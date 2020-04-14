@@ -53,4 +53,16 @@
 
 
 
+(disable-packages! emmet-mode
+                   haml-mode
+                   pug-mode
+                   slim-mode
+                   style-mode
+                   sws-mode
+                   jsonnet-mode
+                   dhall-mode
+                   protobuf-mode)
+
+(package! dash :pin "721436b04d")
+
 (package! clojure-mode-extra-font-locking)

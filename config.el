@@ -24,7 +24,7 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default.
-(setq doom-theme 'doom-one)
+;; (setq doom-theme 'doom-one)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
@@ -56,50 +56,179 @@
 
 
 
-(setq mac-option-modifier 'control
-      mac-control-modifier 'meta
-      mac-command-modifier 'hyper)
+
+(use-package! dash)
 
 
-(defun trans-key! (to from)
-  (define-key key-translation-map (kbd to) (kbd from)))
+;;;; Doom resets
 
-;; (trans-key! "H-n" "ESC")
-(define-key key-translation-map (kbd "H-n") [escape]) ; TODO this doesn't behave like ESC when quitting avy mode so maybe not other places either. Maybe do it better.
+(setq-default indent-tabs-mode t
+              word-wrap nil
+              truncate-lines nil
+              truncate-partial-width-windows 50)
 
-(trans-key! "H-k" "RET")
+(remove-hook 'text-mode-hook #'auto-fill-mode)
 
-(trans-key! "M-h" "<left>")
-(trans-key! "M-j" "<down>")
-(trans-key! "M-k" "<up>")
-(trans-key! "M-l" "<right>")
 
-(trans-key! "H-j" "C-d")
-(trans-key! "H-k" "C-u")
 
-;; (trans-key! "H-h" "z H") ; oops cmd-h is mac hide
-;; (trans-key! "H-l" "z L")
+
+(blink-cursor-mode -1)
+
+(setq save-interprogram-paste-before-kill t)
+
+
+
+
+(map! (:after ivy :map ivy-minibuffer-map
+        "C-k" #'kill-line
+        "C-u" #'ivy-scroll-down-command
+        "C-d" #'ivy-scroll-up-command)
+      (:after lispy :map lispy-mode-map-lispy
+        "[" #'lispy-brackets)
+      (:after lispyville :map lispyville-mode-map
+        "s-C-j" #'lispyville-forward-sexp
+        "s-C-k" #'lispyville-backward-sexp
+        "s-C-h" #'lispyville-backward-up-list
+        "s-C-l" #'lispyville-up-list
+        "s-C-u" #'lispyville-beginning-of-next-defun
+        "s-C-i" #'lispyville-beginning-of-defun
+        "s-C-o" #'lispyville-end-of-defun))
+;; "s-;" #'execute-extended-command  ; TODO probably some other key (if not keeping s-x)
+
+;; TODO rewrite individual `trans!` calls into one
+(defun trans! (&rest rest)
+  (-each (-partition 2 rest)
+    (-lambda ((to from))
+      (define-key key-translation-map (kbd to) (kbd from)))))
+
+;; Old attempts
+;; (trans! "s-n" "C-g")
+;; (define-key key-translation-map (kbd "s-n") [escape])
+
+;; (trans! "s-h" "z H") ; oops cmd-h is mac hide
+;; (trans! "s-l" "z L")
+
+(trans! "s-w" "SPC b k")
+(trans! "s-W" "SPC w d")
+(trans! "s-," "SPC w w")
+
+(trans! "s-n" "<escape>"
+
+        "s-h" "<left>"
+        "s-j" "<down>"
+        "s-k" "<up>"
+        "s-l" "<right>"
+
+        "s-J" "C-d"
+        "s-K" "C-u"
+
+        ;; Get rid of these if my enter-control doesn't make C-c/C-x too hard to hit
+        ;; "s-c" "C-c"
+        ;; "s-x" "C-x"
+
+        ;; TODO make these yank and pop (old s-c and s-v) if keeping s-c and s-x bindings above
+        ;; "s-y" ""
+        ;; "s-p" ""
+
+        "s-i" "RET"
+        "s-d" "RET" ; TODO probably get rid of this one
+        "s-o" "<tab>"
+        "s-O" "<backtab>"
+
+        "s-g" "SPC g g"
+        "s-m" "g s SPC")
+
+
+
 
 (after! avy
-  (setq avy-all-windows t))
+  (setq avy-all-windows t)
+  (setq avy-single-candidate-jump t))
 
-;; I probably want this but try without first. Add the appropriate `after!' or whatever.
-;; (setq evil-multiedit-follow-matches t)
-
+;; Rewrite these with doom list manpulation functions
 (add-to-list 'safe-local-variable-values '(cider-clojure-cli-global-options . nil))
 (add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}")))
 (add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
 
 
 
-(setq initial-frame-alist '((width . 196) (fullscreen . fullheight)))
+(setq initial-frame-alist '((width . 195) (fullscreen . fullheight)))
 
 
 ;; (after! magit
 ;;   (setq magit-save-repository-buffers nil
 ;;         ;; git-commit-style-convention-checks nil))
 
-
-;; The extra-font-locking code won't get run more than once, right?
+;; Weirdly this doesn't work in clojurescript (and never did, even in my old emacs setup).
 (use-package! clojure-mode-extra-font-locking
   :after clojure-mode)
+
+
+
+
+(prodigy-define-service
+  :name "Amplify Mock"
+  :command "amplify"
+  :args '("mock")
+  :cwd "~/Projects/Krush/hyperdrive/apps/singularity"
+  :kill-process-buffer-on-stop t)
+
+(prodigy-define-service
+  :name "Datomic Access (exogenesis)"
+  :command "bash"
+  :args '("datomic" "client" "access" "exogenesis")
+  :cwd "~/Projects/Krush/hyperdrive/ion/team"
+  :kill-process-buffer-on-stop t)
+
+
+
+
+
+
+
+(add-to-list 'custom-theme-load-path (concat doom-private-dir "/emacs-doom-themes/themes/pharcosyle"))
+(load-theme 'doom-pharcosyle-atomic t)
+
+(setq rainbow-delimiters-max-face-count 8)
+(setq +evil--default-cursor-color "#fdd94a")
+
+(custom-theme-set-faces! 'doom-pharcosyle-atomic
+  '(font-lock-comment-face :foreground "#63677F")
+  '(font-lock-comment-delimiter-face :foreground "#939abd")
+  `(font-lock-doc-face :foreground ,(doom-color 'cyan))
+  ;; `(line-number :inherit 'default :foreground ,(doom-color 'base5) :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
+  `(line-number-current-line :inherit (hl-line default) :foreground "#AEB9F3" :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
+  `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
+  `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
+  `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
+  `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
+  `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
+  `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
+  `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
+  `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))
+  `(clojure-interop-method-face :foreground ,(doom-color 'cyan))
+  `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))
+
+
+
+
+(after! evil-multiedit
+  (setq evil-multiedit-follow-matches t))
+
+(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
+
+
+
+
+(after! lispy
+  (lispy-set-key-theme '(lispy)))
+
+(after! lispyville
+  (lispyville-set-key-theme
+   '(c-u
+     prettify
+     text-objects
+     commentary
+     slurp/barf-cp
+     additional-wrap))
+  (setq lispyville-barf-stay-with-closing t))
