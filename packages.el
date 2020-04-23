@@ -65,4 +65,6 @@
 
 (package! dash :pin "721436b04d")
 
-(package! clojure-mode-extra-font-locking)
+(package! clojure-mode-extra-font-locking) ; TODO replace this with some sort of require from the already-included doom version of clojure-mode (if that's idiomatic)
+
+;; (package! aggressive-indent :pin "c28246ba09")

@@ -62,38 +62,25 @@
 
 ;;;; Doom resets
 
+;; I'd like to have this on but in the doom code it says it's more efficient not to.
+;; (setq-default cursor-in-non-selected-windows t)
+
 (setq-default indent-tabs-mode t
               word-wrap nil
               truncate-lines nil
               truncate-partial-width-windows 50)
 
-(remove-hook 'text-mode-hook #'auto-fill-mode)
+;; visual-line is the new text mode default, try it out for a while, otherwise: (remove-hook 'text-mode-hook #'visual-line-mode)
 
 
 
 
-(blink-cursor-mode -1)
+(setq scroll-margin 10)
 
 (setq save-interprogram-paste-before-kill t)
 
 
 
-
-(map! (:after ivy :map ivy-minibuffer-map
-        "C-k" #'kill-line
-        "C-u" #'ivy-scroll-down-command
-        "C-d" #'ivy-scroll-up-command)
-      (:after lispy :map lispy-mode-map-lispy
-        "[" #'lispy-brackets)
-      (:after lispyville :map lispyville-mode-map
-        "s-C-j" #'lispyville-forward-sexp
-        "s-C-k" #'lispyville-backward-sexp
-        "s-C-h" #'lispyville-backward-up-list
-        "s-C-l" #'lispyville-up-list
-        "s-C-u" #'lispyville-beginning-of-next-defun
-        "s-C-i" #'lispyville-beginning-of-defun
-        "s-C-o" #'lispyville-end-of-defun))
-;; "s-;" #'execute-extended-command  ; TODO probably some other key (if not keeping s-x)
 
 ;; TODO rewrite individual `trans!` calls into one
 (defun trans! (&rest rest)
@@ -107,10 +94,6 @@
 
 ;; (trans! "s-h" "z H") ; oops cmd-h is mac hide
 ;; (trans! "s-l" "z L")
-
-(trans! "s-w" "SPC b k")
-(trans! "s-W" "SPC w d")
-(trans! "s-," "SPC w w")
 
 (trans! "s-n" "<escape>"
 
@@ -135,8 +118,31 @@
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
+        "s-w" "SPC b k"
+        "s-W" "SPC w d"
+        "s-," "SPC w w"
+
         "s-g" "SPC g g"
         "s-m" "g s SPC")
+
+(map! (:after ivy :map ivy-minibuffer-map
+        "C-k" #'kill-line
+        "C-u" #'ivy-scroll-down-command
+        "C-d" #'ivy-scroll-up-command
+        "s-r" #'ivy-reverse-i-search) ; TODO probably a temporary binding
+
+      (:after lispy :map lispy-mode-map-lispy
+        "[" #'lispy-brackets)
+
+      (:after lispyville :map lispyville-mode-map
+        "s-C-j" #'lispyville-forward-sexp
+        "s-C-k" #'lispyville-backward-sexp
+        "s-C-h" #'lispyville-backward-up-list
+        "s-C-l" #'lispyville-up-list
+        "s-C-u" #'lispyville-beginning-of-next-defun
+        "s-C-i" #'lispyville-beginning-of-defun
+        "s-C-o" #'lispyville-end-of-defun))
+;; "s-;" #'execute-extended-command  ; TODO probably some other key (if not keeping s-x)
 
 
 
@@ -186,7 +192,7 @@
 
 
 
-(add-to-list 'custom-theme-load-path (concat doom-private-dir "/emacs-doom-themes/themes/pharcosyle"))
+(add-to-list 'custom-theme-load-path (concat doom-private-dir "emacs-doom-themes/themes/pharcosyle"))
 (load-theme 'doom-pharcosyle-atomic t)
 
 (setq rainbow-delimiters-max-face-count 8)
@@ -232,3 +238,26 @@
      slurp/barf-cp
      additional-wrap))
   (setq lispyville-barf-stay-with-closing t))
+
+
+
+
+;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
+;; (use-package! aggressive-indent
+;;   :config
+;;   (global-aggressive-indent-mode 1))
+
+
+
+;; Trying this out
+(after! ivy
+  (setq +ivy-buffer-preview t))
+
+
+(after! paren
+  (setq! show-paren-delay 0))
+
+
+
+;; ;; TODO Keep this at the end. Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
+;; (toggle-frame-fullscreen)
