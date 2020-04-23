@@ -165,10 +165,6 @@
 ;;   (setq magit-save-repository-buffers nil
 ;;         ;; git-commit-style-convention-checks nil))
 
-;; Weirdly this doesn't work in clojurescript (and never did, even in my old emacs setup).
-(use-package! clojure-mode-extra-font-locking
-  :after clojure-mode)
-
 
 
 
