@@ -54,10 +54,8 @@
 
 
 
-
-
-
 (use-package! dash)
+
 
 
 ;;;; Doom resets
@@ -70,30 +68,19 @@
               truncate-lines nil
               truncate-partial-width-windows 50)
 
-;; visual-line is the new text mode default, try it out for a while, otherwise: (remove-hook 'text-mode-hook #'visual-line-mode)
-
+;; TODO `visual-line` is the new text mode default, try it out for a while, otherwise: (remove-hook 'text-mode-hook #'visual-line-mode)
 
 
 
 (setq scroll-margin 10)
-
 (setq save-interprogram-paste-before-kill t)
 
 
 
-
-;; TODO rewrite individual `trans!` calls into one
 (defun trans! (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
       (define-key key-translation-map (kbd to) (kbd from)))))
-
-;; Old attempts
-;; (trans! "s-n" "C-g")
-;; (define-key key-translation-map (kbd "s-n") [escape])
-
-;; (trans! "s-h" "z H") ; oops cmd-h is mac hide
-;; (trans! "s-l" "z L")
 
 (trans! "s-n" "<escape>"
 
@@ -105,16 +92,7 @@
         "s-J" "C-d"
         "s-K" "C-u"
 
-        ;; Get rid of these if my enter-control doesn't make C-c/C-x too hard to hit
-        ;; "s-c" "C-c"
-        ;; "s-x" "C-x"
-
-        ;; TODO make these yank and pop (old s-c and s-v) if keeping s-c and s-x bindings above
-        ;; "s-y" ""
-        ;; "s-p" ""
-
         "s-i" "RET"
-        "s-d" "RET" ; TODO probably get rid of this one
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
@@ -123,7 +101,9 @@
         "s-," "SPC w w"
 
         "s-g" "SPC g g"
-        "s-m" "g s SPC")
+        "s-m" "g s SPC"
+
+        "s-." "C-x z")                  ; TODO trying this out
 
 (map! (:after ivy :map ivy-minibuffer-map
         "C-k" #'kill-line
@@ -131,8 +111,8 @@
         "C-d" #'ivy-scroll-up-command
         "s-r" #'ivy-reverse-i-search) ; TODO probably a temporary binding
 
-      (:after lispy :map lispy-mode-map-lispy
-        "[" #'lispy-brackets)
+      ;; (:after lispy :map lispy-mode-map-lispy
+      ;;   "[" #'lispy-brackets)
 
       (:after lispyville :map lispyville-mode-map
         "s-C-j" #'lispyville-forward-sexp
@@ -142,8 +122,6 @@
         "s-C-u" #'lispyville-beginning-of-next-defun
         "s-C-i" #'lispyville-beginning-of-defun
         "s-C-o" #'lispyville-end-of-defun))
-;; "s-;" #'execute-extended-command  ; TODO probably some other key (if not keeping s-x)
-
 
 
 
@@ -151,40 +129,35 @@
   (setq avy-all-windows t)
   (setq avy-single-candidate-jump t))
 
-;; Rewrite these with doom list manpulation functions
-(add-to-list 'safe-local-variable-values '(cider-clojure-cli-global-options . nil))
-(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}")))
-(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
+(after! evil-multiedit
+  (setq evil-multiedit-follow-matches t))
 
+;; Trying this out
+(after! ivy
+  (setq +ivy-buffer-preview t))
 
+(after! lispy
+  (lispy-set-key-theme '(lispy)))
 
-(setq initial-frame-alist '((width . 195) (fullscreen . fullheight)))
+(after! lispyville
+  (lispyville-set-key-theme
+   '(c-u
+     prettify
+     text-objects
+     commentary
+     slurp/barf-cp
+     additional-wrap))
+  (setq lispyville-barf-stay-with-closing t))
 
+(after! paren
+  (setq! show-paren-delay 0))
 
-;; (after! magit
-;;   (setq magit-save-repository-buffers nil
-;;         ;; git-commit-style-convention-checks nil))
+(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
 
-
-
-
-(prodigy-define-service
-  :name "Amplify Mock"
-  :command "amplify"
-  :args '("mock")
-  :cwd "~/Projects/Krush/hyperdrive/apps/singularity"
-  :kill-process-buffer-on-stop t)
-
-(prodigy-define-service
-  :name "Datomic Access (exogenesis)"
-  :command "bash"
-  :args '("datomic" "client" "access" "exogenesis")
-  :cwd "~/Projects/Krush/hyperdrive/ion/team"
-  :kill-process-buffer-on-stop t)
-
-
-
-
+;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
+;; (use-package! aggressive-indent
+;;   :config
+;;   (global-aggressive-indent-mode 1))
 
 
 
@@ -213,47 +186,27 @@
 
 
 
-
-(after! evil-multiedit
-  (setq evil-multiedit-follow-matches t))
-
-(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
-
-
-
-
-(after! lispy
-  (lispy-set-key-theme '(lispy)))
-
-(after! lispyville
-  (lispyville-set-key-theme
-   '(c-u
-     prettify
-     text-objects
-     commentary
-     slurp/barf-cp
-     additional-wrap))
-  (setq lispyville-barf-stay-with-closing t))
-
-
-
-
-;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
-;; (use-package! aggressive-indent
-;;   :config
-;;   (global-aggressive-indent-mode 1))
-
-
-
-;; Trying this out
-(after! ivy
-  (setq +ivy-buffer-preview t))
-
-
-(after! paren
-  (setq! show-paren-delay 0))
-
-
-
-;; ;; TODO Keep this at the end. Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
+;; Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
 ;; (toggle-frame-fullscreen)
+(setq initial-frame-alist '((width . 195) (fullscreen . fullheight)))
+
+
+
+(prodigy-define-service
+  :name "Amplify Mock"
+  :command "amplify"
+  :args '("mock")
+  :cwd "~/Projects/Krush/hyperdrive/apps/singularity"
+  :kill-process-buffer-on-stop t)
+
+(prodigy-define-service
+  :name "Datomic Access (exogenesis)"
+  :command "bash"
+  :args '("datomic" "client" "access" "exogenesis")
+  :cwd "~/Projects/Krush/hyperdrive/ion/team"
+  :kill-process-buffer-on-stop t)
+
+;; Rewrite these with doom list manpulation functions unless I just disable local variable checking
+(add-to-list 'safe-local-variable-values '(cider-clojure-cli-global-options . nil))
+(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}")))
+(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
