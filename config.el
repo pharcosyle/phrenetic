@@ -206,7 +206,11 @@
   :cwd "~/Projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 
-;; Rewrite these with doom list manpulation functions unless I just disable local variable checking
-(add-to-list 'safe-local-variable-values '(cider-clojure-cli-global-options . nil))
-(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}")))
-(add-to-list 'safe-local-variable-values '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
+(pushnew! safe-local-variable-values
+          '(cider-preferred-build-tool . shadow-cljs)
+          '(cider-default-cljs-repl . shadow)
+          '(cider-shadow-default-options . ":app")
+          '(cider-offer-to-open-cljs-app-in-browser . nil)
+          '(cider-clojure-cli-global-options . "-A:dev")
+          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
