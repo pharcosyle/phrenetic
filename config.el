@@ -166,11 +166,11 @@
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
 
 (add-hook! cider-repl-mode
-  (goto-address-prog-mode)
-  (highlight-numbers-mode)
-  (rainbow-delimiters-mode)
-  (yas-minor-mode-on)
-  (lispy-mode))
+  #'goto-address-prog-mode
+  #'highlight-numbers-mode
+  #'rainbow-delimiters-mode
+  #'yas-minor-mode-on
+  #'lispy-mode)
 
 ;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
