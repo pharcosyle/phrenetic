@@ -52,17 +52,15 @@
 
 
 
-
 (disable-packages! emmet-mode
                    haml-mode
                    pug-mode
                    slim-mode
                    style-mode
-                   sws-mode
-                   jsonnet-mode
-                   dhall-mode
-                   protobuf-mode)
+                   sws-mode)
 
 (package! dash :pin "721436b04d")
+
+(package! graphql-mode :pin "7c37aee28b")
 
 ;; (package! aggressive-indent :pin "c28246ba09")

@@ -96,20 +96,28 @@
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
+        "s-u" "SPC u"                   ; TODO maybe
+
+        "s-r" "SPC f r"
+
         "s-w" "SPC b k"
         "s-W" "SPC w d"
         "s-," "SPC w w"
 
+        "s-a" "g s SPC"
+
         "s-g" "SPC g g"
-        "s-m" "g s SPC"
+        "s-m" "SPC m"                   ; TODO maybe
 
         "s-." "C-x z")                  ; TODO trying this out
 
-(map! (:after ivy :map ivy-minibuffer-map
+(map! "s-V" #'yank-pop
+
+      (:after ivy :map ivy-minibuffer-map
         "C-k" #'kill-line
         "C-u" #'ivy-scroll-down-command
         "C-d" #'ivy-scroll-up-command
-        "s-r" #'ivy-reverse-i-search) ; TODO probably a temporary binding
+        "s-r" #'ivy-reverse-i-search)   ; TODO probably a temporary binding
 
       ;; (:after lispy :map lispy-mode-map-lispy
       ;;   "[" #'lispy-brackets)
@@ -128,6 +136,9 @@
 (after! avy
   (setq avy-all-windows t)
   (setq avy-single-candidate-jump t))
+
+(after! cider
+  (setq cider-repl-history-size 1000000))
 
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
@@ -152,7 +163,14 @@
 (after! paren
   (setq! show-paren-delay 0))
 
-(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
+(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
+
+(add-hook! cider-repl-mode
+  (goto-address-prog-mode)
+  (highlight-numbers-mode)
+  (rainbow-delimiters-mode)
+  (yas-minor-mode-on)
+  (lispy-mode))
 
 ;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
@@ -213,4 +231,12 @@
           '(cider-offer-to-open-cljs-app-in-browser . nil)
           '(cider-clojure-cli-global-options . "-A:dev")
           '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
-          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}")))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
+          '(cider-clojure-cli-global-options . nil))
+
+
+
+
+
+
+(setq clojure-refactor-map-prefix (kbd "s-C-p")) ; TODO temporary binding
