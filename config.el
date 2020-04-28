@@ -137,8 +137,24 @@
   (setq avy-all-windows t)
   (setq avy-single-candidate-jump t))
 
+(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
+
+(add-hook! cider-repl-mode
+  #'goto-address-prog-mode
+  #'highlight-numbers-mode
+  #'rainbow-delimiters-mode
+  #'yas-minor-mode-on
+  #'lispy-mode)
+
 (after! cider
-  (setq cider-repl-history-size 1000000))
+  (pushnew! cider-font-lock-dynamically 'deprecated)
+  (setq cider-repl-history-size 1000000
+        cider-print-options '(("length" 100))))
+
+(add-hook! clj-refactor-mode
+  (cljr-add-keybindings-with-prefix "s-C-.")) ; TODO temporary binding
+
+(setq clojure-refactor-map-prefix (kbd "s-C-,")) ; Has to be set before clojure-mode laods. ; TODO temporary binding
 
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
@@ -162,15 +178,6 @@
 
 (after! paren
   (setq! show-paren-delay 0))
-
-(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
-
-(add-hook! cider-repl-mode
-  #'goto-address-prog-mode
-  #'highlight-numbers-mode
-  #'rainbow-delimiters-mode
-  #'yas-minor-mode-on
-  #'lispy-mode)
 
 ;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
@@ -233,10 +240,3 @@
           '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
           '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
           '(cider-clojure-cli-global-options . nil))
-
-
-
-
-
-
-(setq clojure-refactor-map-prefix (kbd "s-C-p")) ; TODO temporary binding
