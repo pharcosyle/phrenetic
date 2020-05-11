@@ -213,7 +213,8 @@
 
 ;; Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
 ;; (toggle-frame-fullscreen)
-(setq initial-frame-alist '((width . 195) (fullscreen . fullheight)))
+(setq initial-frame-alist '((width . 194) (fullscreen . fullheight)))
+(set-frame-position (selected-frame) 66 23)
 
 
 
