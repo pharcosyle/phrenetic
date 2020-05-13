@@ -54,8 +54,8 @@
                    style-mode
                    sws-mode)
 
-(package! dash :pin "721436b04d")
+(package! dash :pin "fe9bbc2414af645d255de68cd59cf0edd5d8548b")
 
-(package! graphql-mode :pin "7c37aee28b")
+(package! graphql-mode :pin "7c37aee28bf8c8ffb3da73df5571c4e1e352562b")
 
-;; (package! aggressive-indent :pin "c28246ba09")
+;; (package! aggressive-indent :pin "12a64b4e5c1a1e124baa74336738b6ae1972607f")
