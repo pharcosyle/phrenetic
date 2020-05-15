@@ -72,6 +72,9 @@
 
 
 
+;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point.
+;; (setq display-line-numbers-type nil)
+
 (setq scroll-margin 10)
 (setq save-interprogram-paste-before-kill t)
 
@@ -111,25 +114,27 @@
 
         "s-." "C-x z")                  ; TODO trying this out
 
-(map! "s-V" #'yank-pop
+(defalias 'original-yank-pop #'yank-pop)
+
+(map! "s-V" #'original-yank-pop
 
       (:after ivy :map ivy-minibuffer-map
-        "C-k" #'kill-line
-        "C-u" #'ivy-scroll-down-command
-        "C-d" #'ivy-scroll-up-command
-        "s-r" #'ivy-reverse-i-search)   ; TODO probably a temporary binding
+       "C-k" #'kill-line
+       "C-u" #'ivy-scroll-down-command
+       "C-d" #'ivy-scroll-up-command
+       "s-r" #'ivy-reverse-i-search)    ; TODO probably a temporary binding
 
       ;; (:after lispy :map lispy-mode-map-lispy
       ;;   "[" #'lispy-brackets)
 
       (:after lispyville :map lispyville-mode-map
-        "s-C-j" #'lispyville-forward-sexp
-        "s-C-k" #'lispyville-backward-sexp
-        "s-C-h" #'lispyville-backward-up-list
-        "s-C-l" #'lispyville-up-list
-        "s-C-u" #'lispyville-beginning-of-next-defun
-        "s-C-i" #'lispyville-beginning-of-defun
-        "s-C-o" #'lispyville-end-of-defun))
+       "s-C-j" #'lispyville-forward-sexp
+       "s-C-k" #'lispyville-backward-sexp
+       "s-C-h" #'lispyville-backward-up-list
+       "s-C-l" #'lispyville-up-list
+       "s-C-u" #'lispyville-beginning-of-next-defun
+       "s-C-i" #'lispyville-beginning-of-defun
+       "s-C-o" #'lispyville-end-of-defun))
 
 
 
@@ -154,7 +159,7 @@
 (add-hook! clj-refactor-mode
   (cljr-add-keybindings-with-prefix "s-C-.")) ; TODO temporary binding
 
-(setq clojure-refactor-map-prefix (kbd "s-C-,")) ; Has to be set before clojure-mode laods. ; TODO temporary binding
+(setq clojure-refactor-map-prefix (kbd "s-C-,")) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
 
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
@@ -178,6 +183,9 @@
 
 (after! paren
   (setq! show-paren-delay 0))
+
+;; (after! undo-tree
+;;   (setq undo-tree-visualizer-timestamps t))
 
 ;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
