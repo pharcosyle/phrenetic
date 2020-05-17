@@ -139,7 +139,6 @@
 
 
 (after! avy
-  (setq avy-all-windows t)
   (setq avy-single-candidate-jump t))
 
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
@@ -187,10 +186,18 @@
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 
+
+
 ;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
 ;;   :config
 ;;   (global-aggressive-indent-mode 1))
+
+(use-package! tldr
+  :defer t
+  :config
+  (setq tldr-directory-path (concat doom-etc-dir "tldr/"))
+  (set-popup-rule! "^\\*tldr\\*" :side 'right :select t :quit t))
 
 
 
