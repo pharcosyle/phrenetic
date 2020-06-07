@@ -5,7 +5,7 @@
                    haml-mode
                    pug-mode
                    slim-mode
-                   style-mode
+                   stylus-mode
                    sws-mode)
 
 ;; (package! aggressive-indent :pin "12a64b4e5c1a1e124baa74336738b6ae1972607f")
