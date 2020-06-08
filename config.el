@@ -160,11 +160,13 @@
 
 
 
-(add-to-list 'custom-theme-load-path (concat doom-private-dir "emacs-doom-themes/themes/pharcosyle"))
-(load-theme 'doom-pharcosyle-atomic t)
+(setq doom-theme 'doom-pharcosyle-atomic)
+
+(after! evil
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
 (setq rainbow-delimiters-max-face-count 8)
-(setq +evil--default-cursor-color "#fdd94a")
 
 (custom-theme-set-faces! 'doom-pharcosyle-atomic
   '(font-lock-comment-face :foreground "#63677F")
