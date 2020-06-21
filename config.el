@@ -139,6 +139,9 @@
      additional-wrap))
   (setq lispyville-barf-stay-with-closing t))
 
+(after! magit
+  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
+
 (after! paren
   (setq! show-paren-delay 0))
 
