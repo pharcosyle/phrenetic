@@ -110,7 +110,6 @@
   #'lispy-mode)
 
 (after! cider
-  (pushnew! cider-font-lock-dynamically 'deprecated)
   (setq cider-repl-history-size 1000000
         cider-print-options '(("length" 100))))
 
