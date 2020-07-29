@@ -1,41 +1,32 @@
 ;;; $DOOMDIR/config.el -*- lexical-binding: t; -*-
 
-;; TODO this shouldn't be its own section anymore.
+(use-package! dash)
+
 
 (setq user-full-name "Krzysztof Baranowski"
       user-mail-address "pharcosyle@gmail.com")
 
-(setq doom-font (font-spec :family "Source Code Variable" :size 12 :weight 'semi-light))
-
-(setq org-directory "~/org/")           ; Must be set before org loads.
-
-(setq display-line-numbers-type t)
-
-
-
-(use-package! dash)
+;; (setq org-directory "~/org/")           ; Must be set before org loads.
 
 
 
 ;;;; Doom resets
-
-;; I'd like to have this on but in the doom code it says it's more efficient not to.
-;; (setq-default cursor-in-non-selected-windows t)
 
 (setq-default indent-tabs-mode t
               word-wrap nil
               truncate-lines nil
               truncate-partial-width-windows 50)
 
-;; TODO `visual-line` is the new text mode default, try it out for a while, otherwise: (remove-hook 'text-mode-hook #'visual-line-mode)
+;; I'd like to have this on but in the doom code it says it's more efficient not to.
+;; (setq-default cursor-in-non-selected-windows t)
 
 
+
+(setq scroll-margin 10
+      save-interprogram-paste-before-kill t)
 
 ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point.
 ;; (setq display-line-numbers-type nil)
-
-(setq scroll-margin 10)
-(setq save-interprogram-paste-before-kill t)
 
 
 
@@ -51,37 +42,49 @@
         "s-k" "<up>"
         "s-l" "<right>"
 
-        "s-J" "C-d"
-        "s-K" "C-u"
-
         "s-i" "RET"
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
-        "s-u" "SPC u"                   ; TODO maybe
-
+        "s-t" "SPC `"
+        "s-u" "SPC u"
         "s-r" "SPC f r"
-
         "s-w" "SPC b k"
         "s-W" "SPC w d"
-        "s-," "SPC w w"
-
         "s-a" "g s SPC"
-
         "s-g" "SPC g g"
-        "s-m" "SPC m"                   ; TODO maybe
-
-        "s-." "C-x z")                  ; TODO trying this out
+        "s-m" "SPC m"
+        "s-," "SPC w w"
+        "s-e" "C-x C-e"
+        "s-E" "C-M-x"
+        "s-." "C-x z"
+        "s->" "C-x ESC ESC")            ; Try using this where simple `repeat` fails but I doubt it'll prove useful.
 
 (defalias 'original-yank-pop #'yank-pop)
 
 (map! "s-V" #'original-yank-pop
 
+      "s-J" #'evil-scroll-down
+      "s-K" #'evil-scroll-up
+
+      "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
+
+      "s-d d" #'git-gutter:popup-hunk
+
       (:after ivy :map ivy-minibuffer-map
-       "C-k" #'kill-line
-       "C-u" #'ivy-scroll-down-command
-       "C-d" #'ivy-scroll-up-command
-       "s-r" #'ivy-reverse-i-search)    ; TODO probably a temporary binding
+       "s-J" #'ivy-scroll-up-command
+       "s-K" #'ivy-scroll-down-command
+
+       "<left>" (cmd! (if (and ivy--directory (= (minibuffer-prompt-end) (point)))
+                          (ivy-backward-delete-char)
+                        (left-char)))
+       "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
+                           (ivy-alt-done)
+                         (right-char)))
+
+       ;; Doom overrides these, restore them.
+       "C-k" #'ivy-kill-line
+       "C-r" #'ivy-reverse-i-search)
 
       ;; (:after lispy :map lispy-mode-map-lispy
       ;;   "[" #'lispy-brackets)
@@ -121,7 +124,6 @@
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 
-;; Trying this out
 (after! ivy
   (setq +ivy-buffer-preview t))
 
@@ -149,7 +151,7 @@
 
 
 
-;; TODO try this out after doing lispy et al for a while. Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
+;; Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
 ;; (use-package! aggressive-indent
 ;;   :config
 ;;   (global-aggressive-indent-mode 1))
@@ -157,18 +159,17 @@
 (use-package! tldr
   :defer t
   :config
-  (setq tldr-directory-path (concat doom-etc-dir "tldr/"))
-  (set-popup-rule! "^\\*tldr\\*" :side 'right :select t :quit t))
+  (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 
 
 
-(setq doom-theme 'doom-pharcosyle-atomic)
+(setq doom-theme 'doom-pharcosyle-atomic
+      doom-font (font-spec :family "Source Code Variable" :size 12 :weight 'semi-light)
+      rainbow-delimiters-max-face-count 8)
 
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
-
-(setq rainbow-delimiters-max-face-count 8)
 
 (custom-theme-set-faces! 'doom-pharcosyle-atomic
   '(font-lock-comment-face :foreground "#63677F")
@@ -190,6 +191,7 @@
 
 
 ;; Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
+;; - Update: Probably do this instead, it'll work on additional frames and presumably avoid "weird sizing things": https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
 ;; (toggle-frame-fullscreen)
 (setq initial-frame-alist '((width . 194) (fullscreen . fullheight)))
 (set-frame-position (selected-frame) 66 23)
