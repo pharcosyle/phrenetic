@@ -220,4 +220,7 @@
           '(cider-clojure-cli-global-options . "-A:dev")
           '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
           '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
-          '(cider-clojure-cli-global-options . nil))
+          '(cider-clojure-cli-global-options . nil)
+
+          '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
+          '(ssh-deploy-automatically-detect-remote-changes . t))
