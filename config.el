@@ -164,7 +164,7 @@
 
 
 (setq doom-theme 'doom-pharcosyle-atomic
-      doom-font (font-spec :family "Source Code Variable" :size 12 :weight 'semi-light)
+      doom-font (font-spec :family "Source Code Variable" :size 12)
       rainbow-delimiters-max-face-count 8)
 
 (after! evil
