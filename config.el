@@ -96,7 +96,10 @@
        "s-C-l" #'lispyville-up-list
        "s-C-u" #'lispyville-beginning-of-next-defun
        "s-C-i" #'lispyville-beginning-of-defun
-       "s-C-o" #'lispyville-end-of-defun))
+       "s-C-o" #'lispyville-end-of-defun)
+
+      (:after evil-org :map evil-org-mode-map
+       :nv "C-i" #'evil-jump-forward))  ; evil-org overrides this, restore it.
 
 
 
@@ -142,6 +145,14 @@
 
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
+
+(after! org
+  (setq org-agenda-files `(,org-directory "~/org/projects")
+        org-priority-lowest ?D
+        org-priority-faces `((?A . ,(doom-color 'red))
+                             (?B . ,(doom-color 'orange))
+                             (?C . ,(doom-color 'yellow))
+                             (?D . ,(doom-color 'cyan)))))
 
 (after! paren
   (setq! show-paren-delay 0))
