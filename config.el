@@ -58,7 +58,7 @@
         "s-e" "C-x C-e"
         "s-E" "C-M-x"
         "s-." "C-x z"
-        "s->" "C-x ESC ESC")            ; Try using this where simple `repeat` fails but I doubt it'll prove useful.
+        "s->" "C-x ESC ESC")            ; Try using this where simple emacs `repeat` fails but I doubt it'll prove useful.
 
 (defalias 'original-yank-pop #'yank-pop)
 
@@ -71,7 +71,9 @@
 
       (:prefix "s-d"
        "d" #'git-gutter:popup-hunk
-       "f" #'org-gcal-fetch)
+       "f" #'org-gcal-fetch
+       "o" #'+macos/open-in-default-program
+       "t" #'tldr)
 
       (:after ivy :map ivy-minibuffer-map
        "s-J" #'ivy-scroll-up-command
