@@ -69,7 +69,9 @@
 
       "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
 
-      "s-d d" #'git-gutter:popup-hunk
+      (:prefix "s-d"
+       "d" #'git-gutter:popup-hunk
+       "f" #'org-gcal-fetch)
 
       (:after ivy :map ivy-minibuffer-map
        "s-J" #'ivy-scroll-up-command
@@ -147,12 +149,20 @@
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 
 (after! org
-  (setq org-agenda-files `(,org-directory "~/org/projects")
+  (setq org-agenda-files `(,org-directory "~/org/projects"  "~/org/gcal")
         org-priority-lowest ?D
         org-priority-faces `((?A . ,(doom-color 'red))
                              (?B . ,(doom-color 'orange))
                              (?C . ,(doom-color 'yellow))
                              (?D . ,(doom-color 'cyan)))))
+
+(after! org-gcal
+  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+        org-gcal-client-secret "UdMte0q2B3nMURYY0F1aqNYA"
+        org-gcal-fetch-file-alist '(("pharcosyle@gmail.com" . "~/org/gcal/pharcosyle@gmail.com.org")
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . "~/org/gcal/contacts.org")
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . "~/org/gcal/holidays.org")
+                                    ("krzysztof@massrealty.com" . "~/org/gcal/krzysztof@massrealty.com.org"))))
 
 (after! paren
   (setq! show-paren-delay 0))
