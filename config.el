@@ -14,6 +14,8 @@
 
 (setq-default indent-tabs-mode t
               word-wrap nil
+
+              ;; I suspect these (and the default `visual-line-mode' for text-modes Doom does) will cause slowdowns in large files, I may want to remove them (selectively or altogether).
               truncate-lines nil
               truncate-partial-width-windows 50)
 
@@ -25,7 +27,7 @@
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
 
-;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point.
+;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
 ;; (setq display-line-numbers-type nil)
 
 
@@ -61,7 +63,7 @@
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-u" (lookup-key doom-leader-map (kbd "u"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
-              ;; `swiper' hangs initially when `visual-line-mode' is active.
+              ;; `swiper' hangs initially when `visual-line-mode' is active. Plus doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
               (cmd! (if visual-line-mode
                         (letf! ((#'swiper #'swiper-isearch))
                           (f))
