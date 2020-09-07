@@ -74,6 +74,8 @@
       "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
       "s-g" (lookup-key doom-leader-map (kbd "g g"))
       "s-," (lookup-key doom-leader-map (kbd "w w"))
+      "s-{" (lookup-key doom-leader-map (kbd "b p"))
+      "s-}" (lookup-key doom-leader-map (kbd "b n"))
       (:after evil-easymotion
        "s-a" (lookup-key evilem-map (kbd "SPC")))
 
