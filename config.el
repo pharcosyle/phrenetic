@@ -30,6 +30,9 @@
 
 
 
+(setq doom-localleader-key "s-m"
+      doom-localleader-alt-key "s-m")
+
 (defun trans! (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
@@ -46,15 +49,8 @@
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
-        "s-t" "SPC `"
-        "s-u" "SPC u"
-        "s-r" "SPC f r"
-        "s-w" "SPC b k"
-        "s-W" "SPC w d"
-        "s-a" "g s SPC"
-        "s-g" "SPC g g"
-        "s-m" "SPC m"
-        "s-," "SPC w w"
+        "s-a" "g s SPC"                 ; TODO move this
+
         "s-e" "C-x C-e"
         "s-E" "C-M-x"
         "s-." "C-x z"
@@ -64,10 +60,17 @@
 
 (map! "s-V" #'original-yank-pop
 
+      "s-t" (lookup-key doom-leader-map (kbd "`"))
+      "s-u" (lookup-key doom-leader-map (kbd "u"))
+      "s-r" (lookup-key doom-leader-map (kbd "f r"))
+      "s-w" (lookup-key doom-leader-map (kbd "b k"))
+      "s-W" (lookup-key doom-leader-map (kbd "w d"))
+      "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
+      "s-g" (lookup-key doom-leader-map (kbd "g g"))
+      "s-," (lookup-key doom-leader-map (kbd "w w"))
+
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
-
-      "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
 
       (:prefix "s-d"
        "d" #'git-gutter:popup-hunk
