@@ -60,6 +60,12 @@
 
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-u" (lookup-key doom-leader-map (kbd "u"))
+      "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
+              ;; `swiper' hangs initially when `visual-line-mode' is active.
+              (cmd! (if visual-line-mode
+                        (letf! ((#'swiper #'swiper-isearch))
+                          (f))
+                      (f))))
       "s-r" (lookup-key doom-leader-map (kbd "f r"))
       "s-w" (lookup-key doom-leader-map (kbd "b k"))
       "s-W" (lookup-key doom-leader-map (kbd "w d"))
