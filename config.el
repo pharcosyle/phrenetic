@@ -49,8 +49,6 @@
         "s-o" "<tab>"
         "s-O" "<backtab>"
 
-        "s-a" "g s SPC"                 ; TODO move this
-
         "s-e" "C-x C-e"
         "s-E" "C-M-x"
         "s-." "C-x z"
@@ -68,45 +66,18 @@
       "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
       "s-g" (lookup-key doom-leader-map (kbd "g g"))
       "s-," (lookup-key doom-leader-map (kbd "w w"))
+      (:after evil-easymotion
+       "s-a" (lookup-key evilem-map (kbd "SPC")))
 
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
 
+      ;; These should be in `:after' (or their respective package) sections but I'm not certain how I want to do them yet and I'm lazy.
       (:prefix "s-d"
        "d" #'git-gutter:popup-hunk
        "f" #'org-gcal-fetch
        "o" #'+macos/open-in-default-program
-       "t" #'tldr)
-
-      (:after ivy :map ivy-minibuffer-map
-       "s-J" #'ivy-scroll-up-command
-       "s-K" #'ivy-scroll-down-command
-
-       "<left>" (cmd! (if (and ivy--directory (= (minibuffer-prompt-end) (point)))
-                          (ivy-backward-delete-char)
-                        (left-char)))
-       "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
-                           (ivy-alt-done)
-                         (right-char)))
-
-       ;; Doom overrides these, restore them.
-       "C-k" #'ivy-kill-line
-       "C-r" #'ivy-reverse-i-search)
-
-      ;; (:after lispy :map lispy-mode-map-lispy
-      ;;   "[" #'lispy-brackets)
-
-      (:after lispyville :map lispyville-mode-map
-       "s-C-j" #'lispyville-forward-sexp
-       "s-C-k" #'lispyville-backward-sexp
-       "s-C-h" #'lispyville-backward-up-list
-       "s-C-l" #'lispyville-up-list
-       "s-C-u" #'lispyville-beginning-of-next-defun
-       "s-C-i" #'lispyville-beginning-of-defun
-       "s-C-o" #'lispyville-end-of-defun)
-
-      (:after evil-org :map evil-org-mode-map
-       :nv "C-i" #'evil-jump-forward))  ; evil-org overrides this, restore it.
+       "t" #'tldr))
 
 
 
@@ -115,12 +86,16 @@
 
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
 
+(after! evil-org
+  (map! :map evil-org-mode-map
+        :nv "C-i" #'evil-jump-forward)) ; evil-org overrides this, restore it.
+
 (add-hook! cider-repl-mode
-  #'goto-address-prog-mode
-  #'highlight-numbers-mode
-  #'rainbow-delimiters-mode
-  #'yas-minor-mode-on
-  #'lispy-mode)
+           #'goto-address-prog-mode
+           #'highlight-numbers-mode
+           #'rainbow-delimiters-mode
+           #'yas-minor-mode-on
+           #'lispy-mode)
 
 (after! cider
   (setq cider-repl-history-size 1000000
@@ -136,10 +111,28 @@
 
 (after! ivy
   (setq +ivy-buffer-preview t
-        ivy-extra-directories nil))
+        ivy-extra-directories nil)
+
+  (map! :map ivy-minibuffer-map
+        "s-J" #'ivy-scroll-up-command
+        "s-K" #'ivy-scroll-down-command
+        "<left>" (cmd! (if (and ivy--directory (= (minibuffer-prompt-end) (point)))
+                           (ivy-backward-delete-char)
+                         (left-char)))
+        "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
+                            (ivy-alt-done)
+                          (right-char)))
+
+        ;; Doom overrides these, restore them.
+        "C-k" #'ivy-kill-line
+        "C-r" #'ivy-reverse-i-search))
 
 (after! lispy
-  (lispy-set-key-theme '(lispy)))
+  (lispy-set-key-theme '(lispy))
+
+  ;; (map! :map lispy-mode-map-lispy
+  ;;       "[" #'lispy-brackets)
+  )
 
 (after! lispyville
   (lispyville-set-key-theme
@@ -149,7 +142,16 @@
      commentary
      slurp/barf-cp
      additional-wrap))
-  (setq lispyville-barf-stay-with-closing t))
+  (setq lispyville-barf-stay-with-closing t)
+
+  (map! :map lispyville-mode-map
+        "s-C-j" #'lispyville-forward-sexp
+        "s-C-k" #'lispyville-backward-sexp
+        "s-C-h" #'lispyville-backward-up-list
+        "s-C-l" #'lispyville-up-list
+        "s-C-u" #'lispyville-beginning-of-next-defun
+        "s-C-i" #'lispyville-beginning-of-defun
+        "s-C-o" #'lispyville-end-of-defun))
 
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
