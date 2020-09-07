@@ -132,7 +132,8 @@
   (setq evil-multiedit-follow-matches t))
 
 (after! ivy
-  (setq +ivy-buffer-preview t))
+  (setq +ivy-buffer-preview t
+        ivy-extra-directories nil))
 
 (after! lispy
   (lispy-set-key-theme '(lispy)))
