@@ -119,6 +119,8 @@
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 
+(remove-hook! (prog-mode text-mode conf-mode) #'highlight-indent-guides-mode)
+
 (after! ivy
   (setq +ivy-buffer-preview t
         ivy-extra-directories nil)
