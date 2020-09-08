@@ -116,6 +116,9 @@
 
 (setq clojure-refactor-map-prefix (kbd "s-C-,")) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
 
+(after! counsel
+  (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
+
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 
@@ -124,6 +127,10 @@
 (after! ivy
   (setq +ivy-buffer-preview t
         ivy-extra-directories nil)
+  (-each '(counsel-yank-pop
+           counsel-evil-registers)
+    (lambda (i)
+      (add-to-list 'ivy-height-alist `(,i . 10))))
 
   (map! :map ivy-minibuffer-map
         "s-J" #'ivy-scroll-up-command
