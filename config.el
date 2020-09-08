@@ -177,7 +177,8 @@
                              (?D . ,(doom-color 'cyan)))))
 
 (after! org-gcal
-  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+  (setq persist--directory-location (concat doom-etc-dir "persist")
+        org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret "UdMte0q2B3nMURYY0F1aqNYA"
         org-gcal-fetch-file-alist '(("pharcosyle@gmail.com" . "~/org/gcal/pharcosyle@gmail.com.org")
                                     ("addressbook%23contacts@group.v.calendar.google.com" . "~/org/gcal/contacts.org")
