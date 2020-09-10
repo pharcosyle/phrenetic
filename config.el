@@ -205,6 +205,9 @@
 ;;   :config
 ;;   (global-aggressive-indent-mode 1))
 
+(use-package! ivy-avy
+  :after ivy)
+
 (use-package! tldr
   :defer t
   :config
