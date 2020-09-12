@@ -53,15 +53,15 @@
 
         "s-e" "C-x C-e"
         "s-E" "C-M-x"
+
         "s-." "C-x z"
-        "s->" "C-x ESC ESC")            ; Try using this where simple emacs `repeat` fails but I doubt it'll prove useful.
+        "s->" "C-x ESC ESC")            ; Try using this where simple emacs `repeat' (C-x z) fails but I doubt it'll prove useful.
 
 (defalias 'original-yank-pop #'yank-pop)
 
 (map! "s-V" #'original-yank-pop
 
       "s-t" (lookup-key doom-leader-map (kbd "`"))
-      "s-u" (lookup-key doom-leader-map (kbd "u"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
               ;; `swiper' hangs initially when `visual-line-mode' is active. Plus doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
               (cmd! (if visual-line-mode
@@ -76,6 +76,12 @@
       "s-," (lookup-key doom-leader-map (kbd "w w"))
       "s-{" (lookup-key doom-leader-map (kbd "b p"))
       "s-}" (lookup-key doom-leader-map (kbd "b n"))
+
+      "s-u" (lookup-key doom-leader-map (kbd "u"))
+      "s-U" #'negative-argument         ; Trying this out.
+      (:map universal-argument-map
+       "s-u" #'universal-argument-more)
+
       (:after evil-easymotion
        "s-a" (lookup-key evilem-map (kbd "SPC")))
 
