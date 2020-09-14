@@ -251,8 +251,8 @@
 ;; Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
 ;; - Update: Probably do this instead, it'll work on additional frames and presumably avoid "weird sizing things": https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
 ;; (toggle-frame-fullscreen)
-(setq initial-frame-alist '((width . 194) (fullscreen . fullheight)))
-(set-frame-position (selected-frame) 66 23)
+(setq initial-frame-alist '((width . 193) (fullscreen . fullheight)))
+(set-frame-position (selected-frame) 73 23)
 
 
 
