@@ -185,7 +185,7 @@
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 
 (after! org
-  (setq org-agenda-files `(,org-directory "~/org/projects"  "~/org/gcal")
+  (setq org-agenda-files `(,org-directory "~/org/projects" "~/org/gcal")
         org-priority-lowest ?D
         org-priority-faces `((?A . ,(doom-color 'red))
                              (?B . ,(doom-color 'orange))
