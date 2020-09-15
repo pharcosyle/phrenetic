@@ -52,10 +52,7 @@
         "s-O" "<backtab>"
 
         "s-e" "C-x C-e"
-        "s-E" "C-M-x"
-
-        "s-." "C-x z"
-        "s->" "C-x ESC ESC")            ; Try using this where simple emacs `repeat' (C-x z) fails but I doubt it'll prove useful.
+        "s-E" "C-M-x")
 
 (defalias 'original-yank-pop #'yank-pop)
 
@@ -84,6 +81,9 @@
 
       (:after evil-easymotion
        "s-a" (lookup-key evilem-map (kbd "SPC")))
+
+      "s-." #'repeat
+      "s->" #'repeat-complex-command ; Try using this where simple emacs `repeat' (C-x z) fails but I donno if it'll prove useful.
 
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
