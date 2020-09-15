@@ -91,9 +91,12 @@
       ;; These should be in `:after' (or their respective package) sections but I'm not certain how I want to do them yet and I'm lazy.
       (:prefix "s-d"
        "d" #'git-gutter:popup-hunk
-       "f" #'org-gcal-fetch
        "o" #'+macos/open-in-default-program
-       "t" #'tldr))
+       "t" #'tldr
+       (:prefix "c"
+        "f" #'org-gcal-fetch
+        "s" #'org-gcal-sync
+        "p" #'org-gcal-post-at-point)))
 
 
 
