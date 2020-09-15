@@ -107,7 +107,7 @@
 
 (after! evil-org
   (map! :map evil-org-mode-map
-        :nv "C-i" #'evil-jump-forward)) ; evil-org overrides this, restore it.
+        :nv "C-i" nil))
 
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode
