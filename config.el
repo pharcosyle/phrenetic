@@ -136,10 +136,9 @@
 (after! ivy
   (setq +ivy-buffer-preview t
         ivy-extra-directories nil)
-  (-each '(counsel-yank-pop
-           counsel-evil-registers)
-    (lambda (i)
-      (add-to-list 'ivy-height-alist `(,i . 10))))
+  (dolist (i '(counsel-yank-pop
+               counsel-evil-registers))
+    (add-to-list 'ivy-height-alist `(,i . 10)))
 
   (map! :map ivy-minibuffer-map
         "s-J" #'ivy-scroll-up-command
