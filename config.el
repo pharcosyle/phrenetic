@@ -35,24 +35,24 @@
 (setq doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 
-(defun trans! (&rest rest)
+(defun my--trans (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
       (define-key key-translation-map (kbd to) (kbd from)))))
 
-(trans! "s-n" "<escape>"
+(my--trans "s-n" "<escape>"
 
-        "s-h" "<left>"
-        "s-j" "<down>"
-        "s-k" "<up>"
-        "s-l" "<right>"
+           "s-h" "<left>"
+           "s-j" "<down>"
+           "s-k" "<up>"
+           "s-l" "<right>"
 
-        "s-i" "RET"
-        "s-o" "<tab>"
-        "s-O" "<backtab>"
+           "s-i" "RET"
+           "s-o" "<tab>"
+           "s-O" "<backtab>"
 
-        "s-e" "C-x C-e"
-        "s-E" "C-M-x")
+           "s-e" "C-x C-e"
+           "s-E" "C-M-x")
 
 (defalias 'original-yank-pop #'yank-pop)
 
