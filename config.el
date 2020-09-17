@@ -208,11 +208,6 @@
 
 
 
-;; Probably be more selective where it's enabled (with an :after and not global-... or aggressive-indent-excluded-modes). Even if I want it everywhere should I put it behind an :after just to defer loading?
-;; (use-package! aggressive-indent
-;;   :config
-;;   (global-aggressive-indent-mode 1))
-
 (use-package! ivy-avy
   :after ivy)
 
