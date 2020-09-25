@@ -207,6 +207,18 @@
 ;;   (setq undo-tree-visualizer-timestamps t))
 
 
+(use-package! expand-region
+  :commands er/expand-region
+  :init
+  (map! "s-C-i" #'er/expand-region
+        "s-C-o" #'er/contract-region)
+  :config
+  ;; Copied from doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el::12
+  (defadvice! my--quit-expand-region-a ()
+    "Properly abort an expand-region region."
+    :before '(evil-escape doom/escape evil-force-normal-state)
+    (when (memq last-command '(er/expand-region er/contract-region))
+      (er/contract-region 0))))
 
 (use-package! ivy-avy
   :after ivy)
