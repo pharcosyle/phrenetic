@@ -185,11 +185,12 @@
 
 (after! org
   (setq org-agenda-files `(,org-directory "~/org/projects" "~/org/gcal")
-        org-priority-lowest ?D
+        org-priority-lowest ?E
         org-priority-faces `((?A . ,(doom-color 'red))
                              (?B . ,(doom-color 'orange))
-                             (?C . ,(doom-color 'yellow))
-                             (?D . ,(doom-color 'cyan)))))
+                             (?C . ,(doom-color 'blue))
+                             (?D . ,(doom-color 'yellow))
+                             (?E . ,(doom-color 'green)))))
 
 (after! org-gcal
   (setq persist--directory-location (concat doom-etc-dir "persist")
