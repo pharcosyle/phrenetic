@@ -90,7 +90,9 @@
 
       ;; These should be in `:after' (or their respective package) sections but I'm not certain how I want to do them yet and I'm lazy.
       (:prefix "s-d"
-       "d" #'git-gutter:popup-hunk
+       "d" (cmd! (evil-local-mode 'toggle)
+                 (when evil-local-mode (evil-normal-state)))
+       "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
        "t" #'tldr
        (:prefix "c"
