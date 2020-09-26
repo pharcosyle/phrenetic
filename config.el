@@ -130,6 +130,9 @@
 (after! counsel
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
 
+(after! eshell
+  (setq eshell-history-size nil))
+
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 
