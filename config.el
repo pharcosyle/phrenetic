@@ -58,6 +58,8 @@
 
 (map! "s-V" #'original-yank-pop
 
+      :v "s-x" nil
+
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
               ;; `swiper' hangs initially when `visual-line-mode' is active. Plus doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
