@@ -185,3 +185,7 @@
        :config
        ;;literate
        (default +bindings +smartparens))
+
+(use-package-hook! lispyville
+  :post-init
+  (setq lispyville-key-theme nil))

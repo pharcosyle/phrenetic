@@ -102,6 +102,15 @@
 
 
 
+(defun +my--sp-strict-h ()
+  (add-hook! 'smartparens-enabled-hook :local
+             #'turn-on-smartparens-strict-mode
+             (lambda ()
+               (map! :map smartparens-strict-mode-map
+                     :i "DEL" #'sp-backward-delete-char))))
+
+(add-hook! prog-mode #'+my--sp-strict-h)
+
 (after! avy
   (setq avy-single-candidate-jump t))
 
@@ -116,16 +125,16 @@
            #'highlight-numbers-mode
            #'rainbow-delimiters-mode
            #'yas-minor-mode-on
-           #'lispy-mode)
+           #'+my--sp-strict-h)
 
 (after! cider
   (setq cider-repl-history-size 1000000
         cider-print-options '(("length" 100))))
 
 (add-hook! clj-refactor-mode
-  (cljr-add-keybindings-with-prefix "s-C-.")) ; TODO temporary binding
+  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 
-(setq clojure-refactor-map-prefix (kbd "s-C-,")) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
+(setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
 
 (after! counsel
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
@@ -159,31 +168,22 @@
         "C-k" #'ivy-kill-line
         "C-r" #'ivy-reverse-i-search))
 
-(after! lispy
-  (lispy-set-key-theme '(lispy))
+(remove-hook! (lisp-mode emacs-lisp-mode clojure-mode) #'lispy-mode) ; Not using lispy, remove the Doom module's hooks.
 
-  ;; (map! :map lispy-mode-map-lispy
-  ;;       "[" #'lispy-brackets)
-  )
+(add-hook! prog-mode #'lispyville-mode)
 
 (after! lispyville
   (lispyville-set-key-theme
-   '(c-u
-     prettify
-     text-objects
-     commentary
-     slurp/barf-cp
-     additional-wrap))
-  (setq lispyville-barf-stay-with-closing t)
-
+   '(operators
+     c-w
+     c-u
+     commentary))
   (map! :map lispyville-mode-map
-        "s-C-j" #'lispyville-forward-sexp
-        "s-C-k" #'lispyville-backward-sexp
-        "s-C-h" #'lispyville-backward-up-list
-        "s-C-l" #'lispyville-up-list
-        "s-C-u" #'lispyville-beginning-of-next-defun
-        "s-C-i" #'lispyville-beginning-of-defun
-        "s-C-o" #'lispyville-end-of-defun))
+        "s-C-a" #'lispyville-drag-backward
+        "s-C-g" #'lispyville-drag-forward
+        "s-C-p" #'lispyville-prettify
+        (:prefix "s-p"
+         "R" #'lispyville-raise-list)))
 
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
@@ -209,15 +209,48 @@
 (after! paren
   (setq! show-paren-delay 0))
 
+(after! smartparens
+  (cl-flet ((move-handling-eol
+             (lambda (f)
+               (cmd!
+                (when (= (- (line-end-position) (point)) 1)
+                  (let ((evil-move-beyond-eol t))
+                    (evil-forward-char)))
+                (call-interactively f)))))
+    (map! :map smartparens-mode-map
+          "s-C-h" (move-handling-eol #'sp-backward-sexp)
+          "s-C-l" (move-handling-eol #'sp-forward-sexp)
+          "s-C-u" #'sp-backward-up-sexp
+          "s-C-o" #'sp-up-sexp
+          "s-C-m" #'sp-backward-down-sexp
+          "s-C-." #'sp-down-sexp
+          "s-C-d" #'sp-splice-sexp
+          "s-C-s" #'sp-splice-sexp-killing-backward
+          "s-C-f" #'sp-splice-sexp-killing-forward
+          "s-C-w" #'sp-backward-slurp-sexp
+          "s-C-r" #'sp-forward-slurp-sexp
+          "s-C-x" #'sp-backward-barf-sexp
+          "s-C-v" #'sp-forward-barf-sexp
+          (:prefix "s-p"
+           "(" #'sp-wrap-round
+           "[" #'sp-wrap-square
+           "{" #'sp-wrap-curly
+           "s" #'sp-split-sexp
+           "j" #'sp-join-sexp
+           "r" #'sp-raise-sexp
+           "c" #'sp-convolute-sexp
+           "w" #'sp-rewrap-sexp))))
+
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
+
 
 
 (use-package! expand-region
   :commands er/expand-region
   :init
   (map! "s-C-i" #'er/expand-region
-        "s-C-o" #'er/contract-region)
+        "s-C-k" #'er/contract-region)
   :config
   ;; Copied from doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el::12
   (defadvice! my--quit-expand-region-a ()
