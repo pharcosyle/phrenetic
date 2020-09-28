@@ -51,8 +51,8 @@
            "s-o" "<tab>"
            "s-O" "<backtab>"
 
-           "s-e" "C-x C-e"
-           "s-E" "C-M-x")
+           "s-d e" "C-x C-e"
+           "s-d s-e" "C-M-x")
 
 (defalias 'original-yank-pop #'yank-pop)
 
@@ -92,11 +92,14 @@
 
       ;; These should be in `:after' (or their respective package) sections but I'm not certain how I want to do them yet and I'm lazy.
       (:prefix "s-d"
-       "d" (cmd! (evil-local-mode 'toggle)
+       "v" (cmd! (evil-local-mode 'toggle)
                  (when evil-local-mode (evil-normal-state)))
        "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
+       "r" #'projectile-replace
+       "p" #'+popup/raise
        "t" #'tldr
+       "b" #'org-save-all-org-buffers
        (:prefix "c"
         "f" #'org-gcal-fetch
         "s" #'org-gcal-sync
@@ -180,6 +183,7 @@
      c-w
      c-u
      commentary))
+
   (map! :map lispyville-mode-map
         "s-C-a" #'lispyville-drag-backward
         "s-C-g" #'lispyville-drag-forward
@@ -271,7 +275,7 @@
 
 
 
-(setq doom-theme 'doom-pharcosyle-atomic
+(setq doom-theme 'doom-pharcosyle-nuclear
       doom-font (font-spec :family "Source Code Variable" :size 12)
       rainbow-delimiters-max-face-count 8)
 
@@ -279,7 +283,7 @@
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
-(custom-theme-set-faces! 'doom-pharcosyle-atomic
+(custom-theme-set-faces! 'doom-pharcosyle-nuclear
   '(font-lock-comment-face :foreground "#63677F")
   '(font-lock-comment-delimiter-face :foreground "#939abd")
   `(font-lock-doc-face :foreground ,(doom-color 'cyan))
