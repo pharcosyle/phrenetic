@@ -196,6 +196,7 @@
 
 (after! org
   (setq org-agenda-files `(,org-directory "~/org/projects" "~/org/gcal")
+        org-log-done 'time
         org-priority-lowest ?E
         org-priority-default ?C
         org-priority-faces `((?A . ,(doom-color 'red))
