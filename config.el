@@ -22,6 +22,8 @@
 ;; I'd like to have this on but in the doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
 
+(setq mac-right-option-modifier 'meta)
+
 
 
 (setq scroll-margin 10
@@ -172,6 +174,13 @@
         ;; Doom overrides these, restore them.
         "C-k" #'ivy-kill-line
         "C-r" #'ivy-reverse-i-search))
+
+(after! ivy-hydra
+  (defhydra+ hydra-ivy ()
+    ;; Doom overrides these imporant ivy hydra heads: ~/.emacs.d/modules/completion/ivy/autoload/hydras.el
+    ("m" ivy-mark)
+    ("u" ivy-unmark)
+    ("t" ivy-toggle-marks)))
 
 (remove-hook! (lisp-mode emacs-lisp-mode clojure-mode) #'lispy-mode) ; Not using lispy, remove the Doom module's hooks.
 
