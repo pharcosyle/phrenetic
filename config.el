@@ -19,10 +19,10 @@
               truncate-lines nil
               truncate-partial-width-windows 50)
 
+(setq mac-right-option-modifier 'meta)
+
 ;; I'd like to have this on but in the doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
-
-(setq mac-right-option-modifier 'meta)
 
 
 
