@@ -230,6 +230,9 @@
 (after! paren
   (setq! show-paren-delay 0))
 
+(after! recentf
+  (setq recentf-max-saved-items 500))
+
 (after! smartparens
   (cl-flet ((move-handling-eol
              (lambda (f)
