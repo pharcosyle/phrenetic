@@ -147,7 +147,7 @@
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
 
 (after! doom-modeline
-  (setq doom-modeline-checker-simple-format nil)
+  ;; (setq doom-modeline-checker-simple-format nil)
   (setq doom-modeline-persp-name t))
 
 (after! eshell
