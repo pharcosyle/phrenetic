@@ -246,7 +246,7 @@
           "s-C-l" (move-handling-eol #'sp-forward-sexp)
           "s-C-u" #'sp-backward-up-sexp
           "s-C-o" #'sp-up-sexp
-          "s-C-m" #'sp-backward-down-sexp
+          :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.emacs.d/modules/config/default/config.el:447
           "s-C-." #'sp-down-sexp
           "s-C-d" #'sp-splice-sexp
           "s-C-s" #'sp-splice-sexp-killing-backward
