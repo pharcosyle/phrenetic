@@ -224,8 +224,7 @@
         org-gcal-client-secret "UdMte0q2B3nMURYY0F1aqNYA"
         org-gcal-fetch-file-alist '(("pharcosyle@gmail.com" . "~/org/gcal/pharcosyle@gmail.com.org")
                                     ("addressbook%23contacts@group.v.calendar.google.com" . "~/org/gcal/contacts.org")
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . "~/org/gcal/holidays.org")
-                                    ("krzysztof@massrealty.com" . "~/org/gcal/krzysztof@massrealty.com.org"))))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . "~/org/gcal/holidays.org"))))
 
 (after! paren
   (setq! show-paren-delay 0))
@@ -328,6 +327,20 @@
 
 
 
+;;;; Projects
+
+;;; Hyperdrive
+
+(pushnew! safe-local-variable-values
+          '(cider-preferred-build-tool . shadow-cljs)
+          '(cider-default-cljs-repl . shadow)
+          '(cider-shadow-default-options . ":app")
+          '(cider-offer-to-open-cljs-app-in-browser . nil)
+          '(cider-clojure-cli-global-options . "-A:dev")
+          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
+          '(cider-clojure-cli-global-options . nil))
+
 (prodigy-define-service
   :name "Amplify Mock"
   :command "amplify"
@@ -342,15 +355,12 @@
   :cwd "~/Projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 
-(pushnew! safe-local-variable-values
-          '(cider-preferred-build-tool . shadow-cljs)
-          '(cider-default-cljs-repl . shadow)
-          '(cider-shadow-default-options . ":app")
-          '(cider-offer-to-open-cljs-app-in-browser . nil)
-          '(cider-clojure-cli-global-options . "-A:dev")
-          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
-          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
-          '(cider-clojure-cli-global-options . nil)
 
+;;; Massrealty
+
+(pushnew! safe-local-variable-values
           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
           '(ssh-deploy-automatically-detect-remote-changes . t))
+
+;; (after! org-gcal
+;;   (add-to-list 'org-gcal-fetch-file-alist '("krzysztof@massrealty.com" . "~/org/gcal/krzysztof@massrealty.com.org") 'append))
