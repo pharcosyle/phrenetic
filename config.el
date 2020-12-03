@@ -3,10 +3,15 @@
 (use-package! dash)
 
 
+
 (setq user-full-name "Krzysztof Baranowski"
       user-mail-address "pharcosyle@gmail.com")
 
-;; (setq org-directory "~/org/")           ; Must be set before org loads.
+;; Must be set before org loads (I think this is just a Doom, not org-mode, requirement). Keep this even though the value is the default so I can use it in the derived constants below.
+(setq org-directory "~/org")
+
+(defconst my--org-dir (concat org-directory "/"))
+(defconst my--gcal-dir (concat my--org-dir "gcal/"))
 
 
 
@@ -21,10 +26,12 @@
 
 (setq mac-right-option-modifier 'meta)
 
-;; I'd like to have this on but in the doom code it says it's more efficient not to.
+;; I'd like to have this on but in the Doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
 
 
+
+;;;; General
 
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
@@ -34,6 +41,8 @@
 
 
 
+;;;; Keybindings
+
 (setq doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 
@@ -42,39 +51,42 @@
     (-lambda ((to from))
       (define-key key-translation-map (kbd to) (kbd from)))))
 
-(my--trans "s-n" "<escape>"
+(my--trans "C-h" "DEL"
+
+           "s-n" "<escape>"
+
+           "s-i" "<tab>"
+           "s-I" "<backtab>"
 
            "s-h" "<left>"
            "s-j" "<down>"
            "s-k" "<up>"
            "s-l" "<right>"
 
-           "s-i" "RET"
-           "s-o" "<tab>"
-           "s-O" "<backtab>"
-
            "s-d e" "C-x C-e"
            "s-d s-e" "C-M-x")
 
 (defalias 'original-yank-pop #'yank-pop)
 
+;; Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
 (map! "s-V" #'original-yank-pop
 
-      :v "s-x" nil
-
+      "s-;" (lookup-key doom-leader-map (kbd ":"))
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
-              ;; `swiper' hangs initially when `visual-line-mode' is active. Plus doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
+              ;; `swiper' hangs initially when `visual-line-mode' is active. Plus Doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
               (cmd! (if visual-line-mode
                         (letf! ((#'swiper #'swiper-isearch))
                           (f))
                       (f))))
       "s-r" (lookup-key doom-leader-map (kbd "f r"))
       "s-w" (lookup-key doom-leader-map (kbd "b k"))
-      "s-W" (lookup-key doom-leader-map (kbd "w d"))
-      "s-M-w" (cmd! (kill-current-buffer) (+workspace/close-window-or-workspace))
+      "s-d w" (lookup-key doom-leader-map (kbd "w d"))
+      "s-d s-w" (cmd! (kill-current-buffer)
+                      (+workspace/close-window-or-workspace))
       "s-g" (lookup-key doom-leader-map (kbd "g g"))
       "s-," (lookup-key doom-leader-map (kbd "w w"))
+      "s-y" (lookup-key doom-leader-map (kbd "i y"))
       "s-{" (lookup-key doom-leader-map (kbd "b p"))
       "s-}" (lookup-key doom-leader-map (kbd "b n"))
 
@@ -92,14 +104,13 @@
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
 
-      ;; These should be in `:after' (or their respective package) sections but I'm not certain how I want to do them yet and I'm lazy.
       (:prefix "s-d"
-       "v" (cmd! (evil-local-mode 'toggle)
+       "b" (cmd! (evil-local-mode 'toggle)
                  (when evil-local-mode (evil-normal-state)))
        "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
        "r" #'projectile-replace
-       "p" #'+popup/raise
+       "p" (lookup-key global-map (kbd "C-~"))
        "t" #'tldr
        "b" #'org-save-all-org-buffers
        (:prefix "c"
@@ -109,14 +120,16 @@
 
 
 
-(defun +my--sp-strict-h ()
+;;;; Packages
+
+(defun my--sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
              #'turn-on-smartparens-strict-mode
              (lambda ()
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 
-(add-hook! prog-mode #'+my--sp-strict-h)
+(add-hook! prog-mode #'my--sp-strict-h)
 
 (after! avy
   (setq avy-single-candidate-jump t))
@@ -125,14 +138,14 @@
 
 (after! evil-org
   (map! :map evil-org-mode-map
-        :nv "C-i" nil))
+        :nv "C-i" nil)) ; Prevent `jump-forward' from being overriden.
 
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode
            #'highlight-numbers-mode
            #'rainbow-delimiters-mode
            #'yas-minor-mode-on
-           #'+my--sp-strict-h)
+           #'my--sp-strict-h)
 
 (after! cider
   (setq cider-repl-history-size 1000000
@@ -146,15 +159,24 @@
 (after! counsel
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
 
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-persp-name t))
-
 (after! eshell
   (setq eshell-history-size nil))
 
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
+
+(use-package! expand-region
+  :commands er/expand-region
+  :init
+  (map! "s-o" #'er/expand-region
+        "s-O" #'er/contract-region)
+  :config
+  ;; Copied from Doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el:12
+  (defadvice! my--quit-expand-region-a ()
+    "Properly abort an expand-region region."
+    :before '(evil-escape doom/escape evil-force-normal-state)
+    (when (memq last-command '(er/expand-region er/contract-region))
+      (er/contract-region 0))))
 
 (remove-hook! (prog-mode text-mode conf-mode) #'highlight-indent-guides-mode)
 
@@ -174,10 +196,7 @@
         "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
                             (ivy-alt-done)
                           (right-char)))
-
-        ;; Doom overrides these, restore them.
-        "C-k" #'ivy-kill-line
-        "C-r" #'ivy-reverse-i-search))
+        "C-r" #'ivy-reverse-i-search)) ; Doom overrides this, restore it.
 
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
@@ -198,17 +217,22 @@
      commentary))
 
   (map! :map lispyville-mode-map
+        "s-C-j" #'lispyville-beginning-of-next-defun
+        "s-C-k" #'lispyville-beginning-of-defun
+        "s-C-," #'lispyville-end-of-defun
         "s-C-a" #'lispyville-drag-backward
         "s-C-g" #'lispyville-drag-forward
         "s-C-p" #'lispyville-prettify
-        (:prefix "s-p"
+        (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 
 (after! org
-  (setq org-agenda-files `(,org-directory "~/org/projects" "~/org/gcal")
+  (setq org-agenda-files `(,my--org-dir
+                           ,my--gcal-dir
+                           ,(concat my--org-dir "projects"))
         org-log-done 'time
         org-priority-lowest ?E
         org-priority-default ?C
@@ -219,83 +243,63 @@
                              (?E . ,(doom-color 'green)))))
 
 (after! org-gcal
-  (setq persist--directory-location (concat doom-etc-dir "persist")
-        org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret "UdMte0q2B3nMURYY0F1aqNYA"
-        org-gcal-fetch-file-alist '(("pharcosyle@gmail.com" . "~/org/gcal/pharcosyle@gmail.com.org")
-                                    ("addressbook%23contacts@group.v.calendar.google.com" . "~/org/gcal/contacts.org")
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . "~/org/gcal/holidays.org"))))
+        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat my--gcal-dir "pharcosyle@gmail.com.org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat my--gcal-dir "contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat my--gcal-dir "holidays.org")))
+        org-gcal-recurring-events-mode 'nested))
 
 (after! paren
   (setq! show-paren-delay 0))
+
+;; Only used by `org-gcal' at the time of this writing.
+(after! persist
+  (setq persist--directory-location (concat doom-etc-dir "persist")))
 
 (after! recentf
   (setq recentf-max-saved-items 500))
 
 (after! smartparens
-  (cl-flet ((move-handling-eol
-             (lambda (f)
-               (cmd!
-                (when (= (- (line-end-position) (point)) 1)
-                  (let ((evil-move-beyond-eol t))
-                    (evil-forward-char)))
-                (call-interactively f)))))
-    (map! :map smartparens-mode-map
-          "s-C-h" (move-handling-eol #'sp-backward-sexp)
-          "s-C-l" (move-handling-eol #'sp-forward-sexp)
-          "s-C-u" #'sp-backward-up-sexp
-          "s-C-o" #'sp-up-sexp
-          :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.emacs.d/modules/config/default/config.el:447
-          "s-C-." #'sp-down-sexp
-          "s-C-c" #'sp-splice-sexp
-          "s-C-s" #'sp-splice-sexp-killing-backward
-          "s-C-f" #'sp-splice-sexp-killing-forward
-          "s-C-x" #'sp-backward-slurp-sexp
-          "s-C-v" #'sp-forward-slurp-sexp
-          "s-C-w" #'sp-backward-barf-sexp
-          "s-C-r" #'sp-forward-barf-sexp
-          (:prefix "s-p"
-           "(" #'sp-wrap-round
-           "[" #'sp-wrap-square
-           "{" #'sp-wrap-curly
-           "s" #'sp-split-sexp
-           "j" #'sp-join-sexp
-           "r" #'sp-raise-sexp
-           "c" #'sp-convolute-sexp
-           "w" #'sp-rewrap-sexp))))
-
-;; (after! undo-tree
-;;   (setq undo-tree-visualizer-timestamps t))
-
-
-
-(use-package! expand-region
-  :commands er/expand-region
-  :init
-  (map! "s-C-i" #'er/expand-region
-        "s-C-k" #'er/contract-region)
-  :config
-  ;; Copied from doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el:12
-  (defadvice! my--quit-expand-region-a ()
-    "Properly abort an expand-region region."
-    :before '(evil-escape doom/escape evil-force-normal-state)
-    (when (memq last-command '(er/expand-region er/contract-region))
-      (er/contract-region 0))))
+  (map! :map smartparens-mode-map
+        "s-C-h" #'sp-backward-sexp
+        "s-C-l" #'sp-forward-sexp
+        "s-C-u" #'sp-backward-up-sexp
+        "s-C-o" #'sp-up-sexp
+        :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.emacs.d/modules/config/default/config.el:447
+        "s-C-." #'sp-down-sexp
+        "s-C-c" #'sp-splice-sexp
+        "s-C-s" #'sp-splice-sexp-killing-backward
+        "s-C-f" #'sp-splice-sexp-killing-forward
+        "s-C-x" #'sp-backward-slurp-sexp
+        "s-C-v" #'sp-forward-slurp-sexp
+        "s-C-w" #'sp-backward-barf-sexp
+        "s-C-r" #'sp-forward-barf-sexp
+        (:prefix "s-C-;"
+         "(" #'sp-wrap-round
+         "[" #'sp-wrap-square
+         "{" #'sp-wrap-curly
+         "s" #'sp-split-sexp
+         "j" #'sp-join-sexp
+         "r" #'sp-raise-sexp
+         "c" #'sp-convolute-sexp
+         "w" #'sp-rewrap-sexp)))
 
 (use-package! tldr
   :defer t
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 
+;; (after! undo-tree
+;;   (setq undo-tree-visualizer-timestamps t))
 
+
+
+;;;; UI
 
 (setq doom-theme 'doom-pharcosyle-nuclear
       doom-font (font-spec :family "Source Code Variable" :size 12)
       rainbow-delimiters-max-face-count 8)
-
-(after! evil
-  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
 (custom-theme-set-faces! 'doom-pharcosyle-nuclear
   '(font-lock-comment-face :foreground "#63677F")
@@ -314,11 +318,19 @@
   `(clojure-interop-method-face :foreground ,(doom-color 'cyan))
   `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))
 
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-persp-name t))
+
+(after! evil
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
 
-;; Can I move this line up without the "weird sizing things" my old config referrred to? Do I care?
-;; - Update: Probably do this instead, it'll work on additional frames and presumably avoid "weird sizing things": https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
-;; (toggle-frame-fullscreen)
+
+;;; Screen
+
+;; Do this instead once I'm not working on a broken screen: https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
 (setq initial-frame-alist '((width . 193) (fullscreen . fullheight)))
 (set-frame-position (selected-frame) 73 23)
 
@@ -360,4 +372,4 @@
           '(ssh-deploy-automatically-detect-remote-changes . t))
 
 ;; (after! org-gcal
-;;   (add-to-list 'org-gcal-fetch-file-alist '("krzysztof@massrealty.com" . "~/org/gcal/krzysztof@massrealty.com.org") 'append))
+;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat my--gcal-dir "krzysztof@massrealty.com.org")) 'append))
