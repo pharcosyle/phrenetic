@@ -282,9 +282,6 @@
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 
-(use-package! ivy-avy
-  :after ivy)
-
 (use-package! tldr
   :defer t
   :config
