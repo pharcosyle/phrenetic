@@ -253,10 +253,6 @@
 (after! paren
   (setq! show-paren-delay 0))
 
-;; Only used by `org-gcal' at the time of this writing.
-(after! persist
-  (setq persist--directory-location (concat doom-etc-dir "persist")))
-
 (after! recentf
   (setq recentf-max-saved-items 500))
 
