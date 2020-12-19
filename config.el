@@ -136,10 +136,6 @@
 
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
 
-(after! evil-org
-  (map! :map evil-org-mode-map
-        :nv "C-i" nil)) ; Prevent `jump-forward' from being overriden.
-
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode
            #'highlight-numbers-mode
