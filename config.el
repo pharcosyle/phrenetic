@@ -172,7 +172,7 @@
         "s-O" #'er/contract-region)
   :config
   ;; Copied from Doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el:12
-  (defadvice! my--quit-expand-region-a ()
+  (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
     :before '(evil-escape doom/escape evil-force-normal-state)
     (when (memq last-command '(er/expand-region er/contract-region))
