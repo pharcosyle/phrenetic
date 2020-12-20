@@ -53,7 +53,7 @@
 
 (my--trans "C-h" "DEL"
 
-           "s-n" "<escape>"
+           "s-n" "s-C-M-9" ; TODO  Remove this once I've broken the habit of using `s-n'.
 
            "s-i" "<tab>"
            "s-I" "<backtab>"
@@ -112,7 +112,7 @@
        "r" #'projectile-replace
        "p" (lookup-key global-map (kbd "C-~"))
        "t" #'tldr
-       "b" #'org-save-all-org-buffers
+       "s" #'org-save-all-org-buffers
        (:prefix "c"
         "f" #'org-gcal-fetch
         "s" #'org-gcal-sync
@@ -323,8 +323,8 @@
 ;;; Screen
 
 ;; Do this instead once I'm not working on a broken screen: https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
-(setq initial-frame-alist '((width . 193) (fullscreen . fullheight)))
-(set-frame-position (selected-frame) 73 23)
+(setq initial-frame-alist '((width . 192) (fullscreen . fullheight)))
+(set-frame-position (selected-frame) 80 23)
 
 
 
