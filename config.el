@@ -162,15 +162,16 @@
   (setq evil-multiedit-follow-matches t))
 
 (use-package! expand-region
-  :commands er/expand-region
+  :defer t
   :init
-  (map! "s-o" #'er/expand-region
-        "s-O" #'er/contract-region)
+  (map! :nv "s-o" #'er/expand-region
+        :nv "s-O" #'er/contract-region)
   :config
-  ;; Copied from Doom config (with, at the time of this writing, one modification): ~/.emacs.d/modules/config/default/+emacs.el:12
+  (setq expand-region-fast-keys-enabled nil) ; Current mapping of "s-o" means repeat key will be "o" which conflicts with `exchange-point-and-mark'
+  ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
   (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
-    :before '(evil-escape doom/escape evil-force-normal-state)
+    :before '(evil-escape doom/escape)
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 
