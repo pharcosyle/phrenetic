@@ -187,6 +187,12 @@
        ;;literate
        (default +bindings +smartparens))
 
+
+
+(use-package-hook! clojure-mode
+  :post-init
+  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
+
 (use-package-hook! lispyville
   :post-init
   (setq lispyville-key-theme nil))

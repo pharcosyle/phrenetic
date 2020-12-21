@@ -150,8 +150,6 @@
 (add-hook! clj-refactor-mode
   (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 
-(setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode laods so don't put this in a hook. ; TODO temporary binding
-
 (after! counsel
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
 
