@@ -238,13 +238,12 @@
                              (?E . ,(doom-color 'green)))))
 
 (after! org-gcal
-  (let ((client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"))
-    (setq org-gcal-client-id client-id
-          org-gcal-client-secret (-> (car (auth-source-search :host client-id)) (plist-get :secret) funcall)
-          org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat my--gcal-dir "pharcosyle@gmail.com.org"))
-                                      ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat my--gcal-dir "contacts.org"))
-                                      ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat my--gcal-dir "holidays.org")))
-          org-gcal-recurring-events-mode 'nested)))
+  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+        org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat my--gcal-dir "pharcosyle@gmail.com.org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat my--gcal-dir "contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat my--gcal-dir "holidays.org")))
+        org-gcal-recurring-events-mode 'nested))
 
 (after! paren
   (setq! show-paren-delay 0))
