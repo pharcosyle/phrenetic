@@ -181,7 +181,8 @@
 
 (after! ivy
   (setq +ivy-buffer-preview t
-        ivy-extra-directories nil)
+        ivy-extra-directories nil
+        ivy-count-format "(%d/%d) ")
   (dolist (i '(counsel-yank-pop
                counsel-evil-registers))
     (add-to-list 'ivy-height-alist `(,i . 10)))
