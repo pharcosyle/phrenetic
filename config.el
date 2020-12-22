@@ -153,6 +153,10 @@
 (after! counsel
   (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
 
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-persp-name t))
+
 (after! eshell
   (setq eshell-history-size nil))
 
@@ -308,10 +312,6 @@
   `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))
   `(clojure-interop-method-face :foreground ,(doom-color 'cyan))
   `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))
-
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-persp-name t))
 
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
