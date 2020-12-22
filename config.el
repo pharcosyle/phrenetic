@@ -107,14 +107,14 @@
       "s-K" #'evil-scroll-up
 
       (:prefix "s-d"
-       "b" (cmd! (evil-local-mode 'toggle)
-                 (when evil-local-mode (evil-normal-state)))
        "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
        "r" #'projectile-replace
        "p" (lookup-key global-map (kbd "C-~"))
        "t" #'tldr
        "s" #'org-save-all-org-buffers
+       ;; "b" (cmd! (evil-local-mode 'toggle)
+       ;;           (when evil-local-mode (evil-normal-state)))
        (:prefix "c"
         "f" #'org-gcal-fetch
         "s" #'org-gcal-sync
