@@ -171,7 +171,7 @@
   (map! :nv "s-o" #'er/expand-region
         :nv "s-O" #'er/contract-region)
   :config
-  (setq expand-region-fast-keys-enabled nil) ; Current mapping of "s-o" means repeat key will be "o" which conflicts with `exchange-point-and-mark'
+  (setq expand-region-fast-keys-enabled nil) ; Current mapping of `s-o'means repeat key will be "o" which conflicts with `exchange-point-and-mark'
   ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
   (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
@@ -192,12 +192,15 @@
   (map! :map ivy-minibuffer-map
         "s-J" #'ivy-scroll-up-command
         "s-K" #'ivy-scroll-down-command
+
+        ;; These two aren't super necessary anymore now that I have `C-h'remapped: I can navigate directories in counsel using control-h/j/k/l
         "<left>" (cmd! (if (and ivy--directory (= (minibuffer-prompt-end) (point)))
                            (ivy-backward-delete-char)
                          (left-char)))
         "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
                             (ivy-alt-done)
                           (right-char)))
+
         "C-r" #'ivy-reverse-i-search)) ; Doom overrides this, restore it.
 
 (after! ivy-hydra
