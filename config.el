@@ -63,6 +63,8 @@
            "s-k" "<up>"
            "s-l" "<right>"
 
+           "s-H" "C-h"
+
            "s-d e" "C-x C-e"
            "s-d s-e" "C-M-x")
 
