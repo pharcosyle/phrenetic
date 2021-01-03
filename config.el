@@ -66,6 +66,8 @@
            "s-d e" "C-x C-e"
            "s-d s-e" "C-M-x")
 
+(setq help-char (string-to-char "\C-_"))
+
 (defalias 'original-yank-pop #'yank-pop)
 
 ;; Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
@@ -175,7 +177,7 @@
   (map! :nv "s-o" #'er/expand-region
         :nv "s-O" #'er/contract-region)
   :config
-  (setq expand-region-fast-keys-enabled nil) ; Current mapping of `s-o'means repeat key will be "o" which conflicts with `exchange-point-and-mark'
+  (setq expand-region-fast-keys-enabled nil) ; Current mapping of `s-o'means repeat key will be `o' which conflicts with `exchange-point-and-mark'
   ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
   (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
