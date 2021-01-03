@@ -43,9 +43,6 @@
 
 ;;;; Keybindings
 
-(setq doom-localleader-key "s-m"
-      doom-localleader-alt-key "s-m")
-
 (defun my--trans (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
