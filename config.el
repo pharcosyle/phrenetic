@@ -53,8 +53,6 @@
 
 (my--trans "C-h" "DEL"
 
-           "s-n" "s-C-M-9" ; TODO  Remove this once I've broken the habit of using `s-n'.
-
            "s-i" "<tab>"
            "s-I" "<backtab>"
 
@@ -63,7 +61,7 @@
            "s-k" "<up>"
            "s-l" "<right>"
 
-           "s-H" "C-h"
+           "s-e" "C-h"
 
            "s-d e" "C-x C-e"
            "s-d s-e" "C-M-x")
@@ -138,6 +136,9 @@
 
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
 
+;; (after! clojure-mode
+;;   (set-ligatures! 'clojure-mode :lambda "fn"))
+
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode
            #'highlight-numbers-mode
@@ -158,6 +159,9 @@
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
   (setq doom-modeline-persp-name t))
+
+(after! emojify
+  (setq emojify-display-style 'unicode))
 
 (after! eshell
   (setq eshell-history-size nil))
@@ -291,6 +295,9 @@
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 
+(after! undo-fu
+  (setq undo-fu-ignore-keyboard-quit t))
+
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 
@@ -299,7 +306,7 @@
 ;;;; UI
 
 (setq doom-theme 'doom-pharcosyle-nuclear
-      doom-font (font-spec :family "Source Code Variable" :size 12)
+      doom-font (font-spec :family "Source Code Pro" :size 12)
       rainbow-delimiters-max-face-count 8)
 
 (custom-theme-set-faces! 'doom-pharcosyle-nuclear
@@ -307,7 +314,7 @@
   '(font-lock-comment-delimiter-face :foreground "#939abd")
   `(font-lock-doc-face :foreground ,(doom-color 'cyan))
   ;; `(line-number :inherit 'default :foreground ,(doom-color 'base5) :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
-  `(line-number-current-line :inherit (hl-line default) :foreground "#AEB9F3" :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
+  `(line-number-current-line :inherit (hl-line default) :foreground ,(doom-color 'violet) :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
   `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
   `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
   `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
@@ -324,12 +331,14 @@
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
 
-
 ;;; Screen
 
-;; Do this instead once I'm not working on a broken screen: https://github.com/hlissner/doom-emacs/blob/develop/docs/faq.org#how-do-i-maximizefullscreen-emacs-on-startup
-(setq initial-frame-alist '((width . 192) (fullscreen . fullheight)))
+(add-to-list 'initial-frame-alist '(fullscreen . fullheight))
+(add-to-list 'initial-frame-alist '(width . 192))
 (set-frame-position (selected-frame) 80 23)
+
+;; Do this instead once I'm not working on a broken screen:
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
 
 
@@ -364,9 +373,9 @@
 
 ;;; Massrealty
 
-(pushnew! safe-local-variable-values
-          '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
-          '(ssh-deploy-automatically-detect-remote-changes . t))
+;; (pushnew! safe-local-variable-values
+;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
+;;           '(ssh-deploy-automatically-detect-remote-changes . t))
 
 ;; (after! org-gcal
 ;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat my--gcal-dir "krzysztof@massrealty.com.org")) 'append))
