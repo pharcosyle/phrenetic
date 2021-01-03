@@ -112,14 +112,15 @@ determine the exact padding."
    (evil-goggles-default-face :inherit 'region :background (doom-blend region bg 0.5))
 
    ((line-number &override) :foreground base4)
-   ((line-number-current-line &override) :foreground fg)
+   ((line-number-current-line &override) :foreground violet)
 
    (font-lock-comment-face
     :foreground comments
     :background (if doom-pharcosyle-nuclear-comment-bg (doom-lighten bg 0.05)))
+   (font-lock-comment-delimiter-face :foreground "#939abd")
    (font-lock-doc-face
     :inherit 'font-lock-comment-face
-    :foreground doc-comments)
+    :foreground cyan)
 
    (mode-line
     :background modeline-bg :foreground modeline-fg
@@ -129,6 +130,15 @@ determine the exact padding."
     :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
    (mode-line-emphasis
     :foreground (if -modeline-bright base8 highlight))
+
+   (rainbow-delimiters-depth-1-face :foreground fg)
+   (rainbow-delimiters-depth-2-face :foreground magenta)
+   (rainbow-delimiters-depth-3-face :foreground blue)
+   (rainbow-delimiters-depth-4-face :foreground cyan)
+   (rainbow-delimiters-depth-5-face :foreground green)
+   (rainbow-delimiters-depth-6-face :foreground yellow)
+   (rainbow-delimiters-depth-7-face :foreground orange)
+   (rainbow-delimiters-depth-8-face :foreground red)
 
    (solaire-mode-line-face
     :inherit 'mode-line
@@ -149,6 +159,10 @@ determine the exact padding."
    (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
 
    ;; --- major-mode faces -------------------
+   ;; clojure-mode
+   (clojure-interop-method-face :foreground cyan)
+   (clojure-character-face :foreground violet :weight bold)
+
    ;; css-mode / scss-mode
    (css-proprietary-property :foreground orange)
    (css-property             :foreground green)

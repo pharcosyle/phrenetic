@@ -309,23 +309,6 @@
       doom-font (font-spec :family "Source Code Pro" :size 12)
       rainbow-delimiters-max-face-count 8)
 
-(custom-theme-set-faces! 'doom-pharcosyle-nuclear
-  '(font-lock-comment-face :foreground "#63677F")
-  '(font-lock-comment-delimiter-face :foreground "#939abd")
-  `(font-lock-doc-face :foreground ,(doom-color 'cyan))
-  ;; `(line-number :inherit 'default :foreground ,(doom-color 'base5) :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
-  `(line-number-current-line :inherit (hl-line default) :foreground ,(doom-color 'violet) :distant-foreground nil :weight normal :italic nil :underline nil :strike-through nil)
-  `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
-  `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
-  `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
-  `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
-  `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
-  `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
-  `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
-  `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))
-  `(clojure-interop-method-face :foreground ,(doom-color 'cyan))
-  `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))
-
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
