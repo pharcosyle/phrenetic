@@ -161,7 +161,7 @@ determine the exact padding."
    ;; --- major-mode faces -------------------
    ;; clojure-mode
    (clojure-interop-method-face :foreground cyan)
-   (clojure-character-face :foreground violet :weight bold)
+   (clojure-character-face :foreground violet :weight 'bold)
 
    ;; css-mode / scss-mode
    (css-proprietary-property :foreground orange)
