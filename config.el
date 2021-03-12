@@ -315,12 +315,12 @@
 
 ;;; Screen
 
-(add-to-list 'initial-frame-alist '(fullscreen . fullheight))
+(add-to-list 'initial-frame-alist '(height . 56))
 (add-to-list 'initial-frame-alist '(width . 192))
 (set-frame-position (selected-frame) 80 23)
 
-;; REVIEW Do this instead once I'm not working on a broken screen
-;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+;; REVIEW Do this instead once I'm not working on a broken screen. I'm concerned the `fullboth' behavior I want is specific to `emacs-mac' which I won't be using much longer.
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth)) ; Make Emacs fill the screen (including the mac menu bar area) without creating a new workspace.
 
 
 
