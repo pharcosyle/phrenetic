@@ -49,6 +49,7 @@
       (define-key key-translation-map (kbd to) (kbd from)))))
 
 (my--trans "C-h" "DEL"
+           "s-H" "C-h" ; REVIEW I don't like this binding
 
            "s-i" "<tab>"
            "s-I" "<backtab>"
@@ -57,8 +58,6 @@
            "s-j" "<down>"
            "s-k" "<up>"
            "s-l" "<right>"
-
-           "s-e" "C-h"
 
            "s-d e" "C-x C-e"
            "s-d s-e" "C-M-x")
@@ -171,10 +170,10 @@
 (use-package! expand-region
   :defer t
   :init
-  (map! :nv "s-o" #'er/expand-region
-        :nv "s-O" #'er/contract-region)
+  (map! :nv "s-e" #'er/expand-region
+        :nv "s-E" #'er/contract-region)
   :config
-  (setq expand-region-fast-keys-enabled nil) ; Current mapping of `s-o' means repeat key will be `o' which conflicts with `exchange-point-and-mark'
+  (setq expand-region-fast-keys-enabled nil) ; Unnecessary, my mapping is conventient enough and I don't want the repeat key to conflict with anything.
   ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
   (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
