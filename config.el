@@ -57,10 +57,7 @@
            "s-h" "<left>"
            "s-j" "<down>"
            "s-k" "<up>"
-           "s-l" "<right>"
-
-           "s-d e" "C-x C-e"
-           "s-d s-e" "C-M-x")
+           "s-l" "<right>")
 
 (setq help-char (string-to-char "\C-_"))
 
