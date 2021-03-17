@@ -49,7 +49,7 @@
       (define-key key-translation-map (kbd to) (kbd from)))))
 
 (my--trans "C-h" "DEL"
-           "s-H" "C-h" ; REVIEW I don't like this binding
+           "s-H" "C-h" ; REVIEW I really don't like this binding
 
            "s-i" "<tab>"
            "s-I" "<backtab>"
@@ -66,7 +66,7 @@
 
 (defalias 'original-yank-pop #'yank-pop)
 
-;; Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
+;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
 (map! "s-V" #'original-yank-pop
 
       "s-;" (lookup-key doom-leader-map (kbd ":"))
