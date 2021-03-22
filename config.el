@@ -191,15 +191,6 @@
   (map! :map ivy-minibuffer-map
         "s-J" #'ivy-scroll-up-command
         "s-K" #'ivy-scroll-down-command
-
-        ;; These two aren't super necessary anymore now that I have `C-h' remapped: I can navigate directories in counsel using control-h/j/k/l
-        "<left>" (cmd! (if (and ivy--directory (= (minibuffer-prompt-end) (point)))
-                           (ivy-backward-delete-char)
-                         (left-char)))
-        "<right>" (cmd! (if (ivy-alist-setting '((read-file-name-internal . t)))
-                            (ivy-alt-done)
-                          (right-char)))
-
         "C-r" #'ivy-reverse-i-search)) ; Doom overrides this, restore it.
 
 (after! ivy-hydra
