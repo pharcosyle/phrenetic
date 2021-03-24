@@ -31,6 +31,7 @@
        multiple-cursors
        rotate-text
        snippets
+       word-wrap
 
        :emacs
        (dired +icons)
@@ -55,6 +56,7 @@
        pdf
        prodigy
        rgb
+       taskrunner
 
        :os
        (:if IS-MAC macos)
