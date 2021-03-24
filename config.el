@@ -17,14 +17,9 @@
 
 ;;;; Doom resets
 
-(setq-default indent-tabs-mode t
-              word-wrap nil
-
-              ;; I suspect these (and the default `visual-line-mode' for text-modes Doom does) will cause slowdowns in large files, I may want to remove them (selectively or altogether).
-              truncate-lines nil
-              truncate-partial-width-windows 50)
-
 (setq mac-right-option-modifier 'left)
+
+(setq-default indent-tabs-mode t)
 
 ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
