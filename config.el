@@ -79,9 +79,11 @@
                       (+workspace/close-window-or-workspace))
       "s-g" (lookup-key doom-leader-map (kbd "g g"))
       "s-," (lookup-key doom-leader-map (kbd "w w"))
+      "s-<" (lookup-key doom-leader-map (kbd "w W"))
       "s-y" (lookup-key doom-leader-map (kbd "i y"))
       "s-{" (lookup-key doom-leader-map (kbd "b p"))
       "s-}" (lookup-key doom-leader-map (kbd "b n"))
+      "s-p" (lookup-key global-map (kbd "C-~"))
 
       "s-u" (lookup-key doom-leader-map (kbd "u"))
       "s-U" #'negative-argument         ; Trying this out.
@@ -101,7 +103,6 @@
        "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
        "r" #'projectile-replace
-       "p" (lookup-key global-map (kbd "C-~"))
        "t" #'tldr
        "s" #'org-save-all-org-buffers
        ;; "b" (cmd! (evil-local-mode 'toggle)
