@@ -159,6 +159,11 @@
 (after! eshell
   (setq eshell-history-size nil))
 
+(after! evil-org
+  (map! :map evil-org-mode-map
+        :nv "C-j" #'outline-forward-same-level
+        :nv "C-k" #'outline-backward-same-level))
+
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 
