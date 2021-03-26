@@ -38,6 +38,10 @@
 
 ;;;; Keybindings
 
+(setq doom-leader-alt-key "s-;"
+      doom-localleader-key "s-m"
+      doom-localleader-alt-key "s-m")
+
 (defun my--trans (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
@@ -61,7 +65,6 @@
 ;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
 (map! "s-V" #'original-yank-pop
 
-      "s-;" (lookup-key doom-leader-map (kbd ":"))
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
               ;; `swiper' hangs initially when `visual-line-mode' is active. Plus Doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
