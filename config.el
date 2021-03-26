@@ -203,7 +203,9 @@
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
 
-(remove-hook! (lisp-mode emacs-lisp-mode clojure-mode) #'lispy-mode) ; Not using lispy, remove the Doom module's hooks.
+;; Not using lispy, remove the Doom module's hooks.
+(remove-hook! (lisp-mode emacs-lisp-mode clojure-mode) #'lispy-mode)
+(remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
 
 (add-hook! prog-mode #'lispyville-mode)
 
