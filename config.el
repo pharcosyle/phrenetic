@@ -105,6 +105,7 @@
        "r" #'projectile-replace
        "t" #'tldr
        "s" #'org-save-all-org-buffers
+       "a" #'link-hint-open-multiple-links
        ;; "b" (cmd! (evil-local-mode 'toggle)
        ;;           (when evil-local-mode (evil-normal-state)))
        (:prefix "c"
