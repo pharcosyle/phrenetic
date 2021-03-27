@@ -195,7 +195,9 @@
   (map! :map ivy-minibuffer-map
         "s-J" #'ivy-scroll-up-command
         "s-K" #'ivy-scroll-down-command
-        "C-r" #'ivy-reverse-i-search)) ; Doom overrides this, restore it.
+        "C-r" #'ivy-reverse-i-search ; Doom overrides this, restore it.
+        :map ivy-reverse-i-search-map
+        "C-k" #'previous-line))
 
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
