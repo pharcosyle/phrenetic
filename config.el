@@ -94,7 +94,7 @@
        "s-a" (lookup-key evilem-map (kbd "SPC")))
 
       "s-." #'repeat
-      "s->" #'repeat-complex-command ; Try using this where simple emacs `repeat' (C-x z) fails but I donno if it'll prove useful.
+      "s->" #'repeat-complex-command
 
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
@@ -175,7 +175,7 @@
   (map! :nv "s-e" #'er/expand-region
         :nv "s-E" #'er/contract-region)
   :config
-  (setq expand-region-fast-keys-enabled nil) ; Unnecessary, my mapping is conventient enough and I don't want the repeat key to conflict with anything.
+  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
   ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
   (defadvice! my--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
