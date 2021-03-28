@@ -69,7 +69,7 @@
        javascript
        markdown
        nix
-       org
+       (org +journal)
        rest
        sh
        web
