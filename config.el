@@ -13,6 +13,7 @@
 (defconst my--org-dir (concat org-directory "/"))
 (defconst my--gcal-dir (concat my--org-dir "gcal/"))
 
+(defconst my--very-big 1000000)
 
 
 ;;;; Doom resets
@@ -94,12 +95,13 @@
        "s-a" (lookup-key evilem-map (kbd "SPC")))
 
       "s-." #'repeat
-      "s->" #'repeat-complex-command
 
       "s-J" #'evil-scroll-down
       "s-K" #'evil-scroll-up
 
       (:prefix "s-d"
+       "." #'repeat-complex-command
+
        "h" #'git-gutter:popup-hunk
        "o" #'+macos/open-in-default-program
        "r" #'projectile-replace
@@ -142,7 +144,7 @@
            #'my--sp-strict-h)
 
 (after! cider
-  (setq cider-repl-history-size 1000000
+  (setq cider-repl-history-size my--very-big
         cider-print-options '(("length" 100))))
 
 (add-hook! clj-refactor-mode
@@ -231,7 +233,8 @@
          "R" #'lispyville-raise-list)))
 
 (after! magit
-  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
+  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
+  (setq transient-history-limit my--very-big))
 
 (after! org
   (setq org-agenda-files `(,my--org-dir
