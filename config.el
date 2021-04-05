@@ -128,6 +128,9 @@
 
 (add-hook! prog-mode #'my--sp-strict-h)
 
+(after! all-the-icons-dired
+  (setq all-the-icons-dired-monochrome nil))
+
 (after! avy
   (setq avy-single-candidate-jump t))
 
@@ -155,6 +158,7 @@
 
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
   (setq doom-modeline-persp-name t))
 
 (after! emojify
@@ -360,3 +364,10 @@
 
 ;; (after! org-gcal
 ;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat my--gcal-dir "krzysztof@massrealty.com.org")) 'append))
+
+
+
+
+;; TODO Remove this when spring cleaning is done
+(after! org
+  (add-to-list 'org-agenda-files (concat my--org-dir "spring_cleaning") 'append))
