@@ -154,7 +154,7 @@
   (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 
 (after! counsel
-  (setq! counsel-yank-pop-separator "\n--------------------------------\n"))
+  (setq counsel-yank-pop-separator "\n--------------------------------\n"))
 
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
