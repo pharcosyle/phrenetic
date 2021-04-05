@@ -136,8 +136,8 @@
 
 (setq-hook! emacs-lisp-mode indent-tabs-mode nil)
 
-;; (after! clojure-mode
-;;   (set-ligatures! 'clojure-mode :lambda "fn"))
+(after! clojure-mode
+  (set-ligatures! 'clojure-mode :lambda "fn"))
 
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode

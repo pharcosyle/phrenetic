@@ -12,6 +12,7 @@
        hl-todo
        hydra
        indent-guides
+       (ligatures +extra)
        modeline
        nav-flash
        ophints
