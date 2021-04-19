@@ -72,6 +72,7 @@
        nix
        (org +journal)
        rest
+       (scheme +guile)
        sh
        web
        yaml
