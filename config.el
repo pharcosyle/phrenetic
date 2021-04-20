@@ -50,7 +50,7 @@
       (define-key key-translation-map (kbd to) (kbd from)))))
 
 (my--trans "C-h" "DEL"
-           "s-H" "C-h" ; REVIEW I really don't like this binding
+           "C-?" "C-h"
 
            "s-i" "<tab>"
            "s-I" "<backtab>"
@@ -60,7 +60,7 @@
            "s-k" "<up>"
            "s-l" "<right>")
 
-(setq help-char (string-to-char "\C-_"))
+(setq help-char (string-to-char "\C-?"))
 
 (defalias 'original-yank-pop #'yank-pop)
 
