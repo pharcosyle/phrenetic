@@ -60,7 +60,7 @@
            "s-k" "<up>"
            "s-l" "<right>")
 
-(setq help-char (string-to-char "\C-?"))
+(setq help-char (string-to-char "\C-_"))
 
 (defalias 'original-yank-pop #'yank-pop)
 
