@@ -1,35 +1,35 @@
-;;; doom-pharcosyle-nuclear-theme.el --- inspired by Atom One Dark -*- no-byte-compile: t; -*-
+;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- no-byte-compile: t; -*-
 (require 'doom-themes)
 
 ;;
-(defgroup doom-pharcosyle-nuclear-theme nil
+(defgroup nuclear-theme nil
   "Options for doom-themes"
   :group 'doom-themes)
 
-(defcustom doom-pharcosyle-nuclear-brighter-modeline nil
+(defcustom nuclear-brighter-modeline nil
   "If non-nil, more vivid colors will be used to style the mode-line."
-  :group 'doom-pharcosyle-nuclear-theme
+  :group 'nuclear-theme
   :type 'boolean)
 
-(defcustom doom-pharcosyle-nuclear-brighter-comments nil
+(defcustom nuclear-brighter-comments nil
   "If non-nil, comments will be highlighted in more vivid colors."
-  :group 'doom-pharcosyle-nuclear-theme
+  :group 'nuclear-theme
   :type 'boolean)
 
-(defcustom doom-pharcosyle-nuclear-comment-bg doom-pharcosyle-nuclear-brighter-comments
+(defcustom nuclear-comment-bg nuclear-brighter-comments
   "If non-nil, comments will have a subtle, darker background. Enhancing their
 legibility."
-  :group 'doom-pharcosyle-nuclear-theme
+  :group 'nuclear-theme
   :type 'boolean)
 
-(defcustom doom-pharcosyle-nuclear-padded-modeline doom-themes-padded-modeline
+(defcustom nuclear-padded-modeline doom-themes-padded-modeline
   "If non-nil, adds a 4px padding to the mode-line. Can be an integer to
 determine the exact padding."
-  :group 'doom-pharcosyle-nuclear-theme
+  :group 'nuclear-theme
   :type '(choice integer boolean))
 
 ;;
-(def-doom-theme doom-pharcosyle-nuclear
+(def-doom-theme doom-nuclear
   "A dark theme inspired by Atom One Dark"
 
   ;; name        default   256       16
@@ -65,8 +65,8 @@ determine the exact padding."
    (vertical-bar   (doom-darken base1 0.1))
    (selection      dark-blue)
    (builtin        blue)
-   (comments       (if doom-pharcosyle-nuclear-brighter-comments dark-cyan "#63677F"))
-   (doc-comments   (doom-lighten (if doom-pharcosyle-nuclear-brighter-comments dark-cyan base5) 0.25))
+   (comments       (if nuclear-brighter-comments dark-cyan "#63677F"))
+   (doc-comments   (doom-lighten (if nuclear-brighter-comments dark-cyan base5) 0.25))
    (constants      yellow)
    (functions      blue)
    (keywords       magenta)
@@ -86,10 +86,10 @@ determine the exact padding."
 
    ;; custom categories
    (hidden     `(,(car bg) "black" "black"))
-   (-modeline-bright doom-pharcosyle-nuclear-brighter-modeline)
+   (-modeline-bright nuclear-brighter-modeline)
    (-modeline-pad
-    (when doom-pharcosyle-nuclear-padded-modeline
-      (if (integerp doom-pharcosyle-nuclear-padded-modeline) doom-pharcosyle-nuclear-padded-modeline 4)))
+    (when nuclear-padded-modeline
+      (if (integerp nuclear-padded-modeline) nuclear-padded-modeline 4)))
 
    (modeline-fg     fg)
    (modeline-fg-alt base5)
@@ -116,7 +116,7 @@ determine the exact padding."
 
    (font-lock-comment-face
     :foreground comments
-    :background (if doom-pharcosyle-nuclear-comment-bg (doom-lighten bg 0.05)))
+    :background (if nuclear-comment-bg (doom-lighten bg 0.05)))
    (font-lock-comment-delimiter-face :foreground "#939abd")
    (font-lock-doc-face
     :inherit 'font-lock-comment-face
@@ -191,4 +191,4 @@ determine the exact padding."
   ()
   )
 
-;;; doom-pharcosyle-nuclear-theme.el ends here
+;;; doom-nuclear-theme.el ends here
