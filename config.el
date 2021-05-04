@@ -312,6 +312,9 @@
       doom-font (font-spec :family "Source Code Pro" :size 12)
       rainbow-delimiters-max-face-count 8)
 
+(after! doom-themes
+  (doom-themes-visual-bell-config))
+
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
