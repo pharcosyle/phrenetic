@@ -215,7 +215,17 @@
     ("t" ivy-toggle-marks)))
 
 ;; Not using lispy, remove the Doom module's hooks.
-(remove-hook! (lisp-mode emacs-lisp-mode clojure-mode) #'lispy-mode)
+(remove-hook! (lisp-mode
+               emacs-lisp-mode
+               ielm-mode
+               scheme-mode
+               racket-mode
+               hy-mode
+               lfe-mode
+               dune-mode
+               clojure-mode
+               fennel-mode)
+  #'lispy-mode)
 (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
 
 (add-hook! prog-mode #'lispyville-mode)
