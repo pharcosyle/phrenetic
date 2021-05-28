@@ -114,8 +114,7 @@ determine the exact padding."
    ((line-number &override) :foreground base4)
    ((line-number-current-line &override) :foreground violet)
 
-   (font-lock-comment-face
-    :foreground comments
+   ((font-lock-comment-face &override)
     :background (if nuclear-comment-bg (doom-lighten bg 0.05)))
    (font-lock-comment-delimiter-face :foreground "#939abd")
    (font-lock-doc-face
@@ -179,9 +178,6 @@ determine the exact padding."
    ;; org-mode
    (org-hide :foreground hidden)
    (solaire-org-hide-face :foreground hidden)
-
-   ;; lsp-mode
-   (lsp-headerline-breadcrumb-separator-face :foreground green)
 
    ;; rjsx
    (rjsx-tag :foreground red)
