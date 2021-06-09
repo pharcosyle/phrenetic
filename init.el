@@ -59,9 +59,6 @@
        rgb
        taskrunner
 
-       :os
-       (:if IS-MAC macos)
-
        :lang
        clojure
        data

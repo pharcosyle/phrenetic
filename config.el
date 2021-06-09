@@ -67,6 +67,20 @@
 ;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
 (map! "s-V" #'original-yank-pop
 
+      ;; Copied from Doom MacOS bindings: ~/.emacs.d/modules/config/default/config.el:263
+      ;; "s-`" #'other-frame ; TODO test if this is necessary
+      "s-n" #'+default/new-buffer
+      "s-z" #'undo
+      "s-Z" #'redo
+      "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
+      "s-v" #'yank
+      "s-s" #'save-buffer
+      "s-x" #'execute-extended-command
+      :v "s-x" #'kill-region
+      "s-/" (cmd! (save-excursion (comment-line 1)))
+      :n "s-/" #'evilnc-comment-or-uncomment-lines
+      :v "s-/" #'evilnc-comment-operator
+
       "s-t" (lookup-key doom-leader-map (kbd "`"))
       "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
               ;; `swiper' hangs initially when `visual-line-mode' is active. Plus Doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
