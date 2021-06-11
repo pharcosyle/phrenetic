@@ -19,8 +19,6 @@
 
 ;;;; Doom resets
 
-(setq mac-right-option-modifier 'left)
-
 (setq-default indent-tabs-mode t)
 
 ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
