@@ -331,7 +331,7 @@
 ;;;; UI
 
 (setq doom-theme 'doom-nuclear
-      doom-font (font-spec :family "Source Code Pro" :size 12)
+      doom-font (font-spec :family "Source Code Pro" :size 24)
       rainbow-delimiters-max-face-count 8)
 
 (after! doom-themes
