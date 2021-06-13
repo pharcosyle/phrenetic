@@ -397,3 +397,6 @@
 ;; TODO Remove this when spring cleaning is done
 (after! org
   (add-to-list 'org-agenda-files (concat my--org-dir "spring_cleaning") 'append))
+
+(after! tramp
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix.
