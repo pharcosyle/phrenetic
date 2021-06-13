@@ -38,7 +38,7 @@
 
 ;;;; Keybindings
 
-(setq doom-leader-alt-key "s-;"
+(setq doom-leader-alt-key "s-SPC"
       doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 
