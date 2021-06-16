@@ -178,7 +178,7 @@
   (setq emojify-display-style 'unicode))
 
 (after! eshell
-  (setq eshell-history-size nil))
+  (setq eshell-history-size my--very-big)) ; Setting this to `nil' to inherit HISTSIZE is another option.
 
 (after! evil-org
   (map! :map evil-org-mode-map
