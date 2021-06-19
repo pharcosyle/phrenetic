@@ -344,9 +344,10 @@
 
 ;;; Screen
 
-(add-to-list 'initial-frame-alist '(height . 57))
-(add-to-list 'initial-frame-alist '(width . 192))
-(set-frame-position (selected-frame) 80 0)
+;; TODO commenting these out for now while I'm trying out EXWM so they don't interfere
+;; (add-to-list 'initial-frame-alist '(height . 57))
+;; (add-to-list 'initial-frame-alist '(width . 192))
+;; (set-frame-position (selected-frame) 80 0)
 
 ;; REVIEW Do this instead once I'm not working on a broken screen. I'm concerned the `fullboth' behavior I want is specific to `emacs-mac' which I won't be using much longer.
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth)) ; Make Emacs fill the screen without creating a new workspace.
@@ -398,5 +399,5 @@
 (after! org
   (add-to-list 'org-agenda-files (concat my--org-dir "spring_cleaning") 'append))
 
-(after! tramp
-  (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix.
+;; (after! tramp
+;;   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix. I should add ~/.guix-profile stuff too, see https://lists.gnu.org/archive/html/help-guix/2017-07/msg00003.html
