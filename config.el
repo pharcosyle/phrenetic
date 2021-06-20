@@ -343,17 +343,6 @@
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 
 
-;;; Screen
-
-;; TODO commenting these out for now while I'm trying out EXWM so they don't interfere
-;; (add-to-list 'initial-frame-alist '(height . 57))
-;; (add-to-list 'initial-frame-alist '(width . 192))
-;; (set-frame-position (selected-frame) 80 0)
-
-;; REVIEW Do this instead once I'm not working on a broken screen. I'm concerned the `fullboth' behavior I want is specific to `emacs-mac' which I won't be using much longer.
-;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth)) ; Make Emacs fill the screen without creating a new workspace.
-
-
 
 ;;;; Projects
 
@@ -408,3 +397,6 @@
              ;; (message "%s" (selected-window))
              (set-window-margins (selected-window) nil (if (cdr (window-margins))
                                                            nil 12))))
+
+;; Run this only when not on EXWM (probably not strictly necessary have this condition)
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
