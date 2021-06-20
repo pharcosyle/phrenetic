@@ -334,6 +334,7 @@
       doom-font (font-spec :family "Source Code Pro" :size 24)
       rainbow-delimiters-max-face-count 8)
 
+;; TODO get rid of this if I'm not going to try it out again
 ;; (after! doom-themes
 ;;   (doom-themes-visual-bell-config))
 
