@@ -10,10 +10,10 @@
 ;; Must be set before org loads (I think this is just a Doom, not org-mode, requirement). Keep this even though the value is the default so I can use it in the derived constants below.
 (setq org-directory "~/org")
 
-(defconst my--org-dir (concat org-directory "/"))
-(defconst my--gcal-dir (concat my--org-dir "gcal/"))
+(defconst biome--org-dir (concat org-directory "/"))
+(defconst biome--gcal-dir (concat biome--org-dir "gcal/"))
 
-(defconst my--very-big 1000000)
+(defconst biome--very-big 1000000)
 
 
 
@@ -42,21 +42,21 @@
       doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 
-(defun my--trans (&rest rest)
+(defun biome--trans (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
       (define-key key-translation-map (kbd to) (kbd from)))))
 
-(my--trans "C-h" "DEL"
-           "C-?" "C-h"
+(biome--trans "C-h" "DEL"
+              "C-?" "C-h"
 
-           "s-i" "<tab>"
-           "s-I" "<backtab>"
+              "s-i" "<tab>"
+              "s-I" "<backtab>"
 
-           "s-h" "<left>"
-           "s-j" "<down>"
-           "s-k" "<up>"
-           "s-l" "<right>")
+              "s-h" "<left>"
+              "s-j" "<down>"
+              "s-k" "<up>"
+              "s-l" "<right>")
 
 (setq help-char (string-to-char "\C-_"))
 
@@ -132,14 +132,14 @@
 
 ;;;; Packages
 
-(defun my--sp-strict-h ()
+(defun biome--sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
              #'turn-on-smartparens-strict-mode
              (lambda ()
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 
-(add-hook! prog-mode #'my--sp-strict-h)
+(add-hook! prog-mode #'biome--sp-strict-h)
 
 (after! all-the-icons-dired
   (setq all-the-icons-dired-monochrome nil))
@@ -157,10 +157,10 @@
            #'highlight-numbers-mode
            #'rainbow-delimiters-mode
            #'yas-minor-mode-on
-           #'my--sp-strict-h)
+           #'biome--sp-strict-h)
 
 (after! cider
-  (setq cider-repl-history-size my--very-big
+  (setq cider-repl-history-size biome--very-big
         cider-print-options '(("length" 100))))
 
 (add-hook! clj-refactor-mode
@@ -178,7 +178,7 @@
   (setq emojify-display-style 'unicode))
 
 (after! eshell
-  (setq eshell-history-size my--very-big)) ; Setting this to `nil' to inherit HISTSIZE is another option.
+  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit HISTSIZE is another option.
 
 (after! evil-org
   (map! :map evil-org-mode-map
@@ -196,7 +196,7 @@
   :config
   (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
   ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
-  (defadvice! my--quit-expand-region-a (&rest _)
+  (defadvice! biome--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
     :before '(evil-escape doom/escape)
     (when (memq last-command '(er/expand-region er/contract-region))
@@ -261,12 +261,12 @@
 
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
-  (setq transient-history-limit my--very-big))
+  (setq transient-history-limit biome--very-big))
 
 (after! org
-  (setq org-agenda-files `(,my--org-dir
-                           ,my--gcal-dir
-                           ,(concat my--org-dir "projects"))
+  (setq org-agenda-files `(,biome--org-dir
+                           ,biome--gcal-dir
+                           ,(concat biome--org-dir "projects"))
         org-log-done 'time
         org-priority-lowest ?E
         org-priority-default ?C
@@ -279,9 +279,9 @@
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat my--gcal-dir "pharcosyle@gmail.com.org"))
-                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat my--gcal-dir "contacts.org"))
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat my--gcal-dir "holidays.org")))
+        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat biome--gcal-dir "pharcosyle@gmail.com.org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--gcal-dir "contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--gcal-dir "holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 
 (after! paren
@@ -380,14 +380,14 @@
 ;;           '(ssh-deploy-automatically-detect-remote-changes . t))
 
 ;; (after! org-gcal
-;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat my--gcal-dir "krzysztof@massrealty.com.org")) 'append))
+;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--gcal-dir "krzysztof@massrealty.com.org")) 'append))
 
 
 
 
 ;; TODO Remove this when spring cleaning is done
 (after! org
-  (add-to-list 'org-agenda-files (concat my--org-dir "spring_cleaning") 'append))
+  (add-to-list 'org-agenda-files (concat biome--org-dir "spring_cleaning") 'append))
 
 ;; (after! tramp
 ;;   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix. I should add ~/.guix-profile stuff too, see https://lists.gnu.org/archive/html/help-guix/2017-07/msg00003.html
