@@ -400,3 +400,5 @@
 
 ;; Run this only when not on EXWM (probably not strictly necessary have this condition)
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+(map! "s-a" #'counsel-linux-app)
