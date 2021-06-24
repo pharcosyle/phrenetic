@@ -68,7 +68,7 @@
       "s-SPC" doom-leader-map
 
       ;; Copied from Doom MacOS bindings: ~/.emacs.d/modules/config/default/config.el:263
-      ;; "s-`" #'other-frame ; TODO test if this is necessary
+      "s-`" #'other-frame
       "s-n" #'+default/new-buffer
       "s-z" #'undo
       "s-Z" #'redo
