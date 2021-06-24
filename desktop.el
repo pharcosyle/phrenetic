@@ -24,7 +24,7 @@
 
 (defun efs/exwm-update-title ()
   (pcase exwm-class-name
-    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title)))))
+    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title))))) ; TODO get rid of preceding or trailing "Chromium"
 
 (defun biome--shell-cmd (command)
   (start-process-shell-command command nil command))
@@ -53,8 +53,9 @@
   ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
   ;;(setq exwm-workspace-minibuffer-position 'top)
 
-  (require 'exwm-randr)
-  (exwm-randr-enable)
+  ;; TODO I don't think I need this module since I have one screen. I can move my xrandr command too then.
+  ;; (require 'exwm-randr)
+  ;; (exwm-randr-enable)
   (biome--shell-cmd  "xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1")
 
   ;; TODO put this somewhere better
@@ -62,21 +63,23 @@
 
   ;; Load the system tray before exwm-init
   (require 'exwm-systemtray)
+  ;; TODO is this the right value for height? Try another one? Make it derived off of something?
   (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
   (exwm-systemtray-enable)
 
   ;; These keys should always pass through to Emacs
-  ;; (setq exwm-input-prefix-keys
-  ;;   '(?\C-x
-  ;;     ?\C-u
-  ;;     ?\C-h
-  ;;     ?\M-x
-  ;;     ?\M-`
-  ;;     ?\M-&
-  ;;     ?\M-:
-  ;;     ?\C-\M-j  ;; Buffer list
-  ;;     ?\C-\ ))  ;; Ctrl+Space
-  (setq exwm-input-prefix-keys nil)
+  (setq exwm-input-prefix-keys
+        '(?\C-x
+          ;; ?\C-u
+          ;; ?\C-h
+          ?\M-x
+          ?\M-`
+          ?\M-&
+          ?\M-:
+          ;; ?\C-\M-j  ;; Buffer list
+          ?\s-\ ; TODO I might want this in exwm global keys
+          ))
+  ;; (setq exwm-input-prefix-keys nil)
 
   ;; (setq exwm-input-simulation-keys
   ;;         '(([?\C-b] . [left])
@@ -96,7 +99,8 @@
 
   ;; Set up global key bindings.  These always work, no matter the input state!
   ;; Keep in mind that changing this list after EXWM initializes has no effect.
-  (setq exwm-input-global-keys
+  ;; TODO maybe setq! would work though?
+  (setq! exwm-input-global-keys
         `(([?\s-q] . exwm-reset)
 
           ([?\s-Q] . exwm-input-release-keyboard)
@@ -108,6 +112,7 @@
           ([s-down] . windmove-down)
 
           ([?\s-t] . evil-switch-to-windows-last-buffer)
+          ;; ([?\s-\ ] . doom-leader-map)
 
           ;; Launch applications via shell command
           ([?\s-&] . (lambda (command)
