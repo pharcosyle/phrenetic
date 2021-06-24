@@ -7,12 +7,6 @@
     (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
 
 (defun efs/exwm-init-hook ()
-  (display-battery-mode 1)
-
-  (setq display-time-day-and-date t)
-  (display-time-mode 1)
-  ;; TODO Also take a look at display-time-format and format-time-string
-
   (efs/run-in-background "nm-applet")
   ;; (efs/run-in-background "dunst")
   ;; (efs/run-in-background "pasystray")
@@ -53,19 +47,16 @@
   ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
   ;;(setq exwm-workspace-minibuffer-position 'top)
 
-  ;; TODO I don't think I need this module since I have one screen. I can move my xrandr command too then.
-  ;; (require 'exwm-randr)
-  ;; (exwm-randr-enable)
-  (biome--shell-cmd  "xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1")
-
-  ;; TODO put this somewhere better
-  (biome--shell-cmd  "xkbcomp -I$HOME/org/spring_cleaning/myxkb org/spring_cleaning/myxkb/current_setxkbmap_print $DISPLAY")
-
   ;; Load the system tray before exwm-init
   (require 'exwm-systemtray)
   ;; TODO is this the right value for height? Try another one? Make it derived off of something?
   (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
   (exwm-systemtray-enable)
+
+  ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.
+  ;; Window focus should follow the mouse pointer
+  ;; (setq mouse-autoselect-window t
+  ;;       focus-follows-mouse t)
 
   ;; These keys should always pass through to Emacs
   (setq exwm-input-prefix-keys
@@ -78,6 +69,7 @@
           ?\M-:
           ;; ?\C-\M-j  ;; Buffer list
           ?\s-\ ; TODO I might want this in exwm global keys
+          ?\s-, ; TODO I might want this in exwm global keys
           ))
   ;; (setq exwm-input-prefix-keys nil)
 
@@ -95,7 +87,11 @@
   (setq exwm-input-simulation-keys
         '(([?\s-c] . [C-c])))
 
-  (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
+  ;; TODO might want to do some local simulation keys too
+
+  ;; TODO maybe find a way to alias localleader key to the commands in exwm-mode-map under C-c?
+  ;; TODO probably use `map!' instead of `define-key'
+  ;; (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
 
   ;; Set up global key bindings.  These always work, no matter the input state!
   ;; Keep in mind that changing this list after EXWM initializes has no effect.
@@ -119,6 +115,7 @@
                        (interactive (list (read-shell-command "$ ")))
                        (biome--shell-command command)))))
 
+  ;; TODO why is this function used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
 
   (exwm-enable))

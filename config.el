@@ -171,11 +171,6 @@
 (after! counsel
   (setq counsel-yank-pop-separator "\n--------------------------------\n"))
 
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-major-mode-icon t)
-  (setq doom-modeline-persp-name t))
-
 (after! emojify
   (setq emojify-display-style 'unicode))
 
@@ -343,6 +338,22 @@
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
+
+
+;;; Mode line
+
+(after! doom-modeline ; TODO after `time'? Should this be a use-package block with a hook instead?
+  (setq display-time-day-and-date t)
+  ;; (setq display-time-24hr-format t)
+  (display-time-mode 1))
+
+(after! doom-modeline ; TODO after `battery'? Should this be a use-package block with a hook instead?
+  (display-battery-mode 1))
+
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-persp-name t))
 
 
 

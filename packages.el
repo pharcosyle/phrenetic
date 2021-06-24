@@ -1,7 +1,7 @@
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
-(package! dash :pin "aab346ed9d8f0f7ea033029c9688810353052e7e")
+(package! dash :pin "88d799595e8f1b4154637ce8a3f81b97b0520c1a")
 (package! expand-region :pin "4b8322774d9c1d8b64a0049d1dbbc1e7ce80c1a0")
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
