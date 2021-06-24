@@ -65,6 +65,8 @@
 ;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
 (map! "s-V" #'original-yank-pop
 
+      "s-SPC" doom-leader-map
+
       ;; Copied from Doom MacOS bindings: ~/.emacs.d/modules/config/default/config.el:263
       ;; "s-`" #'other-frame ; TODO test if this is necessary
       "s-n" #'+default/new-buffer
