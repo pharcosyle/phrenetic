@@ -342,12 +342,12 @@
 
 ;;; Mode line
 
-(after! doom-modeline ; TODO after `time'? Should this be a use-package block with a hook instead?
+(after! doom-modeline ; TODO after `time'? Should this be a use-package block with a hook instead? Or no hook?
   (setq display-time-day-and-date t)
   ;; (setq display-time-24hr-format t)
   (display-time-mode 1))
 
-(after! doom-modeline ; TODO after `battery'? Should this be a use-package block with a hook instead?
+(after! doom-modeline ; TODO after `battery'? Should this be a use-package block with a hook instead? Or no hook?
   (display-battery-mode 1))
 
 (after! doom-modeline
@@ -405,11 +405,11 @@
 ;; (after! tramp
 ;;   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix. I should add ~/.guix-profile stuff too, see https://lists.gnu.org/archive/html/help-guix/2017-07/msg00003.html
 
-(map! "s-b" (cmd!
-             ;; (message "chainging margin")
-             ;; (message "%s" (selected-window))
-             (set-window-margins (selected-window) nil (if (cdr (window-margins))
-                                                           nil 12))))
+;; (map! "s-b" (cmd!
+;;              ;; (message "chainging margin")
+;;              ;; (message "%s" (selected-window))
+;;              (set-window-margins (selected-window) nil (if (cdr (window-margins))
+;;                                                            nil 12))))
 
 ;; Run this only when not on EXWM (probably not strictly necessary have this condition)
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
