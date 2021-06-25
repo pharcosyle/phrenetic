@@ -402,8 +402,12 @@
 (after! org
   (add-to-list 'org-agenda-files (concat biome--org-dir "spring_cleaning") 'append))
 
-;; (after! tramp
-;;   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)) ; Make tramp work on Guix. I should add ~/.guix-profile stuff too, see https://lists.gnu.org/archive/html/help-guix/2017-07/msg00003.html
+(after! tramp
+  ;; Make tramp work on Guix.
+  (prependq! tramp-remote-path '("~/.guix-profile/bin"
+                                 "~/.guix-profile/sbin"
+                                 "/run/current-system/profile/bin"
+                                 "/run/current-system/profile/sbin")))
 
 ;; (map! "s-b" (cmd!
 ;;              ;; (message "chainging margin")
