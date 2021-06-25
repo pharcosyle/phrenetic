@@ -8,10 +8,9 @@
 
 (defun efs/exwm-init-hook ()
   (efs/run-in-background "nm-applet")
-  ;; (efs/run-in-background "dunst")
-  ;; (efs/run-in-background "pasystray")
-  ;; (efs/run-in-background "blueman-applet")
-  )
+  (efs/run-in-background "pasystray")
+  ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
+  (efs/run-in-background "dunst"))
 
 (defun efs/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
@@ -23,7 +22,7 @@
 (defun biome--shell-cmd (command)
   (start-process-shell-command command nil command))
 
-(use-package exwm
+(use-package! exwm
   :config
   ;; When window "class" updates, use it to set the buffer name
   (add-hook 'exwm-update-class-hook #'efs/exwm-update-class)
@@ -49,7 +48,6 @@
 
   ;; Load the system tray before exwm-init
   (require 'exwm-systemtray)
-  ;; TODO is this the right value for height? Try another one? Make it derived off of something?
   (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
   (exwm-systemtray-enable)
 
@@ -96,7 +94,7 @@
   ;; Set up global key bindings.  These always work, no matter the input state!
   ;; Keep in mind that changing this list after EXWM initializes has no effect.
   ;; TODO maybe setq! would work though?
-  (setq! exwm-input-global-keys
+  (setq exwm-input-global-keys
         `(([?\s-q] . exwm-reset)
 
           ([?\s-Q] . exwm-input-release-keyboard)
@@ -115,7 +113,23 @@
                        (interactive (list (read-shell-command "$ ")))
                        (biome--shell-command command)))))
 
-  ;; TODO why is this function used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
+  ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
 
   (exwm-enable))
+
+
+
+(use-package! desktop-environment
+  :after exwm
+  :config
+  (setq desktop-environment-keyboard-backlight-normal-increment 10
+        desktop-environment-keyboard-backlight-normal-decrement -10)
+  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) so modify the map before doing so.
+  (map! :map desktop-environment-mode-map
+        "s-l" nil
+        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-increment-backlight
+        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
+        "<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
+        "S-<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
+  (desktop-environment-mode))
