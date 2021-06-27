@@ -111,7 +111,12 @@
           ;; Launch applications via shell command
           ([?\s-&] . (lambda (command)
                        (interactive (list (read-shell-command "$ ")))
-                       (biome--shell-command command)))))
+                       (biome--shell-cmd command)))
+
+          (,(kbd "<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close")))
+          (,(kbd "S-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close-all")))
+          (,(kbd "C-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl history-pop")))
+          (,(kbd "M-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl action")))))
 
   ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
@@ -140,6 +145,6 @@
         "s-l" nil
         "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
         "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
-        "<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
-        "S-<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
+        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
+        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
   (desktop-environment-mode))
