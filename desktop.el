@@ -10,7 +10,7 @@
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
   ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
-  (efs/run-in-background "dunst"))
+  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/org/spring_cleaning/exwm_stuff/my-dunstrc"))))
 
 (defun efs/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
@@ -123,12 +123,22 @@
 (use-package! desktop-environment
   :after exwm
   :config
-  (setq desktop-environment-keyboard-backlight-normal-increment 10
-        desktop-environment-keyboard-backlight-normal-decrement -10)
+  (setq desktop-environment-brightness-get-command "light"
+        desktop-environment-brightness-set-command "light %s"
+        desktop-environment-brightness-get-regexp "^\\([0-9]+\\)"
+        desktop-environment-brightness-normal-increment "-A 10"
+        desktop-environment-brightness-normal-decrement "-U 10"
+        desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
+        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
+        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+        desktop-environment-volume-normal-increment "+5%"
+        desktop-environment-volume-normal-decrement "-5%"
+        desktop-environment-keyboard-backlight-normal-increment 25
+        desktop-environment-keyboard-backlight-normal-decrement -25)
   ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) so modify the map before doing so.
   (map! :map desktop-environment-mode-map
         "s-l" nil
-        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-increment-backlight
+        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
         "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
         "<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
         "S-<XF86LaunchA>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
