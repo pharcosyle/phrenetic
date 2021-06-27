@@ -7,10 +7,11 @@
     (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
 
 (defun efs/exwm-init-hook ()
+  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/org/spring_cleaning/exwm_stuff/my-dunstrc")))
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
   ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
-  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/org/spring_cleaning/exwm_stuff/my-dunstrc"))))
+  )
 
 (defun efs/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
