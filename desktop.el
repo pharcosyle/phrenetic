@@ -11,7 +11,8 @@
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
   ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
-  )
+  (efs/run-in-background "redshift-gtk -l 47:-123")
+  (efs/run-in-background "udiskie -t"))
 
 (defun efs/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
@@ -50,6 +51,7 @@
   ;; Load the system tray before exwm-init
   (require 'exwm-systemtray)
   (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
+  (setq exwm-systemtray-icon-gap 8)
   (exwm-systemtray-enable)
 
   ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.

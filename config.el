@@ -404,6 +404,7 @@
 
 (after! tramp
   ;; Make tramp work on Guix.
+  ;; TODO will this work anymore now that I use profiles other than `.guix-profile'?
   (prependq! tramp-remote-path '("~/.guix-profile/bin"
                                  "~/.guix-profile/sbin"
                                  "/run/current-system/profile/bin"
@@ -425,5 +426,5 @@
 
 (after! company
   (map! (:map company-active-map
-         "s-[" #'company-show-doc-buffer
+         "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
