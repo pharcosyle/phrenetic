@@ -419,3 +419,11 @@
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
 (map! "s-A" #'counsel-linux-app)
+
+(map! :leader
+      "s-," (lookup-key doom-leader-map (kbd "<")))
+
+(after! company
+  (map! (:map company-active-map
+         "s-[" #'company-show-doc-buffer
+         "s-]" #'company-show-location)))
