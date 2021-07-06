@@ -1,6 +1,8 @@
 ;;; desktop.el -*- lexical-binding: t; -*-
 
 ;; TODO rename efs to biome
+;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
+;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
 
 (defun efs/run-in-background (command)
   (let ((command-parts (split-string command "[ ]+")))

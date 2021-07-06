@@ -398,7 +398,8 @@
 
 
 
-;; TODO Remove this when spring cleaning is done
+
+
 (after! org
   (add-to-list 'org-agenda-files (concat biome--org-dir "spring_cleaning") 'append))
 
