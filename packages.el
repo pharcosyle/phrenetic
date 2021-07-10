@@ -1,8 +1,8 @@
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
 
-(package! dash :pin "3bd52a45aa81a3aab0d02ece800042415669399a")
-(package! expand-region :pin "530a593f5ee06280e26320967700a6292c5fef2e")
+(package! dash :pin "2675596b9ac1c4b9d47b93e227f06f8ec6755ec6")
+(package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
 ;; TODO was causing weird errors with company-capf in eshell, just start typing "guix search [...]" to reproduce
