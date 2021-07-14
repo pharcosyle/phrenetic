@@ -977,7 +977,9 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Lispyville :lisp:lang:prog_mode:bindings:
 #+begin_src elisp
-(after! lispyville
+(use-package! lispyville
+  :hook (prog-mode . lispyville-mode)
+  :config
   (lispyville-set-key-theme
    '(operators
      c-w
@@ -992,10 +994,7 @@ xkb_symbols "semicolon_to_control" {
         "s-C-g" #'lispyville-drag-forward
         "s-C-p" #'lispyville-prettify
         (:prefix "s-C-;"
-         "R" #'lispyville-raise-list))
-
-  ;; TODO make sure this is still working after nesting in `after!'
-  (add-hook! 'prog-mode-hook #'lispyville-mode))
+         "R" #'lispyville-raise-list)))
 #+end_src
 ***** Magit :UI:persistence:
 #+begin_src elisp
@@ -1187,6 +1186,7 @@ xkb_symbols "semicolon_to_control" {
 ;; (add-hook! 'org-mode-hook
 ;;   (add-hook! 'after-save-hook :local
 ;;     (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+;;       ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
 ;;       (let ((org-confirm-babel-evaluate nil))
 ;;         (org-babel-tangle)))))
 #+end_src
@@ -1205,7 +1205,7 @@ xkb_symbols "semicolon_to_control" {
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
 *** Theme :UI:theming:
-#+begin_src elisp :tangle gen/doom/themes/doom-nuclear-theme.el.el :lexical t
+#+begin_src elisp :tangle gen/doom/themes/doom-nuclear-theme.el :lexical t
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;; Copyright (C) 2016-2021 Henrik Lissner
