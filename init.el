@@ -53,7 +53,7 @@
        lookup
        (magit +forge)
        (pass +auth)
-       pdf
+       ;; pdf ; TODO Re-enable this once I'm compiling its `epdfinfo' dependency so `org-store-link' doesn't throw an error.
        prodigy
        rgb
        taskrunner
