@@ -429,3 +429,13 @@
   (map! (:map company-active-map
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
+
+
+
+(setq biome--dotfiles-dir "~/Projects/dotfiles")
+
+(add-hook! org-mode
+  (add-hook! 'after-save-hook :local
+    (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+      (let ((org-confirm-babel-evaluate nil)) ; TODO make sure this is working like I think
+        (org-babel-tangle)))))
