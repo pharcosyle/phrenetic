@@ -563,7 +563,7 @@ xkb_symbols "semicolon_to_control" {
 # :header-args+: :noweb yes :lexical t
 # :END:
 - TODO donno if the lexical property is really necessary, I guess maybe it makes evaluation /from the org file/ work lexically?
-# ** Org Helpers
+# ** Org Private
 # #+name: lexical-binding-header
 # #+begin_src elisp
 # ;;; -*- lexical-binding: t; -*-
@@ -658,12 +658,15 @@ xkb_symbols "semicolon_to_control" {
        :config
        (default +bindings +smartparens))
 #+end_src
-**** init-stage configuration
+**** init-phase configuration
+***** Clojure :lang:clojure:bindings:
 #+begin_src elisp
 (use-package-hook! clojure-mode
   :post-init
   (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding
-
+#+end_src
+***** Lispyville :lisp:bindings:
+#+begin_src elisp
 (use-package-hook! lispyville
   :post-init
   (setq lispyville-key-theme nil))
@@ -680,14 +683,15 @@ xkb_symbols "semicolon_to_control" {
 #+begin_src elisp
 (use-package! dash)
 #+end_src
-**** Personal
+**** Personal Info :user:
 #+begin_src elisp
 (setq user-full-name "Krzysztof Baranowski"
       user-mail-address "pharcosyle@gmail.com")
 #+end_src
-**** Globals
+**** Private
 #+begin_src elisp
 ;; Must be set before org loads (I think this is just a Doom, not org-mode, requirement). Keep this even though the value is the default so I can use it in the derived constants below.
+;; TODO try to move this into an org `:init' block or something, it doesn't belong up here in "Private".
 (setq org-directory "~/org")
 
 
@@ -696,14 +700,7 @@ xkb_symbols "semicolon_to_control" {
 
 (defconst biome--very-big 1000000)
 #+end_src
-**** Doom resets
-#+begin_src elisp
-(setq-default indent-tabs-mode t)
-
-;; I'd like to have this on but in the Doom code it says it's more efficient not to.
-;; (setq-default cursor-in-non-selected-windows t)
-#+end_src
-**** General
+**** General :UI:
 #+begin_src elisp
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
@@ -711,12 +708,31 @@ xkb_symbols "semicolon_to_control" {
 ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
 ;; (setq display-line-numbers-type nil)
 #+end_src
-**** Keybindings
+***** Doom resets
+#+begin_src elisp
+(setq-default indent-tabs-mode t)
+
+;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+;; (setq-default cursor-in-non-selected-windows t)
+#+end_src
+**** Doom
+***** UI :UI:theming:
+#+begin_src elisp
+(setq doom-theme 'doom-nuclear
+      doom-font (font-spec :family "Source Code Pro" :size 24)
+#+end_src
+***** Leader/Localleader :bindings:
 #+begin_src elisp
 (setq doom-leader-alt-key "s-SPC"
       doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
-
+#+end_src
+**** Keybindings :bindings:
+#+begin_src elisp
+(setq help-char (string-to-char "\C-_"))
+#+end_src
+***** Translations
+#+begin_src elisp
 (defun biome--trans (&rest rest)
   (-each (-partition 2 rest)
     (-lambda ((to from))
@@ -732,9 +748,9 @@ xkb_symbols "semicolon_to_control" {
               "s-j" "<down>"
               "s-k" "<up>"
               "s-l" "<right>")
-
-(setq help-char (string-to-char "\C-_"))
-
+#+end_src
+***** General
+#+begin_src elisp
 (defalias 'original-yank-pop #'yank-pop)
 
 ;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
@@ -807,25 +823,28 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 **** Packages
 #+begin_src elisp
-(defun biome--sp-strict-h ()
-  (add-hook! 'smartparens-enabled-hook :local
-             #'turn-on-smartparens-strict-mode
-             (lambda ()
-               (map! :map smartparens-strict-mode-map
-                     :i "DEL" #'sp-backward-delete-char))))
-
-(add-hook! prog-mode #'biome--sp-strict-h)
-
 (after! all-the-icons-dired
   (setq all-the-icons-dired-monochrome nil))
 
 (after! avy
   (setq avy-single-candidate-jump t))
-
-(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
-
+#+end_src
+***** Battery :UI:
+#+begin_src elisp
+(use-package! battery
+  :config
+  (display-battery-mode 1))
+#+end_src
+***** Clojure :lang:clojure:
+#+begin_src elisp
 (after! clojure-mode
   (set-ligatures! 'clojure-mode :lambda "fn"))
+#+end_src
+***** Cider :lang:clojure:persistence:
+#+begin_src elisp
+(after! cider
+  (setq cider-repl-history-size biome--very-big
+        cider-print-options '(("length" 100))))
 
 (add-hook! cider-repl-mode
            #'goto-address-prog-mode
@@ -833,31 +852,64 @@ xkb_symbols "semicolon_to_control" {
            #'rainbow-delimiters-mode
            #'yas-minor-mode-on
            #'biome--sp-strict-h)
-
-(after! cider
-  (setq cider-repl-history-size biome--very-big
-        cider-print-options '(("length" 100))))
-
+#+end_src
+***** Clj Refactor :lang:clojure:bindings:
+#+begin_src elisp
 (add-hook! clj-refactor-mode
   (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
-
+#+end_src
+***** Counsel :completion:UI:
+#+begin_src elisp
 (after! counsel
   (setq counsel-yank-pop-separator "\n--------------------------------\n"))
-
+#+end_src
+***** Doom Modeline :UI:
+#+begin_src elisp
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-persp-name t))
+#+end_src
+***** Doom Themes :UI:
+#+begin_src elisp
+;; TODO get rid of this if I'm not going to try it out again
+;; (after! doom-themes
+;;   (doom-themes-visual-bell-config))
+#+end_src
+***** Emacs Lisp :lang:
+#+begin_src elisp
+(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
+#+end_src
+***** Emojify :UI:
+#+begin_src elisp
 (after! emojify
   (setq emojify-display-style 'unicode))
-
+#+end_src
+***** Eshell :persistence:
+#+begin_src elisp
 (after! eshell
-  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit HISTSIZE is another option.
-
+  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+#+end_src
+***** Evil :UI:theming:
+#+begin_src elisp
+(after! evil
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
+#+end_src
+***** Evil Org :org:bindings:
+#+begin_src elisp
 (after! evil-org
   (map! :map evil-org-mode-map
         :nv "C-j" #'outline-forward-same-level
         :nv "C-k" #'outline-backward-same-level))
-
+#+end_src
+***** Evil Multiedit
+#+begin_src elisp
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
-
+#+end_src
+***** Expand Region :bindings:
+#+begin_src elisp
 (use-package! expand-region
   :defer t
   :init
@@ -871,9 +923,13 @@ xkb_symbols "semicolon_to_control" {
     :before '(evil-escape doom/escape)
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
-
+#+end_src
+***** Highlight Indent Guides :lang:prog_mode:UI:
+#+begin_src elisp
 (remove-hook! (prog-mode text-mode conf-mode) #'highlight-indent-guides-mode)
-
+#+end_src
+***** Ivy :completion:bindings:UI:
+#+begin_src elisp
 (after! ivy
   (setq +ivy-buffer-preview t
         ivy-extra-directories nil
@@ -888,14 +944,18 @@ xkb_symbols "semicolon_to_control" {
         "C-r" #'ivy-reverse-i-search ; Doom overrides this, restore it.
         :map ivy-reverse-i-search-map
         "C-k" #'previous-line))
-
+#+end_src
+***** Ivy Hydra :completion:bindings:
+#+begin_src elisp
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
     ;; Doom overrides these imporant ivy hydra heads: ~/.emacs.d/modules/completion/ivy/autoload/hydras.el
     ("m" ivy-mark)
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
-
+#+end_src
+***** Lispy :lisp:
+#+begin_src elisp
 ;; Not using lispy, remove the Doom module's hooks.
 (remove-hook! (lisp-mode
                emacs-lisp-mode
@@ -909,9 +969,9 @@ xkb_symbols "semicolon_to_control" {
                fennel-mode)
   #'lispy-mode)
 (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
-
-(add-hook! prog-mode #'lispyville-mode)
-
+#+end_src
+***** Lispyville :lisp:lang:prog_mode:bindings:
+#+begin_src elisp
 (after! lispyville
   (lispyville-set-key-theme
    '(operators
@@ -929,10 +989,16 @@ xkb_symbols "semicolon_to_control" {
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 
+(add-hook! prog-mode #'lispyville-mode)
+#+end_src
+***** Magit :UI:persistence:
+#+begin_src elisp
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
   (setq transient-history-limit biome--very-big))
-
+#+end_src
+***** Org :org:UI:
+#+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
                            ,biome--gcal-dir
@@ -945,7 +1011,9 @@ xkb_symbols "semicolon_to_control" {
                              (?C . ,(doom-color 'blue))
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
-
+#+end_src
+***** Org Gcal :user:secret:persistence:
+#+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
@@ -953,13 +1021,28 @@ xkb_symbols "semicolon_to_control" {
                                     ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--gcal-dir "contacts.org"))
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--gcal-dir "holidays.org")))
         org-gcal-recurring-events-mode 'nested))
-
+#+end_src
+***** Paren :UI:
+#+begin_src elisp
 (after! paren
   (setq! show-paren-delay 0))
-
+#+end_src
+***** Prog Mode :lang:prog_mode:
+#+begin_src elisp
+(add-hook! prog-mode #'biome--sp-strict-h)
+#+end_src
+***** Rainbow Delimiters :UI:theming:
+#+begin_src elisp
+(after! rainbow-delimiters
+  (setq rainbow-delimiters-max-face-count 8)) ; TODO make sure this is working and I didn't need to put it in an `:init'`or anything
+#+end_src
+***** Recentf :persistence:
+#+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
-
+#+end_src
+***** Smartparens :bindings:
+#+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
         "s-C-h" #'sp-backward-sexp
@@ -984,46 +1067,41 @@ xkb_symbols "semicolon_to_control" {
          "r" #'sp-raise-sexp
          "c" #'sp-convolute-sexp
          "w" #'sp-rewrap-sexp)))
-
+#+end_src
+****** Hook :bindings:
+#+begin_src elisp
+(defun biome--sp-strict-h ()
+  (add-hook! 'smartparens-enabled-hook :local
+             #'turn-on-smartparens-strict-mode
+             (lambda ()
+               (map! :map smartparens-strict-mode-map
+                     :i "DEL" #'sp-backward-delete-char))))
+#+end_src
+***** Time :UI:
+#+begin_src elisp
+;; TODO see whether my startup time suffers because of this (or the `use-package!' for battery-mode)
+(use-package! time
+  :config
+  (setq display-time-day-and-date t)
+  ;; (setq display-time-24hr-format t)
+  (display-time-mode 1))
+#+end_src
+***** Tldr :persistence:
+#+begin_src elisp
 (use-package! tldr
   :defer t
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
-
+#+end_src
+***** Undo Fu
+#+begin_src elisp
 (after! undo-fu
   (setq undo-fu-ignore-keyboard-quit t))
-
+#+end_src
+***** Undo Tree :UI:
+#+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
-#+end_src
-**** UI
-#+begin_src elisp
-(setq doom-theme 'doom-nuclear
-      doom-font (font-spec :family "Source Code Pro" :size 24)
-      rainbow-delimiters-max-face-count 8)
-
-;; TODO get rid of this if I'm not going to try it out again
-;; (after! doom-themes
-;;   (doom-themes-visual-bell-config))
-
-(after! evil
-  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
-#+end_src
-***** Mode line
-#+begin_src elisp
-(after! doom-modeline ; TODO after `time'? Should this be a use-package block with a hook instead? Or no hook?
-  (setq display-time-day-and-date t)
-  ;; (setq display-time-24hr-format t)
-  (display-time-mode 1))
-
-(after! doom-modeline ; TODO after `battery'? Should this be a use-package block with a hook instead? Or no hook?
-  (display-battery-mode 1))
-
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-major-mode-icon t)
-  (setq doom-modeline-persp-name t))
 #+end_src
 **** Projects
 ***** Hyperdrive
@@ -1094,13 +1172,13 @@ xkb_symbols "semicolon_to_control" {
          "s-]" #'company-show-location)))
 
 
-(setq biome--dotfiles-dir "~/Projects/dotfiles")
+;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
 
-(add-hook! org-mode
-  (add-hook! 'after-save-hook :local
-    (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
-      (let ((org-confirm-babel-evaluate nil)) ; TODO make sure this is working like I think
-        (org-babel-tangle)))))
+;; (add-hook! org-mode
+;;   (add-hook! 'after-save-hook :local
+;;     (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+;;       (let ((org-confirm-babel-evaluate nil))
+;;         (org-babel-tangle)))))
 #+end_src
 *** packages.el
 #+begin_src elisp :tangle gen/doom/packages.el
@@ -1116,7 +1194,7 @@ xkb_symbols "semicolon_to_control" {
 (package! trashed :pin "23e782f78d9adf6b5479a01bfac90b2cfbf729fe")
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
-*** theme
+*** Theme :UI:theming:
 #+begin_src elisp :tangle gen/doom/themes/doom-nuclear-theme.el.el :lexical t
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
@@ -1315,7 +1393,7 @@ Can be an integer to determine the exact padding."
 
 ;;; doom-nuclear-theme.el ends here
 #+end_src
-** desktop
+** desktop :UI:bindings:
 #+begin_src elisp :tangle gen/desktop.el :lexical t
 ;;; -*- lexical-binding: t; -*-
 
@@ -1446,7 +1524,6 @@ Can be an integer to determine the exact padding."
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
 
   (exwm-enable))
-
 
 
 (use-package! desktop-environment
