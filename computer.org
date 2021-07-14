@@ -1,0 +1,554 @@
+#+TITLE: Monolith
+
+* Channels
+#+begin_src scheme :mkdirp yes :tangle gen/.config/guix/channels.scm
+(cons* (channel
+        (name 'penitent-tangent)
+        (url "file:///home/pharcosyle/Projects/penitent-tangent"))
+       (channel
+        (name 'flat)
+        (url "https://github.com/flatwhatson/guix-channel.git")
+        (introduction
+         (make-channel-introduction
+          "33f86a4b48205c0dc19d7c036c85393f0766f806"
+          (openpgp-fingerprint
+           "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
+       (channel
+        (name 'rde)
+        (url "https://git.sr.ht/~abcdw/rde")
+        (introduction
+         (make-channel-introduction
+          "257cebd587b66e4d865b3537a9a88cccd7107c95"
+          (openpgp-fingerprint
+           "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+       (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (introduction
+         (make-channel-introduction
+          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+          (openpgp-fingerprint
+           "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+       %default-channels)
+
+;; (append (channel
+;;          (name 'penitent-tangent)
+;;          (url "file:///home/pharcosyle/Projects/penitent-tangent"))
+;;         (channel
+;;          (name 'flat)
+;;          (url "https://github.com/flatwhatson/guix-channel.git")
+;;          (introduction
+;;           (make-channel-introduction
+;;            "33f86a4b48205c0dc19d7c036c85393f0766f806"
+;;            (openpgp-fingerprint
+;;             "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))
+;;          (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
+;;         (channel
+;;          (name 'rde)
+;;          (url "https://git.sr.ht/~abcdw/rde")
+;;          (introduction
+;;           (make-channel-introduction
+;;            "257cebd587b66e4d865b3537a9a88cccd7107c95"
+;;            (openpgp-fingerprint
+;;             "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0")))
+;;          (commit "930b9aa377cd4b2fbf43e39b2583df27b70f8ad0"))
+;;         (channel
+;;          (name 'nonguix)
+;;          (url "https://gitlab.com/nonguix/nonguix")
+;;          (introduction
+;;           (make-channel-introduction
+;;            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+;;            (openpgp-fingerprint
+;;             "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))
+;;          (commit "706d8af5b111d85902280f1154dc4fad683b5281"))
+;;         (channel
+;;          (name 'guix)
+;;          (url "https://git.savannah.gnu.org/git/guix.git")
+;;          (introduction
+;;           (make-channel-introduction
+;;            "9edb3f66fd807b096b48283debdcddccfea34bad"
+;;            (openpgp-fingerprint
+;;             "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA")))
+;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
+#+end_src
+* System
+** system.scm
+#+begin_src scheme :mkdirp yes :tangle gen/system/system.scm
+(use-modules ((gnu system) #:select (operating-system %base-packages))
+             ((gnu system accounts) #:select (user-account))
+             ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
+             ((gnu system keyboard) #:select (keyboard-layout))
+             ((gnu system shadow) #:select (%base-user-accounts))
+             ((gnu bootloader) #:select (bootloader-configuration))
+             ((gnu bootloader grub) #:select (grub-efi-bootloader))
+             ((gnu services) #:select (service simple-service modify-services))
+             ((gnu services base) #:select (guix-service-type guix-configuration udev-service-type %default-authorized-guix-keys))
+             ((gnu services desktop) #:select (gnome-desktop-service-type %desktop-services))
+             ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
+             ((gnu packages) #:select (specification->package))
+             ((gnu packages linux) #:select (light))
+             ((guix gexp) #:select (local-file))
+             ((guix store) #:select (%default-substitute-urls))
+             ((nongnu system linux-initrd) #:select (microcode-initrd))
+             ((nongnu packages linux) #:select (linux-firmware))
+             ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
+
+             ((guix packages) #:select (package-input-rewriting))
+             ((gnu packages emacs) #:select (emacs))
+             ((flat packages emacs) #:select (emacs-native-comp))
+
+             ((nongnu packages linux) #:select (linux))
+             ;; ((srfi srfi-1) #:select (first))
+             ;; ((guix channels) #:select (channel))
+             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+             )
+
+(define %my-xorg-config
+  "
+Section \"InputClass\"
+  Identifier      \"Keyboards\"
+  Driver          \"libinput\"
+  MatchIsKeyboard \"on\"
+EndSection
+Section \"InputClass\"
+  Identifier      \"Touchpads\"
+  Driver          \"mtrack\"
+  MatchIsTouchpad \"on\"
+EndSection
+")
+
+(operating-system
+  (kernel linux)
+  ;; (kernel
+  ;;   (let*
+  ;;     ((channels
+  ;;       (list (channel
+  ;;              (name 'nonguix)
+  ;;              (url "https://gitlab.com/nonguix/nonguix")
+  ;;              (commit "c5fed11e7df221cad1045fc193b4136b34e23451"))
+  ;;             (channel
+  ;;              (name 'guix)
+  ;;              (url "https://git.savannah.gnu.org/git/guix.git")
+  ;;              (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))
+  ;;      (inferior
+  ;;       (inferior-for-channels channels)))
+  ;;     (first (lookup-inferior-packages inferior "linux" "5.12.9"))))
+  ;; TODO
+  ;; (kernel-arguments '("modprobe.blacklist=b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+  ;; (kernel-loadable-modules (list broadcom-sta))
+  (initrd microcode-initrd)
+  (firmware (list linux-firmware))
+  (locale "en_US.utf8")
+  (timezone "America/Los_Angeles")
+  (keyboard-layout (keyboard-layout "us" #:model "macbook78"))
+  (host-name "frostfire")
+  (users (cons* (user-account
+                  (name "pharcosyle")
+                  (comment "Krzysztof Baranowski")
+                  (group "users")
+                  (home-directory "/home/pharcosyle")
+                  (supplementary-groups
+                    '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
+                %base-user-accounts))
+  (packages
+    (append
+      (list (specification->package "nss-certs")
+            (specification->package "xf86-input-libinput")
+            (specification->package "xf86-input-mtrack")
+            (specification->package "spartan"))
+      %base-packages))
+  (services
+    (append
+      (list (service gnome-desktop-service-type)
+            (set-xorg-configuration
+              (xorg-configuration
+                (modules (cons* xf86-input-mtrack
+                                %default-xorg-modules))
+                (keyboard-layout keyboard-layout)
+                (extra-config (list %my-xorg-config))))
+            (simple-service 'my-light-udev-rules udev-service-type (list light)))
+      (modify-services %desktop-services
+                       (guix-service-type config =>
+                                          (guix-configuration
+                                           (inherit config)
+                                           (substitute-urls
+                                            (append %default-substitute-urls
+                                                    (list "https://mirror.brielmaier.net")))
+                                           (authorized-keys
+                                            (append %default-authorized-guix-keys
+                                                    (list (local-file "./mirror.brielmaier.net.pub")))))))
+      ;; %desktop-services
+      ))
+  (bootloader
+    (bootloader-configuration
+      (bootloader grub-efi-bootloader)
+      (target "/boot/efi")
+      (keyboard-layout keyboard-layout)))
+  (file-systems
+    (cons* (file-system
+             (mount-point "/")
+             (device
+               (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
+                     'ext4))
+             (type "ext4"))
+           (file-system
+             (mount-point "/boot/efi")
+             (device (uuid "67E3-17ED" 'fat32))
+             (type "vfat"))
+           %base-file-systems)))
+#+end_src
+** mirror.brielmaier.net.pub
+#+begin_src scheme :mkdirp yes :tangle gen/system/mirror.brielmaier.net.pub
+(public-key
+  (ecc
+    (curve Ed25519)
+    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+#+end_src
+* Home Environment
+#+begin_src scheme :mkdirp yes :tangle gen/solitude.scm
+(use-modules ((gnu home) #:select (home-environment))
+             ;; (gnu home-services)
+             ;; (gnu home-services gnupg)
+             ;; (gnu home-services ssh)
+             ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
+             ((gnu home-services files) #:select (home-files-service-type))
+             ((gnu home-services) #:select (home-environment-variables-service-type))
+             ((gnu home-services shells) #:select (home-bash-service-type))
+             ;; (gnu home-services mcron)
+             ((gnu services) #:select (service simple-service))
+             ((gnu packages) #:select (specification->package))
+             ;; (gnu packages linux)
+             ;; (gnu packages admin)
+             ;; (gnu packages gnupg)
+             ;; (gnu system keyboard)
+             ((guix gexp) #:select (local-file)))
+
+;; (define %my-fontconfig-config-file
+;;   "
+;; <?xml version=\"1.0\"?>
+;; <!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">
+;; <fontconfig>
+;;   <dir>~/org/spring_cleaning/.guix-extra-profiles/multiverse/multiverse/share/fonts</dir>
+;;   <match target=\"font\">
+;;     <test name=\"family\" compare=\"eq\">
+;;         <string>Source Code Pro</string>
+;;     </test>
+;;     <edit mode=\"assign\" name=\"hintstyle\">
+;;       <const>hintfull</const>
+;;     </edit>
+;;     <edit name=\"antialias\" mode=\"assign\">
+;;       <bool>true</bool>
+;;     </edit>
+;;   </match>
+;; </fontconfig>
+;; ")
+
+(home-environment
+ ;; (packages (list htop))
+ ;; TODO temporary font packages to make guix-home fontconfig work
+ (packages (list (specification->package "font-google-noto")
+                 (specification->package "font-adobe-source-code-pro")))
+ (services
+  (list
+   (simple-service 'my-channels
+                   home-files-service-type
+                   (list `("config/guix/channels.scm"
+						   ,(local-file "channels.scm"))))
+   ;; TODO Documentation gives this example for setting LESSHISTFILE but maybe doing it in a shell profile would be better?
+   (simple-service 'my-env-vars
+                   home-environment-variables-service-type
+                   `(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")
+                     ;; ("SHELL" . ,(file-append zsh "/bin/zsh"))
+                     ))
+   (service home-bash-service-type
+;;             (home-bash-configuration
+;;              (bash-profile '("\
+;; export HISTFILE=\"$XDG_CACHE_HOME\"/.bash_history")))
+			)
+   (service home-git-service-type
+            (home-git-configuration
+             (config
+              `((user
+                 ((name . "Krzysztof Baranowski")
+                  (email . "pharcosyle@gmail.com")))
+                ;; (http "https://weak.example.com"
+                ;;   ((ssl-verify . #f)))
+                ;; (gpg
+                ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+                ;; (sendmail
+                ;;  ((annotate . #t)))
+                ))))
+   ;; (service home-keyboard-service-type
+   ;;          (keyboard-layout "us,ru" "dvorak,"
+   ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+   ;; (service home-fontconfig-service-type)
+   ;; (simple-service 'my-fontconfig-config-file
+   ;;                 home-files-service-type
+   ;;                 (list `("config/fontconfig/fonts.conf"
+   ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
+   ;; (service home-ssh-service-type
+   ;;          (home-ssh-configuration
+   ;;           (extra-config
+   ;;            (list
+   ;;             (ssh-host "savannah"
+   ;;                       '((compression . #f)))))))
+   ;; (service home-gnupg-service-type
+   ;;          (home-gnupg-configuration
+   ;;           (gpg-agent-config
+   ;;            (home-gpg-agent-configuration
+   ;;             (ssh-agent? #t)))))
+   )))
+
+;; (service home-state-service-type
+;;          (append
+;;           (list
+;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
+;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
+;;            (state-git "/home/bob/tmp/talkes/"
+;;                       "git@git.sr.ht:~abcdw/rde"))))
+#+end_src
+* Manifests
+** omni
+#+begin_src scheme :mkdirp yes :tangle gen/omni.scm
+(use-modules ((guix packages) #:select (package-input-rewriting))
+             ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
+             ((flat packages emacs) #:select (emacs-native-comp))
+
+             ;; ((srfi srfi-1) #:select (first))
+             ;; ((guix channels) #:select (channel))
+             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+             )
+
+(concatenate-manifests
+ (list
+  ;; (packages->manifest
+  ;;  (list
+  ;;   (let ((inferior
+  ;;          (inferior-for-channels
+  ;;           (list (channel
+  ;;                  (name 'flat)
+  ;;                  (url "https://github.com/flatwhatson/guix-channel.git")
+  ;;                  (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
+  ;;                 ;; TODO not sure if specifying the guix channel is necessary
+  ;;                 (channel
+  ;;                  (name 'guix)
+  ;;                  (url "https://git.savannah.gnu.org/git/guix.git")
+  ;;                  (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
+  ;;     (first (lookup-inferior-packages inferior "emacs-native-comp")))))
+  (specifications->manifest
+   '("ungoogled-chromium"
+
+     "emacs-native-comp"
+
+     "xkbcomp"
+     "setxkbmap"
+
+     "xcape"
+
+     "xrandr"
+
+     "xinput"
+
+
+     ;; Desktop
+     "light"
+     "playerctl"
+     "scrot"
+     "pavucontrol"
+     "pasystray"
+     "blueman"
+     "dunst"
+     "udiskie"
+     "redshift:gtk"
+
+     "dracula-theme"
+
+
+     "papirus-icon-theme" ; TODO trying out
+
+     "font-google-noto"
+     ;; Coding I guess?
+     "font-adobe-source-code-pro"
+
+     ;; Doom dependencies ; TODO these should be inputs / propogated inputs to a Doom guix package I find/create
+     "git"
+     "ripgrep"
+     "coreutils"
+     "fd"
+     "clang"
+
+     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO can this be made an input to a/the counsel package?
+
+     ;; General
+     ;; "git"
+     "zip"
+     "unzip"
+     ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
+
+     ;; Apps
+     "gimp"))
+  (packages->manifest
+   (cons*
+	;; TODO make sure `spartan-binary' can be found when booting (`multiverse' won't be sourced yet when the binary needs to be available I think)
+    ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
+     (specification->package "spartan-binary"))
+    (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
+                                    (,emacs-minimal . ,emacs-native-comp)
+                                    (,emacs-no-x . ,emacs-native-comp)))
+         (list (specification->package "emacs-exwm")
+               (specification->package "emacs-desktop-environment")))))))
+#+end_src
+* dotprofile
+#+begin_src sh :mkdirp yes :tangle gen/dotprofile
+# TODO these should be in a .profile or something
+
+GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
+
+# TODO do I need to source ~/.guix-profile here like daviwil does? I don't think so.
+
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+
+
+export VISUAL=emacsclient
+export EDITOR="$VISUAL"
+
+
+
+
+
+# TODO where should these be? I could put them in desktop.el but they should be run in both EXWM and Gnome, if I care
+
+xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
+
+xkbcomp -I$HOME/Projects/dotfiles/gen/xkb $HOME/Projects/dotfiles/gen/xkb/current_setxkbmap_print $DISPLAY
+
+trackpad_set ()
+{
+  xinput set-prop "bcm5974" "$@"
+}
+trackpad_set "Device Accel Profile" 2
+trackpad_set "Trackpad Sensitivity" 0.08
+trackpad_set "Trackpad Edge Sizes" 15, 15, 15, 15 # TODO make the sides smaller (like macOS). Maybe turn the top and bottom down a bit too.
+trackpad_set "Trackpad Scroll Settings" 150, 10, 0 # TODO trying this out, doesn't seem to do anything in chromium, maybe a full restart?
+trackpad_set "Trackpad Scroll Coasting" 0.05 200
+trackpad_set "Trackpad Scroll Buttons" 5, 4, 7, 6 # Invert vertical and horizontal scrolling.
+trackpad_set "Trackpad Drag Settings" 0, 350, 40, 200, 500 # First value disables, others are defaults.
+# Three-finger dragging
+trackpad_set "Trackpad Swipe Settings" 1, 0, 1000
+trackpad_set "Trackpad Swipe Buttons" 1, 1, 1, 1
+# Trying out
+trackpad_set "Trackpad Swipe Settings" 1, 0, 1500
+trackpad_set "Trackpad Palm Detection" 1, 0
+trackpad_set "Trackpad Palm Size" 30
+# trackpad_set "Trackpad Scroll Settings" 250, 10, 0
+trackpad_set "Trackpad Hold1Move1 Stationary Settings" 20, 0 # First value is the default, second value disables. # TODO I think?
+trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First three values are defaults, last four disable. # TODO I think? Otherwise disable by just setting the distance really high?
+#+end_src
+* Desktop
+** xsettingsd
+#+begin_src conf :mkdirp yes :tangle gen/desktop/xsettingsd.conf
+# TODO these
+Net/EnableEventSounds 1
+Net/EnableInputFeedbackSounds 1
+
+Xft/Antialias 1
+Xft/Hinting 1
+Xft/HintStyle "hintfull"
+Xft/DPI 196608
+# Xft/DPI 184320 # TODO I do like the chromium interface size better at this dpi
+# Xft/DPI 225280
+
+# Xft/RGBA "rgb"
+
+# Xft/Autohint 0 # TODO donno if the casing is right or if it matters
+
+
+
+# Gtk/ToolbarIconSize "large"
+# Net/ApplicationPreferDarkTheme 1
+# Gtk/FontName "Cantarell 11"
+# Gtk/MonospaceFontName "Fira Mono 10"
+Gtk/CursorThemeName "Adwaita"
+Gtk/CursorThemeSize 48
+
+# TODO theme
+# - before doing any more wait until I've picked a browser and have installed more apps like e.g. VLC
+# - make sure my browser reads the device theme preference as dark
+# - if I don't like dracula try another theme or maybe patch it with my emacs colors (perhaps some other theme would be a better base?)
+# - look at dracula / other theme I choose in Gnome to see if it looks "right"
+Net/ThemeName "Dracula"
+# TODO icon theme
+# Donno about these new papirus icons, daviwil and hlissner seem to like them but I'm not sure I do (the Files icons and particularly the systray ones, can I change just those?). Maybe they'll look better once Dracula is enabled? Maybe a wrong / lower-resolution version of the icons is being used and I need to set up where they're looked for?
+Net/IconThemeName "Papirus-Dark"
+# seems like this is the default, at least for dracula
+# Gtk/DecorationLayout "menu:minimize,maximize,close"
+#+end_src
+** dunstrc
+#+begin_src conf :mkdirp yes :tangle gen/desktop/dunstrc
+[global]
+    geometry = "500x10-200+50"
+    transparency = 10
+    separator_color = frame
+    padding = 15
+    horizontal_padding = 15
+    text_icon_padding = 15
+    frame_width = 2
+    frame_color = "#89AAEB"
+    idle_threshold = 120
+	font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
+    line_height = 2
+    markup = full
+    format = "<b>%s</b>\n%b"
+    show_age_threshold = 60
+    word_wrap = yes
+    icon_position = left
+	min_icon_size = 40
+    max_icon_size = 40
+	# icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
+    # TODO browser = qutebrowser
+    corner_radius = 16
+    mouse_right_click = do_action
+
+[urgency_low]
+    background = "#1c1f26"
+    foreground = "#9ca0a4"
+    timeout = 10
+
+[urgency_normal]
+    background = "#1c1f26"
+    foreground = "#ffffff"
+    timeout = 10
+
+[urgency_critical]
+    background = "#900000"
+    foreground = "#ffffff"
+    frame_color = "#ff0000"
+    timeout = 0
+#+end_src
+** xkb
+- TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
+*** current_setxkbmap_print
+#+begin_src c :mkdirp yes :tangle gen/xkb/current_setxkbmap_print
+xkb_keymap {
+	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
+	xkb_types     { include "complete+numpad(mac)"	};
+	xkb_compat    { include "complete"	};
+	xkb_symbols   { include "pc+macintosh_vndr/us+inet(evdev)+ctrl(nocaps)+shift(both_capslock)+mysymbols(semicolon_to_control)"	};
+	xkb_geometry  { include "macintosh(macbook78)"	};
+};
+#+end_src
+*** xkb config
+#+begin_src c :mkdirp yes :tangle gen/xkb/symbols/mysymbols
+partial modifier_keys
+xkb_symbols "semicolon_to_control" {
+    key <AC10> { [ Control_R, colon ] };
+    modifier_map Control { <AC10> };
+};
+#+end_src
