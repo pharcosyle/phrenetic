@@ -1,6 +1,7 @@
 #+TITLE: Computer
 #+PROPERTY: header-args :mkdirp yes
 
+- TODO maybe make instances of my name/email be shared. Noweb or would some other mechanism be better?
 * Channels
 #+begin_src scheme :tangle gen/.config/guix/channels.scm
 (cons* (channel
@@ -254,7 +255,7 @@ EndSection
    (simple-service 'my-channels
                    home-files-service-type
                    (list `("config/guix/channels.scm"
-						   ,(local-file "channels.scm"))))
+                           ,(local-file ".config/guix/channels.scm"))))
    ;; TODO Documentation gives this example for setting LESSHISTFILE but maybe doing it in a shell profile would be better?
    (simple-service 'my-env-vars
                    home-environment-variables-service-type
@@ -265,7 +266,7 @@ EndSection
 ;;             (home-bash-configuration
 ;;              (bash-profile '("\
 ;; export HISTFILE=\"$XDG_CACHE_HOME\"/.bash_history")))
-			)
+            )
    (service home-git-service-type
             (home-git-configuration
              (config
@@ -390,7 +391,7 @@ EndSection
      "gimp"))
   (packages->manifest
    (cons*
-	;; TODO make sure `spartan-binary' can be found when booting (`multiverse' won't be sourced yet when the binary needs to be available I think)
+    ;; TODO make sure `spartan-binary' can be found when booting (`multiverse' won't be sourced yet when the binary needs to be available I think)
     ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
      (specification->package "spartan-binary"))
     (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
@@ -503,16 +504,16 @@ Net/IconThemeName "Papirus-Dark"
     frame_width = 2
     frame_color = "#89AAEB"
     idle_threshold = 120
-	font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
+    font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
     line_height = 2
     markup = full
     format = "<b>%s</b>\n%b"
     show_age_threshold = 60
     word_wrap = yes
     icon_position = left
-	min_icon_size = 40
+    min_icon_size = 40
     max_icon_size = 40
-	# icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
+    # icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
     # TODO browser = qutebrowser
     corner_radius = 16
     mouse_right_click = do_action
