@@ -1,7 +1,8 @@
 #+TITLE: Monolith
+#+PROPERTY: header-args :mkdirp yes
 
 * Channels
-#+begin_src scheme :mkdirp yes :tangle gen/.config/guix/channels.scm
+#+begin_src scheme :tangle gen/.config/guix/channels.scm
 (cons* (channel
         (name 'penitent-tangent)
         (url "file:///home/pharcosyle/Projects/penitent-tangent"))
@@ -73,7 +74,7 @@
 #+end_src
 * System
 ** system.scm
-#+begin_src scheme :mkdirp yes :tangle gen/system/system.scm
+#+begin_src scheme :tangle gen/system/system.scm
 (use-modules ((gnu system) #:select (operating-system %base-packages))
              ((gnu system accounts) #:select (user-account))
              ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
@@ -198,14 +199,14 @@ EndSection
            %base-file-systems)))
 #+end_src
 ** mirror.brielmaier.net.pub
-#+begin_src scheme :mkdirp yes :tangle gen/system/mirror.brielmaier.net.pub
+#+begin_src scheme :tangle gen/system/mirror.brielmaier.net.pub
 (public-key
   (ecc
     (curve Ed25519)
     (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 * Home Environment
-#+begin_src scheme :mkdirp yes :tangle gen/solitude.scm
+#+begin_src scheme :tangle gen/solitude.scm
 (use-modules ((gnu home) #:select (home-environment))
              ;; (gnu home-services)
              ;; (gnu home-services gnupg)
@@ -309,7 +310,7 @@ EndSection
 #+end_src
 * Manifests
 ** omni
-#+begin_src scheme :mkdirp yes :tangle gen/omni.scm
+#+begin_src scheme :tangle gen/omni.scm
 (use-modules ((guix packages) #:select (package-input-rewriting))
              ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
              ((flat packages emacs) #:select (emacs-native-comp))
@@ -399,7 +400,7 @@ EndSection
                (specification->package "emacs-desktop-environment")))))))
 #+end_src
 * dotprofile
-#+begin_src sh :mkdirp yes :tangle gen/dotprofile
+#+begin_src sh :tangle gen/dotprofile
 # TODO these should be in a .profile or something
 
 GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
@@ -453,7 +454,7 @@ trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First thre
 #+end_src
 * Desktop
 ** xsettingsd
-#+begin_src conf :mkdirp yes :tangle gen/desktop/xsettingsd.conf
+#+begin_src conf :tangle gen/desktop/xsettingsd.conf
 # TODO these
 Net/EnableEventSounds 1
 Net/EnableInputFeedbackSounds 1
@@ -491,7 +492,7 @@ Net/IconThemeName "Papirus-Dark"
 # Gtk/DecorationLayout "menu:minimize,maximize,close"
 #+end_src
 ** dunstrc
-#+begin_src conf :mkdirp yes :tangle gen/desktop/dunstrc
+#+begin_src conf :tangle gen/desktop/dunstrc
 [global]
     geometry = "500x10-200+50"
     transparency = 10
@@ -535,7 +536,7 @@ Net/IconThemeName "Papirus-Dark"
 ** xkb
 - TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
 *** current_setxkbmap_print
-#+begin_src c :mkdirp yes :tangle gen/xkb/current_setxkbmap_print
+#+begin_src c :tangle gen/xkb/current_setxkbmap_print
 xkb_keymap {
 	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
 	xkb_types     { include "complete+numpad(mac)"	};
@@ -545,7 +546,7 @@ xkb_keymap {
 };
 #+end_src
 *** xkb config
-#+begin_src c :mkdirp yes :tangle gen/xkb/symbols/mysymbols
+#+begin_src c :tangle gen/xkb/symbols/mysymbols
 partial modifier_keys
 xkb_symbols "semicolon_to_control" {
     key <AC10> { [ Control_R, colon ] };
