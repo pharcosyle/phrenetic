@@ -280,6 +280,10 @@ EndSection
                 ;; (sendmail
                 ;;  ((annotate . #t)))
                 ))))
+   (simple-service 'my-doomdir
+                   home-files-service-type
+                   (list `("config/doom"
+                           ,(local-file "doom" #:recursive? #t))))
    ;; (service home-keyboard-service-type
    ;;          (keyboard-layout "us,ru" "dvorak,"
    ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
