@@ -1,4 +1,4 @@
-#+TITLE: Monolith
+#+TITLE: Computer
 #+PROPERTY: header-args :mkdirp yes
 
 * Channels
@@ -552,4 +552,919 @@ xkb_symbols "semicolon_to_control" {
     key <AC10> { [ Control_R, colon ] };
     modifier_map Control { <AC10> };
 };
+#+end_src
+* Emacs
+# :PROPERTIES:
+# :header-args+: :noweb yes :lexical t
+# :END:
+- TODO donno if the lexical property is really necessary, I guess maybe it makes evaluation /from the org file/ work lexically?
+# ** Org Helpers
+# #+name: lexical-binding-header
+# #+begin_src elisp
+# ;;; -*- lexical-binding: t; -*-
+# #+end_src
+** Doomdir
+*** init.el
+:PROPERTIES:
+:header-args+: :tangle gen/doom/init.el :lexical t
+:END:
+**** Header
+#+begin_src elisp
+;;; -*- lexical-binding: t; -*-
+#+end_src
+**** ~doom!~ block
+#+begin_src elisp
+(doom! :completion
+       company
+       (ivy +icons)
+
+       :ui
+       doom
+       doom-dashboard
+       (emoji +unicode)
+       hl-todo
+       hydra
+       indent-guides
+       (ligatures +extra)
+       modeline
+       nav-flash
+       ophints
+       (popup +defaults +all)
+       treemacs
+       vc-gutter
+       vi-tilde-fringe
+       window-select
+       workspaces
+
+       :editor
+       (evil +everywhere)
+       file-templates
+       fold
+       format
+       lispy
+       multiple-cursors
+       rotate-text
+       snippets
+       word-wrap
+
+       :emacs
+       (dired +icons)
+       electric
+       (ibuffer +icons)
+       undo
+       vc
+
+       :term
+       eshell
+       vterm
+
+       :checkers
+       syntax
+
+       :tools
+       direnv
+       (eval +overlay)
+       lookup
+       (magit +forge)
+       (pass +auth)
+       ;; pdf ; TODO Re-enable this once I'm compiling its `epdfinfo' dependency so `org-store-link' doesn't throw an error.
+       prodigy
+       rgb
+       taskrunner
+
+       :lang
+       clojure
+       data
+       emacs-lisp
+       json
+       javascript
+       markdown
+       nix
+       (org +journal)
+       rest
+       (scheme +guile)
+       sh
+       web
+       yaml
+
+       :app
+       calendar
+
+       :config
+       (default +bindings +smartparens))
+#+end_src
+**** init-stage configuration
+#+begin_src elisp
+(use-package-hook! clojure-mode
+  :post-init
+  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding
+
+(use-package-hook! lispyville
+  :post-init
+  (setq lispyville-key-theme nil))
+#+end_src
+*** config.el
+:PROPERTIES:
+:header-args+: :tangle gen/doom/config.el :lexical t
+:END:
+**** Header
+#+begin_src elisp
+;;; -*- lexical-binding: t; -*-
+#+end_src
+**** Requires
+#+begin_src elisp
+(use-package! dash)
+#+end_src
+**** Personal
+#+begin_src elisp
+(setq user-full-name "Krzysztof Baranowski"
+      user-mail-address "pharcosyle@gmail.com")
+#+end_src
+**** Globals
+#+begin_src elisp
+;; Must be set before org loads (I think this is just a Doom, not org-mode, requirement). Keep this even though the value is the default so I can use it in the derived constants below.
+(setq org-directory "~/org")
+
+
+(defconst biome--org-dir (concat org-directory "/"))
+(defconst biome--gcal-dir (concat biome--org-dir "gcal/"))
+
+(defconst biome--very-big 1000000)
+#+end_src
+**** Doom resets
+#+begin_src elisp
+(setq-default indent-tabs-mode t)
+
+;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+;; (setq-default cursor-in-non-selected-windows t)
+#+end_src
+**** General
+#+begin_src elisp
+(setq scroll-margin 10
+      save-interprogram-paste-before-kill t)
+
+;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
+;; (setq display-line-numbers-type nil)
+#+end_src
+**** Keybindings
+#+begin_src elisp
+(setq doom-leader-alt-key "s-SPC"
+      doom-localleader-key "s-m"
+      doom-localleader-alt-key "s-m")
+
+(defun biome--trans (&rest rest)
+  (-each (-partition 2 rest)
+    (-lambda ((to from))
+      (define-key key-translation-map (kbd to) (kbd from)))))
+
+(biome--trans "C-h" "DEL"
+              "C-?" "C-h"
+
+              "s-i" "<tab>"
+              "s-I" "<backtab>"
+
+              "s-h" "<left>"
+              "s-j" "<down>"
+              "s-k" "<up>"
+              "s-l" "<right>")
+
+(setq help-char (string-to-char "\C-_"))
+
+(defalias 'original-yank-pop #'yank-pop)
+
+;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
+(map! "s-V" #'original-yank-pop
+
+      "s-SPC" doom-leader-map
+
+      ;; Copied from Doom MacOS bindings: ~/.emacs.d/modules/config/default/config.el:263
+      "s-`" #'other-frame
+      "s-n" #'+default/new-buffer
+      "s-z" #'undo
+      "s-Z" #'redo
+      "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
+      "s-v" #'yank
+      "s-s" #'save-buffer
+      "s-x" #'execute-extended-command
+      :v "s-x" #'kill-region
+      "s-/" (cmd! (save-excursion (comment-line 1)))
+      :n "s-/" #'evilnc-comment-or-uncomment-lines
+      :v "s-/" #'evilnc-comment-operator
+
+      "s-t" (lookup-key doom-leader-map (kbd "`"))
+      "s-f" (cl-flet ((f (lookup-key doom-leader-map (kbd "s b"))))
+              ;; `swiper' hangs initially when `visual-line-mode' is active. Plus Doom defaults to having `visual-line-mode' enabled in text-mode (and derived) buffers where it makes more sense to not search linewise.
+              (cmd! (if visual-line-mode
+                        (letf! ((#'swiper #'swiper-isearch))
+                          (f))
+                      (f))))
+      "s-r" (lookup-key doom-leader-map (kbd "f r"))
+      "s-w" (lookup-key doom-leader-map (kbd "b k"))
+      "s-d w" (lookup-key doom-leader-map (kbd "w d"))
+      "s-d s-w" (cmd! (kill-current-buffer)
+                      (+workspace/close-window-or-workspace))
+      "s-g" (lookup-key doom-leader-map (kbd "g g"))
+      "s-," (lookup-key doom-leader-map (kbd "w w"))
+      "s-<" (lookup-key doom-leader-map (kbd "w W"))
+      "s-y" (lookup-key doom-leader-map (kbd "i y"))
+      "s-{" (lookup-key doom-leader-map (kbd "b p"))
+      "s-}" (lookup-key doom-leader-map (kbd "b n"))
+      "s-p" (lookup-key global-map (kbd "C-~"))
+
+      "s-u" (lookup-key doom-leader-map (kbd "u"))
+      "s-U" #'negative-argument         ; Trying this out.
+      (:map universal-argument-map
+       "s-u" #'universal-argument-more)
+
+      (:after evil-easymotion
+       "s-a" (lookup-key evilem-map (kbd "SPC")))
+
+      "s-." #'repeat
+
+      "s-J" #'evil-scroll-down
+      "s-K" #'evil-scroll-up
+
+      (:prefix "s-d"
+       "." #'repeat-complex-command
+
+       "h" #'git-gutter:popup-hunk
+       ;; "o" #'+macos/open-in-default-program ;; TODO consider a Guix alternative? Meh.
+       "r" #'projectile-replace
+       "t" #'tldr
+       "s" #'org-save-all-org-buffers
+       "a" #'link-hint-open-multiple-links
+       ;; "b" (cmd! (evil-local-mode 'toggle)
+       ;;           (when evil-local-mode (evil-normal-state)))
+       (:prefix "c"
+        "f" #'org-gcal-fetch
+        "s" #'org-gcal-sync
+        "p" #'org-gcal-post-at-point)))
+#+end_src
+**** Packages
+#+begin_src elisp
+(defun biome--sp-strict-h ()
+  (add-hook! 'smartparens-enabled-hook :local
+             #'turn-on-smartparens-strict-mode
+             (lambda ()
+               (map! :map smartparens-strict-mode-map
+                     :i "DEL" #'sp-backward-delete-char))))
+
+(add-hook! prog-mode #'biome--sp-strict-h)
+
+(after! all-the-icons-dired
+  (setq all-the-icons-dired-monochrome nil))
+
+(after! avy
+  (setq avy-single-candidate-jump t))
+
+(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
+
+(after! clojure-mode
+  (set-ligatures! 'clojure-mode :lambda "fn"))
+
+(add-hook! cider-repl-mode
+           #'goto-address-prog-mode
+           #'highlight-numbers-mode
+           #'rainbow-delimiters-mode
+           #'yas-minor-mode-on
+           #'biome--sp-strict-h)
+
+(after! cider
+  (setq cider-repl-history-size biome--very-big
+        cider-print-options '(("length" 100))))
+
+(add-hook! clj-refactor-mode
+  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
+
+(after! counsel
+  (setq counsel-yank-pop-separator "\n--------------------------------\n"))
+
+(after! emojify
+  (setq emojify-display-style 'unicode))
+
+(after! eshell
+  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit HISTSIZE is another option.
+
+(after! evil-org
+  (map! :map evil-org-mode-map
+        :nv "C-j" #'outline-forward-same-level
+        :nv "C-k" #'outline-backward-same-level))
+
+(after! evil-multiedit
+  (setq evil-multiedit-follow-matches t))
+
+(use-package! expand-region
+  :defer t
+  :init
+  (map! :nv "s-e" #'er/expand-region
+        :nv "s-E" #'er/contract-region)
+  :config
+  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+  ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
+  (defadvice! biome--quit-expand-region-a (&rest _)
+    "Properly abort an expand-region region."
+    :before '(evil-escape doom/escape)
+    (when (memq last-command '(er/expand-region er/contract-region))
+      (er/contract-region 0))))
+
+(remove-hook! (prog-mode text-mode conf-mode) #'highlight-indent-guides-mode)
+
+(after! ivy
+  (setq +ivy-buffer-preview t
+        ivy-extra-directories nil
+        ivy-count-format "(%d/%d) ")
+  (dolist (i '(counsel-yank-pop
+               counsel-evil-registers))
+    (add-to-list 'ivy-height-alist `(,i . 10)))
+
+  (map! :map ivy-minibuffer-map
+        "s-J" #'ivy-scroll-up-command
+        "s-K" #'ivy-scroll-down-command
+        "C-r" #'ivy-reverse-i-search ; Doom overrides this, restore it.
+        :map ivy-reverse-i-search-map
+        "C-k" #'previous-line))
+
+(after! ivy-hydra
+  (defhydra+ hydra-ivy ()
+    ;; Doom overrides these imporant ivy hydra heads: ~/.emacs.d/modules/completion/ivy/autoload/hydras.el
+    ("m" ivy-mark)
+    ("u" ivy-unmark)
+    ("t" ivy-toggle-marks)))
+
+;; Not using lispy, remove the Doom module's hooks.
+(remove-hook! (lisp-mode
+               emacs-lisp-mode
+               ielm-mode
+               scheme-mode
+               racket-mode
+               hy-mode
+               lfe-mode
+               dune-mode
+               clojure-mode
+               fennel-mode)
+  #'lispy-mode)
+(remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
+
+(add-hook! prog-mode #'lispyville-mode)
+
+(after! lispyville
+  (lispyville-set-key-theme
+   '(operators
+     c-w
+     c-u
+     commentary))
+
+  (map! :map lispyville-mode-map
+        "s-C-j" #'lispyville-beginning-of-next-defun
+        "s-C-k" #'lispyville-beginning-of-defun
+        "s-C-," #'lispyville-end-of-defun
+        "s-C-a" #'lispyville-drag-backward
+        "s-C-g" #'lispyville-drag-forward
+        "s-C-p" #'lispyville-prettify
+        (:prefix "s-C-;"
+         "R" #'lispyville-raise-list)))
+
+(after! magit
+  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
+  (setq transient-history-limit biome--very-big))
+
+(after! org
+  (setq org-agenda-files `(,biome--org-dir
+                           ,biome--gcal-dir
+                           ,(concat biome--org-dir "projects"))
+        org-log-done 'time
+        org-priority-lowest ?E
+        org-priority-default ?C
+        org-priority-faces `((?A . ,(doom-color 'red))
+                             (?B . ,(doom-color 'orange))
+                             (?C . ,(doom-color 'blue))
+                             (?D . ,(doom-color 'yellow))
+                             (?E . ,(doom-color 'green)))))
+
+(after! org-gcal
+  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+        org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat biome--gcal-dir "pharcosyle@gmail.com.org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--gcal-dir "contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--gcal-dir "holidays.org")))
+        org-gcal-recurring-events-mode 'nested))
+
+(after! paren
+  (setq! show-paren-delay 0))
+
+(after! recentf
+  (setq recentf-max-saved-items 500))
+
+(after! smartparens
+  (map! :map smartparens-mode-map
+        "s-C-h" #'sp-backward-sexp
+        "s-C-l" #'sp-forward-sexp
+        "s-C-u" #'sp-backward-up-sexp
+        "s-C-o" #'sp-up-sexp
+        :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.emacs.d/modules/config/default/config.el:447
+        "s-C-." #'sp-down-sexp
+        "s-C-c" #'sp-splice-sexp
+        "s-C-s" #'sp-splice-sexp-killing-backward
+        "s-C-f" #'sp-splice-sexp-killing-forward
+        "s-C-x" #'sp-backward-slurp-sexp
+        "s-C-v" #'sp-forward-slurp-sexp
+        "s-C-w" #'sp-backward-barf-sexp
+        "s-C-r" #'sp-forward-barf-sexp
+        (:prefix "s-C-;"
+         "(" #'sp-wrap-round
+         "[" #'sp-wrap-square
+         "{" #'sp-wrap-curly
+         "s" #'sp-split-sexp
+         "j" #'sp-join-sexp
+         "r" #'sp-raise-sexp
+         "c" #'sp-convolute-sexp
+         "w" #'sp-rewrap-sexp)))
+
+(use-package! tldr
+  :defer t
+  :config
+  (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
+
+(after! undo-fu
+  (setq undo-fu-ignore-keyboard-quit t))
+
+;; (after! undo-tree
+;;   (setq undo-tree-visualizer-timestamps t))
+#+end_src
+**** UI
+#+begin_src elisp
+(setq doom-theme 'doom-nuclear
+      doom-font (font-spec :family "Source Code Pro" :size 24)
+      rainbow-delimiters-max-face-count 8)
+
+;; TODO get rid of this if I'm not going to try it out again
+;; (after! doom-themes
+;;   (doom-themes-visual-bell-config))
+
+(after! evil
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
+#+end_src
+***** Mode line
+#+begin_src elisp
+(after! doom-modeline ; TODO after `time'? Should this be a use-package block with a hook instead? Or no hook?
+  (setq display-time-day-and-date t)
+  ;; (setq display-time-24hr-format t)
+  (display-time-mode 1))
+
+(after! doom-modeline ; TODO after `battery'? Should this be a use-package block with a hook instead? Or no hook?
+  (display-battery-mode 1))
+
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-persp-name t))
+#+end_src
+**** Projects
+***** Hyperdrive
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(cider-preferred-build-tool . shadow-cljs)
+          '(cider-default-cljs-repl . shadow)
+          '(cider-shadow-default-options . ":app")
+          '(cider-offer-to-open-cljs-app-in-browser . nil)
+          '(cider-clojure-cli-global-options . "-A:dev")
+          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
+          '(cider-clojure-cli-global-options . nil))
+
+(prodigy-define-service
+  :name "Amplify Mock"
+  :command "amplify"
+  :args '("mock")
+  :cwd "~/Projects/Krush/hyperdrive/apps/singularity"
+  :kill-process-buffer-on-stop t)
+
+(prodigy-define-service
+  :name "Datomic Access (exogenesis)"
+  :command "bash"
+  :args '("datomic" "client" "access" "exogenesis")
+  :cwd "~/Projects/Krush/hyperdrive/ion/team"
+  :kill-process-buffer-on-stop t)
+#+end_src
+***** Massrealty
+#+begin_src elisp
+;; (pushnew! safe-local-variable-values
+;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
+;;           '(ssh-deploy-automatically-detect-remote-changes . t))
+
+;; (after! org-gcal
+;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--gcal-dir "krzysztof@massrealty.com.org")) 'append))
+#+end_src
+**** WIP
+#+begin_src elisp
+(after! org
+  (add-to-list 'org-agenda-files (concat biome--org-dir "spring_cleaning") 'append))
+
+(after! tramp
+  ;; Make tramp work on Guix.
+  ;; TODO will this work anymore now that I use profiles other than `.guix-profile'?
+  (prependq! tramp-remote-path '("~/.guix-profile/bin"
+                                 "~/.guix-profile/sbin"
+                                 "/run/current-system/profile/bin"
+                                 "/run/current-system/profile/sbin")))
+
+;; (map! "s-b" (cmd!
+;;              ;; (message "chainging margin")
+;;              ;; (message "%s" (selected-window))
+;;              (set-window-margins (selected-window) nil (if (cdr (window-margins))
+;;                                                            nil 12))))
+
+;; Run this only when not on EXWM (probably not strictly necessary have this condition)
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+(map! "s-A" #'counsel-linux-app)
+
+(map! :leader
+      "s-," (lookup-key doom-leader-map (kbd "<")))
+
+(after! company
+  (map! (:map company-active-map
+         "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+         "s-]" #'company-show-location)))
+
+
+(setq biome--dotfiles-dir "~/Projects/dotfiles")
+
+(add-hook! org-mode
+  (add-hook! 'after-save-hook :local
+    (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+      (let ((org-confirm-babel-evaluate nil)) ; TODO make sure this is working like I think
+        (org-babel-tangle)))))
+#+end_src
+*** packages.el
+#+begin_src elisp :tangle gen/doom/packages.el
+;; -*- no-byte-compile: t; -*-
+
+(package! dash :pin "2675596b9ac1c4b9d47b93e227f06f8ec6755ec6")
+(package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
+;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
+;; TODO was causing weird errors with company-capf in eshell, just start typing "guix search [...]" to reproduce
+;; (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+(package! tldr :pin "d59405bd72f3379417b9e73f06e8848b43cb021d")
+(package! trashed :pin "23e782f78d9adf6b5479a01bfac90b2cfbf729fe")
+(package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
+#+end_src
+*** theme
+#+begin_src elisp :tangle gen/doom/themes/doom-nuclear-theme.el.el :lexical t
+;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
+;;
+;; Copyright (C) 2016-2021 Henrik Lissner
+;;
+;; Author: Henrik Lissner <https://github.com/hlissner>
+;; Created: December 6, 2020
+;; Version: 2.0.0
+;; Keywords: custom themes, faces
+;; Homepage: https://github.com/hlissner/emacs-doom-themes
+;; Package-Requires: ((emacs "25.1") (cl-lib "0.5") (doom-themes "2.2.1"))
+;;
+;;; Commentary:
+;;
+;; Inspired by Atom's One Dark color scheme.
+;;
+;;; Code:
+
+(require 'doom-themes)
+
+
+;;
+;;; Variables
+
+(defgroup nuclear-theme nil
+  "Options for the `doom-nuclear' theme."
+  :group 'doom-themes)
+
+(defcustom nuclear-brighter-modeline nil
+  "If non-nil, more vivid colors will be used to style the mode-line."
+  :group 'nuclear-theme
+  :type 'boolean)
+
+(defcustom nuclear-brighter-comments nil
+  "If non-nil, comments will be highlighted in more vivid colors."
+  :group 'nuclear-theme
+  :type 'boolean)
+
+(defcustom nuclear-padded-modeline doom-themes-padded-modeline
+  "If non-nil, adds a 4px padding to the mode-line.
+Can be an integer to determine the exact padding."
+  :group 'nuclear-theme
+  :type '(choice integer boolean))
+
+
+;;
+;;; Theme definition
+
+(def-doom-theme doom-nuclear
+  "A dark theme inspired by Atom One Dark."
+
+  ;; name        default   256           16
+  ((bg         '("#282c34" "black"       "black" ))
+   (fg         '("#DEE2F8" "#bfbfbf"     "brightwhite"  ))
+
+   ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
+   ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
+   ;; or region), especially when paired with the `doom-darken', `doom-lighten',
+   ;; and `doom-blend' helper functions.
+   (bg-alt     '("#21242b" "black"       "black"        ))
+   (fg-alt     '("#5B6268" "#2d2d2d"     "white"        ))
+
+   ;; These should represent a spectrum from bg to fg, where base0 is a starker
+   ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
+   ;; dark grey, base0 should be white and base8 should be black.
+   (base0      '("#1B2229" "black"       "black"        ))
+   (base1      '("#1c1f24" "#1e1e1e"     "brightblack"  ))
+   (base2      '("#202328" "#2e2e2e"     "brightblack"  ))
+   (base3      '("#23272e" "#262626"     "brightblack"  ))
+   (base4      '("#3f444a" "#3f3f3f"     "brightblack"  ))
+   (base5      '("#5B6268" "#525252"     "brightblack"  ))
+   (base6      '("#73797e" "#6b6b6b"     "brightblack"  ))
+   (base7      '("#9ca0a4" "#979797"     "brightblack"  ))
+   (base8      '("#DFDFDF" "#dfdfdf"     "white"        ))
+
+   (grey       base4)
+   (red        '("#FB8578" "#ff6655" "red"          ))
+   (orange     '("#FDCE5F" "#dd8844" "brightred"    ))
+   (green      '("#9FED9C" "#99bb66" "green"        ))
+   (teal       '("#4db5bd" "#44b9b1" "brightgreen"  ))
+   (yellow     '("#EDDC91" "#ECBE7B" "yellow"       ))
+   (blue       '("#7DB9FE" "#51afef" "brightblue"   ))
+   (dark-blue  '("#5F68DE" "#2257A0" "blue"         ))
+   (magenta    '("#E29BF7" "#c678dd" "brightmagenta"))
+   (violet     '("#AEB9F3" "#a9a1e1" "magenta"      ))
+   (cyan       '("#75E0F9" "#46D9FF" "brightcyan"   ))
+   (dark-cyan  '("#5699AF" "#5699AF" "cyan"         ))
+
+   ;; These are the "universal syntax classes" that doom-themes establishes.
+   ;; These *must* be included in every doom themes, or your theme will throw an
+   ;; error, as they are used in the base theme defined in doom-themes-base.
+   (highlight      "#8496FF")
+   (vertical-bar   (doom-darken base1 0.1))
+   (selection      dark-blue)
+   (builtin        blue)
+   (comments       (if nuclear-brighter-comments dark-cyan "#63677F"))
+   (doc-comments   (doom-lighten (if nuclear-brighter-comments dark-cyan base5) 0.25))
+   (constants      yellow)
+   (functions      blue)
+   (keywords       magenta)
+   (methods        violet)
+   (operators      cyan)
+   (type           orange)
+   (strings        green)
+   (variables      red)
+   (numbers        violet)
+   (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
+   (error          red)
+   (warning        yellow)
+   (success        green)
+   (vc-modified    orange)
+   (vc-added       green)
+   (vc-deleted     red)
+
+   ;; These are extra color variables used only in this theme; i.e. they aren't
+   ;; mandatory for derived themes.
+   (modeline-fg              fg)
+   (modeline-fg-alt          base5)
+   (modeline-bg              (if nuclear-brighter-modeline
+                                 (doom-darken blue 0.45)
+                               (doom-darken bg-alt 0.1)))
+   (modeline-bg-alt          (if nuclear-brighter-modeline
+                                 (doom-darken blue 0.475)
+                               `(,(doom-darken (car bg-alt) 0.15) ,@(cdr bg))))
+   (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
+   (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg)))
+
+   (-modeline-pad
+    (when nuclear-padded-modeline
+      (if (integerp nuclear-padded-modeline) nuclear-padded-modeline 4))))
+
+
+  ;;;; Base theme face overrides
+  (((line-number &override) :foreground base4)
+   ((line-number-current-line &override) :foreground violet)
+   ((font-lock-comment-face &override)
+    :background (if nuclear-brighter-comments (doom-lighten bg 0.05)))
+   (font-lock-comment-delimiter-face :foreground "#939abd")
+   (font-lock-doc-face
+    :inherit 'font-lock-comment-face
+    :foreground cyan)
+   (mode-line
+    :background modeline-bg :foreground modeline-fg
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
+   (mode-line-inactive
+    :background modeline-bg-inactive :foreground modeline-fg-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
+   (mode-line-emphasis :foreground (if nuclear-brighter-modeline base8 highlight))
+
+   ;;;; clojure-mode
+   (clojure-interop-method-face :foreground cyan)
+   (clojure-character-face :foreground violet :weight 'bold)
+   ;;;; css-mode <built-in> / scss-mode
+   (css-proprietary-property :foreground orange)
+   (css-property             :foreground green)
+   (css-selector             :foreground blue)
+   ;;;; doom-modeline
+   (doom-modeline-bar :background (if nuclear-brighter-modeline modeline-bg highlight))
+   (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
+   (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
+   (doom-modeline-buffer-project-root :foreground green :weight 'bold)
+   ;;;; elscreen
+   (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
+   ;;;; ivy
+   (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
+   ;;;; LaTeX-mode
+   (font-latex-math-face :foreground green)
+   ;;;; markdown-mode
+   (markdown-markup-face :foreground base5)
+   (markdown-header-face :inherit 'bold :foreground red)
+   ((markdown-code-face &override) :background (doom-lighten base3 0.05))
+   ;;;; rainbow-delimiters
+   (rainbow-delimiters-depth-1-face :foreground fg)
+   (rainbow-delimiters-depth-2-face :foreground magenta)
+   (rainbow-delimiters-depth-3-face :foreground blue)
+   (rainbow-delimiters-depth-4-face :foreground cyan)
+   (rainbow-delimiters-depth-5-face :foreground green)
+   (rainbow-delimiters-depth-6-face :foreground yellow)
+   (rainbow-delimiters-depth-7-face :foreground orange)
+   (rainbow-delimiters-depth-8-face :foreground red)
+   ;;;; rjsx-mode
+   (rjsx-tag :foreground red)
+   (rjsx-attr :foreground orange)
+   ;;;; solaire-mode
+   (solaire-mode-line-face
+    :inherit 'mode-line
+    :background modeline-bg-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-alt)))
+   (solaire-mode-line-inactive-face
+    :inherit 'mode-line-inactive
+    :background modeline-bg-inactive-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive-alt))))
+
+  ;;;; Base theme variable overrides-
+  ())
+
+;;; doom-nuclear-theme.el ends here
+#+end_src
+** desktop
+#+begin_src elisp :tangle gen/desktop.el :lexical t
+;;; -*- lexical-binding: t; -*-
+
+;; TODO rename efs to biome
+;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
+;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
+
+(defun efs/run-in-background (command)
+  (let ((command-parts (split-string command "[ ]+")))
+    (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
+
+(defun efs/exwm-init-hook ()
+  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/desktop/dunstrc")))
+  (efs/run-in-background "nm-applet")
+  (efs/run-in-background "pasystray")
+  ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
+  (efs/run-in-background "redshift-gtk -l 47:-123")
+  (efs/run-in-background "udiskie -t"))
+
+(defun efs/exwm-update-class ()
+  (exwm-workspace-rename-buffer exwm-class-name))
+
+(defun efs/exwm-update-title ()
+  (pcase exwm-class-name
+    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title))))) ; TODO get rid of preceding or trailing "Chromium"
+
+(defun biome--shell-cmd (command)
+  (start-process-shell-command command nil command))
+
+(use-package! exwm
+  :config
+  ;; When window "class" updates, use it to set the buffer name
+  (add-hook 'exwm-update-class-hook #'efs/exwm-update-class)
+
+  ;; When window title updates, use it to set the buffer name
+  (add-hook 'exwm-update-title-hook #'efs/exwm-update-title)
+
+  ;; When EXWM starts up, do some extra confifuration
+  (add-hook 'exwm-init-hook #'efs/exwm-init-hook)
+
+  ;; NOTE: Uncomment the following two options if you want window buffers
+  ;;       to be available on all workspaces!
+
+  ;; Automatically move EXWM buffer to current workspace when selected
+  ;; (setq exwm-layout-show-all-buffers t)
+
+  ;; Display all EXWM buffers in every workspace buffer list
+  ;; (setq exwm-workspace-show-all-buffers t)
+
+  ;; NOTE: Uncomment this option if you want to detach the minibuffer!
+  ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
+  ;;(setq exwm-workspace-minibuffer-position 'top)
+
+  ;; Load the system tray before exwm-init
+  (require 'exwm-systemtray)
+  (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
+  (setq exwm-systemtray-icon-gap 8)
+  (exwm-systemtray-enable)
+
+  ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.
+  ;; Window focus should follow the mouse pointer
+  ;; (setq mouse-autoselect-window t
+  ;;       focus-follows-mouse t)
+
+  ;; These keys should always pass through to Emacs
+  (setq exwm-input-prefix-keys
+        '(?\C-x
+          ;; ?\C-u
+          ;; ?\C-h
+          ?\M-x
+          ?\M-`
+          ?\M-&
+          ?\M-:
+          ;; ?\C-\M-j  ;; Buffer list
+          ?\s-\ ; TODO I might want this in exwm global keys
+          ?\s-, ; TODO I might want this in exwm global keys
+          ))
+  ;; (setq exwm-input-prefix-keys nil)
+
+  ;; (setq exwm-input-simulation-keys
+  ;;         '(([?\C-b] . [left])
+  ;;           ([?\C-f] . [right])
+  ;;           ([?\C-p] . [up])
+  ;;           ([?\C-n] . [down])
+  ;;           ([?\C-a] . [home])
+  ;;           ([?\C-e] . [end])
+  ;;           ([?\M-v] . [prior])
+  ;;           ([?\C-v] . [next])
+  ;;           ([?\C-d] . [delete])
+  ;;           ([?\C-k] . [S-end delete])))
+  (setq exwm-input-simulation-keys
+        '(([?\s-c] . [C-c])))
+
+  ;; TODO might want to do some local simulation keys too
+
+  ;; TODO maybe find a way to alias localleader key to the commands in exwm-mode-map under C-c?
+  ;; TODO probably use `map!' instead of `define-key'
+  ;; (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
+
+  ;; Set up global key bindings.  These always work, no matter the input state!
+  ;; Keep in mind that changing this list after EXWM initializes has no effect.
+  ;; TODO maybe setq! would work though?
+  (setq exwm-input-global-keys
+        `(([?\s-q] . exwm-reset)
+
+          ([?\s-Q] . exwm-input-release-keyboard)
+
+          ;; Move between windows
+          ([s-left] . windmove-left)
+          ([s-right] . windmove-right)
+          ([s-up] . windmove-up)
+          ([s-down] . windmove-down)
+
+          ([?\s-t] . evil-switch-to-windows-last-buffer)
+          ;; ([?\s-\ ] . doom-leader-map)
+
+          ;; Launch applications via shell command
+          ([?\s-&] . (lambda (command)
+                       (interactive (list (read-shell-command "$ ")))
+                       (biome--shell-cmd command)))
+
+          (,(kbd "<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close")))
+          (,(kbd "S-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close-all")))
+          (,(kbd "C-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl history-pop")))
+          (,(kbd "M-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl action")))))
+
+  ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
+  (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
+
+  (exwm-enable))
+
+
+
+(use-package! desktop-environment
+  :after exwm
+  :config
+  (setq desktop-environment-brightness-get-command "light"
+        desktop-environment-brightness-set-command "light %s"
+        desktop-environment-brightness-get-regexp "^\\([0-9]+\\)"
+        desktop-environment-brightness-normal-increment "-A 10"
+        desktop-environment-brightness-normal-decrement "-U 10"
+        desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
+        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
+        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+        desktop-environment-volume-normal-increment "+5%"
+        desktop-environment-volume-normal-decrement "-5%"
+        desktop-environment-keyboard-backlight-normal-increment 25
+        desktop-environment-keyboard-backlight-normal-decrement -25)
+  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) so modify the map before doing so.
+  (map! :map desktop-environment-mode-map
+        "s-l" nil
+        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
+        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
+        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
+        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
+  (desktop-environment-mode))
 #+end_src
