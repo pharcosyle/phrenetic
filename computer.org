@@ -688,20 +688,18 @@ xkb_symbols "semicolon_to_control" {
 (setq user-full-name "Krzysztof Baranowski"
       user-mail-address "pharcosyle@gmail.com")
 #+end_src
-**** Private
+**** Private :path:
 #+begin_src elisp
-;; Must be set before org loads (I think this is just a Doom, not org-mode, requirement). Keep this even though the value is the default so I can use it in the derived constants below.
-;; TODO try to move this into an org `:init' block or something, it doesn't belong up here in "Private".
-(setq org-directory "~/org")
-
-
-(defconst biome--org-dir (concat org-directory "/"))
-(defconst biome--gcal-dir (concat biome--org-dir "gcal/"))
+(defconst biome--org-dir (concat org-directory "~/org"))
+(defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
 
 (defconst biome--very-big 1000000)
 #+end_src
 **** General :UI:
 #+begin_src elisp
+;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
+(setq org-directory biome--org-dir)
+
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
 
@@ -1001,8 +999,8 @@ xkb_symbols "semicolon_to_control" {
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
-                           ,biome--gcal-dir
-                           ,(concat biome--org-dir "projects"))
+                           ,biome--org-gcal-dir
+                           ,(concat biome--org-dir "/projects"))
         org-log-done 'time
         org-priority-lowest ?E
         org-priority-default ?C
@@ -1017,9 +1015,9 @@ xkb_symbols "semicolon_to_control" {
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat biome--gcal-dir "pharcosyle@gmail.com.org"))
-                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--gcal-dir "contacts.org"))
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--gcal-dir "holidays.org")))
+        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat biome--org-gcal-dir "/pharcosyle@gmail.com.org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
 ***** Paren :UI:
@@ -1137,20 +1135,12 @@ xkb_symbols "semicolon_to_control" {
 ;;           '(ssh-deploy-automatically-detect-remote-changes . t))
 
 ;; (after! org-gcal
-;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--gcal-dir "krzysztof@massrealty.com.org")) 'append))
+;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
 #+end_src
 **** WIP
 #+begin_src elisp
 (after! org
-  (add-to-list 'org-agenda-files (concat biome--org-dir "spring_cleaning") 'append))
-
-(after! tramp
-  ;; Make tramp work on Guix.
-  ;; TODO will this work anymore now that I use profiles other than `.guix-profile'?
-  (prependq! tramp-remote-path '("~/.guix-profile/bin"
-                                 "~/.guix-profile/sbin"
-                                 "/run/current-system/profile/bin"
-                                 "/run/current-system/profile/sbin")))
+  (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
 
 ;; (map! "s-b" (cmd!
 ;;              ;; (message "chainging margin")
@@ -1171,7 +1161,19 @@ xkb_symbols "semicolon_to_control" {
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
 
-
+#+end_src
+***** asdf :path:
+#+begin_src elisp
+(after! tramp
+  ;; Make tramp work on Guix.
+  ;; TODO will this work anymore now that I use profiles other than `.guix-profile'?
+  (prependq! tramp-remote-path '("~/.guix-profile/bin"
+                                 "~/.guix-profile/sbin"
+                                 "/run/current-system/profile/bin"
+                                 "/run/current-system/profile/sbin")))
+#+end_src
+***** Dotfiles auto-tangle :path:
+#+begin_src elisp
 ;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
 
 ;; (add-hook! org-mode
@@ -1393,7 +1395,7 @@ Can be an integer to determine the exact padding."
 
 ;;; doom-nuclear-theme.el ends here
 #+end_src
-** desktop :UI:bindings:
+** desktop :UI:bindings:path:
 #+begin_src elisp :tangle gen/desktop.el :lexical t
 ;;; -*- lexical-binding: t; -*-
 
