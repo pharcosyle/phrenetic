@@ -9,7 +9,7 @@
     (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
 
 (defun efs/exwm-init-hook ()
-  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/org/spring_cleaning/exwm_stuff/my-dunstrc")))
+  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/desktop/dunstrc")))
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
   ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
