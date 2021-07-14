@@ -844,7 +844,7 @@ xkb_symbols "semicolon_to_control" {
   (setq cider-repl-history-size biome--very-big
         cider-print-options '(("length" 100))))
 
-(add-hook! cider-repl-mode
+(add-hook! 'cider-repl-mode-hook
            #'goto-address-prog-mode
            #'highlight-numbers-mode
            #'rainbow-delimiters-mode
@@ -853,7 +853,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Clj Refactor :lang:clojure:bindings:
 #+begin_src elisp
-(add-hook! clj-refactor-mode
+(add-hook! 'clj-refactor-mode-hook
   (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 #+end_src
 ***** Counsel :completion:UI:
@@ -876,7 +876,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Emacs Lisp :lang:
 #+begin_src elisp
-(setq-hook! emacs-lisp-mode indent-tabs-mode nil)
+(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
 #+end_src
 ***** Emojify :UI:
 #+begin_src elisp
@@ -924,7 +924,10 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Highlight Indent Guides :lang:prog_mode:UI:
 #+begin_src elisp
-(remove-hook! (prog-mode text-mode conf-mode) #'highlight-indent-guides-mode)
+(remove-hook! '(prog-mode-hook
+                text-mode-hook
+                conf-mode-hook)
+  #'highlight-indent-guides-mode)
 #+end_src
 ***** Ivy :completion:bindings:UI:
 #+begin_src elisp
@@ -955,16 +958,16 @@ xkb_symbols "semicolon_to_control" {
 ***** Lispy :lisp:
 #+begin_src elisp
 ;; Not using lispy, remove the Doom module's hooks.
-(remove-hook! (lisp-mode
-               emacs-lisp-mode
-               ielm-mode
-               scheme-mode
-               racket-mode
-               hy-mode
-               lfe-mode
-               dune-mode
-               clojure-mode
-               fennel-mode)
+(remove-hook! '(lisp-mode-hook
+                emacs-lisp-mode-hook
+                ielm-mode-hook
+                scheme-mode-hook
+                racket-mode-hook
+                hy-mode-hook
+                lfe-mode-hook
+                dune-mode-hook
+                clojure-mode-hook
+                fennel-mode-hook)
   #'lispy-mode)
 (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
 #+end_src
@@ -987,7 +990,7 @@ xkb_symbols "semicolon_to_control" {
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 
-(add-hook! prog-mode #'lispyville-mode)
+(add-hook! 'prog-mode-hook #'lispyville-mode)
 #+end_src
 ***** Magit :UI:persistence:
 #+begin_src elisp
@@ -1027,7 +1030,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Prog Mode :lang:prog_mode:
 #+begin_src elisp
-(add-hook! prog-mode #'biome--sp-strict-h)
+(add-hook! 'prog-mode-hook #'biome--sp-strict-h)
 #+end_src
 ***** Rainbow Delimiters :UI:theming:
 #+begin_src elisp
@@ -1176,7 +1179,7 @@ xkb_symbols "semicolon_to_control" {
 #+begin_src elisp
 ;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
 
-;; (add-hook! org-mode
+;; (add-hook! 'org-mode-hook
 ;;   (add-hook! 'after-save-hook :local
 ;;     (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
 ;;       (let ((org-confirm-babel-evaluate nil))
