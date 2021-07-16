@@ -75,35 +75,36 @@
 #+end_src
 * System
 ** system.scm
-#+begin_src scheme :tangle gen/system/system.scm
-(use-modules ((gnu system) #:select (operating-system %default-kernel-arguments %base-firmware %base-packages))
-             ((gnu system accounts) #:select (user-account))
-             ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
-             ((gnu system keyboard) #:select (keyboard-layout))
-             ((gnu system shadow) #:select (%base-user-accounts))
-             ((gnu bootloader) #:select (bootloader-configuration))
-             ((gnu bootloader grub) #:select (grub-efi-bootloader))
-             ((gnu services) #:select (service simple-service modify-services))
-             ((gnu services base) #:select (guix-service-type guix-configuration udev-service-type %default-authorized-guix-keys))
-             ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
-             ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
-             ((gnu packages) #:select (specification->package))
-             ((gnu packages linux) #:select (light))
-             ((guix gexp) #:select (local-file))
-             ((guix store) #:select (%default-substitute-urls))
-             ((nongnu system linux-initrd) #:select (microcode-initrd))
-             ((nongnu packages linux) #:select (linux-firmware broadcom-bt-firmware broadcom-sta))
-             ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
+#+begin_src scheme :tangle gen/computer/system/frostfire.scm
+(define-module (computer system frostfire)
+  #:use-module ((gnu system) #:select (operating-system %default-kernel-arguments %base-firmware %base-packages))
+  #:use-module ((gnu system accounts) #:select (user-account))
+  #:use-module ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
+  #:use-module ((gnu system keyboard) #:select (keyboard-layout))
+  #:use-module ((gnu system shadow) #:select (%base-user-accounts))
+  #:use-module ((gnu bootloader) #:select (bootloader-configuration))
+  #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
+  #:use-module ((gnu services) #:select (service simple-service modify-services))
+  #:use-module ((gnu services base) #:select (guix-service-type guix-configuration udev-service-type %default-authorized-guix-keys))
+  #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
+  #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
+  #:use-module ((gnu packages) #:select (specification->package))
+  #:use-module ((gnu packages linux) #:select (light))
+  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module ((guix store) #:select (%default-substitute-urls))
+  #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((nongnu packages linux) #:select (linux-firmware broadcom-bt-firmware broadcom-sta))
+  #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
 
-             ((guix packages) #:select (package-input-rewriting))
-             ((gnu packages emacs) #:select (emacs))
-             ((flat packages emacs) #:select (emacs-native-comp))
+  #:use-module ((guix packages) #:select (package-input-rewriting))
+  #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
-             ((nongnu packages linux) #:select (linux))
-             ;; ((srfi srfi-1) #:select (first))
-             ;; ((guix channels) #:select (channel))
-             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-             )
+  #:use-module ((nongnu packages linux) #:select (linux))
+  ;; #:use-module ((srfi srfi-1) #:select (first))
+  ;; #:use-module ((guix channels) #:select (channel))
+  ;; #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+  )
 
 (define %my-xorg-config
   "
@@ -203,30 +204,31 @@ EndSection
            %base-file-systems)))
 #+end_src
 ** mirror.brielmaier.net.pub
-#+begin_src scheme :tangle gen/system/mirror.brielmaier.net.pub
+#+begin_src scheme :tangle gen/computer/system/mirror.brielmaier.net.pub
 (public-key
   (ecc
     (curve Ed25519)
     (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 * Home Environment
-#+begin_src scheme :tangle gen/solitude.scm
-(use-modules ((gnu home) #:select (home-environment))
-             ;; (gnu home-services)
-             ;; (gnu home-services gnupg)
-             ;; (gnu home-services ssh)
-             ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
-             ((gnu home-services files) #:select (home-files-service-type))
-             ((gnu home-services) #:select (home-environment-variables-service-type))
-             ((gnu home-services shells) #:select (home-bash-service-type))
-             ;; (gnu home-services mcron)
-             ((gnu services) #:select (service simple-service))
-             ((gnu packages) #:select (specification->package))
-             ;; (gnu packages linux)
-             ;; (gnu packages admin)
-             ;; (gnu packages gnupg)
-             ;; (gnu system keyboard)
-             ((guix gexp) #:select (local-file)))
+#+begin_src scheme :tangle gen/computer/home/solitude.scm
+(define-module (computer home solitude)
+  #:use-module ((gnu home) #:select (home-environment))
+  ;; #:use-module (gnu home-services)
+  ;; #:use-module (gnu home-services gnupg)
+  ;; #:use-module (gnu home-services ssh)
+  #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
+  #:use-module ((gnu home-services files) #:select (home-files-service-type))
+  #:use-module ((gnu home-services) #:select (home-environment-variables-service-type))
+  #:use-module ((gnu home-services shells) #:select (home-bash-service-type))
+  ;; #:use-module (gnu home-services mcron)
+  #:use-module ((gnu services) #:select (service simple-service))
+  #:use-module ((gnu packages) #:select (specification->package))
+  ;; #:use-module (gnu packages linux)
+  ;; #:use-module (gnu packages admin)
+  ;; #:use-module (gnu packages gnupg)
+  ;; #:use-module (gnu system keyboard)
+  #:use-module ((guix gexp) #:select (local-file)))
 
 ;; (define %my-fontconfig-config-file
 ;;   "
