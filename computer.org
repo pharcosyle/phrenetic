@@ -76,7 +76,7 @@
 * System
 ** system.scm
 #+begin_src scheme :tangle gen/system/system.scm
-(use-modules ((gnu system) #:select (operating-system %base-packages))
+(use-modules ((gnu system) #:select (operating-system %default-kernel-arguments %base-firmware %base-packages))
              ((gnu system accounts) #:select (user-account))
              ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
              ((gnu system keyboard) #:select (keyboard-layout))
@@ -92,7 +92,7 @@
              ((guix gexp) #:select (local-file))
              ((guix store) #:select (%default-substitute-urls))
              ((nongnu system linux-initrd) #:select (microcode-initrd))
-             ((nongnu packages linux) #:select (linux-firmware))
+             ((nongnu packages linux) #:select (linux-firmware broadcom-bt-firmware broadcom-sta))
              ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
 
              ((guix packages) #:select (package-input-rewriting))
@@ -135,11 +135,14 @@ EndSection
   ;;      (inferior
   ;;       (inferior-for-channels channels)))
   ;;     (first (lookup-inferior-packages inferior "linux" "5.12.9"))))
-  ;; TODO
-  ;; (kernel-arguments '("modprobe.blacklist=b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-  ;; (kernel-loadable-modules (list broadcom-sta))
+  (kernel-arguments (let ((kargs %default-kernel-arguments)
+                          (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+                      (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
+  (kernel-loadable-modules (list broadcom-sta))
   (initrd microcode-initrd)
-  (firmware (list linux-firmware))
+  (firmware (cons* broadcom-bt-firmware
+                   linux-firmware
+                   %base-firmware))
   (locale "en_US.utf8")
   (timezone "America/Los_Angeles")
   (keyboard-layout (keyboard-layout "us" #:model "macbook78"))
@@ -381,7 +384,7 @@ EndSection
      "ripgrep"
      "coreutils"
      "fd"
-     "clang"
+     "clang" ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
 
      "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO can this be made an input to a/the counsel package?
 
@@ -1084,7 +1087,6 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ***** Time :UI:
 #+begin_src elisp
-;; TODO see whether my startup time suffers because of this (or the `use-package!' for battery-mode)
 (use-package! time
   :config
   (setq display-time-day-and-date t)
