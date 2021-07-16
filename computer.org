@@ -85,7 +85,7 @@
              ((gnu bootloader grub) #:select (grub-efi-bootloader))
              ((gnu services) #:select (service simple-service modify-services))
              ((gnu services base) #:select (guix-service-type guix-configuration udev-service-type %default-authorized-guix-keys))
-             ((gnu services desktop) #:select (gnome-desktop-service-type %desktop-services))
+             ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
              ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
              ((gnu packages) #:select (specification->package))
              ((gnu packages linux) #:select (light))
@@ -163,27 +163,27 @@ EndSection
             (specification->package "spartan"))
       %base-packages))
   (services
-    (append
-      (list (service gnome-desktop-service-type)
-            (set-xorg-configuration
-              (xorg-configuration
-                (modules (cons* xf86-input-mtrack
-                                %default-xorg-modules))
-                (keyboard-layout keyboard-layout)
-                (extra-config (list %my-xorg-config))))
-            (simple-service 'my-light-udev-rules udev-service-type (list light)))
-      (modify-services %desktop-services
-                       (guix-service-type config =>
-                                          (guix-configuration
-                                           (inherit config)
-                                           (substitute-urls
-                                            (append %default-substitute-urls
-                                                    (list "https://mirror.brielmaier.net")))
-                                           (authorized-keys
-                                            (append %default-authorized-guix-keys
-                                                    (list (local-file "./mirror.brielmaier.net.pub")))))))
-      ;; %desktop-services
-      ))
+   (cons* (service gnome-desktop-service-type)
+          (set-xorg-configuration
+           (xorg-configuration
+            (modules (cons* xf86-input-mtrack
+                            %default-xorg-modules))
+            (keyboard-layout keyboard-layout)
+            (extra-config (list %my-xorg-config))))
+          (simple-service 'my-light-udev-rules udev-service-type (list light))
+          (bluetooth-service #:auto-enable? #t)
+          (modify-services %desktop-services
+                           (guix-service-type config =>
+                                              (guix-configuration
+                                               (inherit config)
+                                               (substitute-urls
+                                                (append %default-substitute-urls
+                                                        (list "https://mirror.brielmaier.net")))
+                                               (authorized-keys
+                                                (append %default-authorized-guix-keys
+                                                        (list (local-file "./mirror.brielmaier.net.pub")))))))
+          ;; %desktop-services
+          ))
   (bootloader
     (bootloader-configuration
       (bootloader grub-efi-bootloader)
@@ -365,7 +365,6 @@ EndSection
      "scrot"
      "pavucontrol"
      "pasystray"
-     "blueman"
      "dunst"
      "udiskie"
      "redshift:gtk"
@@ -1196,6 +1195,7 @@ xkb_symbols "semicolon_to_control" {
 #+begin_src elisp :tangle gen/.config/doom/packages.el
 ;; -*- no-byte-compile: t; -*-
 
+(package! bluetooth :pin "147d4690087049c6647b5222ee40baa5002b7586")
 (package! dash :pin "2675596b9ac1c4b9d47b93e227f06f8ec6755ec6")
 (package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
@@ -1421,7 +1421,6 @@ Can be an integer to determine the exact padding."
   (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/desktop/dunstrc")))
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
-  ;; (efs/run-in-background "blueman-applet") ; TODO I get an error when running this currently
   (efs/run-in-background "redshift-gtk -l 47:-123")
   (efs/run-in-background "udiskie -t"))
 
