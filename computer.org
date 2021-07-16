@@ -286,7 +286,7 @@ EndSection
    (simple-service 'my-doomdir
                    home-files-service-type
                    (list `("config/doom"
-                           ,(local-file "doom" #:recursive? #t))))
+                           ,(local-file ".config/doom" #:recursive? #t))))
    ;; (service home-keyboard-service-type
    ;;          (keyboard-layout "us,ru" "dvorak,"
    ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
@@ -574,7 +574,7 @@ xkb_symbols "semicolon_to_control" {
 ** Doomdir
 *** init.el
 :PROPERTIES:
-:header-args+: :tangle gen/doom/init.el :lexical t
+:header-args+: :tangle gen/.config/doom/init.el :lexical t
 :END:
 **** Header
 #+begin_src elisp
@@ -676,7 +676,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 *** config.el
 :PROPERTIES:
-:header-args+: :tangle gen/doom/config.el :lexical t
+:header-args+: :tangle gen/.config/doom/config.el :lexical t
 :END:
 **** Header
 #+begin_src elisp
@@ -1193,7 +1193,7 @@ xkb_symbols "semicolon_to_control" {
 ;;         (org-babel-tangle)))))
 #+end_src
 *** packages.el
-#+begin_src elisp :tangle gen/doom/packages.el
+#+begin_src elisp :tangle gen/.config/doom/packages.el
 ;; -*- no-byte-compile: t; -*-
 
 (package! dash :pin "2675596b9ac1c4b9d47b93e227f06f8ec6755ec6")
@@ -1207,7 +1207,7 @@ xkb_symbols "semicolon_to_control" {
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
 *** Theme :UI:theming:
-#+begin_src elisp :tangle gen/doom/themes/doom-nuclear-theme.el :lexical t
+#+begin_src elisp :tangle gen/.config/doom/themes/doom-nuclear-theme.el :lexical t
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;; Copyright (C) 2016-2021 Henrik Lissner
