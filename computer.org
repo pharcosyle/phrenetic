@@ -1641,7 +1641,11 @@ Can be an integer to determine the exact padding."
   ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
 
-  (exwm-enable))
+  (exwm-enable)
+
+
+  ;; WIP
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h))
 
 
 (use-package! desktop-environment
