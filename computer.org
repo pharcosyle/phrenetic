@@ -98,10 +98,6 @@
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((computer system spartan) #:select (spartan))
 
-  #:use-module ((guix packages) #:select (package-input-rewriting))
-  #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((flat packages emacs) #:select (emacs-native-comp))
-
   #:use-module ((nongnu packages linux) #:select (linux))
   ;; #:use-module ((srfi srfi-1) #:select (first))
   ;; #:use-module ((guix channels) #:select (channel))
@@ -518,6 +514,7 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
 # TODO these should be in a .profile or something
 
 GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
+# GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 
 # TODO do I need to source ~/.guix-profile here like daviwil does? I don't think so.
 
