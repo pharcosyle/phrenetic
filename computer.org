@@ -252,6 +252,7 @@ EndSection
   #:use-module ((gnu home-services files) #:select (home-files-service-type))
   #:use-module ((gnu home-services) #:select (home-environment-variables-service-type))
   #:use-module ((gnu home-services shells) #:select (home-bash-service-type))
+  #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   ;; #:use-module (gnu home-services mcron)
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
@@ -329,6 +330,7 @@ EndSection
                    home-files-service-type
                    (list `("config/doom"
                            ,(local-file "../../.config/doom" #:recursive? #t))))
+   (service home-bash-direnv-service-type)
    ;; (service home-keyboard-service-type
    ;;          (keyboard-layout "us,ru" "dvorak,"
    ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
