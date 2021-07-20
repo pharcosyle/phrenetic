@@ -1655,9 +1655,9 @@ Can be an integer to determine the exact padding."
         desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle"
         desktop-environment-volume-normal-increment "+5%"
         desktop-environment-volume-normal-decrement "-5%"
-        desktop-environment-keyboard-backlight-normal-increment 25
-        desktop-environment-keyboard-backlight-normal-decrement -25)
-  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) so modify the map before doing so.
+        desktop-environment-keyboard-backlight-normal-increment 26
+        desktop-environment-keyboard-backlight-normal-decrement -26)
+  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
   (map! :map desktop-environment-mode-map
         "s-l" nil
         "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
