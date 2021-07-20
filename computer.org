@@ -90,7 +90,7 @@
   #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
   #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
   #:use-module ((gnu packages) #:select (specification->package))
-  #:use-module ((gnu packages linux) #:select (light))
+  #:use-module ((gnu packages linux) #:select (brightnessctl))
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
@@ -169,7 +169,7 @@ EndSection
                             %default-xorg-modules))
             (keyboard-layout keyboard-layout)
             (extra-config (list %my-xorg-config))))
-          (simple-service 'my-light-udev-rules udev-service-type (list light))
+          (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
           (bluetooth-service #:auto-enable? #t)
           (modify-services %desktop-services
                            (guix-service-type config =>
@@ -469,7 +469,7 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
 
 
      ;; Desktop
-     "light"
+     "brightnessctl"
      "playerctl"
      "scrot"
      "pavucontrol"
@@ -1650,12 +1650,7 @@ Can be an integer to determine the exact padding."
 (use-package! desktop-environment
   :after exwm
   :config
-  (setq desktop-environment-brightness-get-command "light"
-        desktop-environment-brightness-set-command "light %s"
-        desktop-environment-brightness-get-regexp "^\\([0-9]+\\)"
-        desktop-environment-brightness-normal-increment "-A 10"
-        desktop-environment-brightness-normal-decrement "-U 10"
-        desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
+  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
         desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
         desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle"
         desktop-environment-volume-normal-increment "+5%"
