@@ -1274,9 +1274,8 @@ xkb_symbols "semicolon_to_control" {
   (map! (:map company-active-map
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
-
 #+end_src
-***** asdf :path:
+***** Tramp :path:
 #+begin_src elisp
 (after! tramp
   ;; Make tramp work on Guix.
@@ -1287,6 +1286,7 @@ xkb_symbols "semicolon_to_control" {
                                  "/run/current-system/profile/sbin")))
 #+end_src
 ***** Dotfiles auto-tangle :path:
+- TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
 ;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
 
