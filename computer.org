@@ -250,7 +250,7 @@ EndSection
 * Home Environment
 ** Solitude
 #+begin_src scheme :tangle gen/computer/home/solitude.scm
-(load "spartan-binary.scm")
+(load "spartan-executable.scm")
 (define-module (computer home solitude)
   #:use-module ((gnu home) #:select (home-environment))
   ;; #:use-module (gnu home-services)
@@ -274,7 +274,7 @@ EndSection
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
-  #:use-module ((computer home spartan-binary) #:select (spartan-binary)))
+  #:use-module ((computer home spartan-executable) #:select (spartan-executable)))
 
 ;; (define %my-fontconfig-config-file
 ;;   "
@@ -298,9 +298,9 @@ EndSection
 
 (home-environment
  ;; (packages (list htop))
- (packages (list spartan-binary
+ (packages (list spartan-executable
                  ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
-                 ;;  spartan-binary)
+                 ;;  spartan-executable)
                  ;; TODO temporary font packages to make guix-home fontconfig work
                  (specification->package "font-google-noto")
                  (specification->package "font-adobe-source-code-pro")))
@@ -368,9 +368,9 @@ EndSection
 ;;            (state-git "/home/bob/tmp/talkes/"
 ;;                       "git@git.sr.ht:~abcdw/rde"))))
 #+end_src
-** Spartan Binary
-#+begin_src scheme :tangle gen/computer/home/spartan-binary.scm
-(define-module (computer home spartan-binary)
+** Spartan Executable
+#+begin_src scheme :tangle gen/computer/home/spartan-executable.scm
+(define-module (computer home spartan-executable)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((gnu packages bash) #:select (bash))
@@ -390,9 +390,9 @@ xss-lock -- slock &
 ~/.config/emacs/bin/doom env
 exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs -mm -l ~/Projects/dotfiles/gen/desktop.el # --debug-init")
 
-(define-public spartan-binary
+(define-public spartan-executable
   (package
-   (name "spartan-binary-test")
+   (name "spartan-executable")
    (version "0")
    (source #f)
    (build-system trivial-build-system)
@@ -416,8 +416,8 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
           (with-output-to-file executable
             (lambda _
               (display ,startup-script)))
-          (let ((cmd (lambda* (input #:optional (binary input))
-                       (string-append (assoc-ref %build-inputs input) "/bin/" binary))))
+          (let ((cmd (lambda* (input #:optional (executable input))
+                       (string-append (assoc-ref %build-inputs input) "/bin/" executable))))
             (substitute* executable
               (("/bin/sh") (cmd "bash" "sh"))
               (("^xhost") (cmd "xhost"))
@@ -428,7 +428,7 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
               ((" emacs ") (string-append " " (cmd "emacs") " ")))) ; hacky
           (chmod executable #o555))
         #t)))
-   (synopsis "Spartan Binary")
+   (synopsis "Spartan Executable")
    (description synopsis)
    (home-page #f)
    (license #f)))
