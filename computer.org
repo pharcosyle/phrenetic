@@ -779,7 +779,7 @@ xkb_symbols "semicolon_to_control" {
 #+begin_src elisp
 (use-package-hook! clojure-mode
   :post-init
-  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding
+  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding ; TODO did I already try putting this in a use-package `:init' section?
 #+end_src
 ***** Lispyville :lisp:bindings:
 #+begin_src elisp
@@ -1219,6 +1219,7 @@ xkb_symbols "semicolon_to_control" {
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
 ***** Undo Tree :UI:
+- TODO am I commenting stuff or doing notangle?
 #+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
@@ -1660,7 +1661,7 @@ Can be an integer to determine the exact padding."
   :config
   (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
         desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
-        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle"
+        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
         desktop-environment-volume-normal-increment "+5%"
         desktop-environment-volume-normal-decrement "-5%"
         desktop-environment-keyboard-backlight-normal-increment 26
