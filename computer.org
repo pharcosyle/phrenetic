@@ -1,7 +1,6 @@
 #+TITLE: Computer
 #+PROPERTY: header-args :mkdirp yes
 
-- TODO maybe make instances of my name/email be shared. Noweb or would some other mechanism be better?
 * Channels
 #+begin_src scheme :tangle gen/.config/guix/channels.scm
 (cons* (channel
@@ -676,10 +675,9 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 * Emacs
 # :PROPERTIES:
-# :header-args+: :noweb yes :lexical t
+# :header-args+: :noweb yes
 # :END:
-- TODO donno if the lexical property is really necessary, I guess maybe it makes evaluation /from the org file/ work lexically?
-# ** Org Private
+# ** Org Locals
 # #+name: lexical-binding-header
 # #+begin_src elisp
 # ;;; -*- lexical-binding: t; -*-
@@ -687,7 +685,7 @@ xkb_symbols "semicolon_to_control" {
 ** Doomdir
 *** init.el
 :PROPERTIES:
-:header-args+: :tangle gen/.config/doom/init.el :lexical t
+:header-args+: :tangle gen/.config/doom/init.el
 :END:
 **** Header
 #+begin_src elisp
@@ -789,7 +787,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 *** config.el
 :PROPERTIES:
-:header-args+: :tangle gen/.config/doom/config.el :lexical t
+:header-args+: :tangle gen/.config/doom/config.el
 :END:
 **** Header
 #+begin_src elisp
@@ -804,7 +802,7 @@ xkb_symbols "semicolon_to_control" {
 (setq user-full-name "Krzysztof Baranowski"
       user-mail-address "pharcosyle@gmail.com")
 #+end_src
-**** Private :path:
+**** Locals :path:
 #+begin_src elisp
 (defconst biome--org-dir (concat org-directory "~/org"))
 (defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
@@ -1322,7 +1320,7 @@ xkb_symbols "semicolon_to_control" {
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
 *** Theme :UI:theming:
-#+begin_src elisp :tangle gen/.config/doom/themes/doom-nuclear-theme.el :lexical t
+#+begin_src elisp :tangle gen/.config/doom/themes/doom-nuclear-theme.el
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;; Copyright (C) 2016-2021 Henrik Lissner
@@ -1521,7 +1519,7 @@ Can be an integer to determine the exact padding."
 ;;; doom-nuclear-theme.el ends here
 #+end_src
 ** desktop :UI:bindings:path:
-#+begin_src elisp :tangle gen/desktop.el :lexical t
+#+begin_src elisp :tangle gen/desktop.el
 ;;; -*- lexical-binding: t; -*-
 
 ;; TODO rename efs to biome
