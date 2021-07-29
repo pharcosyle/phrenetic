@@ -1,6 +1,19 @@
 #+TITLE: Computer
 #+PROPERTY: header-args :mkdirp yes
 
+* Org Locals
+#+name: user-name
+#+begin_src org
+pharcosyle
+#+end_src
+#+name: user-full-name
+#+begin_src org
+Krzysztof Baranowski
+#+end_src
+#+name: user-email
+#+begin_src org
+pharcosyle@gmail.com
+#+end_src
 * Channels
 #+begin_src scheme :tangle gen/.config/guix/channels.scm
 (cons* (channel
@@ -74,7 +87,7 @@
 #+end_src
 * System
 ** Frostfire
-#+begin_src scheme :tangle gen/computer/system/frostfire.scm
+#+begin_src scheme :tangle gen/computer/system/frostfire.scm :noweb yes
 (load "spartan.scm")
 (define-module (computer system frostfire)
   #:use-module ((gnu system) #:select (operating-system %default-kernel-arguments %base-firmware %base-packages))
@@ -146,17 +159,17 @@ EndSection
   (keyboard-layout (keyboard-layout "us" #:model "macbook78"))
   (host-name "frostfire")
   (users (cons* (user-account
-                  (name "pharcosyle")
-                  (comment "Krzysztof Baranowski")
+                  (name "<<user-name>>")
+                  (comment "<<user-full-name>>")
                   (group "users")
-                  (home-directory "/home/pharcosyle")
+                  (home-directory (string-append "/home/" name))
                   (supplementary-groups
                     '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
                 (user-account
                   (name "gandalf")
                   (comment "Speak Friend and Enter")
                   (group "users")
-                  (home-directory "/home/gandalf")
+                  (home-directory (string-append "/home/" name))
                   (supplementary-groups
                     '("netdev" "audio" "video" "input")) ; TODO input for mtrack, might be removing this
                   (password (crypt "mellon" "toosimple")))
@@ -237,7 +250,7 @@ EndSection
                (xsessions (string-append out "/share/xsessions")))
           (mkdir-p xsessions)
           (make-desktop-entry-file
-           (string-append xsessions (string-append "/" ,name ".desktop"))
+           (string-append xsessions "/" ,name ".desktop")
            #:name (string-capitalize ,name)
            #:comment ,synopsis
            #:exec "spartan"))
@@ -248,7 +261,7 @@ EndSection
 #+end_src
 * Home Environment
 ** Solitude
-#+begin_src scheme :tangle gen/computer/home/solitude.scm
+#+begin_src scheme :tangle gen/computer/home/solitude.scm :noweb yes
 (load "spartan-executable.scm")
 (define-module (computer home solitude)
   #:use-module ((gnu home) #:select (home-environment))
@@ -324,8 +337,8 @@ EndSection
             (home-git-configuration
              (config
               `((user
-                 ((name . "Krzysztof Baranowski")
-                  (email . "pharcosyle@gmail.com")))
+                 ((name . "<<user-full-name>>")
+                  (email . "<<user-email>>")))
                 ;; (http "https://weak.example.com"
                 ;;   ((ssl-verify . #f)))
                 ;; (gpg
@@ -798,9 +811,9 @@ xkb_symbols "semicolon_to_control" {
 (use-package! dash)
 #+end_src
 **** Personal Info :user:
-#+begin_src elisp
-(setq user-full-name "Krzysztof Baranowski"
-      user-mail-address "pharcosyle@gmail.com")
+#+begin_src elisp :noweb yes
+(setq user-full-name "<<user-full-name>>"
+      user-mail-address "<<user-email>>")
 #+end_src
 **** Locals :path:
 #+begin_src elisp
@@ -1136,7 +1149,7 @@ xkb_symbols "semicolon_to_control" {
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
         org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-        org-gcal-fetch-file-alist `(("pharcosyle@gmail.com" . ,(concat biome--org-gcal-dir "/pharcosyle@gmail.com.org"))
+        org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
                                     ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
