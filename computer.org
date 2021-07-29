@@ -1,5 +1,6 @@
 #+TITLE: Computer
 #+PROPERTY: header-args :mkdirp yes
+#+PROPERTY: tangle-dir gen
 
 * Org Locals
 #+name: user-name
@@ -14,8 +15,18 @@ Krzysztof Baranowski
 #+begin_src org
 pharcosyle@gmail.com
 #+end_src
+#+begin_src elisp
+(defun in-tangle-dir (sub-path)
+  (expand-file-name sub-path
+                    (or
+                     (-> (org-entry-get (point) "tangle-dir" 'inherit)
+                         (split-string " ")
+                         (string-join "/"))
+                     ;; (default-directory)
+                     )))
+#+end_src
 * Channels
-#+begin_src scheme :tangle gen/.config/guix/channels.scm
+#+begin_src scheme :tangle (in-tangle-dir "/.config/guix/channels.scm")
 (cons* (channel
         (name 'penitent-tangent)
         (url "file:///home/pharcosyle/Projects/penitent-tangent"))
