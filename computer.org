@@ -283,77 +283,79 @@ guix home --load-path=. reconfigure solitude.scm
 ;; </fontconfig>
 ;; ")
 
-(home-environment
- ;; (packages (list htop))
- (packages (list spartan-executable
-                 ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
-                 ;;  spartan-executable)
-                 ;; TODO temporary font packages to make guix-home fontconfig work
-                 (specification->package "font-google-noto")
-                 (specification->package "font-adobe-source-code-pro")))
- (services
-  (list
-   (simple-service 'my-channels
-                   home-files-service-type
-                   (list `("config/guix/channels.scm"
-                           ,(local-file "channels.scm"))))
-   ;; TODO Documentation gives this example for setting LESSHISTFILE but maybe doing it in a shell profile would be better?
-   (simple-service 'my-env-vars
-                   home-environment-variables-service-type
-                   `(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")
-                     ;; ("SHELL" . ,(file-append zsh "/bin/zsh"))
-                     ))
-   (service home-bash-service-type
-;;             (home-bash-configuration
-;;              (bash-profile '("\
-;; export HISTFILE=\"$XDG_CACHE_HOME\"/.bash_history")))
-            )
-   (service home-git-service-type
-            (home-git-configuration
-             (config
-              `((user
-                 ((name . "<<user-full-name>>")
-                  (email . "<<user-email>>")))
-                ;; (http "https://weak.example.com"
-                ;;   ((ssl-verify . #f)))
-                ;; (gpg
-                ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-                ;; (sendmail
-                ;;  ((annotate . #t)))
-                ))))
-   (simple-service 'my-doomdir
-                   home-files-service-type
-                   (list `("config/doom"
-                           ,(local-file "doom" #:recursive? #t))))
-   (service home-bash-direnv-service-type)
-   ;; (service home-keyboard-service-type
-   ;;          (keyboard-layout "us,ru" "dvorak,"
-   ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-   ;; (service home-fontconfig-service-type)
-   ;; (simple-service 'my-fontconfig-config-file
-   ;;                 home-files-service-type
-   ;;                 (list `("config/fontconfig/fonts.conf"
-   ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
-   ;; (service home-ssh-service-type
-   ;;          (home-ssh-configuration
-   ;;           (extra-config
-   ;;            (list
-   ;;             (ssh-host "savannah"
-   ;;                       '((compression . #f)))))))
-   ;; (service home-gnupg-service-type
-   ;;          (home-gnupg-configuration
-   ;;           (gpg-agent-config
-   ;;            (home-gpg-agent-configuration
-   ;;             (ssh-agent? #t)))))
-   )))
+(define solitude
+  (home-environment
+   ;; (packages (list htop))
+   (packages (list spartan-executable
+                   ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
+                   ;;  spartan-executable)
+                   ;; TODO temporary font packages to make guix-home fontconfig work
+                   (specification->package "font-google-noto")
+                   (specification->package "font-adobe-source-code-pro")))
+   (services
+    (list
+     (simple-service 'my-channels
+                     home-files-service-type
+                     (list `("config/guix/channels.scm"
+                             ,(local-file "channels.scm"))))
+     ;; TODO Documentation gives this example for setting LESSHISTFILE but maybe doing it in a shell profile would be better?
+     (simple-service 'my-env-vars
+                     home-environment-variables-service-type
+                     `(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")
+                       ;; ("SHELL" . ,(file-append zsh "/bin/zsh"))
+                       ))
+     (service home-bash-service-type
+  ;;             (home-bash-configuration
+  ;;              (bash-profile '("\
+  ;; export HISTFILE=\"$XDG_CACHE_HOME\"/.bash_history")))
+              )
+     (service home-git-service-type
+              (home-git-configuration
+               (config
+                `((user
+                   ((name . "<<user-full-name>>")
+                    (email . "<<user-email>>")))
+                  ;; (http "https://weak.example.com"
+                  ;;   ((ssl-verify . #f)))
+                  ;; (gpg
+                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+                  ;; (sendmail
+                  ;;  ((annotate . #t)))
+                  ))))
+     (simple-service 'my-doomdir
+                     home-files-service-type
+                     (list `("config/doom"
+                             ,(local-file "doom" #:recursive? #t))))
+     (service home-bash-direnv-service-type)
+     ;; (service home-keyboard-service-type
+     ;;          (keyboard-layout "us,ru" "dvorak,"
+     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+     ;; (service home-fontconfig-service-type)
+     ;; (simple-service 'my-fontconfig-config-file
+     ;;                 home-files-service-type
+     ;;                 (list `("config/fontconfig/fonts.conf"
+     ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
+     ;; (service home-ssh-service-type
+     ;;          (home-ssh-configuration
+     ;;           (extra-config
+     ;;            (list
+     ;;             (ssh-host "savannah"
+     ;;                       '((compression . #f)))))))
+     ;; (service home-gnupg-service-type
+     ;;          (home-gnupg-configuration
+     ;;           (gpg-agent-config
+     ;;            (home-gpg-agent-configuration
+     ;;             (ssh-agent? #t)))))
+     ;; (service home-state-service-type
+     ;;          (append
+     ;;           (list
+     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
+     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
+     ;;            (state-git "/home/bob/tmp/talkes/"
+     ;;                       "git@git.sr.ht:~abcdw/rde"))))
+     ))))
 
-;; (service home-state-service-type
-;;          (append
-;;           (list
-;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
-;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
-;;            (state-git "/home/bob/tmp/talkes/"
-;;                       "git@git.sr.ht:~abcdw/rde"))))
+solitude
 #+end_src
 ** Spartan Executable
 - TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
