@@ -33,13 +33,12 @@ pharcosyle@gmail.com
 #+begin_src sh
 sudo guix system --load-path=. reconfigure frostfire.scm
 #+end_src
-** Frostfire
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
-(define-module (frostfire)
-  #:use-module ((gnu system) #:select (operating-system %default-kernel-arguments %base-firmware %base-packages))
+** Base OS
+#+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
+(define-module (base-os)
+  #:use-module ((gnu system) #:select (operating-system %base-firmware %base-packages))
   #:use-module ((gnu system accounts) #:select (user-account))
   #:use-module ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
-  #:use-module ((gnu system keyboard) #:select (keyboard-layout))
   #:use-module ((gnu system shadow) #:select (%base-user-accounts))
   #:use-module ((gnu bootloader) #:select (bootloader-configuration))
   #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
@@ -52,7 +51,7 @@ sudo guix system --load-path=. reconfigure frostfire.scm
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module ((nongnu packages linux) #:select (linux-firmware broadcom-bt-firmware broadcom-sta))
+  #:use-module ((nongnu packages linux) #:select (linux-firmware))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((spartan) #:select (spartan))
 
@@ -76,96 +75,121 @@ Section \"InputClass\"
 EndSection
 ")
 
-(operating-system
-  (kernel linux)
-  ;; (kernel
-  ;;   (let*
-  ;;     ((channels
-  ;;       (list (channel
-  ;;              (name 'nonguix)
-  ;;              (url "https://gitlab.com/nonguix/nonguix")
-  ;;              (commit "c5fed11e7df221cad1045fc193b4136b34e23451"))
-  ;;             (channel
-  ;;              (name 'guix)
-  ;;              (url "https://git.savannah.gnu.org/git/guix.git")
-  ;;              (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))
-  ;;      (inferior
-  ;;       (inferior-for-channels channels)))
-  ;;     (first (lookup-inferior-packages inferior "linux" "5.12.9"))))
-  (kernel-arguments (let ((kargs %default-kernel-arguments)
-                          (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-                      (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
-  (kernel-loadable-modules (list broadcom-sta))
-  (initrd microcode-initrd)
-  (firmware (cons* broadcom-bt-firmware
-                   linux-firmware
-                   %base-firmware))
-  (locale "en_US.utf8")
-  (timezone "America/Los_Angeles")
-  (keyboard-layout (keyboard-layout "us" #:model "macbook78"))
-  (host-name "frostfire")
-  (users (cons* (user-account
-                  (name "<<user-name>>")
-                  (comment "<<user-full-name>>")
-                  (group "users")
-                  (home-directory (string-append "/home/" name))
-                  (supplementary-groups
-                    '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
-                (user-account
-                  (name "gandalf")
-                  (comment "Speak Friend and Enter")
-                  (group "users")
-                  (home-directory (string-append "/home/" name))
-                  (supplementary-groups
-                    '("netdev" "audio" "video" "input")) ; TODO input for mtrack, might be removing this
-                  (password (crypt "mellon" "toosimple")))
-                %base-user-accounts))
-  (packages
-    (append
-      (list (specification->package "nss-certs")
-            (specification->package "xf86-input-libinput")
-            (specification->package "xf86-input-mtrack")
-            spartan)
-      %base-packages))
-  (services
-   (cons* (service gnome-desktop-service-type)
-          (set-xorg-configuration
-           (xorg-configuration
-            (modules (cons* xf86-input-mtrack
-                            %default-xorg-modules))
-            (keyboard-layout keyboard-layout)
-            (extra-config (list %my-xorg-config))))
-          (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
-          (bluetooth-service #:auto-enable? #t)
-          (modify-services %desktop-services
-                           (guix-service-type config =>
-                                              (guix-configuration
-                                               (inherit config)
-                                               (substitute-urls
-                                                (append %default-substitute-urls
-                                                        (list "https://mirror.brielmaier.net")))
-                                               (authorized-keys
-                                                (append %default-authorized-guix-keys
-                                                        (list (local-file "mirror.brielmaier.net.pub")))))))
-          ;; %desktop-services
-          ))
-  (bootloader
-    (bootloader-configuration
-      (bootloader grub-efi-bootloader)
-      (target "/boot/efi")
-      (keyboard-layout keyboard-layout)))
-  (file-systems
-    (cons* (file-system
-             (mount-point "/")
-             (device
-               (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
-                     'ext4))
-             (type "ext4"))
-           (file-system
-             (mount-point "/boot/efi")
-             (device (uuid "67E3-17ED" 'fat32))
-             (type "vfat"))
-           %base-file-systems)))
+(define-public (base-os kbl)
+  (operating-system
+    (kernel linux)
+    ;; (kernel
+    ;;   (let*
+    ;;     ((channels
+    ;;       (list (channel
+    ;;              (name 'nonguix)
+    ;;              (url "https://gitlab.com/nonguix/nonguix")
+    ;;              (commit "c5fed11e7df221cad1045fc193b4136b34e23451"))
+    ;;             (channel
+    ;;              (name 'guix)
+    ;;              (url "https://git.savannah.gnu.org/git/guix.git")
+    ;;              (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))
+    ;;      (inferior
+    ;;       (inferior-for-channels channels)))
+    ;;     (first (lookup-inferior-packages inferior "linux" "5.12.9"))))
+    (initrd microcode-initrd)
+    (firmware (cons* linux-firmware
+                     %base-firmware))
+    (locale "en_US.utf8")
+    (timezone "America/Los_Angeles")
+    (keyboard-layout kbl)
+    (users (cons* (user-account
+                    (name "<<user-name>>")
+                    (comment "<<user-full-name>>")
+                    (group "users")
+                    (home-directory (string-append "/home/" name))
+                    (supplementary-groups
+                      '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
+                  (user-account
+                    (name "gandalf")
+                    (comment "Speak Friend and Enter")
+                    (group "users")
+                    (home-directory (string-append "/home/" name))
+                    (supplementary-groups
+                      '("netdev" "audio" "video" "input")) ; TODO input for mtrack, might be removing this
+                    (password (crypt "mellon" "toosimple")))
+                  %base-user-accounts))
+    (packages
+      (append
+        (list (specification->package "nss-certs")
+              (specification->package "xf86-input-libinput")
+              (specification->package "xf86-input-mtrack")
+              spartan)
+        %base-packages))
+    (services
+     (cons* (service gnome-desktop-service-type)
+            (set-xorg-configuration
+             (xorg-configuration
+              (modules (cons* xf86-input-mtrack
+                              %default-xorg-modules))
+              (keyboard-layout keyboard-layout)
+              (extra-config (list %my-xorg-config))))
+            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
+            (bluetooth-service #:auto-enable? #t)
+            (modify-services %desktop-services
+                             (guix-service-type config =>
+                                                (guix-configuration
+                                                 (inherit config)
+                                                 (substitute-urls
+                                                  (append %default-substitute-urls
+                                                          (list "https://mirror.brielmaier.net")))
+                                                 (authorized-keys
+                                                  (append %default-authorized-guix-keys
+                                                          (list (local-file "mirror.brielmaier.net.pub")))))))
+            ;; %desktop-services
+            ))
+    (bootloader
+      (bootloader-configuration
+        (bootloader grub-efi-bootloader)
+        (target "/boot/efi")
+        (keyboard-layout keyboard-layout)))
+
+    (host-name #f)
+    (file-systems #f)))
+#+end_src
+** Frostfire
+#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
+(define-module (frostfire)
+  #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
+  #:use-module ((gnu system keyboard) #:select (keyboard-layout))
+  #:use-module ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
+  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
+  #:use-module ((base-os) #:select (base-os)))
+
+(define macbook
+  (let ((os (base-os (keyboard-layout "us" #:model "macbook78"))))
+    (operating-system
+      (inherit os)
+      (kernel-arguments (let ((kargs %default-kernel-arguments)
+                              (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+                          (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
+      (kernel-loadable-modules (list broadcom-sta))
+      (firmware (cons* broadcom-bt-firmware
+                       (operating-system-firmware os))))))
+
+(define frostfire
+  (operating-system
+    (inherit macbook)
+    (host-name "frostfire")
+    (file-systems
+      (cons* (file-system
+               (mount-point "/")
+               (device
+                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
+                       'ext4))
+               (type "ext4"))
+             (file-system
+               (mount-point "/boot/efi")
+               (device (uuid "67E3-17ED" 'fat32))
+               (type "vfat"))
+             %base-file-systems))))
+
+frostfire
 #+end_src
 ** mirror.brielmaier.net.pub
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
