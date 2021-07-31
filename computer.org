@@ -4,14 +4,19 @@
 
 * Org Functions
 #+begin_src elisp
+(defun tangle-dir* ()
+  (or
+   (-> (org-entry-get (point) "tangle-dir" 'inherit)
+       (split-string " ")
+       (string-join "/"))
+   ;; (default-directory)
+   ))
+
+(defun get-tangle-dir ()
+  (expand-file-name (tangle-dir*)))
+
 (defun in-tangle-dir (sub-path)
-  (expand-file-name sub-path
-                    (or
-                     (-> (org-entry-get (point) "tangle-dir" 'inherit)
-                         (split-string " ")
-                         (string-join "/"))
-                     ;; (default-directory)
-                     )))
+  (expand-file-name sub-path (tangle-dir*)))
 #+end_src
 * Org Locals
 #+name: user-name
@@ -30,8 +35,8 @@ pharcosyle@gmail.com
 :PROPERTIES:
 :tangle-dir+: system
 :END:
-#+begin_src sh
-sudo guix system --load-path=. reconfigure frostfire.scm
+#+begin_src sh :results output silent :var dir=(get-tangle-dir)
+sudo guix system --load-path=$dir reconfigure $dir/frostfire.scm
 #+end_src
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
@@ -240,8 +245,8 @@ frostfire
 :PROPERTIES:
 :tangle-dir+: home
 :END:
-#+begin_src sh
-guix home --load-path=. reconfigure solitude.scm
+#+begin_src sh :results output silent :var dir=(get-tangle-dir)
+guix home --load-path=$dir reconfigure $dir/solitude.scm
 #+end_src
 ** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
