@@ -38,7 +38,7 @@ sudo guix system --load-path=. reconfigure frostfire.scm
 (define-module (base-os)
   #:use-module ((gnu system) #:select (operating-system %base-firmware %base-packages))
   #:use-module ((gnu system accounts) #:select (user-account))
-  #:use-module ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
+  #:use-module ((gnu system file-systems) #:select (%base-file-systems))
   #:use-module ((gnu system shadow) #:select (%base-user-accounts))
   #:use-module ((gnu bootloader) #:select (bootloader-configuration))
   #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
@@ -149,19 +149,18 @@ EndSection
         (target "/boot/efi")
         (keyboard-layout keyboard-layout)))
 
-    (host-name #f)
-    (file-systems #f)))
+    (file-systems %base-file-systems)
+    (host-name #f)))
 #+end_src
-** Frostfire
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
-(define-module (frostfire)
+** Macbook
+#+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
+(define-module (macbook)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
-  #:use-module ((gnu system file-systems) #:select (file-system uuid %base-file-systems))
   #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
   #:use-module ((base-os) #:select (base-os)))
 
-(define macbook
+(define-public macbook
   (let ((os (base-os (keyboard-layout "us" #:model "macbook78"))))
     (operating-system
       (inherit os)
@@ -171,23 +170,31 @@ EndSection
       (kernel-loadable-modules (list broadcom-sta))
       (firmware (cons* broadcom-bt-firmware
                        (operating-system-firmware os))))))
+#+end_src
+** Frostfire
+#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
+(define-module (frostfire)
+  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
+  #:use-module ((gnu system file-systems) #:select (file-system uuid))
+  #:use-module ((macbook) #:select (macbook)))
 
 (define frostfire
-  (operating-system
-    (inherit macbook)
-    (host-name "frostfire")
-    (file-systems
-      (cons* (file-system
-               (mount-point "/")
-               (device
-                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
-                       'ext4))
-               (type "ext4"))
-             (file-system
-               (mount-point "/boot/efi")
-               (device (uuid "67E3-17ED" 'fat32))
-               (type "vfat"))
-             %base-file-systems))))
+  (let ((os macbook))
+    (operating-system
+      (inherit os)
+      (host-name "frostfire")
+      (file-systems
+        (cons* (file-system
+                 (mount-point "/")
+                 (device
+                   (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
+                         'ext4))
+                 (type "ext4"))
+               (file-system
+                 (mount-point "/boot/efi")
+                 (device (uuid "67E3-17ED" 'fat32))
+                 (type "vfat"))
+               (operating-system-file-systems os))))))
 
 frostfire
 #+end_src
