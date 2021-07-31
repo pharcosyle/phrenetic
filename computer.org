@@ -366,6 +366,7 @@ solitude
 #+end_src
 ** Spartan Executable
 - TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
+  Uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
 #+begin_src scheme :tangle (in-tangle-dir "spartan-executable.scm")
 (define-module (spartan-executable)
   #:use-module ((guix packages) #:select (package))
@@ -1700,6 +1701,7 @@ Can be an integer to determine the exact padding."
 # TODO these should be in a .profile or something
 
 GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
+# TODO uncomment this and also change the profile path in fontconfig
 # GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 
 # TODO do I need to source ~/.guix-profile here like daviwil does? I don't think so.
