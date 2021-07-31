@@ -507,6 +507,96 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
 ;;             "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA")))
 ;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
 #+end_src
+** Profiles
+*** Manifests
+:PROPERTIES:
+:tangle-dir+: manifests
+:END:
+**** omni
+#+begin_src scheme :tangle (in-tangle-dir "omni.scm")
+(use-modules ((guix packages) #:select (package-input-rewriting))
+             ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
+             ((flat packages emacs) #:select (emacs-native-comp))
+
+             ;; ((srfi srfi-1) #:select (first))
+             ;; ((guix channels) #:select (channel))
+             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+             )
+
+(concatenate-manifests
+ (list
+  ;; (packages->manifest
+  ;;  (list
+  ;;   (let ((inferior
+  ;;          (inferior-for-channels
+  ;;           (list (channel
+  ;;                  (name 'flat)
+  ;;                  (url "https://github.com/flatwhatson/guix-channel.git")
+  ;;                  (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
+  ;;                 ;; TODO not sure if specifying the guix channel is necessary
+  ;;                 (channel
+  ;;                  (name 'guix)
+  ;;                  (url "https://git.savannah.gnu.org/git/guix.git")
+  ;;                  (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
+  ;;     (first (lookup-inferior-packages inferior "emacs-native-comp")))))
+  (specifications->manifest
+   '("ungoogled-chromium"
+
+     "emacs-native-comp"
+
+     "xkbcomp"
+     "setxkbmap"
+
+     "xcape"
+
+     "xrandr"
+
+     "xinput"
+
+
+     ;; Desktop
+     "brightnessctl"
+     "playerctl"
+     "scrot"
+     "pavucontrol"
+     "pasystray"
+     "dunst"
+     "udiskie"
+     "redshift:gtk"
+
+     "dracula-theme"
+
+
+     "papirus-icon-theme" ; TODO trying out
+
+     "font-google-noto"
+     ;; Coding I guess?
+     "font-adobe-source-code-pro"
+
+     ;; Doom dependencies ; TODO these should be inputs / propogated inputs to a Doom guix package I find/create
+     "git"
+     "ripgrep"
+     "coreutils"
+     "fd"
+     "clang" ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
+
+     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO can this be made an input to a/the counsel package?
+
+     ;; General
+     ;; "git"
+     "zip"
+     "unzip"
+     ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
+
+     ;; Apps
+     "gimp"))
+  (packages->manifest
+   (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
+                                   (,emacs-minimal . ,emacs-native-comp)
+                                   (,emacs-no-x . ,emacs-native-comp)))
+        (list (specification->package "emacs-exwm")
+              (specification->package "emacs-desktop-environment"))))))
+#+end_src
 ** Desktop
 *** xsettingsd
 #+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
@@ -1614,92 +1704,6 @@ Can be an integer to determine the exact padding."
         "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
         "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
   (desktop-environment-mode))
-#+end_src
-* Manifests
-** omni
-#+begin_src scheme :tangle (in-tangle-dir "omni.scm")
-(use-modules ((guix packages) #:select (package-input-rewriting))
-             ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
-             ((flat packages emacs) #:select (emacs-native-comp))
-
-             ;; ((srfi srfi-1) #:select (first))
-             ;; ((guix channels) #:select (channel))
-             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-             )
-
-(concatenate-manifests
- (list
-  ;; (packages->manifest
-  ;;  (list
-  ;;   (let ((inferior
-  ;;          (inferior-for-channels
-  ;;           (list (channel
-  ;;                  (name 'flat)
-  ;;                  (url "https://github.com/flatwhatson/guix-channel.git")
-  ;;                  (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
-  ;;                 ;; TODO not sure if specifying the guix channel is necessary
-  ;;                 (channel
-  ;;                  (name 'guix)
-  ;;                  (url "https://git.savannah.gnu.org/git/guix.git")
-  ;;                  (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
-  ;;     (first (lookup-inferior-packages inferior "emacs-native-comp")))))
-  (specifications->manifest
-   '("ungoogled-chromium"
-
-     "emacs-native-comp"
-
-     "xkbcomp"
-     "setxkbmap"
-
-     "xcape"
-
-     "xrandr"
-
-     "xinput"
-
-
-     ;; Desktop
-     "brightnessctl"
-     "playerctl"
-     "scrot"
-     "pavucontrol"
-     "pasystray"
-     "dunst"
-     "udiskie"
-     "redshift:gtk"
-
-     "dracula-theme"
-
-
-     "papirus-icon-theme" ; TODO trying out
-
-     "font-google-noto"
-     ;; Coding I guess?
-     "font-adobe-source-code-pro"
-
-     ;; Doom dependencies ; TODO these should be inputs / propogated inputs to a Doom guix package I find/create
-     "git"
-     "ripgrep"
-     "coreutils"
-     "fd"
-     "clang" ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
-
-     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO can this be made an input to a/the counsel package?
-
-     ;; General
-     ;; "git"
-     "zip"
-     "unzip"
-     ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
-
-     ;; Apps
-     "gimp"))
-  (packages->manifest
-   (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
-                                   (,emacs-minimal . ,emacs-native-comp)
-                                   (,emacs-no-x . ,emacs-native-comp)))
-        (list (specification->package "emacs-exwm")
-              (specification->package "emacs-desktop-environment"))))))
 #+end_src
 * dotprofile
 #+begin_src sh :tangle (in-tangle-dir "dotprofile")
