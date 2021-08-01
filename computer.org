@@ -157,6 +157,44 @@ EndSection
     (file-systems %base-file-systems)
     (host-name #f)))
 #+end_src
+*** mirror.brielmaier.net.pub
+#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
+(public-key
+  (ecc
+    (curve Ed25519)
+    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+#+end_src
+*** Spartan
+#+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
+(define-module (spartan)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
+
+(define-public spartan
+  (package
+   (name "spartan")
+   (version "0")
+   (synopsis "Spartan Window Manager")
+   (source #f)
+   (build-system trivial-build-system)
+   (arguments
+    `(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (xsessions (string-append out "/share/xsessions")))
+          (mkdir-p xsessions)
+          (make-desktop-entry-file
+           (string-append xsessions "/" ,name ".desktop")
+           #:name (string-capitalize ,name)
+           #:comment ,synopsis
+           #:exec "spartan"))
+        #t)))
+   (description synopsis)
+   (home-page #f)
+   (license #f)))
+#+end_src
 ** Macbook
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
 (define-module (macbook)
@@ -202,44 +240,6 @@ EndSection
                (operating-system-file-systems os))))))
 
 frostfire
-#+end_src
-** mirror.brielmaier.net.pub
-#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
-(public-key
-  (ecc
-    (curve Ed25519)
-    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
-#+end_src
-** Spartan
-#+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
-(define-module (spartan)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
-
-(define-public spartan
-  (package
-   (name "spartan")
-   (version "0")
-   (synopsis "Spartan Window Manager")
-   (source #f)
-   (build-system trivial-build-system)
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
-        (let* ((out (assoc-ref %outputs "out"))
-               (xsessions (string-append out "/share/xsessions")))
-          (mkdir-p xsessions)
-          (make-desktop-entry-file
-           (string-append xsessions "/" ,name ".desktop")
-           #:name (string-capitalize ,name)
-           #:comment ,synopsis
-           #:exec "spartan"))
-        #t)))
-   (description synopsis)
-   (home-page #f)
-   (license #f)))
 #+end_src
 * Home
 :PROPERTIES:
@@ -369,79 +369,7 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
 
 solitude
 #+end_src
-** Spartan Executable
-#+begin_src scheme :tangle (in-tangle-dir "spartan-executable.scm")
-(define-module (spartan-executable)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
-  #:use-module ((guix gexp) #:select (local-file))
-  #:use-module ((gnu packages bash) #:select (bash))
-  #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages xorg) #:select (xhost xset))
-  #:use-module ((gnu packages xdisorg) #:select (xss-lock xsettingsd)))
-
-(define-public spartan-executable
-  (package
-   (name "spartan-executable")
-   (version "0")
-   (source #f)
-   (build-system trivial-build-system)
-   (native-inputs
-    `(("startup-script" ,(local-file "startup-script.sh"))))
-   (inputs
-    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
-      ("xhost" ,xhost)
-      ("xset" ,xset)
-      ("xss-lock" ,xss-lock)
-      ("xsettingsd" ,xsettingsd)
-      ("dbus" ,dbus)
-      ("emacs" ,emacs)))
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
-        (let* ((out (assoc-ref %outputs "out"))
-               (bin (string-append out "/bin"))
-               (executable (string-append bin "/spartan")))
-          (mkdir-p bin)
-          (copy-file (assoc-ref %build-inputs "startup-script") executable)
-          (let ((cmd (lambda* (input #:optional (executable input))
-                       (string-append (assoc-ref %build-inputs input) "/bin/" executable))))
-            (substitute* executable
-              (("/bin/sh") (cmd "bash" "sh"))
-              ;; TODO remove the carets in regexps (if possible, specifically for "xsettingsd") for consistency?
-              (("^xhost") (cmd "xhost"))
-              (("^xsettingsd") (cmd "xsettingsd"))
-              (("^xset") (cmd "xset"))
-              (("^xss-lock") (cmd "xss-lock"))
-              (("dbus-launch") (cmd "dbus" "dbus-launch"))
-              ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
-              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
-              ;; (("emacs") (cmd "emacs"))
-              (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
-              (("doom") "~/.config/emacs/bin/doom"))) ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-          (chmod executable #o555))
-        #t)))
-   (synopsis "Spartan Executable")
-   (description synopsis)
-   (home-page #f)
-   (license #f)))
-#+end_src
-*** Startup script
-#+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
-#!/bin/sh
-. ~/Projects/dotfiles/gen/dotprofile
-xhost +SI:localuser:$USER
-export _JAVA_AWT_WM_NONREPARENTING=1
-xsettingsd --config=$HOME/Projects/dotfiles/gen/home/xsettingsd.conf &
-xset r rate 300 30 # TODO tweak?
-xss-lock -- slock &
-doom env
-exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init
-#+end_src
-** Channels
+*** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (cons* (channel
         (name 'penitent-tangent)
@@ -511,6 +439,78 @@ exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/d
 ;;            (openpgp-fingerprint
 ;;             "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA")))
 ;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
+#+end_src
+*** Spartan Executable
+#+begin_src scheme :tangle (in-tangle-dir "spartan-executable.scm")
+(define-module (spartan-executable)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module ((gnu packages bash) #:select (bash))
+  #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages glib) #:select (dbus))
+  #:use-module ((gnu packages xorg) #:select (xhost xset))
+  #:use-module ((gnu packages xdisorg) #:select (xss-lock xsettingsd)))
+
+(define-public spartan-executable
+  (package
+   (name "spartan-executable")
+   (version "0")
+   (source #f)
+   (build-system trivial-build-system)
+   (native-inputs
+    `(("startup-script" ,(local-file "startup-script.sh"))))
+   (inputs
+    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
+      ("xhost" ,xhost)
+      ("xset" ,xset)
+      ("xss-lock" ,xss-lock)
+      ("xsettingsd" ,xsettingsd)
+      ("dbus" ,dbus)
+      ("emacs" ,emacs)))
+   (arguments
+    `(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (bin (string-append out "/bin"))
+               (executable (string-append bin "/spartan")))
+          (mkdir-p bin)
+          (copy-file (assoc-ref %build-inputs "startup-script") executable)
+          (let ((cmd (lambda* (input #:optional (executable input))
+                       (string-append (assoc-ref %build-inputs input) "/bin/" executable))))
+            (substitute* executable
+              (("/bin/sh") (cmd "bash" "sh"))
+              ;; TODO remove the carets in regexps (if possible, specifically for "xsettingsd") for consistency?
+              (("^xhost") (cmd "xhost"))
+              (("^xsettingsd") (cmd "xsettingsd"))
+              (("^xset") (cmd "xset"))
+              (("^xss-lock") (cmd "xss-lock"))
+              (("dbus-launch") (cmd "dbus" "dbus-launch"))
+              ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
+              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
+              ;; (("emacs") (cmd "emacs"))
+              (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
+              (("doom") "~/.config/emacs/bin/doom"))) ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+          (chmod executable #o555))
+        #t)))
+   (synopsis "Spartan Executable")
+   (description synopsis)
+   (home-page #f)
+   (license #f)))
+#+end_src
+**** Startup script
+#+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
+#!/bin/sh
+. ~/Projects/dotfiles/gen/dotprofile
+xhost +SI:localuser:$USER
+export _JAVA_AWT_WM_NONREPARENTING=1
+xsettingsd --config=$HOME/Projects/dotfiles/gen/home/xsettingsd.conf &
+xset r rate 300 30 # TODO tweak?
+xss-lock -- slock &
+doom env
+exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init
 #+end_src
 ** Profiles
 :PROPERTIES:
