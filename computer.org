@@ -370,8 +370,6 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
 solitude
 #+end_src
 ** Spartan Executable
-- TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
-  Uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
 #+begin_src scheme :tangle (in-tangle-dir "spartan-executable.scm")
 (define-module (spartan-executable)
   #:use-module ((guix packages) #:select (package))
@@ -390,8 +388,8 @@ export _JAVA_AWT_WM_NONREPARENTING=1
 xsettingsd --config=$HOME/Projects/dotfiles/gen/home/xsettingsd.conf &
 xset r rate 300 30 # TODO tweak?
 xss-lock -- slock &
-~/.config/emacs/bin/doom env
-exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init")
+doom env
+exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init")
 
 (define-public spartan-executable
   (package
@@ -400,7 +398,7 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
    (source #f)
    (build-system trivial-build-system)
    (inputs
-    `(("bash" ,bash) ; `bash-minimal' might be okay/preferable here
+    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
       ("xhost" ,xhost)
       ("xset" ,xset)
       ("xss-lock" ,xss-lock)
@@ -428,7 +426,11 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
               (("^xset") (cmd "xset"))
               (("^xss-lock") (cmd "xss-lock"))
               (("dbus-launch") (cmd "dbus" "dbus-launch"))
-              ((" emacs ") (string-append " " (cmd "emacs") " ")))) ; hacky
+              ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
+              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
+              ;; (("emacs") (cmd "emacs"))
+              (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
+              (("doom") "~/.config/emacs/bin/doom"))) ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
           (chmod executable #o555))
         #t)))
    (synopsis "Spartan Executable")
