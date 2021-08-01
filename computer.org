@@ -508,12 +508,46 @@ exec dbus-launch --exit-with-session /gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh
 ;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
 #+end_src
 ** Profiles
-*** Manifests
 :PROPERTIES:
 :tangle-dir+: manifests
 :END:
-**** omni
-#+begin_src scheme :tangle (in-tangle-dir "omni.scm")
+#+name: install-profiles
+#+begin_src sh :results output silent :var dir=(get-tangle-dir)
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+
+profiles=$*
+if [[ $# -eq 0 ]]; then
+    profiles="$dir/*";
+fi
+
+for profile in $profiles; do
+  profileName=$(basename $profile .scm)
+  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
+  mkdir -p $profilePath
+  guix package --profile="$profilePath/$profileName" --manifest="$dir/$profileName.scm"
+done
+#+end_src
+#+call: install-profiles[:cmdline ...]()
+
+#+name: upgrade-profiles
+#+begin_src sh :results output silent :var dir=(get-tangle-dir)
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+
+profiles=$*
+if [[ $# -eq 0 ]]; then
+    profiles="$GUIX_EXTRA_PROFILES/*";
+fi
+
+for profile in $profiles; do
+  profileName=$(basename $profile)
+  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
+  guix package --profile="$profilePath/$profileName" --manifest="$dir/$profileName.scm"
+done
+#+end_src
+#+call: upgrade-profiles[:cmdline ...]()
+*** Manifests
+**** multiverse
+#+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
 (use-modules ((guix packages) #:select (package-input-rewriting))
              ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
              ((flat packages emacs) #:select (emacs-native-comp))
