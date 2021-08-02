@@ -59,7 +59,7 @@ sudo guix system --load-path=$dir reconfigure $dir/frostfire.scm
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((nongnu packages linux) #:select (linux-firmware))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
-  #:use-module ((spartan) #:select (spartan))
+  #:use-module ((spartan-wm) #:select (spartan-wm))
 
   #:use-module ((nongnu packages linux) #:select (linux))
   ;; #:use-module ((srfi srfi-1) #:select (first))
@@ -109,7 +109,7 @@ sudo guix system --load-path=$dir reconfigure $dir/frostfire.scm
         (list (specification->package "nss-certs")
               (specification->package "xf86-input-libinput")
               (specification->package "xf86-input-mtrack")
-              spartan)
+              spartan-wm)
         %base-packages))
     (services
      (cons* (service gnome-desktop-service-type)
@@ -162,15 +162,15 @@ Section "InputClass"
   MatchIsTouchpad "on"
 EndSection
 #+end_src
-*** Spartan
-#+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
-(define-module (spartan)
+*** Spartan WM
+#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm")
+(define-module (spartan-wm)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
 
-(define-public spartan
+(define-public spartan-wm
   (package
-   (name "spartan")
+   (name "spartan-wm")
    (version "0")
    (synopsis "Spartan Window Manager")
    (source #f)
@@ -185,7 +185,7 @@ EndSection
           (mkdir-p xsessions)
           (make-desktop-entry-file
            (string-append xsessions "/" ,name ".desktop")
-           #:name (string-capitalize ,name)
+           #:name "Spartan WM"
            #:comment ,synopsis
            #:exec "spartan"))
         #t)))
@@ -271,7 +271,7 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
-  #:use-module ((spartan-executable) #:select (spartan-executable)))
+  #:use-module ((spartan) #:select (spartan)))
 
 ;; (define %my-fontconfig-config-file
 ;;   "
@@ -296,9 +296,9 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list spartan-executable
+   (packages (list spartan
                    ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
-                   ;;  spartan-executable)
+                   ;;  spartan)
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto")
                    (specification->package "font-adobe-source-code-pro")))
@@ -438,9 +438,9 @@ solitude
 ;;             "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA")))
 ;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
 #+end_src
-*** Spartan Executable
-#+begin_src scheme :tangle (in-tangle-dir "spartan-executable.scm")
-(define-module (spartan-executable)
+*** Spartan
+#+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
+(define-module (spartan)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((guix gexp) #:select (local-file))
@@ -450,9 +450,9 @@ solitude
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (xss-lock xsettingsd)))
 
-(define-public spartan-executable
+(define-public spartan
   (package
-   (name "spartan-executable")
+   (name "spartan")
    (version "0")
    (source #f)
    (build-system trivial-build-system)
@@ -487,13 +487,13 @@ solitude
               (("^xss-lock") (cmd "xss-lock"))
               (("dbus-launch") (cmd "dbus" "dbus-launch"))
               ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
-              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan-executable in home config when I get rid of this hardcoding
+              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan in home config when I get rid of this hardcoding
               ;; (("emacs") (cmd "emacs"))
               (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
               (("doom") "~/.config/emacs/bin/doom"))) ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
           (chmod executable #o555))
         #t)))
-   (synopsis "Spartan Executable")
+   (synopsis "Spartan")
    (description synopsis)
    (home-page #f)
    (license #f)))
