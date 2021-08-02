@@ -31,6 +31,10 @@ Krzysztof Baranowski
 #+begin_src org
 pharcosyle@gmail.com
 #+end_src
+#+name: spartan-executable
+#+begin_src org
+spartan
+#+end_src
 * System
 :PROPERTIES:
 :tangle-dir+: system
@@ -163,7 +167,7 @@ Section "InputClass"
 EndSection
 #+end_src
 *** Spartan WM
-#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm")
+#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm") :noweb yes
 (define-module (spartan-wm)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
@@ -187,7 +191,7 @@ EndSection
            (string-append xsessions "/" ,name ".desktop")
            #:name "Spartan WM"
            #:comment ,synopsis
-           #:exec "spartan"))
+           #:exec "<<spartan-executable>>"))
         #t)))
    (description synopsis)
    (home-page #f)
@@ -439,7 +443,7 @@ solitude
 ;;          (commit "20dfda3d9ebb14b72ed33fed940ee3a1f030c99a")))
 #+end_src
 *** Spartan
-#+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
+#+begin_src scheme :tangle (in-tangle-dir "spartan.scm") :noweb yes
 (define-module (spartan)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
@@ -473,7 +477,7 @@ solitude
         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
         (let* ((out (assoc-ref %outputs "out"))
                (bin (string-append out "/bin"))
-               (executable (string-append bin "/spartan")))
+               (executable (string-append bin "/<<spartan-executable>>")))
           (mkdir-p bin)
           (copy-file (assoc-ref %build-inputs "startup-script") executable)
           (let ((cmd (lambda* (input #:optional (executable input))
