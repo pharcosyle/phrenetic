@@ -514,6 +514,241 @@ xss-lock -- slock &
 doom env
 exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init
 #+end_src
+***** xsettingsd.conf
+#+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
+# TODO these
+Net/EnableEventSounds 1
+Net/EnableInputFeedbackSounds 1
+
+Xft/Antialias 1
+Xft/Hinting 1
+Xft/HintStyle "hintfull"
+Xft/DPI 196608
+# Xft/DPI 184320 # TODO I do like the chromium interface size better at this dpi
+# Xft/DPI 225280
+
+# Xft/RGBA "rgb"
+
+# Xft/Autohint 0 # TODO donno if the casing is right or if it matters
+
+
+
+# Gtk/ToolbarIconSize "large"
+# Net/ApplicationPreferDarkTheme 1
+# Gtk/FontName "Cantarell 11"
+# Gtk/MonospaceFontName "Fira Mono 10"
+Gtk/CursorThemeName "Adwaita"
+Gtk/CursorThemeSize 48
+
+# TODO theme
+# - before doing any more wait until I've picked a browser and have installed more apps like e.g. VLC
+# - make sure my browser reads the device theme preference as dark
+# - if I don't like dracula try another theme or maybe patch it with my emacs colors (perhaps some other theme would be a better base?)
+# - look at dracula / other theme I choose in Gnome to see if it looks "right"
+Net/ThemeName "Dracula"
+# TODO icon theme
+# Donno about these new papirus icons, daviwil and hlissner seem to like them but I'm not sure I do (the Files icons and particularly the systray ones, can I change just those?). Maybe they'll look better once Dracula is enabled? Maybe a wrong / lower-resolution version of the icons is being used and I need to set up where they're looked for?
+Net/IconThemeName "Papirus-Dark"
+# seems like this is the default, at least for dracula
+# Gtk/DecorationLayout "menu:minimize,maximize,close"
+#+end_src
+**** EXWM :UI:bindings:path:
+#+begin_src elisp :tangle (in-tangle-dir "desktop.el")
+;;; -*- lexical-binding: t; -*-
+
+;; TODO rename efs to biome
+;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
+;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
+
+(defun efs/run-in-background (command)
+  (let ((command-parts (split-string command "[ ]+")))
+    (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
+
+(defun efs/exwm-init-hook ()
+  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/home/dunstrc")))
+  (efs/run-in-background "nm-applet")
+  (efs/run-in-background "pasystray")
+  (efs/run-in-background "redshift-gtk -l 47:-123")
+  (efs/run-in-background "udiskie -t"))
+
+(defun efs/exwm-update-class ()
+  (exwm-workspace-rename-buffer exwm-class-name))
+
+(defun efs/exwm-update-title ()
+  (pcase exwm-class-name
+    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title))))) ; TODO get rid of preceding or trailing "Chromium"
+
+(defun biome--shell-cmd (command)
+  (start-process-shell-command command nil command))
+
+(use-package! exwm
+  :config
+  ;; When window "class" updates, use it to set the buffer name
+  (add-hook 'exwm-update-class-hook #'efs/exwm-update-class)
+
+  ;; When window title updates, use it to set the buffer name
+  (add-hook 'exwm-update-title-hook #'efs/exwm-update-title)
+
+  ;; When EXWM starts up, do some extra confifuration
+  (add-hook 'exwm-init-hook #'efs/exwm-init-hook)
+
+  ;; NOTE: Uncomment the following two options if you want window buffers
+  ;;       to be available on all workspaces!
+
+  ;; Automatically move EXWM buffer to current workspace when selected
+  (setq exwm-layout-show-all-buffers t)
+
+  ;; Display all EXWM buffers in every workspace buffer list
+  (setq exwm-workspace-show-all-buffers t)
+
+  ;; NOTE: Uncomment this option if you want to detach the minibuffer!
+  ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
+  ;;(setq exwm-workspace-minibuffer-position 'top)
+
+  ;; Load the system tray before exwm-init
+  (require 'exwm-systemtray)
+  (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
+  (setq exwm-systemtray-icon-gap 8)
+  (exwm-systemtray-enable)
+
+  ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.
+  ;; Window focus should follow the mouse pointer
+  ;; (setq mouse-autoselect-window t
+  ;;       focus-follows-mouse t)
+
+  ;; These keys should always pass through to Emacs
+  (setq exwm-input-prefix-keys
+        '(?\C-x
+          ;; ?\C-u
+          ;; ?\C-h
+          ?\M-x
+          ?\M-`
+          ?\M-&
+          ?\M-:
+          ;; ?\C-\M-j  ;; Buffer list
+          ?\s-\ ; TODO I might want this in exwm global keys
+          ?\s-, ; TODO I might want this in exwm global keys
+          ))
+  ;; (setq exwm-input-prefix-keys nil)
+
+  ;; (setq exwm-input-simulation-keys
+  ;;         '(([?\C-b] . [left])
+  ;;           ([?\C-f] . [right])
+  ;;           ([?\C-p] . [up])
+  ;;           ([?\C-n] . [down])
+  ;;           ([?\C-a] . [home])
+  ;;           ([?\C-e] . [end])
+  ;;           ([?\M-v] . [prior])
+  ;;           ([?\C-v] . [next])
+  ;;           ([?\C-d] . [delete])
+  ;;           ([?\C-k] . [S-end delete])))
+  (setq exwm-input-simulation-keys
+        '(([?\s-c] . [C-c])))
+
+  ;; TODO might want to do some local simulation keys too
+
+  ;; TODO maybe find a way to alias localleader key to the commands in exwm-mode-map under C-c?
+  ;; TODO probably use `map!' instead of `define-key'
+  ;; (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
+
+  ;; Set up global key bindings.  These always work, no matter the input state!
+  ;; Keep in mind that changing this list after EXWM initializes has no effect.
+  ;; TODO maybe setq! would work though?
+  (setq exwm-input-global-keys
+        `(([?\s-q] . exwm-reset)
+
+          ([?\s-Q] . exwm-input-release-keyboard)
+
+          ;; Move between windows
+          ([s-left] . windmove-left)
+          ([s-right] . windmove-right)
+          ([s-up] . windmove-up)
+          ([s-down] . windmove-down)
+
+          ([?\s-t] . evil-switch-to-windows-last-buffer)
+          ;; ([?\s-\ ] . doom-leader-map)
+
+          ;; Launch applications via shell command
+          ([?\s-&] . (lambda (command)
+                       (interactive (list (read-shell-command "$ ")))
+                       (biome--shell-cmd command)))
+
+          (,(kbd "<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close")))
+          (,(kbd "S-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close-all")))
+          (,(kbd "C-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl history-pop")))
+          (,(kbd "M-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl action")))))
+
+  ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
+  (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
+
+  (exwm-enable)
+
+
+  ;; WIP
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h))
+
+
+(use-package! desktop-environment
+  :after exwm
+  :config
+  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
+        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
+        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
+        desktop-environment-volume-normal-increment "+5%"
+        desktop-environment-volume-normal-decrement "-5%"
+        desktop-environment-keyboard-backlight-normal-increment 26
+        desktop-environment-keyboard-backlight-normal-decrement -26)
+  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
+  (map! :map desktop-environment-mode-map
+        "s-l" nil
+        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
+        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
+        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
+        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
+  (desktop-environment-mode))
+#+end_src
+***** dunstrc
+#+begin_src conf :tangle (in-tangle-dir "dunstrc")
+[global]
+    geometry = "500x10-200+50"
+    transparency = 10
+    separator_color = frame
+    padding = 15
+    horizontal_padding = 15
+    text_icon_padding = 15
+    frame_width = 2
+    frame_color = "#89AAEB"
+    idle_threshold = 120
+    font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
+    line_height = 2
+    markup = full
+    format = "<b>%s</b>\n%b"
+    show_age_threshold = 60
+    word_wrap = yes
+    icon_position = left
+    min_icon_size = 40
+    max_icon_size = 40
+    # icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
+    # TODO browser = qutebrowser
+    corner_radius = 16
+    mouse_right_click = do_action
+
+[urgency_low]
+    background = "#1c1f26"
+    foreground = "#9ca0a4"
+    timeout = 10
+
+[urgency_normal]
+    background = "#1c1f26"
+    foreground = "#ffffff"
+    timeout = 10
+
+[urgency_critical]
+    background = "#900000"
+    foreground = "#ffffff"
+    frame_color = "#ff0000"
+    timeout = 0
+#+end_src
 ** Profiles
 :PROPERTIES:
 :tangle-dir+: manifests
@@ -639,86 +874,6 @@ done
               (specification->package "emacs-desktop-environment"))))))
 #+end_src
 ** Desktop
-*** xsettingsd
-#+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
-# TODO these
-Net/EnableEventSounds 1
-Net/EnableInputFeedbackSounds 1
-
-Xft/Antialias 1
-Xft/Hinting 1
-Xft/HintStyle "hintfull"
-Xft/DPI 196608
-# Xft/DPI 184320 # TODO I do like the chromium interface size better at this dpi
-# Xft/DPI 225280
-
-# Xft/RGBA "rgb"
-
-# Xft/Autohint 0 # TODO donno if the casing is right or if it matters
-
-
-
-# Gtk/ToolbarIconSize "large"
-# Net/ApplicationPreferDarkTheme 1
-# Gtk/FontName "Cantarell 11"
-# Gtk/MonospaceFontName "Fira Mono 10"
-Gtk/CursorThemeName "Adwaita"
-Gtk/CursorThemeSize 48
-
-# TODO theme
-# - before doing any more wait until I've picked a browser and have installed more apps like e.g. VLC
-# - make sure my browser reads the device theme preference as dark
-# - if I don't like dracula try another theme or maybe patch it with my emacs colors (perhaps some other theme would be a better base?)
-# - look at dracula / other theme I choose in Gnome to see if it looks "right"
-Net/ThemeName "Dracula"
-# TODO icon theme
-# Donno about these new papirus icons, daviwil and hlissner seem to like them but I'm not sure I do (the Files icons and particularly the systray ones, can I change just those?). Maybe they'll look better once Dracula is enabled? Maybe a wrong / lower-resolution version of the icons is being used and I need to set up where they're looked for?
-Net/IconThemeName "Papirus-Dark"
-# seems like this is the default, at least for dracula
-# Gtk/DecorationLayout "menu:minimize,maximize,close"
-#+end_src
-*** dunstrc
-#+begin_src conf :tangle (in-tangle-dir "dunstrc")
-[global]
-    geometry = "500x10-200+50"
-    transparency = 10
-    separator_color = frame
-    padding = 15
-    horizontal_padding = 15
-    text_icon_padding = 15
-    frame_width = 2
-    frame_color = "#89AAEB"
-    idle_threshold = 120
-    font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
-    line_height = 2
-    markup = full
-    format = "<b>%s</b>\n%b"
-    show_age_threshold = 60
-    word_wrap = yes
-    icon_position = left
-    min_icon_size = 40
-    max_icon_size = 40
-    # icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
-    # TODO browser = qutebrowser
-    corner_radius = 16
-    mouse_right_click = do_action
-
-[urgency_low]
-    background = "#1c1f26"
-    foreground = "#9ca0a4"
-    timeout = 10
-
-[urgency_normal]
-    background = "#1c1f26"
-    foreground = "#ffffff"
-    timeout = 10
-
-[urgency_critical]
-    background = "#900000"
-    foreground = "#ffffff"
-    frame_color = "#ff0000"
-    timeout = 0
-#+end_src
 *** xkb
 :PROPERTIES:
 :tangle-dir+: xkb
@@ -742,29 +897,19 @@ xkb_symbols "semicolon_to_control" {
     modifier_map Control { <AC10> };
 };
 #+end_src
-** Emacs
-- TODO remove these comments at some point
-# :PROPERTIES:
-# :header-args+: :noweb yes
-# :END:
-# ** Org Locals
-# #+name: lexical-binding-header
-# #+begin_src elisp
-# ;;; -*- lexical-binding: t; -*-
-# #+end_src
-*** Doomdir
+** Doom
 :PROPERTIES:
 :tangle-dir+: doom
 :END:
-**** init.el
+*** init.el
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "init.el")
 :END:
-***** Header
+**** Header
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 #+end_src
-***** ~doom!~ block
+**** ~doom!~ block
 #+begin_src elisp
 (doom! :completion
        company
@@ -845,44 +990,44 @@ xkb_symbols "semicolon_to_control" {
        :config
        (default +bindings +smartparens))
 #+end_src
-***** init-phase configuration
-****** Clojure :lang:clojure:bindings:
+**** init-phase configuration
+***** Clojure :lang:clojure:bindings:
 #+begin_src elisp
 (use-package-hook! clojure-mode
   :post-init
   (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding ; TODO did I already try putting this in a use-package `:init' section?
 #+end_src
-****** Lispyville :lisp:bindings:
+***** Lispyville :lisp:bindings:
 #+begin_src elisp
 (use-package-hook! lispyville
   :post-init
   (setq lispyville-key-theme nil))
 #+end_src
-**** config.el
+*** config.el
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "config.el")
 :END:
-***** Header
+**** Header
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 #+end_src
-***** Requires
+**** Requires
 #+begin_src elisp
 (use-package! dash)
 #+end_src
-***** Personal Info :user:
+**** Personal Info :user:
 #+begin_src elisp :noweb yes
 (setq user-full-name "<<user-full-name>>"
       user-mail-address "<<user-email>>")
 #+end_src
-***** Locals :path:
+**** Locals :path:
 #+begin_src elisp
 (defconst biome--org-dir (concat org-directory "~/org"))
 (defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
 
 (defconst biome--very-big 1000000)
 #+end_src
-***** General :UI:
+**** General :UI:
 #+begin_src elisp
 ;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
 (setq org-directory biome--org-dir)
@@ -893,30 +1038,30 @@ xkb_symbols "semicolon_to_control" {
 ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
 ;; (setq display-line-numbers-type nil)
 #+end_src
-****** Doom resets
+***** Doom resets
 #+begin_src elisp
 (setq-default indent-tabs-mode t)
 
 ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
 #+end_src
-***** Doom
-****** UI :UI:theming:
+**** Doom
+***** UI :UI:theming:
 #+begin_src elisp
 (setq doom-theme 'doom-nuclear
       doom-font (font-spec :family "Source Code Pro" :size 24))
 #+end_src
-****** Leader/Localleader :bindings:
+***** Leader/Localleader :bindings:
 #+begin_src elisp
 (setq doom-leader-alt-key "s-SPC"
       doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 #+end_src
-***** Keybindings :bindings:
+**** Keybindings :bindings:
 #+begin_src elisp
 (setq help-char (string-to-char "\C-_"))
 #+end_src
-****** Translations
+***** Translations
 #+begin_src elisp
 (defun biome--trans (&rest rest)
   (-each (-partition 2 rest)
@@ -934,7 +1079,7 @@ xkb_symbols "semicolon_to_control" {
               "s-k" "<up>"
               "s-l" "<right>")
 #+end_src
-****** General
+***** General
 #+begin_src elisp
 (defalias 'original-yank-pop #'yank-pop)
 
@@ -1006,7 +1151,7 @@ xkb_symbols "semicolon_to_control" {
         "s" #'org-gcal-sync
         "p" #'org-gcal-post-at-point)))
 #+end_src
-***** Packages
+**** Packages
 #+begin_src elisp
 (after! all-the-icons-dired
   (setq all-the-icons-dired-monochrome nil))
@@ -1014,18 +1159,18 @@ xkb_symbols "semicolon_to_control" {
 (after! avy
   (setq avy-single-candidate-jump t))
 #+end_src
-****** Battery :UI:
+***** Battery :UI:
 #+begin_src elisp
 (use-package! battery
   :config
   (display-battery-mode 1))
 #+end_src
-****** Clojure :lang:clojure:
+***** Clojure :lang:clojure:
 #+begin_src elisp
 (after! clojure-mode
   (set-ligatures! 'clojure-mode :lambda "fn"))
 #+end_src
-****** Cider :lang:clojure:persistence:
+***** Cider :lang:clojure:persistence:
 #+begin_src elisp
 (after! cider
   (setq cider-repl-history-size biome--very-big
@@ -1040,64 +1185,64 @@ xkb_symbols "semicolon_to_control" {
              #'yas-minor-mode-on
              #'biome--sp-strict-h))
 #+end_src
-****** Clj Refactor :lang:clojure:bindings:
+***** Clj Refactor :lang:clojure:bindings:
 #+begin_src elisp
 (after! clj-refactor
   ;; TODO make sure this is still working after nesting in `after!'
   (add-hook! 'clj-refactor-mode-hook
     (cljr-add-keybindings-with-prefix "s-M R"))) ; TODO temporary binding
 #+end_src
-****** Counsel :completion:UI:
+***** Counsel :completion:UI:
 #+begin_src elisp
 (after! counsel
   (setq counsel-yank-pop-separator "\n--------------------------------\n"))
 #+end_src
-****** Doom Modeline :UI:
+***** Doom Modeline :UI:
 #+begin_src elisp
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
   (setq doom-modeline-major-mode-icon t)
   (setq doom-modeline-persp-name t))
 #+end_src
-****** Doom Themes :UI:
+***** Doom Themes :UI:
 #+begin_src elisp
 ;; TODO get rid of this if I'm not going to try it out again
 ;; (after! doom-themes
 ;;   (doom-themes-visual-bell-config))
 #+end_src
-****** Emacs Lisp :lang:
+***** Emacs Lisp :lang:
 #+begin_src elisp
 (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
 #+end_src
-****** Emojify :UI:
+***** Emojify :UI:
 #+begin_src elisp
 (after! emojify
   (setq emojify-display-style 'unicode))
 #+end_src
-****** Eshell :persistence:
+***** Eshell :persistence:
 #+begin_src elisp
 (after! eshell
   (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
 #+end_src
-****** Evil :UI:theming:
+***** Evil :UI:theming:
 #+begin_src elisp
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 #+end_src
-****** Evil Org :org:bindings:
+***** Evil Org :org:bindings:
 #+begin_src elisp
 (after! evil-org
   (map! :map evil-org-mode-map
         :nv "C-j" #'outline-forward-same-level
         :nv "C-k" #'outline-backward-same-level))
 #+end_src
-****** Evil Multiedit
+***** Evil Multiedit
 #+begin_src elisp
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 #+end_src
-****** Expand Region :bindings:
+***** Expand Region :bindings:
 #+begin_src elisp
 (use-package! expand-region
   :defer t
@@ -1113,14 +1258,14 @@ xkb_symbols "semicolon_to_control" {
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 #+end_src
-****** Highlight Indent Guides :lang:prog_mode:UI:
+***** Highlight Indent Guides :lang:prog_mode:UI:
 #+begin_src elisp
 (remove-hook! '(prog-mode-hook
                 text-mode-hook
                 conf-mode-hook)
   #'highlight-indent-guides-mode)
 #+end_src
-****** Ivy :completion:bindings:UI:
+***** Ivy :completion:bindings:UI:
 #+begin_src elisp
 (after! ivy
   (setq +ivy-buffer-preview t
@@ -1137,7 +1282,7 @@ xkb_symbols "semicolon_to_control" {
         :map ivy-reverse-i-search-map
         "C-k" #'previous-line))
 #+end_src
-****** Ivy Hydra :completion:bindings:
+***** Ivy Hydra :completion:bindings:
 #+begin_src elisp
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
@@ -1146,7 +1291,7 @@ xkb_symbols "semicolon_to_control" {
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
 #+end_src
-****** Lispy :lisp:
+***** Lispy :lisp:
 #+begin_src elisp
 ;; Not using lispy, remove the Doom module's hooks.
 (remove-hook! '(lisp-mode-hook
@@ -1162,7 +1307,7 @@ xkb_symbols "semicolon_to_control" {
   #'lispy-mode)
 (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
 #+end_src
-****** Lispyville :lisp:lang:prog_mode:bindings:
+***** Lispyville :lisp:lang:prog_mode:bindings:
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
@@ -1183,13 +1328,13 @@ xkb_symbols "semicolon_to_control" {
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 #+end_src
-****** Magit :UI:persistence:
+***** Magit :UI:persistence:
 #+begin_src elisp
 (after! magit
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
   (setq transient-history-limit biome--very-big))
 #+end_src
-****** Org :org:UI:
+***** Org :org:UI:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -1204,7 +1349,7 @@ xkb_symbols "semicolon_to_control" {
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-****** Org Gcal :user:secret:persistence:
+***** Org Gcal :user:secret:persistence:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -1214,26 +1359,26 @@ xkb_symbols "semicolon_to_control" {
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
-****** Paren :UI:
+***** Paren :UI:
 #+begin_src elisp
 (after! paren
   (setq! show-paren-delay 0))
 #+end_src
-****** Prog Mode :lang:prog_mode:
+***** Prog Mode :lang:prog_mode:
 #+begin_src elisp
 (add-hook! 'prog-mode-hook #'biome--sp-strict-h)
 #+end_src
-****** Rainbow Delimiters :UI:theming:
+***** Rainbow Delimiters :UI:theming:
 #+begin_src elisp
 (after! rainbow-delimiters
   (setq rainbow-delimiters-max-face-count 8)) ; TODO make sure this is working and I didn't need to put it in an `:init'`or anything
 #+end_src
-****** Recentf :persistence:
+***** Recentf :persistence:
 #+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
 #+end_src
-****** Smartparens :bindings:
+***** Smartparens :bindings:
 #+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
@@ -1260,7 +1405,7 @@ xkb_symbols "semicolon_to_control" {
          "c" #'sp-convolute-sexp
          "w" #'sp-rewrap-sexp)))
 #+end_src
-******* Hook :bindings:
+****** Hook :bindings:
 #+begin_src elisp
 (defun biome--sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
@@ -1269,7 +1414,7 @@ xkb_symbols "semicolon_to_control" {
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
-****** Time :UI:
+***** Time :UI:
 #+begin_src elisp
 (use-package! time
   :config
@@ -1277,26 +1422,26 @@ xkb_symbols "semicolon_to_control" {
   ;; (setq display-time-24hr-format t)
   (display-time-mode 1))
 #+end_src
-****** Tldr :persistence:
+***** Tldr :persistence:
 #+begin_src elisp
 (use-package! tldr
   :defer t
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 #+end_src
-****** Undo Fu
+***** Undo Fu
 #+begin_src elisp
 (after! undo-fu
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
-****** Undo Tree :UI:
+***** Undo Tree :UI:
 - TODO am I commenting stuff or doing notangle?
 #+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 #+end_src
-***** Projects
-****** Hyperdrive
+**** Projects
+***** Hyperdrive
 #+begin_src elisp
 (pushnew! safe-local-variable-values
           '(cider-preferred-build-tool . shadow-cljs)
@@ -1322,7 +1467,7 @@ xkb_symbols "semicolon_to_control" {
   :cwd "~/Projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 #+end_src
-****** Massrealty
+***** Massrealty
 #+begin_src elisp
 ;; (pushnew! safe-local-variable-values
 ;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
@@ -1331,7 +1476,7 @@ xkb_symbols "semicolon_to_control" {
 ;; (after! org-gcal
 ;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
 #+end_src
-***** WIP
+**** WIP
 #+begin_src elisp
 (after! org
   (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
@@ -1355,7 +1500,7 @@ xkb_symbols "semicolon_to_control" {
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
 #+end_src
-****** Tramp :path:
+***** Tramp :path:
 #+begin_src elisp
 (after! tramp
   ;; Make tramp work on Guix.
@@ -1365,7 +1510,7 @@ xkb_symbols "semicolon_to_control" {
                                  "/run/current-system/profile/bin"
                                  "/run/current-system/profile/sbin")))
 #+end_src
-****** Dotfiles auto-tangle :path:
+***** Dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
 ;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
@@ -1377,7 +1522,7 @@ xkb_symbols "semicolon_to_control" {
 ;;       (let ((org-confirm-babel-evaluate nil))
 ;;         (org-babel-tangle)))))
 #+end_src
-**** packages.el
+*** packages.el
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
@@ -1392,7 +1537,7 @@ xkb_symbols "semicolon_to_control" {
 (package! trashed :pin "23e782f78d9adf6b5479a01bfac90b2cfbf729fe")
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
-**** Theme :UI:theming:
+*** Theme :UI:theming:
 #+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
@@ -1590,161 +1735,6 @@ Can be an integer to determine the exact padding."
   ())
 
 ;;; doom-nuclear-theme.el ends here
-#+end_src
-*** desktop :UI:bindings:path:
-#+begin_src elisp :tangle (in-tangle-dir "desktop.el")
-;;; -*- lexical-binding: t; -*-
-
-;; TODO rename efs to biome
-;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
-;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
-
-(defun efs/run-in-background (command)
-  (let ((command-parts (split-string command "[ ]+")))
-    (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
-
-(defun efs/exwm-init-hook ()
-  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/home/dunstrc")))
-  (efs/run-in-background "nm-applet")
-  (efs/run-in-background "pasystray")
-  (efs/run-in-background "redshift-gtk -l 47:-123")
-  (efs/run-in-background "udiskie -t"))
-
-(defun efs/exwm-update-class ()
-  (exwm-workspace-rename-buffer exwm-class-name))
-
-(defun efs/exwm-update-title ()
-  (pcase exwm-class-name
-    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title))))) ; TODO get rid of preceding or trailing "Chromium"
-
-(defun biome--shell-cmd (command)
-  (start-process-shell-command command nil command))
-
-(use-package! exwm
-  :config
-  ;; When window "class" updates, use it to set the buffer name
-  (add-hook 'exwm-update-class-hook #'efs/exwm-update-class)
-
-  ;; When window title updates, use it to set the buffer name
-  (add-hook 'exwm-update-title-hook #'efs/exwm-update-title)
-
-  ;; When EXWM starts up, do some extra confifuration
-  (add-hook 'exwm-init-hook #'efs/exwm-init-hook)
-
-  ;; NOTE: Uncomment the following two options if you want window buffers
-  ;;       to be available on all workspaces!
-
-  ;; Automatically move EXWM buffer to current workspace when selected
-  (setq exwm-layout-show-all-buffers t)
-
-  ;; Display all EXWM buffers in every workspace buffer list
-  (setq exwm-workspace-show-all-buffers t)
-
-  ;; NOTE: Uncomment this option if you want to detach the minibuffer!
-  ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
-  ;;(setq exwm-workspace-minibuffer-position 'top)
-
-  ;; Load the system tray before exwm-init
-  (require 'exwm-systemtray)
-  (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
-  (setq exwm-systemtray-icon-gap 8)
-  (exwm-systemtray-enable)
-
-  ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.
-  ;; Window focus should follow the mouse pointer
-  ;; (setq mouse-autoselect-window t
-  ;;       focus-follows-mouse t)
-
-  ;; These keys should always pass through to Emacs
-  (setq exwm-input-prefix-keys
-        '(?\C-x
-          ;; ?\C-u
-          ;; ?\C-h
-          ?\M-x
-          ?\M-`
-          ?\M-&
-          ?\M-:
-          ;; ?\C-\M-j  ;; Buffer list
-          ?\s-\ ; TODO I might want this in exwm global keys
-          ?\s-, ; TODO I might want this in exwm global keys
-          ))
-  ;; (setq exwm-input-prefix-keys nil)
-
-  ;; (setq exwm-input-simulation-keys
-  ;;         '(([?\C-b] . [left])
-  ;;           ([?\C-f] . [right])
-  ;;           ([?\C-p] . [up])
-  ;;           ([?\C-n] . [down])
-  ;;           ([?\C-a] . [home])
-  ;;           ([?\C-e] . [end])
-  ;;           ([?\M-v] . [prior])
-  ;;           ([?\C-v] . [next])
-  ;;           ([?\C-d] . [delete])
-  ;;           ([?\C-k] . [S-end delete])))
-  (setq exwm-input-simulation-keys
-        '(([?\s-c] . [C-c])))
-
-  ;; TODO might want to do some local simulation keys too
-
-  ;; TODO maybe find a way to alias localleader key to the commands in exwm-mode-map under C-c?
-  ;; TODO probably use `map!' instead of `define-key'
-  ;; (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
-
-  ;; Set up global key bindings.  These always work, no matter the input state!
-  ;; Keep in mind that changing this list after EXWM initializes has no effect.
-  ;; TODO maybe setq! would work though?
-  (setq exwm-input-global-keys
-        `(([?\s-q] . exwm-reset)
-
-          ([?\s-Q] . exwm-input-release-keyboard)
-
-          ;; Move between windows
-          ([s-left] . windmove-left)
-          ([s-right] . windmove-right)
-          ([s-up] . windmove-up)
-          ([s-down] . windmove-down)
-
-          ([?\s-t] . evil-switch-to-windows-last-buffer)
-          ;; ([?\s-\ ] . doom-leader-map)
-
-          ;; Launch applications via shell command
-          ([?\s-&] . (lambda (command)
-                       (interactive (list (read-shell-command "$ ")))
-                       (biome--shell-cmd command)))
-
-          (,(kbd "<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close")))
-          (,(kbd "S-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close-all")))
-          (,(kbd "C-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl history-pop")))
-          (,(kbd "M-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl action")))))
-
-  ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
-  (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
-
-  (exwm-enable)
-
-
-  ;; WIP
-  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h))
-
-
-(use-package! desktop-environment
-  :after exwm
-  :config
-  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
-        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
-        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
-        desktop-environment-volume-normal-increment "+5%"
-        desktop-environment-volume-normal-decrement "-5%"
-        desktop-environment-keyboard-backlight-normal-increment 26
-        desktop-environment-keyboard-backlight-normal-decrement -26)
-  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
-  (map! :map desktop-environment-mode-map
-        "s-l" nil
-        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
-        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
-        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
-        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
-  (desktop-environment-mode))
 #+end_src
 * dotprofile
 #+begin_src sh :tangle (in-tangle-dir "dotprofile")
