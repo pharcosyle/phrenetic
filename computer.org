@@ -461,7 +461,7 @@ solitude
    (source #f)
    (build-system trivial-build-system)
    (native-inputs
-    `(("startup-script" ,(local-file "startup-script.sh"))))
+    `(("startup-script.sh" ,(local-file "startup-script.sh"))))
    (inputs
     `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
       ("xhost" ,xhost)
@@ -479,7 +479,7 @@ solitude
                (bin (string-append out "/bin"))
                (executable (string-append bin "/<<spartan-executable>>")))
           (mkdir-p bin)
-          (copy-file (assoc-ref %build-inputs "startup-script") executable)
+          (copy-file (assoc-ref %build-inputs "startup-script.sh") executable)
           (let ((cmd (lambda* (input #:optional (executable input))
                        (string-append (assoc-ref %build-inputs input) "/bin/" executable))))
             (substitute* executable
