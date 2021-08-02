@@ -41,6 +41,7 @@ sudo guix system --load-path=$dir reconfigure $dir/frostfire.scm
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (base-os)
+  #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((gnu system) #:select (operating-system %base-firmware %base-packages))
   #:use-module ((gnu system accounts) #:select (user-account))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems))
@@ -65,20 +66,6 @@ sudo guix system --load-path=$dir reconfigure $dir/frostfire.scm
   ;; #:use-module ((guix channels) #:select (channel))
   ;; #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   )
-
-(define %my-xorg-config
-  "
-Section \"InputClass\"
-  Identifier      \"Keyboards\"
-  Driver          \"libinput\"
-  MatchIsKeyboard \"on\"
-EndSection
-Section \"InputClass\"
-  Identifier      \"Touchpads\"
-  Driver          \"mtrack\"
-  MatchIsTouchpad \"on\"
-EndSection
-")
 
 (define-public (base-os kbl)
   (operating-system
@@ -131,7 +118,7 @@ EndSection
               (modules (cons* xf86-input-mtrack
                               %default-xorg-modules))
               (keyboard-layout keyboard-layout)
-              (extra-config (list %my-xorg-config))))
+              (extra-config (list (with-input-from-file "gen/system/xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")` but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) so I have to put in "gen/system" to run reconfigure from the dotfiles directory
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
             (bluetooth-service #:auto-enable? #t)
             (modify-services %desktop-services
@@ -161,6 +148,19 @@ EndSection
   (ecc
     (curve Ed25519)
     (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+#+end_src
+*** Xorg config
+#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
+Section "InputClass"
+  Identifier      "Keyboards"
+  Driver          "libinput"
+  MatchIsKeyboard "on"
+EndSection
+Section "InputClass"
+  Identifier      "Touchpads"
+  Driver          "mtrack"
+  MatchIsTouchpad "on"
+EndSection
 #+end_src
 *** Spartan
 #+begin_src scheme :tangle (in-tangle-dir "spartan.scm")
