@@ -403,6 +403,53 @@ solitude
                 (("scrot") (cmd "scrot"))))
             #t)))))))
 #+end_src
+*** Bash profile
+#+begin_src sh :tangle (in-tangle-dir ".bash_profile")
+GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
+# TODO uncomment this and also change the profile path in fontconfig
+# GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+
+export VISUAL=emacsclient
+export EDITOR="$VISUAL"
+
+
+
+# TODO where should these be? I could put them in desktop.el but they should be run in both EXWM and Gnome, if I care
+
+xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
+
+xkbcomp -I$HOME/Projects/dotfiles/gen/home/xkb $HOME/Projects/dotfiles/gen/home/xkb/current_setxkbmap_print $DISPLAY
+
+trackpad_set ()
+{
+  xinput set-prop "bcm5974" "$@"
+}
+trackpad_set "Device Accel Profile" 2
+trackpad_set "Trackpad Sensitivity" 0.08
+trackpad_set "Trackpad Edge Sizes" 15, 15, 15, 15 # TODO make the sides smaller (like macOS). Maybe turn the top and bottom down a bit too.
+trackpad_set "Trackpad Scroll Settings" 150, 10, 0 # TODO trying this out, doesn't seem to do anything in chromium, maybe a full restart?
+trackpad_set "Trackpad Scroll Coasting" 0.05 200
+trackpad_set "Trackpad Scroll Buttons" 5, 4, 7, 6 # Invert vertical and horizontal scrolling.
+trackpad_set "Trackpad Drag Settings" 0, 350, 40, 200, 500 # First value disables, others are defaults.
+# Three-finger dragging
+trackpad_set "Trackpad Swipe Settings" 1, 0, 1000
+trackpad_set "Trackpad Swipe Buttons" 1, 1, 1, 1
+# Trying out
+trackpad_set "Trackpad Swipe Settings" 1, 0, 1500
+trackpad_set "Trackpad Palm Detection" 1, 0
+trackpad_set "Trackpad Palm Size" 30
+# trackpad_set "Trackpad Scroll Settings" 250, 10, 0
+trackpad_set "Trackpad Hold1Move1 Stationary Settings" 20, 0 # First value is the default, second value disables. # TODO I think?
+trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First three values are defaults, last four disable. # TODO I think? Otherwise disable by just setting the distance really high?
+#+end_src
 *** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (cons* (channel
@@ -1797,59 +1844,4 @@ Can be an integer to determine the exact padding."
   ())
 
 ;;; doom-nuclear-theme.el ends here
-#+end_src
-* Shell profile
-#+begin_src sh :tangle (in-tangle-dir "dotprofile")
-# TODO these should be in a .profile or something
-
-GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
-# TODO uncomment this and also change the profile path in fontconfig
-# GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
-
-# TODO do I need to source ~/.guix-profile here like daviwil does? I don't think so.
-
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-  unset profile
-done
-
-
-export VISUAL=emacsclient
-export EDITOR="$VISUAL"
-
-
-
-
-
-# TODO where should these be? I could put them in desktop.el but they should be run in both EXWM and Gnome, if I care
-
-xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
-
-xkbcomp -I$HOME/Projects/dotfiles/gen/home/xkb $HOME/Projects/dotfiles/gen/home/xkb/current_setxkbmap_print $DISPLAY
-
-trackpad_set ()
-{
-  xinput set-prop "bcm5974" "$@"
-}
-trackpad_set "Device Accel Profile" 2
-trackpad_set "Trackpad Sensitivity" 0.08
-trackpad_set "Trackpad Edge Sizes" 15, 15, 15, 15 # TODO make the sides smaller (like macOS). Maybe turn the top and bottom down a bit too.
-trackpad_set "Trackpad Scroll Settings" 150, 10, 0 # TODO trying this out, doesn't seem to do anything in chromium, maybe a full restart?
-trackpad_set "Trackpad Scroll Coasting" 0.05 200
-trackpad_set "Trackpad Scroll Buttons" 5, 4, 7, 6 # Invert vertical and horizontal scrolling.
-trackpad_set "Trackpad Drag Settings" 0, 350, 40, 200, 500 # First value disables, others are defaults.
-# Three-finger dragging
-trackpad_set "Trackpad Swipe Settings" 1, 0, 1000
-trackpad_set "Trackpad Swipe Buttons" 1, 1, 1, 1
-# Trying out
-trackpad_set "Trackpad Swipe Settings" 1, 0, 1500
-trackpad_set "Trackpad Palm Detection" 1, 0
-trackpad_set "Trackpad Palm Size" 30
-# trackpad_set "Trackpad Scroll Settings" 250, 10, 0
-trackpad_set "Trackpad Hold1Move1 Stationary Settings" 20, 0 # First value is the default, second value disables. # TODO I think?
-trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First three values are defaults, last four disable. # TODO I think? Otherwise disable by just setting the distance really high?
 #+end_src
