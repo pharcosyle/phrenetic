@@ -275,8 +275,10 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
-  #:use-module ((spartan) #:select (spartan)))
+  #:use-module ((spartan) #:select (spartan))
+  #:use-module ((emacs-temp) #:select (emacs-desktop-environment-temp)))
 
+;; TODO make this a separate file if keeping it
 ;; (define %my-fontconfig-config-file
 ;;   "
 ;; <?xml version=\"1.0\"?>
@@ -303,6 +305,7 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
    (packages (list spartan
                    ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
                    ;;  spartan)
+                   emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto")
                    (specification->package "font-adobe-source-code-pro")))
@@ -370,6 +373,35 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
      ))))
 
 solitude
+#+end_src
+*** emacs-temp
+#+begin_src scheme :tangle (in-tangle-dir "emacs-temp.scm")
+(define-module (emacs-temp)
+  #:use-module ((guix packages) #:select (package package-inputs))
+  #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
+  #:use-module ((gnu packages linux) #:select (brightnessctl))
+  #:use-module ((gnu packages music) #:select (playerctl))
+  #:use-module ((gnu packages xdisorg) #:select (scrot)))
+
+(define-public emacs-desktop-environment-temp
+  (package (inherit emacs-desktop-environment)
+    (inputs
+     `(,@(package-inputs emacs-desktop-environment) ; Just in case (there aren't any inputs at the time of this writing)
+       ("brightnessctl" ,brightnessctl)
+       ("playerctl" ,playerctl)
+       ("scrot" ,scrot)))
+    (arguments
+    '(#:phases
+      (modify-phases %standard-phases
+        (add-after 'unpack 'patch-executables
+          (lambda* (#:key inputs #:allow-other-keys)
+            (let ((cmd (lambda (input)
+                         (string-append (assoc-ref inputs input) "/bin/" input))))
+              (substitute* "desktop-environment.el"
+                (("brightnessctl") (cmd "brightnessctl"))
+                (("playerctl") (cmd "playerctl"))
+                (("scrot") (cmd "scrot"))))
+            #t)))))))
 #+end_src
 *** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
@@ -485,7 +517,7 @@ solitude
       ("redshift:gtk" ,redshift "gtk")
       ("udiskie" ,udiskie)))
    (propagated-inputs
-    `("pavucontrol" ,pavucontrol))
+    `(("pavucontrol" ,pavucontrol)))
    (arguments
     `(#:modules ((guix build utils))
       #:builder
