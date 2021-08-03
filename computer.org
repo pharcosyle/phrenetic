@@ -454,7 +454,7 @@ solitude
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
   #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages pulseaudio) #:select (pasystray))
+  #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
   #:use-module ((penitent-tangent packages dracula-theme) #:select (dracula-theme)))
@@ -484,6 +484,8 @@ solitude
       ("pasystray" ,pasystray)
       ("redshift:gtk" ,redshift "gtk")
       ("udiskie" ,udiskie)))
+   (propagated-inputs
+    `("pavucontrol" ,pavucontrol))
    (arguments
     `(#:modules ((guix build utils))
       #:builder
