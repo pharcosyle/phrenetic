@@ -276,7 +276,9 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
   #:use-module ((spartan) #:select (spartan))
-  #:use-module ((emacs-temp) #:select (emacs-desktop-environment-temp)))
+
+  #:use-module ((emacs-temp) #:select (emacs-desktop-environment-temp))
+  #:use-module ((gnu packages gtk) #:select (gtk+)))
 
 ;; TODO make this a separate file if keeping it
 ;; (define %my-fontconfig-config-file
@@ -305,7 +307,9 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
    (packages (list spartan
                    ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
                    ;;  spartan)
+                   ;; TODO temp emacs stuff
                    emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
+                   (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto")
                    (specification->package "font-adobe-source-code-pro")))
@@ -919,7 +923,7 @@ done
      "fd"
      "clang" ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
 
-     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO can this be made an input to a/the counsel package?
+     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package
 
      ;; General
      ;; "git"
