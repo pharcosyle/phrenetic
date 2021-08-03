@@ -449,10 +449,13 @@ solitude
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((gnu packages bash) #:select (bash))
+  #:use-module ((gnu packages dunst) #:select (dunst))
   #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages freedesktop) #:select (udiskie))
   #:use-module ((gnu packages glib) #:select (dbus))
+  #:use-module ((gnu packages pulseaudio) #:select (pasystray))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
-  #:use-module ((gnu packages xdisorg) #:select (xss-lock xsettingsd)))
+  #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd)))
 
 (define-public spartan
   (package
@@ -461,7 +464,10 @@ solitude
    (source #f)
    (build-system trivial-build-system)
    (native-inputs
-    `(("startup-script.sh" ,(local-file "startup-script.sh"))))
+    `(("startup-script.sh" ,(local-file "startup-script.sh"))
+      ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
+      ("desktop.el" ,(local-file "desktop.el"))
+      ("dunstrc" ,(local-file "dunstrc"))))
    (inputs
     `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
       ("xhost" ,xhost)
@@ -469,33 +475,51 @@ solitude
       ("xss-lock" ,xss-lock)
       ("xsettingsd" ,xsettingsd)
       ("dbus" ,dbus)
-      ("emacs" ,emacs)))
+      ("emacs" ,emacs)
+      ("dunst" ,dunst)
+      ("pasystray" ,pasystray)
+      ("redshift:gtk" ,redshift "gtk")
+      ("udiskie" ,udiskie)))
    (arguments
     `(#:modules ((guix build utils))
       #:builder
       (begin
         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
         (let* ((out (assoc-ref %outputs "out"))
-               (bin (string-append out "/bin"))
-               (executable (string-append bin "/<<spartan-executable>>")))
-          (mkdir-p bin)
-          (copy-file (assoc-ref %build-inputs "startup-script.sh") executable)
-          (let ((cmd (lambda* (input #:optional (executable input))
-                       (string-append (assoc-ref %build-inputs input) "/bin/" executable))))
-            (substitute* executable
-              (("/bin/sh") (cmd "bash" "sh"))
-              ;; TODO remove the carets in regexps (if possible, specifically for "xsettingsd") for consistency?
-              (("^xhost") (cmd "xhost"))
-              (("^xsettingsd") (cmd "xsettingsd"))
-              (("^xset") (cmd "xset"))
-              (("^xss-lock") (cmd "xss-lock"))
-              (("dbus-launch") (cmd "dbus" "dbus-launch"))
-              ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
-              ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan in home config when I get rid of this hardcoding
-              ;; (("emacs") (cmd "emacs"))
-              (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
-              (("doom") "~/.config/emacs/bin/doom"))) ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-          (chmod executable #o555))
+               (get-input (lambda (k)
+                            (assoc-ref %build-inputs k)))
+               (cmd (lambda* (input #:optional (executable input))
+                      (string-append (get-input input) "/bin/" executable)))
+               (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                (let ((newfile (string-append out "/" name)))
+                                  (mkdir-p (dirname newfile))
+                                  (copy-file (get-input input-file) newfile)
+                                  newfile))))
+          (let ((desktop-el-file (install-input "desktop.el"))
+                (dunstrc-file (install-input "dunstrc")))
+            (substitute* desktop-el-file
+              (("(dunstctl|dunst)" all) (case (string->symbol all)
+                                          ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
+                                          ((dunstctl) (cmd "dunst" "dunstctl"))))
+              (("pasystray") (cmd "pasystray"))
+              (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
+              (("udiskie") (cmd "udiskie")))
+            (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-executable>>"))
+                  (xsettingsd-conf-file (install-input "xsettingsd.conf")))
+              (substitute* executable
+                (("/bin/sh") (cmd "bash" "sh"))
+                (("^xhost") (cmd "xhost"))
+                (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
+                (("^xset") (cmd "xset"))
+                (("^xss-lock") (cmd "xss-lock"))
+                (("dbus-launch") (cmd "dbus" "dbus-launch"))
+                ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
+                ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan in home config when I get rid of this hardcoding
+                ;; (("emacs") (cmd "emacs"))
+                (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
+                (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+                (("desktop\\.el") desktop-el-file))
+              (chmod executable #o555))))
         #t)))
    (synopsis "Spartan")
    (description synopsis)
@@ -508,11 +532,11 @@ solitude
 . ~/Projects/dotfiles/gen/dotprofile
 xhost +SI:localuser:$USER
 export _JAVA_AWT_WM_NONREPARENTING=1
-xsettingsd --config=$HOME/Projects/dotfiles/gen/home/xsettingsd.conf &
+xsettingsd &
 xset r rate 300 30 # TODO tweak?
 xss-lock -- slock &
 doom env
-exec dbus-launch --exit-with-session emacs -mm -l ~/Projects/dotfiles/gen/home/desktop.el # --debug-init
+exec dbus-launch --exit-with-session emacs -mm -l desktop.el # --debug-init
 #+end_src
 ***** xsettingsd.conf
 #+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
@@ -565,7 +589,7 @@ Net/IconThemeName "Papirus-Dark"
     (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
 
 (defun efs/exwm-init-hook ()
-  (efs/run-in-background (concat "dunst -config " (expand-file-name "~/Projects/dotfiles/gen/home/dunstrc")))
+  (efs/run-in-background "dunst")
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
   (efs/run-in-background "redshift-gtk -l 47:-123")
