@@ -262,6 +262,7 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
   #:use-module ((gnu home-services) #:select (home-environment-variables-service-type))
   #:use-module ((gnu home-services shells) #:select (home-bash-service-type home-bash-configuration))
   #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
+  #:use-module ((gnu home-services-utils) #:select (slurp-file-gexp))
   ;; #:use-module (gnu home-services mcron)
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
@@ -323,9 +324,8 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
               (home-bash-configuration
                (environment-variables
                 '(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
-  ;;              (bash-profile '("\
-  ;; export POOPHISTFILE=\"$XDG_CACHE_HOME\"/.bash_history"))
-			   ))
+               (bash-profile
+                `(,(slurp-file-gexp (local-file "bash_profile"))))))
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -404,7 +404,7 @@ solitude
             #t)))))))
 #+end_src
 *** Bash profile
-#+begin_src sh :tangle (in-tangle-dir ".bash_profile")
+#+begin_src sh :tangle (in-tangle-dir "bash_profile")
 GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
 # TODO uncomment this and also change the profile path in fontconfig
 # GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
