@@ -503,6 +503,7 @@ solitude
                                   newfile))))
           (let ((desktop-el-file (install-input "desktop.el"))
                 (dunstrc-file (install-input "dunstrc")))
+            ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
             (substitute* desktop-el-file
               (("(dunstctl|dunst)" all) (case (string->symbol all)
                                           ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
