@@ -452,10 +452,12 @@ solitude
   #:use-module ((gnu packages dunst) #:select (dunst))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
+  #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages pulseaudio) #:select (pasystray))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
-  #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd)))
+  #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
+  #:use-module ((penitent-tangent packages dracula-theme) #:select (dracula-theme)))
 
 (define-public spartan
   (package
@@ -474,6 +476,8 @@ solitude
       ("xset" ,xset)
       ("xss-lock" ,xss-lock)
       ("xsettingsd" ,xsettingsd)
+      ("dracula-theme" ,dracula-theme)
+      ("papirus-icon-theme" ,papirus-icon-theme)
       ("dbus" ,dbus)
       ("emacs" ,emacs)
       ("dunst" ,dunst)
