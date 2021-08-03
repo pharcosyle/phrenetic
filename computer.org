@@ -260,7 +260,7 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
   #:use-module ((gnu home-services files) #:select (home-files-service-type))
   #:use-module ((gnu home-services) #:select (home-environment-variables-service-type))
-  #:use-module ((gnu home-services shells) #:select (home-bash-service-type))
+  #:use-module ((gnu home-services shells) #:select (home-bash-service-type home-bash-configuration))
   #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   ;; #:use-module (gnu home-services mcron)
   #:use-module ((gnu services) #:select (service simple-service))
@@ -319,17 +319,13 @@ guix home --load-path=$dir reconfigure $dir/solitude.scm
                      home-files-service-type
                      (list `("config/guix/channels.scm"
                              ,(local-file "channels.scm"))))
-     ;; TODO Documentation gives this example for setting LESSHISTFILE but maybe doing it in a shell profile would be better?
-     (simple-service 'my-env-vars
-                     home-environment-variables-service-type
-                     `(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")
-                       ;; ("SHELL" . ,(file-append zsh "/bin/zsh"))
-                       ))
      (service home-bash-service-type
-  ;;             (home-bash-configuration
+              (home-bash-configuration
+               (environment-variables
+                '(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
   ;;              (bash-profile '("\
-  ;; export HISTFILE=\"$XDG_CACHE_HOME\"/.bash_history")))
-              )
+  ;; export POOPHISTFILE=\"$XDG_CACHE_HOME\"/.bash_history"))
+			   ))
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -656,7 +652,7 @@ Net/IconThemeName "Papirus-Dark"
   ;; When window title updates, use it to set the buffer name
   (add-hook 'exwm-update-title-hook #'efs/exwm-update-title)
 
-  ;; When EXWM starts up, do some extra confifuration
+  ;; When EXWM starts up, do some extra configuration
   (add-hook 'exwm-init-hook #'efs/exwm-init-hook)
 
   ;; NOTE: Uncomment the following two options if you want window buffers
