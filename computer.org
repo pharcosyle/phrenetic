@@ -39,7 +39,7 @@ spartan
 :PROPERTIES:
 :tangle-dir+: system
 :END:
-#+begin_src sh :results output silent :dir (get-tangle-dir)
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
 sudo guix system --load-path=. reconfigure frostfire.scm
 #+end_src
 ** Base OS
@@ -247,7 +247,7 @@ frostfire
 :PROPERTIES:
 :tangle-dir+: home
 :END:
-#+begin_src sh :results output silent :dir (get-tangle-dir)
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
 guix home --load-path=. reconfigure solitude.scm
 #+end_src
 ** Solitude
@@ -863,7 +863,7 @@ Net/IconThemeName "Papirus-Dark"
 :tangle-dir+: manifests
 :END:
 #+name: install-profiles
-#+begin_src sh :results output silent :dir (get-tangle-dir)
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 
 profiles=$*
@@ -881,7 +881,7 @@ done
 #+call: install-profiles[:cmdline ...]()
 
 #+name: upgrade-profiles
-#+begin_src sh :results output silent :dir (get-tangle-dir)
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 
 profiles=$*
