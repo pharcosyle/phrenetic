@@ -39,9 +39,6 @@ spartan
 :PROPERTIES:
 :tangle-dir+: system
 :END:
-#+begin_src sh :results output silent :dir (get-tangle-dir) :async
-sudo guix system --load-path=. reconfigure frostfire.scm
-#+end_src
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (base-os)
@@ -217,6 +214,9 @@ EndSection
                        (operating-system-firmware os))))))
 #+end_src
 ** Frostfire
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
+sudo guix system --load-path=. reconfigure frostfire.scm
+#+end_src
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
@@ -246,10 +246,10 @@ EndSection
 :PROPERTIES:
 :tangle-dir+: home
 :END:
+** Solitude
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 guix home --load-path=. reconfigure solitude.scm
 #+end_src
-** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
