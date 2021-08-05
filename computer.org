@@ -324,7 +324,8 @@ guix home --load-path=. reconfigure solitude.scm
                (environment-variables
                 '(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
                (bash-profile
-                `(,(slurp-file-gexp (local-file "bash_profile"))))))
+                `(,(slurp-file-gexp (local-file "bash_profile"))
+                  ,(slurp-file-gexp (local-file "initialization.sh")))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -338,6 +339,11 @@ guix home --load-path=. reconfigure solitude.scm
                   ;; (sendmail
                   ;;  ((annotate . #t)))
                   ))))
+     ;; TODO probably a temporary location, might be putting this in ~/.xkb or something eventually. Update the path arguments to xkbcomp
+     (simple-service 'my-xkb
+                     home-files-service-type
+                     (list `("myxkb"
+                             ,(local-file "xkb" #:recursive? #t))))
      (simple-service 'my-doomdir
                      home-files-service-type
                      (list `("config/doom"
@@ -402,30 +408,9 @@ solitude
                 (("scrot") (cmd "scrot"))))
             #t)))))))
 #+end_src
-*** Bash profile
-#+begin_src sh :tangle (in-tangle-dir "bash_profile")
-GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
-# TODO remove this and also change the profile path in fontconfig
-GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-  unset profile
-done
-
-export VISUAL=emacsclient
-export EDITOR="$VISUAL"
-
-
-
-# TODO where should these be? I could put them in desktop.el but they should be run in both EXWM and Gnome, if I care
-
-xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
-
-xkbcomp -I$HOME/Projects/dotfiles/gen/home/xkb $HOME/Projects/dotfiles/gen/home/xkb/current_setxkbmap_print $DISPLAY
+*** Initialization
+#+begin_src sh :tangle (in-tangle-dir "initialization.sh")
+xkbcomp -I$HOME/myxkb $HOME/myxkb/current_setxkbmap_print $DISPLAY
 
 trackpad_set ()
 {
@@ -448,6 +433,48 @@ trackpad_set "Trackpad Palm Size" 30
 # trackpad_set "Trackpad Scroll Settings" 250, 10, 0
 trackpad_set "Trackpad Hold1Move1 Stationary Settings" 20, 0 # First value is the default, second value disables. # TODO I think?
 trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First three values are defaults, last four disable. # TODO I think? Otherwise disable by just setting the distance really high?
+
+xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
+#+end_src
+**** XKB
+:PROPERTIES:
+:tangle-dir+: xkb
+:END:
+- TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
+***** current_setxkbmap_print
+#+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print")
+xkb_keymap {
+	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
+	xkb_types     { include "complete+numpad(mac)"	};
+	xkb_compat    { include "complete"	};
+	xkb_symbols   { include "pc+macintosh_vndr/us+inet(evdev)+ctrl(nocaps)+shift(both_capslock)+mysymbols(semicolon_to_control)"	};
+	xkb_geometry  { include "macintosh(macbook78)"	};
+};
+#+end_src
+***** Custom
+#+begin_src c :tangle (in-tangle-dir "symbols/mysymbols")
+partial modifier_keys
+xkb_symbols "semicolon_to_control" {
+    key <AC10> { [ Control_R, colon ] };
+    modifier_map Control { <AC10> };
+};
+#+end_src
+*** Bash profile
+#+begin_src sh :tangle (in-tangle-dir "bash_profile")
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+# TODO remove this and also change the profile path in fontconfig
+GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+
+export VISUAL=emacsclient
+export EDITOR="$VISUAL"
 #+end_src
 *** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
@@ -980,30 +1007,6 @@ done
                                    (,emacs-no-x . ,emacs-native-comp)))
         (list (specification->package "emacs-exwm")
               (specification->package "emacs-desktop-environment"))))))
-#+end_src
-** Desktop
-*** xkb
-:PROPERTIES:
-:tangle-dir+: xkb
-:END:
-- TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
-**** current_setxkbmap_print
-#+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print")
-xkb_keymap {
-	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
-	xkb_types     { include "complete+numpad(mac)"	};
-	xkb_compat    { include "complete"	};
-	xkb_symbols   { include "pc+macintosh_vndr/us+inet(evdev)+ctrl(nocaps)+shift(both_capslock)+mysymbols(semicolon_to_control)"	};
-	xkb_geometry  { include "macintosh(macbook78)"	};
-};
-#+end_src
-**** xkb config
-#+begin_src c :tangle (in-tangle-dir "symbols/mysymbols")
-partial modifier_keys
-xkb_symbols "semicolon_to_control" {
-    key <AC10> { [ Control_R, colon ] };
-    modifier_map Control { <AC10> };
-};
 #+end_src
 ** Doom
 :PROPERTIES:
