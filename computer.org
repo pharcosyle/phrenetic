@@ -404,9 +404,9 @@ solitude
 #+end_src
 *** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+# TODO remove this and also change the profile path in fontconfig
 GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
-# TODO uncomment this and also change the profile path in fontconfig
-# GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 for i in $GUIX_EXTRA_PROFILES/*; do
   profile=$i/$(basename "$i")
   if [ -f "$profile"/etc/profile ]; then
