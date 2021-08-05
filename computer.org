@@ -277,8 +277,26 @@ guix home --load-path=. reconfigure solitude.scm
 
   #:use-module ((spartan) #:select (spartan))
 
-  #:use-module ((emacs-temp) #:select (emacs-desktop-environment-temp))
+  #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
+  #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
+
+;; ((srfi srfi-1) #:select (first))
+;; ((guix channels) #:select (channel))
+;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+;;
+;; (let ((inferior
+;;        (inferior-for-channels
+;;         (list (channel
+;;                (name 'flat)
+;;                (url "https://github.com/flatwhatson/guix-channel.git")
+;;                (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
+;;               ;; TODO not sure if specifying the guix channel is necessary
+;;               (channel
+;;                (name 'guix)
+;;                (url "https://git.savannah.gnu.org/git/guix.git")
+;;                (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
+;;   (first (lookup-inferior-packages inferior "emacs-native-comp")))
 
 ;; TODO make this a separate file if keeping it
 ;; (define %my-fontconfig-config-file
@@ -308,11 +326,16 @@ guix home --load-path=. reconfigure solitude.scm
                    ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
                    ;;  spartan)
                    ;; TODO temp emacs stuff
+                   doom-emacs-temp ; TODO wrap in package-input-rewriting
                    emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
                    (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package
+                   ;; TODO For Initialization, ideally these wouldn't be propagated
+                   (specification->package "xkbcomp")
+                   (specification->package "xinput")
+                   (specification->package "xrandr")
                    ;; TODO temporary font packages to make guix-home fontconfig work
-                   (specification->package "font-google-noto")
-                   (specification->package "font-adobe-source-code-pro")))
+                   (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
+                   (specification->package "font-adobe-source-code-pro"))) ; required for Doom config
    (services
     (list
      (simple-service 'my-channels
@@ -490,80 +513,24 @@ done
 #+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
 (use-modules ((guix packages) #:select (package-input-rewriting))
              ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
-             ((flat packages emacs) #:select (emacs-native-comp))
-
-             ;; ((srfi srfi-1) #:select (first))
-             ;; ((guix channels) #:select (channel))
-             ;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-             )
+             ((flat packages emacs) #:select (emacs-native-comp)))
 
 (concatenate-manifests
  (list
-  ;; (packages->manifest
-  ;;  (list
-  ;;   (let ((inferior
-  ;;          (inferior-for-channels
-  ;;           (list (channel
-  ;;                  (name 'flat)
-  ;;                  (url "https://github.com/flatwhatson/guix-channel.git")
-  ;;                  (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
-  ;;                 ;; TODO not sure if specifying the guix channel is necessary
-  ;;                 (channel
-  ;;                  (name 'guix)
-  ;;                  (url "https://git.savannah.gnu.org/git/guix.git")
-  ;;                  (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
-  ;;     (first (lookup-inferior-packages inferior "emacs-native-comp")))))
   (specifications->manifest
    '("ungoogled-chromium"
 
      "emacs-native-comp"
 
-     "xkbcomp"
-     "setxkbmap"
-
-     "xcape"
-
-     "xrandr"
-
-     "xinput"
-
-
-     ;; Desktop
-     "brightnessctl"
-     "playerctl"
-     "scrot"
-     "pavucontrol"
-     "pasystray"
-     "dunst"
-     "udiskie"
-     "redshift:gtk"
-
-     "dracula-theme"
-
-
-     "papirus-icon-theme" ; TODO trying out
-
-     "font-google-noto"
-     ;; Coding I guess?
-     "font-adobe-source-code-pro"
-
-     ;; Doom dependencies ; TODO these should be inputs / propogated inputs to a Doom guix package I find/create
-     "git"
-     "ripgrep"
-     "coreutils"
-     "fd"
-     "clang" ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
-
-     "gtk+:bin" ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package
-
      ;; General
-     ;; "git"
+     "git"
      "zip"
      "unzip"
      ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
 
      ;; Apps
-     "gimp"))
+     ;; "gimp" ; maybe. Or just install as-needed with `guix environment`
+     ))
   (packages->manifest
    (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
                                    (,emacs-minimal . ,emacs-native-comp)
@@ -1515,8 +1482,6 @@ Can be an integer to determine the exact padding."
       ("xset" ,xset)
       ("xss-lock" ,xss-lock)
       ("xsettingsd" ,xsettingsd)
-      ("dracula-theme" ,dracula-theme)
-      ("papirus-icon-theme" ,papirus-icon-theme)
       ("dbus" ,dbus)
       ("emacs" ,emacs)
       ("dunst" ,dunst)
@@ -1524,7 +1489,9 @@ Can be an integer to determine the exact padding."
       ("redshift:gtk" ,redshift "gtk")
       ("udiskie" ,udiskie)))
    (propagated-inputs
-    `(("pavucontrol" ,pavucontrol)))
+    `(("dracula-theme" ,dracula-theme)
+      ("papirus-icon-theme" ,papirus-icon-theme)
+      ("pavucontrol" ,pavucontrol)))
    (arguments
     `(#:modules ((guix build utils))
       #:builder
@@ -1819,8 +1786,52 @@ Net/IconThemeName "Papirus-Dark"
     timeout = 0
 #+end_src
 ** emacs-temp
-#+begin_src scheme :tangle (in-tangle-dir "emacs-temp.scm")
-(define-module (emacs-temp)
+*** doom-emacs-temp
+#+begin_src scheme :tangle (in-tangle-dir "doom-emacs-temp.scm")
+(define-module (doom-emacs-temp)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((gnu packages base) #:select (coreutils))
+  ;; #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages llvm) #:select (clang))
+  #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
+  #:use-module ((gnu packages version-control) #:select (git)))
+
+(define-public doom-emacs-temp
+  (package
+    (name "doom-emacs-temp")
+    (version "0")
+    (source #f)
+    ;; TODO Ideally these wouldn't be propagated inputs
+    (propagated-inputs
+     `(;; Required
+       ;; ("emacs" ,emacs)
+       ("git" ,git)
+       ("ripgrep" ,ripgrep)
+       ;; Optional
+       ("coreutils" ,coreutils)
+       ("fd" ,fd)
+       ("clang" ,clang))) ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
+      (build-system trivial-build-system)
+    (arguments
+    `(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+        (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
+        (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
+          (lambda _
+            (display "asdfffff")))
+        #t)))
+    (synopsis "An Emacs framework for the stubborn martian hacker")
+    (description synopsis)
+    (home-page "https://github.com/hlissner/doom-emacs")
+    (license license:expat)))
+#+end_src
+*** emacs-desktop-environment-temp
+#+begin_src scheme :tangle (in-tangle-dir "emacs-desktop-environment-temp.scm")
+(define-module (emacs-desktop-environment-temp)
   #:use-module ((guix packages) #:select (package package-inputs))
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
   #:use-module ((gnu packages linux) #:select (brightnessctl))
