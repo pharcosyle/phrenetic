@@ -223,25 +223,24 @@ EndSection
   #:use-module ((gnu system file-systems) #:select (file-system uuid))
   #:use-module ((macbook) #:select (macbook)))
 
-(define frostfire
-  (let ((os macbook))
-    (operating-system
-      (inherit os)
-      (host-name "frostfire")
-      (file-systems
-        (cons* (file-system
-                 (mount-point "/")
-                 (device
-                   (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
-                         'ext4))
-                 (type "ext4"))
-               (file-system
-                 (mount-point "/boot/efi")
-                 (device (uuid "67E3-17ED" 'fat32))
-                 (type "vfat"))
-               (operating-system-file-systems os))))))
+(define (frostfire os)
+  (operating-system
+    (inherit os)
+    (host-name "frostfire")
+    (file-systems
+      (cons* (file-system
+               (mount-point "/")
+               (device
+                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
+                       'ext4))
+               (type "ext4"))
+             (file-system
+               (mount-point "/boot/efi")
+               (device (uuid "67E3-17ED" 'fat32))
+               (type "vfat"))
+             (operating-system-file-systems os)))))
 
-frostfire
+(frostfire macbook)
 #+end_src
 * Home
 :PROPERTIES:
