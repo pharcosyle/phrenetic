@@ -342,7 +342,7 @@ guix home --load-path=. reconfigure solitude.scm
      ;; TODO probably a temporary location, might be putting this in ~/.xkb or something eventually. Update the path arguments to xkbcomp
      (simple-service 'my-xkb
                      home-files-service-type
-                     (list `("myxkb"
+                     (list `("xkb-temp"
                              ,(local-file "xkb" #:recursive? #t))))
      (simple-service 'my-doomdir
                      home-files-service-type
@@ -381,7 +381,7 @@ solitude
 #+end_src
 ** Initialization
 #+begin_src sh :tangle (in-tangle-dir "initialization.sh")
-xkbcomp -I$HOME/myxkb $HOME/myxkb/current_setxkbmap_print $DISPLAY
+xkbcomp -I$HOME/.xkb-temp $HOME/.xkb-temp/current_setxkbmap_print $DISPLAY
 
 trackpad_set ()
 {
