@@ -1497,7 +1497,7 @@ Can be an integer to determine the exact padding."
       ("papirus-icon-theme" ,papirus-icon-theme)
       ("pavucontrol" ,pavucontrol)))
    (arguments
-    `(#:modules ((guix build utils))
+    '(#:modules ((guix build utils))
       #:builder
       (begin
         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
@@ -1819,7 +1819,7 @@ Net/IconThemeName "Papirus-Dark"
        ("clang" ,clang))) ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
       (build-system trivial-build-system)
     (arguments
-    `(#:modules ((guix build utils))
+    '(#:modules ((guix build utils))
       #:builder
       (begin
         (use-modules ((guix build utils) #:select (mkdir-p)))
