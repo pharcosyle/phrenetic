@@ -59,33 +59,13 @@ spartan
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module ((nongnu packages linux) #:select (linux-firmware))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
-  #:use-module ((spartan-wm) #:select (spartan-wm))
-
-  #:use-module ((nongnu packages linux) #:select (linux))
-  ;; #:use-module ((srfi srfi-1) #:select (first))
-  ;; #:use-module ((guix channels) #:select (channel))
-  ;; #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-  )
+  #:use-module ((spartan-wm) #:select (spartan-wm)))
 
 (define-public (base-os kbl)
   (operating-system
     (kernel linux)
-    ;; (kernel
-    ;;   (let*
-    ;;     ((channels
-    ;;       (list (channel
-    ;;              (name 'nonguix)
-    ;;              (url "https://gitlab.com/nonguix/nonguix")
-    ;;              (commit "c5fed11e7df221cad1045fc193b4136b34e23451"))
-    ;;             (channel
-    ;;              (name 'guix)
-    ;;              (url "https://git.savannah.gnu.org/git/guix.git")
-    ;;              (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))
-    ;;      (inferior
-    ;;       (inferior-for-channels channels)))
-    ;;     (first (lookup-inferior-packages inferior "linux" "5.12.9"))))
     (initrd microcode-initrd)
     (firmware (cons* linux-firmware
                      %base-firmware))
