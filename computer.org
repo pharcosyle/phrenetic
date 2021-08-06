@@ -39,7 +39,8 @@ spartan
 :PROPERTIES:
 :tangle-dir+: system
 :END:
-** Base OS
+** ~operating-system~
+*** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (base-os)
   #:use-module ((ice-9 rdelim) #:select (read-string))
@@ -143,14 +144,62 @@ spartan
     (file-systems %base-file-systems)
     (host-name #f)))
 #+end_src
-*** mirror.brielmaier.net.pub
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
+sudo guix system --load-path=. reconfigure frostfire.scm
+#+end_src
+*** Macbook
+#+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
+(define-module (macbook)
+  #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
+  #:use-module ((gnu system keyboard) #:select (keyboard-layout))
+  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta)))
+
+(define-public (macbook os-fn)
+  (let ((os (os-fn (keyboard-layout "us" #:model "macbook78"))))
+    (operating-system
+      (inherit os)
+      (kernel-arguments (let ((kargs %default-kernel-arguments)
+                              (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+                          (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
+      (kernel-loadable-modules (list broadcom-sta))
+      (firmware (cons* broadcom-bt-firmware
+                       (operating-system-firmware os))))))
+#+end_src
+*** Frostfire
+#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
+(define-module (frostfire)
+  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
+  #:use-module ((gnu system file-systems) #:select (file-system uuid))
+  #:use-module ((base-os) #:select (base-os))
+  #:use-module ((macbook) #:select (macbook)))
+
+(define (frostfire os)
+  (operating-system
+    (inherit os)
+    (host-name "frostfire")
+    (file-systems
+      (cons* (file-system
+               (mount-point "/")
+               (device
+                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
+                       'ext4))
+               (type "ext4"))
+             (file-system
+               (mount-point "/boot/efi")
+               (device (uuid "67E3-17ED" 'fat32))
+               (type "vfat"))
+             (operating-system-file-systems os)))))
+
+(frostfire (macbook base-os))
+#+end_src
+** mirror.brielmaier.net.pub
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
 (public-key
   (ecc
     (curve Ed25519)
     (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
-*** Xorg config
+** Xorg config
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
 Section "InputClass"
   Identifier      "Keyboards"
@@ -163,7 +212,7 @@ Section "InputClass"
   MatchIsTouchpad "on"
 EndSection
 #+end_src
-*** Spartan WM
+** Spartan WM
 #+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm") :noweb yes
 (define-module (spartan-wm)
   #:use-module ((guix packages) #:select (package))
@@ -194,62 +243,15 @@ EndSection
    (home-page #f)
    (license #f)))
 #+end_src
-** Macbook
-#+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
-(define-module (macbook)
-  #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
-  #:use-module ((gnu system keyboard) #:select (keyboard-layout))
-  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta)))
-
-(define-public (macbook os-fn)
-  (let ((os (os-fn (keyboard-layout "us" #:model "macbook78"))))
-    (operating-system
-      (inherit os)
-      (kernel-arguments (let ((kargs %default-kernel-arguments)
-                              (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-                          (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
-      (kernel-loadable-modules (list broadcom-sta))
-      (firmware (cons* broadcom-bt-firmware
-                       (operating-system-firmware os))))))
-#+end_src
-** Frostfire
-#+begin_src sh :results output silent :dir (get-tangle-dir) :async
-sudo guix system --load-path=. reconfigure frostfire.scm
-#+end_src
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
-(define-module (frostfire)
-  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
-  #:use-module ((gnu system file-systems) #:select (file-system uuid))
-  #:use-module ((base-os) #:select (base-os))
-  #:use-module ((macbook) #:select (macbook)))
-
-(define (frostfire os)
-  (operating-system
-    (inherit os)
-    (host-name "frostfire")
-    (file-systems
-      (cons* (file-system
-               (mount-point "/")
-               (device
-                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
-                       'ext4))
-               (type "ext4"))
-             (file-system
-               (mount-point "/boot/efi")
-               (device (uuid "67E3-17ED" 'fat32))
-               (type "vfat"))
-             (operating-system-file-systems os)))))
-
-(frostfire (macbook base-os))
-#+end_src
 * Home
 :PROPERTIES:
 :tangle-dir+: home
 :END:
-** Solitude
+** ~home-environment~
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 guix home --load-path=. reconfigure solitude.scm
 #+end_src
+*** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
