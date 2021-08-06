@@ -270,7 +270,9 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
 
-;; (define emacs-native-comp
+(define emacs-variant emacs-native-comp)
+
+;; (define emacs-variant
 ;;   (let ((inferior
 ;;          (inferior-for-channels
 ;;           (list (channel
@@ -283,10 +285,10 @@ guix home --load-path=. reconfigure solitude.scm
 ;;                  (commit "196f171c556acb1c94d719b261287eaf23e5116c"))))))
 ;;     (first (lookup-inferior-packages inferior "emacs-native-comp"))))
 
-(define with-emacs-native-comp
-  (package-input-rewriting `((,emacs . ,emacs-native-comp)
-                             (,emacs-minimal . ,emacs-native-comp)
-                             (,emacs-no-x . ,emacs-native-comp))))
+(define with-emacs-variant
+  (package-input-rewriting `((,emacs . ,emacs-variant)
+                             (,emacs-minimal . ,emacs-variant)
+                             (,emacs-no-x . ,emacs-variant))))
 
 ;; TODO make this a separate file if keeping it
 ;; (define %my-fontconfig-config-file
@@ -312,11 +314,12 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list (with-emacs-native-comp spartan)
-                   (with-emacs-native-comp doom-emacs-temp)
+   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes. Also remove hardcoded PATH in bash_profile
+                   (with-emacs-variant spartan)
+                   (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
-                   (with-emacs-native-comp (specification->package "emacs-exwm"))
-                   (with-emacs-native-comp emacs-desktop-environment-temp) ; TODO donno where this should really go
+                   (with-emacs-variant (specification->package "emacs-exwm"))
+                   (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
                    ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
@@ -487,7 +490,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
-export PATH="/gnu/store/4fzpm7br2c80qyph97rzxfa7y0c5wsva-emacs-native-comp-28.0.50-180.e68bc86/bin${PATH:+:}$PATH" # TODO remove this hardcoding when I can add emacs to my guix home packages without eating up all my inodes
+export PATH="/gnu/store/4fzpm7br2c80qyph97rzxfa7y0c5wsva-emacs-native-comp-28.0.50-180.e68bc86/bin${PATH:+:}$PATH" # TODO remove this hardcoding when I can add emacs to my guix home packages without eating up all my inodes. Also add back the emacs varint package in guix-home packages
 
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 for i in $GUIX_EXTRA_PROFILES/*; do
