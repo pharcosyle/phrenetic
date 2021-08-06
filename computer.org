@@ -251,11 +251,17 @@ guix home --load-path=. reconfigure solitude.scm
   ;; #:use-module (gnu packages admin)
   ;; #:use-module (gnu packages gnupg)
   ;; #:use-module (gnu system keyboard)
-  #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((guix gexp) #:select (file-append local-file))
 
-  #:use-module ((gnu packages emacs) #:select (emacs))
+
+  #:use-module ((srfi srfi-1) #:select (first))
+  #:use-module ((guix channels) #:select (channel))
+  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+
+  #:use-module ((guix packages) #:select (package-input-rewriting))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
+
 
   #:use-module ((initialization core) #:select (initialization))
   #:use-module ((spartan core) #:select (spartan))
@@ -264,22 +270,23 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
 
-;; ((srfi srfi-1) #:select (first))
-;; ((guix channels) #:select (channel))
-;; ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-;;
-;; (let ((inferior
-;;        (inferior-for-channels
-;;         (list (channel
-;;                (name 'flat)
-;;                (url "https://github.com/flatwhatson/guix-channel.git")
-;;                (commit "7b8353ebbcf486e3344924d1cac0fa7ba47c371d"))
-;;               ;; TODO not sure if specifying the guix channel is necessary
-;;               (channel
-;;                (name 'guix)
-;;                (url "https://git.savannah.gnu.org/git/guix.git")
-;;                (commit "4343476a3bffeb3714ad50ff7559c4b7f7c81551"))))))
-;;   (first (lookup-inferior-packages inferior "emacs-native-comp")))
+;; (define emacs-native-comp
+;;   (let ((inferior
+;;          (inferior-for-channels
+;;           (list (channel
+;;                  (name 'flat)
+;;                  (url "https://github.com/flatwhatson/guix-channel.git")
+;;                  (commit "b3e3b3260fcceabbc8bff6ca49a8b819b92fbd7c"))
+;;                 (channel
+;;                  (name 'guix)
+;;                  (url "https://git.savannah.gnu.org/git/guix.git")
+;;                  (commit "196f171c556acb1c94d719b261287eaf23e5116c"))))))
+;;     (first (lookup-inferior-packages inferior "emacs-native-comp"))))
+
+(define with-emacs-native-comp
+  (package-input-rewriting `((,emacs . ,emacs-native-comp)
+                             (,emacs-minimal . ,emacs-native-comp)
+                             (,emacs-no-x . ,emacs-native-comp))))
 
 ;; TODO make this a separate file if keeping it
 ;; (define %my-fontconfig-config-file
@@ -305,12 +312,11 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list spartan
-                   ;; ((package-input-rewriting `((,emacs . ,emacs-native-comp)))
-                   ;;  spartan)
+   (packages (list (with-emacs-native-comp spartan)
+                   (with-emacs-native-comp doom-emacs-temp)
                    ;; TODO temp emacs stuff
-                   doom-emacs-temp ; TODO wrap in package-input-rewriting
-                   emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
+                   (with-emacs-native-comp (specification->package "emacs-exwm"))
+                   (with-emacs-native-comp emacs-desktop-environment-temp) ; TODO donno where this should really go
                    ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
@@ -537,31 +543,17 @@ done
 *** Manifests
 **** multiverse
 #+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
-(use-modules ((guix packages) #:select (package-input-rewriting))
-             ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
-             ((flat packages emacs) #:select (emacs-native-comp)))
+(specifications->manifest
+ '("ungoogled-chromium"
 
-(concatenate-manifests
- (list
-  (specifications->manifest
-   '("ungoogled-chromium"
+   ;; General
+   "zip"
+   "unzip"
+   ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
 
-     "emacs-native-comp"
-
-     ;; General
-     "zip"
-     "unzip"
-     ;; "openssh" ; Might want this at some point for command line ssh'ing and the like.
-
-     ;; Apps
-     ;; "gimp" ; maybe. Or just install as-needed with `guix environment`
-     ))
-  (packages->manifest
-   (map (package-input-rewriting `((,emacs . ,emacs-native-comp)
-                                   (,emacs-minimal . ,emacs-native-comp)
-                                   (,emacs-no-x . ,emacs-native-comp)))
-        (list (specification->package "emacs-exwm")
-              (specification->package "emacs-desktop-environment"))))))
+   ;; Apps
+   ;; "gimp" ; maybe. Or just install as-needed with `guix environment`
+   ))
 #+end_src
 ** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
@@ -1555,10 +1547,7 @@ Can be an integer to determine the exact padding."
                 (("^xset") (cmd "xset"))
                 (("^xss-lock") (cmd "xss-lock"))
                 (("dbus-launch") (cmd "dbus" "dbus-launch"))
-                ;; TODO temporarily hardcoding path to emacs-native in startup-script to avoid a rebuild
-                ;;      Also uncoment the ~package-input-rewriting~-wrapped spartan in home config when I get rid of this hardcoding
-                ;; (("emacs") (cmd "emacs"))
-                (("emacs") "/gnu/store/i77clb2i8lxdxfbr2zl232d0wk471dvh-emacs-native-comp-28.0.50-175.8b49e99/bin/emacs")
+                (("emacs") (cmd "emacs"))
                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
                 (("desktop\\.el") desktop-el-file))
               (chmod executable #o555))))
@@ -1835,7 +1824,7 @@ Net/IconThemeName "Papirus-Dark"
     ;; TODO Ideally these wouldn't be propagated inputs
     (propagated-inputs
      `(;; Required
-       ;; ("emacs" ,emacs)
+       ;; ("emacs" ,emacs) ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
        ("git" ,git)
        ("ripgrep" ,ripgrep)
        ;; Optional
