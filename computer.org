@@ -294,7 +294,7 @@ guix home --load-path=. reconfigure solitude.scm
 ;; <?xml version=\"1.0\"?>
 ;; <!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">
 ;; <fontconfig>
-;;   <dir>~/org/spring_cleaning/.guix-extra-profiles/multiverse/multiverse/share/fonts</dir>
+;;   <dir>~/.guix-extra-profiles/multiverse/multiverse/share/fonts</dir>
 ;;   <match target=\"font\">
 ;;     <test name=\"family\" compare=\"eq\">
 ;;         <string>Source Code Pro</string>
@@ -488,8 +488,6 @@ xkb_symbols "semicolon_to_control" {
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
-# TODO remove this and also change the profile path in fontconfig
-GUIX_EXTRA_PROFILES=$HOME/org/spring_cleaning/.guix-extra-profiles
 for i in $GUIX_EXTRA_PROFILES/*; do
   profile=$i/$(basename "$i")
   if [ -f "$profile"/etc/profile ]; then
