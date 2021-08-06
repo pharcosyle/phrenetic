@@ -199,11 +199,10 @@ EndSection
 (define-module (macbook)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
-  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
-  #:use-module ((base-os) #:select (base-os)))
+  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta)))
 
-(define-public macbook
-  (let ((os (base-os (keyboard-layout "us" #:model "macbook78"))))
+(define-public (macbook os-fn)
+  (let ((os (os-fn (keyboard-layout "us" #:model "macbook78"))))
     (operating-system
       (inherit os)
       (kernel-arguments (let ((kargs %default-kernel-arguments)
@@ -221,6 +220,7 @@ sudo guix system --load-path=. reconfigure frostfire.scm
 (define-module (frostfire)
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
   #:use-module ((gnu system file-systems) #:select (file-system uuid))
+  #:use-module ((base-os) #:select (base-os))
   #:use-module ((macbook) #:select (macbook)))
 
 (define (frostfire os)
@@ -240,7 +240,7 @@ sudo guix system --load-path=. reconfigure frostfire.scm
                (type "vfat"))
              (operating-system-file-systems os)))))
 
-(frostfire macbook)
+(frostfire (macbook base-os))
 #+end_src
 * Home
 :PROPERTIES:
