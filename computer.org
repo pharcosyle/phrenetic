@@ -272,12 +272,13 @@ guix home --load-path=. reconfigure solitude.scm
   ;; #:use-module (gnu packages gnupg)
   ;; #:use-module (gnu system keyboard)
   #:use-module ((guix packages) #:select (package-input-rewriting))
-  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module ((guix gexp) #:select (file-append local-file))
 
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
-  #:use-module ((spartan) #:select (spartan))
+  #:use-module ((initialization core) #:select (initialization))
+  #:use-module ((spartan core) #:select (spartan))
 
   #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
@@ -331,10 +332,6 @@ guix home --load-path=. reconfigure solitude.scm
                    doom-emacs-temp ; TODO wrap in package-input-rewriting
                    emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
                    ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
-                   ;; TODO For Initialization, ideally these wouldn't be propagated
-                   (specification->package "xkbcomp")
-                   (specification->package "xinput")
-                   (specification->package "xrandr")
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
                    (specification->package "font-adobe-source-code-pro"))) ; required for Doom config
@@ -350,7 +347,7 @@ guix home --load-path=. reconfigure solitude.scm
                 '(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
                (bash-profile
                 `(,(slurp-file-gexp (local-file "bash_profile"))
-                  ,(slurp-file-gexp (local-file "initialization.sh")))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                  ,(slurp-file-gexp (file-append initialization "/script.sh")))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -364,11 +361,6 @@ guix home --load-path=. reconfigure solitude.scm
                   ;; (sendmail
                   ;;  ((annotate . #t)))
                   ))))
-     ;; TODO probably a temporary location, might be putting this in ~/.xkb or something eventually. Update the path arguments to xkbcomp
-     (simple-service 'my-xkb
-                     home-files-service-type
-                     (list `("xkb-temp"
-                             ,(local-file "xkb" #:recursive? #t))))
      (simple-service 'my-doomdir
                      home-files-service-type
                      (list `("config/doom"
@@ -405,8 +397,63 @@ guix home --load-path=. reconfigure solitude.scm
 solitude
 #+end_src
 ** Initialization
-#+begin_src sh :tangle (in-tangle-dir "initialization.sh")
-xkbcomp -I$HOME/.xkb-temp $HOME/.xkb-temp/current_setxkbmap_print $DISPLAY
+:PROPERTIES:
+:tangle-dir+: initialization
+:END:
+#+begin_src scheme :tangle (in-tangle-dir "core.scm")
+(define-module (initialization core)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr)))
+
+(define-public initialization
+  (package
+    (name "Initialization")
+    (version "0")
+    (source #f)
+    (native-inputs
+     `(("script.sh" ,(local-file "script.sh"))))
+    (inputs
+     `(("xkbcomp" ,xkbcomp)
+       ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
+       ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))
+       ("xinput" ,xinput)
+       ("xrandr" ,xrandr)))
+    (build-system trivial-build-system)
+    (arguments
+    '(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (get-input (lambda (k)
+                            (assoc-ref %build-inputs k)))
+               (cmd (lambda* (input #:optional (executable input))
+                      (string-append (get-input input) "/bin/" executable)))
+               (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                (let ((newfile (string-append out "/" name)))
+                                  (mkdir-p (dirname newfile))
+                                  (copy-file (get-input input-file) newfile)
+                                  newfile))))
+          (let ((script-file (install-input "script.sh")))
+            (substitute* script-file
+              (("xkbcomp") (cmd "xkbcomp"))
+              (("xkb_source=" all) (string-append all (get-input "xkb-source")))
+              (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
+              (("xinput") (cmd "xinput"))
+              (("xrandr") (cmd "xrandr")))))
+        #t)))
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
+#+end_src
+*** Script
+#+begin_src sh :tangle (in-tangle-dir "script.sh")
+xkb_custom=
+xkb_source=
+xkbcomp -I$xkb_custom $xkb_source $DISPLAY
 
 trackpad_set ()
 {
@@ -433,12 +480,9 @@ trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First thre
 xrandr --fb 2728x1800 --output eDP-1 --transform 1,0,-152,0,1,0,0,0,1
 #+end_src
 *** XKB
-:PROPERTIES:
-:tangle-dir+: xkb
-:END:
 - TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
 **** current_setxkbmap_print
-#+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print")
+#+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print.xkb")
 xkb_keymap {
 	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
 	xkb_types     { include "complete+numpad(mac)"	};
@@ -448,7 +492,7 @@ xkb_keymap {
 };
 #+end_src
 **** Custom
-#+begin_src c :tangle (in-tangle-dir "symbols/mysymbols")
+#+begin_src c :tangle (in-tangle-dir "xkb_custom/symbols/mysymbols")
 partial modifier_keys
 xkb_symbols "semicolon_to_control" {
     key <AC10> { [ Control_R, colon ] };
@@ -1453,8 +1497,8 @@ Can be an integer to determine the exact padding."
 :PROPERTIES:
 :tangle-dir+: spartan
 :END:
-#+begin_src scheme :tangle (in-tangle-dir "spartan.scm") :noweb yes
-(define-module (spartan)
+#+begin_src scheme :tangle (in-tangle-dir "core.scm") :noweb yes
+(define-module (spartan core)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((guix gexp) #:select (local-file))
@@ -1475,6 +1519,7 @@ Can be an integer to determine the exact padding."
    (version "0")
    (source #f)
    (build-system trivial-build-system)
+   ;; At the time of this writing `xsettingsd.conf` and `dunstrc` have no substitutions and could just be regular inputs.
    (native-inputs
     `(("startup-script.sh" ,(local-file "startup-script.sh"))
       ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
