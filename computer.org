@@ -328,7 +328,7 @@ guix home --load-path=. reconfigure solitude.scm
                    ;; TODO temp emacs stuff
                    doom-emacs-temp ; TODO wrap in package-input-rewriting
                    emacs-desktop-environment-temp ; TODO donno where this should really go. It should also be wrapped in a `package-input-rewriting' just in case
-                   (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package
+                   ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
                    ;; TODO For Initialization, ideally these wouldn't be propagated
                    (specification->package "xkbcomp")
                    (specification->package "xinput")
@@ -1822,7 +1822,7 @@ Net/IconThemeName "Papirus-Dark"
         (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
         (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
           (lambda _
-            (display "asdfffff")))
+            (display "asdffffffffffff")))
         #t)))
     (synopsis "An Emacs framework for the stubborn martian hacker")
     (description synopsis)
