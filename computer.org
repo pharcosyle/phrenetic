@@ -314,7 +314,7 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes. Also remove hardcoded PATH in bash_profile
+   (packages (list emacs-variant
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
@@ -490,8 +490,6 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
-export PATH="/gnu/store/4fzpm7br2c80qyph97rzxfa7y0c5wsva-emacs-native-comp-28.0.50-180.e68bc86/bin${PATH:+:}$PATH" # TODO remove this hardcoding when I can add emacs to my guix home packages without eating up all my inodes. Also add back the emacs varint package in guix-home packages
-
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 for i in $GUIX_EXTRA_PROFILES/*; do
   profile=$i/$(basename "$i")
