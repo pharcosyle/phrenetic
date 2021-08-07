@@ -333,7 +333,9 @@ guix home --load-path=. reconfigure solitude.scm
      (service home-bash-service-type
               (home-bash-configuration
                (environment-variables
-                '(("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
+                `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
+                  ("EDITOR" . "$VISUAL")
+                  ("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
                (bash-profile
                 `(,(slurp-file-gexp (local-file "bash_profile"))
                   ,(slurp-file-gexp (file-append initialization "/script.sh")))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
@@ -499,9 +501,6 @@ for i in $GUIX_EXTRA_PROFILES/*; do
   fi
   unset profile
 done
-
-export VISUAL=emacsclient
-export EDITOR="$VISUAL"
 #+end_src
 ** Guix profiles
 :PROPERTIES:
