@@ -387,6 +387,18 @@ guix home --load-path=. reconfigure solitude.scm
 
 solitude
 #+end_src
+** Bash profile
+#+begin_src sh :tangle (in-tangle-dir "bash_profile")
+GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+  unset profile
+done
+#+end_src
 ** Initialization
 :PROPERTIES:
 :tangle-dir+: initialization
@@ -489,18 +501,6 @@ xkb_symbols "semicolon_to_control" {
     key <AC10> { [ Control_R, colon ] };
     modifier_map Control { <AC10> };
 };
-#+end_src
-** Bash profile
-#+begin_src sh :tangle (in-tangle-dir "bash_profile")
-GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-  unset profile
-done
 #+end_src
 ** Guix profiles
 :PROPERTIES:
