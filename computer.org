@@ -232,18 +232,18 @@ guix home --load-path=. reconfigure solitude.scm
 *** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
-  #:use-module ((gnu home) #:select (home-environment))
+  #:use-module ((gnu home) #:select (home-environment this-home-environment))
   ;; #:use-module (gnu home-services)
   ;; #:use-module (gnu home-services gnupg)
   ;; #:use-module (gnu home-services ssh)
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
   #:use-module ((gnu home-services files) #:select (home-files-service-type))
-  #:use-module ((gnu home-services) #:select (home-environment-variables-service-type))
+  #:use-module ((gnu home-services fontutils) #:select (home-fontconfig-service-type))
   #:use-module ((gnu home-services shells) #:select (home-bash-service-type home-bash-configuration))
   #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   #:use-module ((gnu home-services-utils) #:select (slurp-file-gexp))
   ;; #:use-module (gnu home-services mcron)
-  #:use-module ((gnu services) #:select (service simple-service))
+  #:use-module ((gnu services) #:select (service service-kind simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
   ;; #:use-module (gnu packages linux)
   ;; #:use-module (gnu packages admin)
@@ -252,7 +252,7 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((guix gexp) #:select (file-append local-file))
 
 
-  #:use-module ((srfi srfi-1) #:select (first))
+  #:use-module ((srfi srfi-1) #:select (first remove))
   #:use-module ((guix channels) #:select (channel))
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
 
@@ -267,6 +267,9 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
+
+(define home-environment-default-essential-services
+  (@@ (gnu home) home-environment-default-essential-services))
 
 (define emacs-variant emacs-native-comp)
 
@@ -322,6 +325,9 @@ guix home --load-path=. reconfigure solitude.scm
                    ;; TODO temporary font packages to make guix-home fontconfig work
                    (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
                    (specification->package "font-adobe-source-code-pro"))) ; required for Doom config
+   (essential-services (remove (lambda (service)
+                                 (eq? (service-kind service) home-fontconfig-service-type))
+                               (home-environment-default-essential-services this-home-environment)))
    (services
     (list
      (simple-service 'my-channels
