@@ -315,7 +315,7 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list emacs-variant
+   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes. Also remove hardcoded exports in bash_profile
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
@@ -393,6 +393,16 @@ solitude
 #+end_src
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
+ # TODO remove this hardcoding when I can add back the emacs variant package to my guix home packages without eating up all my hd space / inodes
+EMACS_STORE_DIR=/gnu/store/j1kbz1zrxp1k4zp01l2bw3lfj1p95a9q-emacs-native-comp-28.0.50-180.e68bc86
+export PATH="${EMACS_STORE_DIR}/bin${PATH:+:}$PATH"
+export INFOPATH="${EMACS_STORE_DIR}/share/info${INFOPATH:+:}$INFOPATH"
+export EMACSLOADPATH="${EMACS_STORE_DIR}/share/emacs/site-lisp${EMACSLOADPATH:+:}$EMACSLOADPATH"
+export LIBRARY_PATH="${EMACS_STORE_DIR}/lib${LIBRARY_PATH:+:}$LIBRARY_PATH"
+export CPLUS_INCLUDE_PATH="${EMACS_STORE_DIR}/include${CPLUS_INCLUDE_PATH:+:}$CPLUS_INCLUDE_PATH"
+export C_INCLUDE_PATH="${EMACS_STORE_DIR}/include${C_INCLUDE_PATH:+:}$C_INCLUDE_PATH"
+export GIT_EXEC_PATH="${EMACS_STORE_DIR}/libexec/git-core"
+
 GUIX_EXTRA_PROFILES=$HOME/.guix-extra-profiles
 for i in $GUIX_EXTRA_PROFILES/*; do
   profile=$i/$(basename "$i")
