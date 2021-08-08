@@ -104,17 +104,15 @@ spartan
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
             (bluetooth-service #:auto-enable? #t)
             (modify-services %desktop-services
-                             (guix-service-type config =>
-                                                (guix-configuration
-                                                 (inherit config)
-                                                 (substitute-urls
-                                                  (append %default-substitute-urls
-                                                          (list "https://mirror.brielmaier.net")))
-                                                 (authorized-keys
-                                                  (append %default-authorized-guix-keys
-                                                          (list (local-file "mirror.brielmaier.net.pub")))))))
-            ;; %desktop-services
-            ))
+              (guix-service-type config =>
+                                 (guix-configuration
+                                  (inherit config)
+                                  (substitute-urls
+                                    (append %default-substitute-urls
+                                            (list "https://mirror.brielmaier.net")))
+                                  (authorized-keys
+                                    (append %default-authorized-guix-keys
+                                            (list (local-file "mirror.brielmaier.net.pub")))))))))
     (bootloader
       (bootloader-configuration
         (bootloader grub-efi-bootloader)
