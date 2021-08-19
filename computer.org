@@ -264,6 +264,8 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((initialization core) #:select (initialization))
   #:use-module ((spartan core) #:select (spartan))
 
+  #:use-module ((solitude-fontconfig-service) #:select (solitude-fontconfig-service-type))
+
   #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
@@ -279,38 +281,17 @@ guix home --load-path=. reconfigure solitude.scm
 ;;           (list (channel
 ;;                  (name 'flat)
 ;;                  (url "https://github.com/flatwhatson/guix-channel.git")
-;;                  (commit "b3e3b3260fcceabbc8bff6ca49a8b819b92fbd7c"))
+;;                  (commit "64cdf99252db28408009c2c177649034f414b991"))
 ;;                 (channel
 ;;                  (name 'guix)
 ;;                  (url "https://git.savannah.gnu.org/git/guix.git")
-;;                  (commit "196f171c556acb1c94d719b261287eaf23e5116c"))))))
+;;                  (commit "0fa49fd2a8f0d1d2c37ea276cc44d0d5adcea701"))))))
 ;;     (first (lookup-inferior-packages inferior "emacs-native-comp"))))
 
 (define with-emacs-variant
   (package-input-rewriting `((,emacs . ,emacs-variant)
                              (,emacs-minimal . ,emacs-variant)
                              (,emacs-no-x . ,emacs-variant))))
-
-;; TODO make this a separate file if keeping it
-;; (define %my-fontconfig-config-file
-;;   "
-;; <?xml version=\"1.0\"?>
-;; <!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">
-;; <fontconfig>
-;;   <dir>~/.guix-extra-profiles/multiverse/multiverse/share/fonts</dir>
-;;   <match target=\"font\">
-;;     <test name=\"family\" compare=\"eq\">
-;;         <string>Source Code Pro</string>
-;;     </test>
-;;     <edit mode=\"assign\" name=\"hintstyle\">
-;;       <const>hintfull</const>
-;;     </edit>
-;;     <edit name=\"antialias\" mode=\"assign\">
-;;       <bool>true</bool>
-;;     </edit>
-;;   </match>
-;; </fontconfig>
-;; ")
 
 (define solitude
   (home-environment
@@ -322,14 +303,15 @@ guix home --load-path=. reconfigure solitude.scm
                    (with-emacs-variant (specification->package "emacs-exwm"))
                    (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
                    ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
-                   ;; TODO temporary font packages to make guix-home fontconfig work
-                   (specification->package "font-google-noto") ; should probably be a propagated input of spartan as it's exwm-specific
-                   (specification->package "font-adobe-source-code-pro"))) ; required for Doom config
+                   (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
    (essential-services (remove (lambda (service)
                                  (eq? (service-kind service) home-fontconfig-service-type))
                                (home-environment-default-essential-services this-home-environment)))
    (services
     (list
+     (service solitude-fontconfig-service-type
+              (list (file-append (@ (gnu packages fonts) font-adobe-source-code-pro) "/share/fonts")
+                    (file-append (@ (gnu packages fonts) font-google-noto) "/share/fonts")))
      (simple-service 'my-channels
                      home-files-service-type
                      (list `("config/guix/channels.scm"
@@ -390,6 +372,81 @@ guix home --load-path=. reconfigure solitude.scm
      ))))
 
 solitude
+#+end_src
+*** Fontconfig Service
+TODO
+- check this out for writing xml programmatically: [[https://www.gnu.org/software/guile/manual/guile.html#SXML][Guile Reference Manual - SXML]]
+- should "share/fonts" be automatically appended? I feel like I didn't do that for a reason?
+- add "profile/share/fonts" to the test-for-on-change thing? Or just "profile" to the passed-in config (or support the potential to do that)
+  + make it passed in manually or automatic? If it's automatic and the "profile/share/fonts" folder doesn't exist will my code fail?
+  + test contents of "profile/share/fonts" as well as the live-fonts-file
+#+begin_src scheme :tangle (in-tangle-dir "solitude-fontconfig-service.scm") :noweb yes
+(define-module (solitude-fontconfig-service)
+  #:use-module ((gnu services) #:select (service-extension service-type))
+  ;; #:use-module ((gnu services configuration) #:select (define-configuration))
+  #:use-module ((gnu home-services) #:select (home-profile-service-type home-run-on-change-service-type))
+  #:use-module ((gnu home-services files) #:select (home-files-service-type))
+  #:use-module ((gnu packages fontutils) #:select (fontconfig))
+  ;; TODO narrow down or remove
+  #:use-module (guix gexp)
+
+  ;; #:use-module ((srfi srfi-1) #:select (list?))
+  )
+
+;; (define-configuration solitude-fontconfig-configuration
+;;   (font-directories
+;;    (list '("~/.guix-home/profile"))
+;;    "TODO can I remove the this docstring?"))
+
+(define live-fonts-file-simple-name "solitude-live-fonts")
+(define live-fonts-file-path (string-append "config/." live-fonts-file-simple-name))
+
+(define (add-files-service config)
+  `(("config/fontconfig/fonts.conf"
+     ,(mixed-text-file
+       "fonts.conf"
+       "<?xml version='1.0'?>
+<!DOCTYPE fontconfig SYSTEM 'fonts.dtd'>
+<fontconfig>
+"
+"<dir>" (car config) "</dir>"
+"
+  <dir>~/.guix-home/profile/share/fonts</dir>
+  <dir>~/.guix-extra-profiles/multiverse/multiverse/share/fonts</dir>
+</fontconfig>"))
+    (,live-fonts-file-path
+     ,(apply mixed-text-file live-fonts-file-simple-name
+             (apply append (map (lambda (x) `(,x "\n")) config))))))
+
+(define (regenerate-font-cache-gexp _)
+  `((,(string-append "files/" live-fonts-file-path)
+     ,#~(system* #$(file-append fontconfig "/bin/fc-cache") "-fv"))))
+
+(define-public solitude-fontconfig-service-type
+  (service-type (name 'solitude-fontconfig)
+                (extensions
+                 (list (service-extension
+                        home-files-service-type
+                        add-files-service)
+                       ;; (service-extension
+                       ;;  home-run-on-change-service-type
+                       ;;  regenerate-font-cache-gexp)
+                       (service-extension
+                        home-profile-service-type
+                        (const (list fontconfig))))) ; `fontconfig' seems to be installed by default in the base system but Guix Home adds it like this so I suppose I will too.
+                (default-value #f)))
+
+;; (use-modules (gnu package))
+;; (define-public asdfffy
+;;   (package
+;;    (name "asdfffy")))
+#+end_src
+**** fonts.conf Template
+#+begin_src xml :tangle (in-tangle-dir "fonts.conf")
+<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "fonts.dtd">
+<fontconfig>
+</fontconfig>
 #+end_src
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
@@ -1487,6 +1544,7 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages dunst) #:select (dunst))
   #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages fonts) #:select (font-google-noto))
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
   #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
   #:use-module ((gnu packages glib) #:select (dbus))
@@ -1520,7 +1578,8 @@ Can be an integer to determine the exact padding."
       ("redshift:gtk" ,redshift "gtk")
       ("udiskie" ,udiskie)))
    (propagated-inputs
-    `(("dracula-theme" ,dracula-theme)
+    `(("font-google-noto" ,font-google-noto)
+      ("dracula-theme" ,dracula-theme)
       ("papirus-icon-theme" ,papirus-icon-theme)
       ("pavucontrol" ,pavucontrol)))
    (arguments
