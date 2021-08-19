@@ -251,10 +251,6 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((guix gexp) #:select (file-append local-file))
 
 
-  #:use-module ((srfi srfi-1) #:select (first))
-  #:use-module ((guix channels) #:select (channel))
-  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-
   #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
@@ -268,19 +264,6 @@ guix home --load-path=. reconfigure solitude.scm
   #:use-module ((gnu packages gtk) #:select (gtk+)))
 
 (define emacs-variant emacs-native-comp)
-
-;; (define emacs-variant
-;;   (let ((inferior
-;;          (inferior-for-channels
-;;           (list (channel
-;;                  (name 'flat)
-;;                  (url "https://github.com/flatwhatson/guix-channel.git")
-;;                  (commit "64cdf99252db28408009c2c177649034f414b991"))
-;;                 (channel
-;;                  (name 'guix)
-;;                  (url "https://git.savannah.gnu.org/git/guix.git")
-;;                  (commit "0fa49fd2a8f0d1d2c37ea276cc44d0d5adcea701"))))))
-;;     (first (lookup-inferior-packages inferior "emacs-native-comp"))))
 
 (define with-emacs-variant
   (package-input-rewriting `((,emacs . ,emacs-variant)
@@ -531,7 +514,7 @@ done
 #+end_src
 **** bastille
 #+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
-;; TODO Probably getting rid of this but if I keep it make this a reference to emacs-variant / the emacs variant inferior
+;; TODO Probably getting rid of this but if I keep it make this a reference to emacs-variant
 (specifications->manifest
  '("emacs-native-comp"))
 #+end_src
