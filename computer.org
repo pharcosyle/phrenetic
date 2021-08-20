@@ -972,7 +972,8 @@ done
         "s-K" #'ivy-scroll-down-command
         "C-r" #'ivy-reverse-i-search ; Doom overrides this, restore it.
         :map ivy-reverse-i-search-map
-        "C-k" #'previous-line))
+        "C-k" #'previous-line
+        "s-D" #'ivy-reverse-i-search-kill)) ; TODO temporary binding
 #+end_src
 ***** Ivy Hydra :completion:bindings:
 #+begin_src elisp
