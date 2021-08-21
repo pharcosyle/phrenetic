@@ -100,7 +100,7 @@ spartan
               (modules (cons* xf86-input-mtrack
                               %default-xorg-modules))
               (keyboard-layout keyboard-layout)
-              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")` but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory.
+              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
             (bluetooth-service #:auto-enable? #t)
             (modify-services %desktop-services
@@ -656,7 +656,7 @@ done
        lookup
        (magit +forge)
        (pass +auth)
-       ;; pdf ; TODO Re-enable this once I'm compiling its `epdfinfo' dependency so `org-store-link' doesn't throw an error.
+       ;; pdf ; TODO Re-enable this once I'm compiling its `epdfinfo' dependency so `org-store-link' doesn't throw an error. Update: looks like it should be fixed now (https://github.com/hlissner/doom-emacs/commit/bf8495b4122701fb30cb6cea37281dc8f3bedcd0), re-enable and test `org-store-link' and refiling a subtree to a different file. These operations were crashing emacs a while back and I don't think it was related to the pdf module being enabled but be prepared for exwm to crash when testing just in case.
        prodigy
        rgb
        taskrunner
@@ -1709,7 +1709,7 @@ Net/IconThemeName "Papirus-Dark"
 
 
   ;; WIP
-  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h))
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)) ; TODO any chance this is causing those XELB errors I'm (suddynely?) experiencing? Also if I'm keeping this remember that I have to do something special to make saving the perspective not flub
 
 
 (use-package! desktop-environment
