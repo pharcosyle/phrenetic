@@ -119,6 +119,7 @@ spartan
         (target "/boot/efi")
         (keyboard-layout keyboard-layout)))
 
+    ;; Override/extend these
     (file-systems %base-file-systems)
     (host-name #f)))
 #+end_src
@@ -1231,6 +1232,7 @@ done
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 #+end_src
 *** Theme :UI:theming:
+- TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
 #+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
 ;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
