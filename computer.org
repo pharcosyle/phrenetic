@@ -1429,7 +1429,7 @@ Can be an integer to determine the exact padding."
 
 ;;; doom-nuclear-theme.el ends here
 #+end_src
-** Spartan
+** Spartan :UI:
 :PROPERTIES:
 :tangle-dir+: spartan
 :END:
@@ -1534,7 +1534,7 @@ xss-lock -- slock &
 doom env
 exec dbus-launch --exit-with-session emacs -mm -l desktop.el # --debug-init
 #+end_src
-**** xsettingsd.conf
+**** xsettingsd.conf :theming:
 #+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
 # TODO these
 Net/EnableEventSounds 1
@@ -1572,8 +1572,11 @@ Net/IconThemeName "Papirus-Dark"
 # seems like this is the default, at least for dracula
 # Gtk/DecorationLayout "menu:minimize,maximize,close"
 #+end_src
-*** EXWM :UI:bindings:path:
-#+begin_src elisp :tangle (in-tangle-dir "desktop.el")
+*** desktop.el
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "desktop.el")
+:END:
+#+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 ;; TODO TEMPORARY
 (add-to-list 'load-path "/home/pharcosyle/.guix-home/profile/share/emacs/site-lisp/xelb-0.18")
@@ -1583,7 +1586,9 @@ Net/IconThemeName "Papirus-Dark"
 ;; TODO rename efs to biome
 ;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
 ;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
-
+#+end_src
+**** EXWM :bindings:
+#+begin_src elisp
 (defun efs/run-in-background (command)
   (let ((command-parts (split-string command "[ ]+")))
     (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
@@ -1707,31 +1712,10 @@ Net/IconThemeName "Papirus-Dark"
 
   (exwm-enable)
 
-
   ;; WIP
   (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)) ; TODO any chance this is causing those XELB errors I'm (suddynely?) experiencing? Also if I'm keeping this remember that I have to do something special to make saving the perspective not flub
-
-
-(use-package! desktop-environment
-  :after exwm
-  :config
-  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
-        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
-        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
-        desktop-environment-volume-normal-increment "+5%"
-        desktop-environment-volume-normal-decrement "-5%"
-        desktop-environment-keyboard-backlight-normal-increment 26
-        desktop-environment-keyboard-backlight-normal-decrement -26)
-  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
-  (map! :map desktop-environment-mode-map
-        "s-l" nil
-        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
-        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
-        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
-        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
-  (desktop-environment-mode))
 #+end_src
-**** dunstrc
+***** dunstrc :theming:
 #+begin_src conf :tangle (in-tangle-dir "dunstrc")
 [global]
     geometry = "500x10-200+50"
@@ -1772,6 +1756,27 @@ Net/IconThemeName "Papirus-Dark"
     foreground = "#ffffff"
     frame_color = "#ff0000"
     timeout = 0
+#+end_src
+**** Desktop Environment :bindings:
+#+begin_src elisp
+(use-package! desktop-environment
+  :after exwm
+  :config
+  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
+        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
+        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
+        desktop-environment-volume-normal-increment "+5%"
+        desktop-environment-volume-normal-decrement "-5%"
+        desktop-environment-keyboard-backlight-normal-increment 26
+        desktop-environment-keyboard-backlight-normal-decrement -26)
+  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
+  (map! :map desktop-environment-mode-map
+        "s-l" nil
+        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
+        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
+        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
+        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
+  (desktop-environment-mode))
 #+end_src
 ** emacs-temp
 *** doom-emacs-temp
