@@ -79,6 +79,12 @@ spartan
                     (supplementary-groups
                       '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
                   (user-account
+                    (name "atherton")
+                    (comment "Atherton Wing")
+                    (group "users")
+                    (supplementary-groups
+                      '("wheel" "netdev" "audio" "video" "input"))) ; TODO input for mtrack, might be removing this
+                  (user-account
                     (name "gandalf")
                     (comment "Speak Friend and Enter")
                     (group "users")
