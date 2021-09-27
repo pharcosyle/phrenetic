@@ -43,7 +43,6 @@ spartan
 *** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (base-os)
-  #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((gnu system) #:select (operating-system %base-firmware %base-packages))
   #:use-module ((gnu system accounts) #:select (user-account))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems))
@@ -60,6 +59,7 @@ spartan
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware))
+  #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((spartan-wm) #:select (spartan-wm)))
 
@@ -154,7 +154,9 @@ sudo guix system --load-path=. reconfigure frostfire.scm
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
-  #:use-module ((gnu system file-systems) #:select (file-system uuid))
+  #:use-module ((gnu system file-systems) #:select (file-system file-system-label uuid))
+  #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping))
+  #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((base-os) #:select (base-os))
   #:use-module ((macbook) #:select (macbook)))
 
@@ -162,18 +164,33 @@ sudo guix system --load-path=. reconfigure frostfire.scm
   (operating-system
     (inherit os)
     (host-name "frostfire")
+    (mapped-devices
+      (list (mapped-device
+             (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
+             (target "ciphered")
+             (type luks-device-mapping))))
     (file-systems
-      (cons* (file-system
-               (mount-point "/")
-               (device
-                 (uuid "8359c1c2-f3f8-4693-9cab-838862daae9b"
-                       'ext4))
-               (type "ext4"))
-             (file-system
-               (mount-point "/boot/efi")
-               (device (uuid "67E3-17ED" 'fat32))
-               (type "vfat"))
-             (operating-system-file-systems os)))))
+      (append
+       (map (match-lambda
+              ((subvol . mount-point)
+               (file-system
+                 (device (file-system-label "firmament"))
+                 (mount-point mount-point)
+                 (type "btrfs")
+                 (options (format #f "subvol=~a,compress=zstd,autodefrag" subvol))
+                 (dependencies mapped-devices))))
+            '((root . "/")
+              (boot . "/boot")
+              (store . "/gnu/store")
+              (log . "/var/log")
+              (home . "/home")
+              (persist . "/persist")))
+       (list
+        (file-system
+          (device (file-system-label "genesis"))
+          (mount-point "/boot/efi")
+          (type "vfat")))
+       (operating-system-file-systems os)))))
 
 (frostfire (macbook base-os))
 #+end_src
@@ -243,8 +260,8 @@ guix home --load-path=. reconfigure solitude.scm
   ;; #:use-module (gnu home-services)
   ;; #:use-module (gnu home-services gnupg)
   ;; #:use-module (gnu home-services ssh)
+  #:use-module ((gnu home-services) #:select (home-files-service-type))
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
-  #:use-module ((gnu home-services files) #:select (home-files-service-type))
   #:use-module ((gnu home-services shells) #:select (home-bash-service-type home-bash-configuration))
   #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   #:use-module ((gnu home-services-utils) #:select (slurp-file-gexp))
