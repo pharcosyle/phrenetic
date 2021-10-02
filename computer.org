@@ -35,6 +35,143 @@ pharcosyle@gmail.com
 #+begin_src org
 spartan
 #+end_src
+* Installation Guide
+** Create bootable USB
+Download (or create) a Guix installation ISO
+- I'm using the [[https://github.com/SystemCrafters/guix-installer/releases/latest][System Crafters Guix Installer]] since it's kept up-to-date which should speed things up a bit.
+- Run ~lsblk~ to find the usb device.
+#+begin_src sh
+iso_file=guix-system-install-1.3.0.x86_64-linux.iso
+usb_device=/dev/sdc
+dd if=$iso_file of=$usb_device status=progress bs=4M
+sync
+#+end_src
+** Install
+Boot from the installation medium, select your language and country, and select "Install using the shell based process" when prompted.
+*** Keyboard layout
+Important: This messed up the keyboard when I tried it, not doing ~loadkeys~ at all was fine.
+#+begin_src sh
+keysfile=mac-us
+loadkeys mac-us
+#+end_src
+*** Networking
+#+begin_src sh
+# List network interfaces and find one to use.
+ifconfig -a
+
+# Is this necessary if the interface is already activated?
+interface=usb0
+ifconfig $interface up
+
+dhclient -v $interface
+
+# Test that networking is up and working.
+ping -c 3 gnu.org
+#+end_src
+*** Partitioning
+#+begin_src sh
+# Check out the current block devices and partitions if you want.
+lsblk
+
+device=/dev/sda
+
+# Make two partitions, partition types should be "EFI system partition" and "Linux x86-64 root (/)". For EFI I'm gonna do 1GB to be on the safe side, second should be remainder of free space.
+cfdisk $device
+parted $device set 1 esp on
+
+efi_system_partition="$device"1
+efi_label=genesis
+
+mkfs.fat -F32 -n $efi_label $efi_system_partition
+
+root_partition="$device"2
+root_label=firmament
+crypt_name=ciphered
+crypt_mapping=/dev/mapper/$crypt_name
+
+cryptsetup luksFormat $root_partition
+cryptsetup open --type luks $root_partition $crypt_name
+
+mkfs.btrfs -L $root_label $crypt_mapping
+#+end_src
+*** Set up subvolumes
+#+begin_src sh
+# I don't know if they type argument is necessary but that's how Andrew Tropin had it.
+mount -t btrfs LABEL=$root_label /mnt
+
+btrfs subvolume create /mnt/root
+btrfs subvolume create /mnt/boot
+btrfs subvolume create /mnt/store
+btrfs subvolume create /mnt/log
+btrfs subvolume create /mnt/home
+btrfs subvolume create /mnt/persist
+
+# Take an empty readonly snapshot of the root subvolume (might be useful later for rolling back or comparison)
+btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
+
+umount /mnt
+#+end_src
+*** Mount
+NB: ~$crypt_mapping~ can/"should" be ~LABEL=$root_label~
+#+begin_src sh
+mount -o subvol=root,compress=zstd,autodefrag $crypt_mapping /mnt
+
+mkdir /mnt/boot
+mount -o subvol=boot,compress=zstd,autodefrag $crypt_mapping /mnt/boot
+mkdir -p /mnt/gnu/store
+mount -o subvol=store,compress=zstd,autodefrag,noatime $crypt_mapping /mnt/gnu/store
+mkdir -p /mnt/var/log
+mount -o subvol=log,compress=zstd,autodefrag $crypt_mapping /mnt/var/log
+mkdir /mnt/home
+mount -o subvol=home,compress=zstd,autodefrag $crypt_mapping /mnt/home
+mkdir /mnt/persist
+mount -o subvol=persist,compress=zstd,autodefrag $crypt_mapping /mnt/persist
+
+mkdir -p /mnt/boot/efi
+mount LABEL=$efi_label /mnt/boot/efi
+#+end_src
+*** Proceeding with installation
+#+begin_src sh
+herd start cow-store /mnt
+#+end_src
+*** System configuration
+#+begin_src sh
+# Grab my dotfiles, from github if I put them up at some point or maybe from a USB or another computer with `woof`, into the current directory (the one I'm already in, not `/mnt`).
+# git clone https://github.com/pharcosyle/dotfiles
+# guix environment --ad-hoc woof -- woof -U
+# ...also the penitent-tangent channel if I'm stil referencing it locally.
+# Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
+
+mkdir -p ~/.config/guix
+cp ~/Projects/dotfiles/gen/home/channels.scm ~/.config/guix
+guix pull
+hash guix
+
+# Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
+cryptsetup luksUUID $root_partition
+
+cd ~/Projects/dotfiles/gen/system
+guix system --load-path=. init frostfire.scm /mnt
+#+end_src
+*** Post-installation
+#+begin_src sh
+# Reboot the system, take out the installation medium, and login as root when faced with a login prompt.
+
+# Set the password for the root account.
+passwd
+# Set the password for my user.
+my_user=pharcosyle
+passwd $my_user
+
+# Log out and log in to my user account.
+
+# Grab my dotfiles again.
+
+# Ensure my channels file is in `~/.config/guix` and update my channels.
+guix pull
+
+# Run a system reconfigure, home reconfigure, install manifests, and deploy `home-state.git`. Copy over all my old data.
+#+end_src
 * System
 :PROPERTIES:
 :tangle-dir+: system
