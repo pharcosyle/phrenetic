@@ -297,7 +297,7 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes. Also delete bastille manifest
+   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead?). Also delete bastille manifest
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
@@ -540,7 +540,7 @@ done
 #+end_src
 **** bastille
 #+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
-;; TODO Probably getting rid of this but if I keep it make this a reference to emacs-variant
+;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
 (specifications->manifest
  '("emacs-native-comp"))
 #+end_src
@@ -1740,7 +1740,8 @@ Net/IconThemeName "Papirus-Dark"
   (exwm-enable)
 
   ;; WIP
-  ;; (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)) ; TODO any chance this is causing those XELB errors I'm (suddenly?) experiencing? Reproduce by triggering a download window in chromium and then doing anything. Also if I'm keeping this remember that I have to do something special to make saving the perspective not flub
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h) ; TODO If I'm keeping this remember that I have to do something special to make saving the perspective not flub
+  )
 #+end_src
 ***** dunstrc :theming:
 #+begin_src conf :tangle (in-tangle-dir "dunstrc")
