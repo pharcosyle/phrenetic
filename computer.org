@@ -260,6 +260,7 @@ guix pull
       (bootloader-configuration
         (bootloader grub-efi-bootloader)
         (targets '("/boot/efi"))
+        (timeout 1)
         (keyboard-layout keyboard-layout)))
 
     ;; Override/extend these
