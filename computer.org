@@ -427,6 +427,7 @@ guix home --load-path=. reconfigure solitude.scm
 
 (define emacs-variant emacs-native-comp)
 
+; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare?
 (define with-emacs-variant
   (package-input-rewriting `((,emacs . ,emacs-variant)
                              (,emacs-minimal . ,emacs-variant)
@@ -435,7 +436,7 @@ guix home --load-path=. reconfigure solitude.scm
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead?). Also delete bastille manifest
+   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
@@ -1639,6 +1640,7 @@ Can be an integer to determine the exact padding."
       ("pasystray" ,pasystray)
       ("redshift:gtk" ,redshift "gtk")
       ("udiskie" ,udiskie)))
+   ;; TODO much later, see if there's a way to make any of these not propagated.
    (propagated-inputs
     `(("font-google-noto" ,font-google-noto)
       ("dracula-theme" ,dracula-theme)
