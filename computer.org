@@ -101,7 +101,8 @@ mount -t btrfs LABEL=$root_label /mnt
 
 btrfs subvolume create /mnt/root
 btrfs subvolume create /mnt/boot
-btrfs subvolume create /mnt/store
+btrfs subvolume create /mnt/guix-store
+btrfs subvolume create /mnt/guix-var
 btrfs subvolume create /mnt/log
 btrfs subvolume create /mnt/home
 btrfs subvolume create /mnt/persist
@@ -119,13 +120,15 @@ mount -o subvol=root,compress=zstd,autodefrag $crypt_mapping /mnt
 mkdir /mnt/boot
 mount -o subvol=boot,compress=zstd,autodefrag $crypt_mapping /mnt/boot
 mkdir -p /mnt/gnu/store
-mount -o subvol=store,compress=zstd,autodefrag,noatime $crypt_mapping /mnt/gnu/store
+mount -o subvol=guix-store,compress=zstd,autodefrag,noatime $crypt_mapping /mnt/gnu/store
+mkdir -p /mnt/var/guix
+mount -o subvol=guix-var,compress=zstd,autodefrag $crypt_mapping /mnt/var/guix
 mkdir -p /mnt/var/log
 mount -o subvol=log,compress=zstd,autodefrag $crypt_mapping /mnt/var/log
 mkdir /mnt/home
 mount -o subvol=home,compress=zstd,autodefrag $crypt_mapping /mnt/home
-mkdir /mnt/persist
-mount -o subvol=persist,compress=zstd,autodefrag $crypt_mapping /mnt/persist
+mkdir /mnt/.persist
+mount -o subvol=persist,compress=zstd,autodefrag $crypt_mapping /mnt/.persist
 
 mkdir -p /mnt/boot/efi
 mount LABEL=$efi_label /mnt/boot/efi
@@ -316,13 +319,15 @@ sudo guix system --load-path=. reconfigure frostfire.scm
                  (mount-point mount-point)
                  (type "btrfs")
                  (options (format #f "subvol=~a,compress=zstd,autodefrag" subvol))
+                 (needed-for-boot? (eq? subvol 'guix-var))
                  (dependencies mapped-devices))))
             '((root . "/")
               (boot . "/boot")
-              (store . "/gnu/store")
+              (guix-store . "/gnu/store")
+              (guix-var . "/var/guix")
               (log . "/var/log")
               (home . "/home")
-              (persist . "/persist")))
+              (persist . "/.persist")))
        (list
         (file-system
           (device (file-system-label "genesis"))
