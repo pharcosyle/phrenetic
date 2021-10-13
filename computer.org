@@ -1612,12 +1612,13 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-google-noto))
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
-  #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
+  ;; #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
-  #:use-module ((penitent-tangent packages dracula-theme) #:select (dracula-theme)))
+  ;; #:use-module ((penitent-tangent packages dracula-theme) #:select (dracula-theme))
+  )
 
 (define-public spartan
   (package
@@ -1646,8 +1647,8 @@ Can be an integer to determine the exact padding."
    ;; TODO much later, see if there's a way to make any of these not propagated.
    (propagated-inputs
     `(("font-google-noto" ,font-google-noto)
-      ("dracula-theme" ,dracula-theme)
-      ("papirus-icon-theme" ,papirus-icon-theme)
+      ;; ("dracula-theme" ,dracula-theme)
+      ;; ("papirus-icon-theme" ,papirus-icon-theme)
       ("pavucontrol" ,pavucontrol)))
    (arguments
     '(#:modules ((guix build utils))
@@ -1735,10 +1736,10 @@ Gtk/CursorThemeSize 48
 # - make sure my browser reads the device theme preference as dark
 # - if I don't like dracula try another theme or maybe patch it with my emacs colors (perhaps some other theme would be a better base?)
 # - look at dracula / other theme I choose in Gnome to see if it looks "right"
-Net/ThemeName "Dracula"
+# Net/ThemeName "Dracula"
 # TODO icon theme
 # Donno about these new papirus icons, daviwil and hlissner seem to like them but I'm not sure I do (the Files icons and particularly the systray ones, can I change just those?). Maybe they'll look better once Dracula is enabled? Maybe a wrong / lower-resolution version of the icons is being used and I need to set up where they're looked for?
-Net/IconThemeName "Papirus-Dark"
+# Net/IconThemeName "Papirus-Dark"
 # seems like this is the default, at least for dracula
 # Gtk/DecorationLayout "menu:minimize,maximize,close"
 #+end_src
