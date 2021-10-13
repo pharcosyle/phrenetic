@@ -400,15 +400,13 @@ guix home --load-path=. reconfigure solitude.scm
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
-  ;; #:use-module (gnu home-services)
+  #:use-module ((gnu home services) #:select (home-files-service-type))
+  ;; #:use-module (gnu home services mcron)
+  #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
   ;; #:use-module (gnu home-services gnupg)
   ;; #:use-module (gnu home-services ssh)
-  #:use-module ((gnu home-services) #:select (home-files-service-type))
+  ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type)) ; TODO RDE and upstream Guix Home have incompatibly diverged for the moment, comment this and the `home-bash-direnv-service-type` usage line below back in when they're back in sync.
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
-  #:use-module ((gnu home-services shells) #:select (home-bash-service-type home-bash-configuration))
-  #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
-  #:use-module ((gnu home-services-utils) #:select (slurp-file-gexp))
-  ;; #:use-module (gnu home-services mcron)
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
   ;; #:use-module (gnu packages linux)
@@ -462,8 +460,8 @@ guix home --load-path=. reconfigure solitude.scm
                   ("EDITOR" . "$VISUAL")
                   ("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
                (bash-profile
-                `(,(slurp-file-gexp (local-file "bash_profile"))
-                  ,(slurp-file-gexp (file-append initialization "/script.sh")))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                `(,(local-file "bash_profile")
+                  ,(file-append initialization "/script.sh"))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -481,7 +479,7 @@ guix home --load-path=. reconfigure solitude.scm
                      home-files-service-type
                      (list `("config/doom"
                              ,(local-file "doom" #:recursive? #t))))
-     (service home-bash-direnv-service-type)
+     ;; (service home-bash-direnv-service-type)
      ;; (service home-keyboard-service-type
      ;;          (keyboard-layout "us,ru" "dvorak,"
      ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
