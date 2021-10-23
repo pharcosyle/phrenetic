@@ -270,8 +270,154 @@ guix pull
     (file-systems %base-file-systems)
     (host-name #f)))
 #+end_src
-#+begin_src sh :results output silent :dir (get-tangle-dir) :async
-sudo guix system --load-path=. reconfigure frostfire.scm
+*** Stateless
+#+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
+(define-module (stateless)
+  #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-user-services))
+  #:use-module ((stateless-service) #:select (stateless-service-type)))
+
+(define-public (stateless os)
+  (operating-system
+    (inherit os)
+    (initrd (lambda (file-systems . rest)
+              (apply (operating-system-initrd os) file-systems
+                     #:volatile-root? #t
+                     rest)))
+    (services
+     (append
+      (operating-system-user-services os)
+      ;; Stateless service should be after base/desktop services state gets installed before them during activation.
+      (list
+       (service stateless-service-type
+                '(#:persist-dir "/.persist"
+                  #:paths ("/etc/machine-id"
+                           "/var/lib/random-seed"
+                           "/etc/NetworkManager/system-connections"
+                           "/var/lib/NetworkManager/secret_key"
+                           "/var/lib/bluetooth"
+                           "/etc/guix/signing-key.pub"
+                           "/etc/guix/signing-key.sec"))))))))
+#+end_src
+**** Service
+#+begin_src scheme :tangle (in-tangle-dir "stateless-service.scm")
+(define-module (stateless-service)
+  ;; #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
+  #:use-module (gnu)
+  #:use-module (gnu packages admin)
+  #:use-module (gnu packages linux)
+  #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
+  #:use-module ((guix modules) #:select (source-module-closure)))
+
+(define (populate-gexp _)
+  (with-extensions (list guile-gcrypt)
+    (with-imported-modules (source-module-closure
+                            '((gnu build install)
+                              (guix build utils)))
+      #~(begin
+          ;; (use-modules ((guix build utils) #:select (mkdir-p)))
+          (use-modules ((gnu build install) #:select (populate-root-file-system))
+                       (guix build utils))
+
+          (invoke #$(file-append coreutils "/bin/echo") "working!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!working")
+
+          ;; (with-output-to-file "asdffy.txt"
+          ;;   (lambda _
+          ;;     (invoke #$(file-append util-linux+udev "/bin/mount"))
+          ;;     ;; (display "asdffffffffffff")
+          ;;     ))
+
+          ;; (with-output-to-file "qwerty.txt"
+          ;;   (lambda _
+          ;;     (invoke #$(file-append tree "/bin/tree"))
+          ;;     ;; (display "asdffffffffffff")
+          ;;     ))
+
+
+          ;; (define (populate noclobber)
+
+          ;;   (define (stash-or-pop op)
+          ;;     (when (eq? op 'pop)
+          ;;       (for-each delete-file noclobber))
+          ;;     (for-each (lambda (path)
+          ;;                 (let ((paths `(,path ,(string-append path ".stash"))))
+          ;;                   (apply rename-file (if (eq? op 'stash)
+          ;;                                          paths (reverse paths)))))
+          ;;               noclobber))
+
+          ;;   (stash-or-pop 'stash)
+          ;;   (populate-root-file-system "dummy" "")
+          ;;   (stash-or-pop 'pop))
+
+          ;; (populate '("/var/guix/profiles/system"
+          ;;             "/var/guix/profiles/system-1-link"))
+
+
+          (let ((system-link (readlink "/var/guix/profiles/system"))
+                (system-1-link (readlink "/var/guix/profiles/system-1-link")))
+            (populate-root-file-system system-1-link ""
+                                       #:extras `(("/var/guix/profiles/system" -> ,system-link))))
+
+
+          ;; (define (install-state target file)
+          ;;   (mkdir-p (dirname target))
+          ;;   (symlink file target))
+          ;; (install-state "/var/lib/random-seed" "/.persist/var/lib/random-seed")
+
+
+          (copy-file "/.persist/etc/group" "/etc/group")
+          (copy-file "/.persist/etc/passwd" "/etc/passwd")
+          (copy-file "/.persist/etc/shadow" "/etc/shadow")
+
+
+          (invoke #$(file-append coreutils "/bin/echo") "done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!done")
+
+          ))
+  )
+
+  )
+
+(define (activate-state-gexp config)
+  #~(begin
+      (use-modules ((ice-9 match) #:select (match)))
+
+      (define* (activate-state #:key persist-dir paths)
+
+        (define (install path)
+          (let loop ((components (string-tokenize path (char-set-complement (char-set #\/))))
+                     (base persist-dir)
+                     (target-base ""))
+            (match components
+              ((head tail ...)
+               (let* ((path (string-append base "/" head))
+                      (target-path (string-append target-base "/" head)))
+                 (if (null? tail)
+                     ;; The Guix code makes a point of doing stuff like this atomically. I don't really know why but I will too.
+                     (let ((pivot (string-append target-path ".new")))
+                       (symlink path pivot)
+                       (rename-file pivot target-path))
+                     (begin
+                       (catch 'system-error
+                         (lambda ()
+                           (mkdir target-path))
+                         (lambda args
+                           (unless (= EEXIST (system-error-errno args))
+                             (apply throw args))))
+                       (let ((st (lstat path)))
+                         (chown target-path (stat:uid st) (stat:gid st))
+                         (chmod target-path (stat:perms st)))
+                       (loop tail path target-path))))))))
+
+        (for-each install paths))
+
+      (apply activate-state '#$config)))
+
+(define-public stateless-service-type
+  (service-type (name 'stateless)
+                (extensions
+                 (list (service-extension boot-service-type
+                                          populate-gexp)
+                       (service-extension activation-service-type
+                                          activate-state-gexp)))))
 #+end_src
 *** Macbook
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
@@ -299,17 +445,29 @@ sudo guix system --load-path=. reconfigure frostfire.scm
   #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping))
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((base-os) #:select (base-os))
+  #:use-module ((stateless) #:select (stateless))
   #:use-module ((macbook) #:select (macbook)))
+
+(define my-cool-mapped-devices
+  (list (mapped-device
+          (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
+          (target "ciphered")
+          (type luks-device-mapping))))
+
+(define my-cool-persist
+  (file-system
+    (device (file-system-label "firmament"))
+    (mount-point "/.persist")
+    (type "btrfs")
+    (options (format #f "subvol=~a,compress=zstd,autodefrag" 'persist))
+    (needed-for-boot? #t)
+    (dependencies my-cool-mapped-devices)))
 
 (define (frostfire os)
   (operating-system
     (inherit os)
     (host-name "frostfire")
-    (mapped-devices
-      (list (mapped-device
-             (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
-             (target "ciphered")
-             (type luks-device-mapping))))
+    (mapped-devices my-cool-mapped-devices)
     (file-systems
       (append
        (map (match-lambda
@@ -319,15 +477,42 @@ sudo guix system --load-path=. reconfigure frostfire.scm
                  (mount-point mount-point)
                  (type "btrfs")
                  (options (format #f "subvol=~a,compress=zstd,autodefrag" subvol))
-                 (needed-for-boot? (eq? subvol 'guix-var))
+                 (needed-for-boot? (if (memq subvol '(guix-var log)) #t #f))
                  (dependencies mapped-devices))))
-            '((root . "/")
+            '((root-blank . "/")
               (boot . "/boot")
               (guix-store . "/gnu/store")
               (guix-var . "/var/guix")
               (log . "/var/log")
               (home . "/home")
-              (persist . "/.persist")))
+              ; (persist . "/.persist")
+              ))
+       (list my-cool-persist)
+       (list
+        (file-system
+          (device "/.persist/etc/passwd")
+          (mount-point "/etc/passwd")
+          (type "none")
+          (flags '(bind-mount))
+          (mount? #f)
+          ;; (needed-for-boot? #t)
+          (dependencies (list my-cool-persist)))
+        (file-system
+          (device "/.persist/etc/group")
+          (mount-point "/etc/group")
+          (type "none")
+          (flags '(bind-mount))
+          (mount? #f)
+          ;; (needed-for-boot? #t)
+          (dependencies (list my-cool-persist)))
+        (file-system
+          (device "/.persist/etc/shadow")
+          (mount-point "/etc/shadow")
+          (type "none")
+          (flags '(bind-mount))
+          (mount? #f)
+          ;; (needed-for-boot? #t)
+          (dependencies (list my-cool-persist))))
        (list
         (file-system
           (device (file-system-label "genesis"))
@@ -335,7 +520,10 @@ sudo guix system --load-path=. reconfigure frostfire.scm
           (type "vfat")))
        (operating-system-file-systems os)))))
 
-(frostfire (macbook base-os))
+(frostfire (stateless (macbook base-os)))
+#+end_src
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
+sudo guix system --load-path=. reconfigure frostfire.scm
 #+end_src
 ** mirror.brielmaier.net.pub
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
@@ -393,9 +581,6 @@ EndSection
 :tangle-dir+: home
 :END:
 ** ~home-environment~
-#+begin_src sh :results output silent :dir (get-tangle-dir) :async
-guix home --load-path=. reconfigure solitude.scm
-#+end_src
 *** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
@@ -509,6 +694,9 @@ guix home --load-path=. reconfigure solitude.scm
      ))))
 
 solitude
+#+end_src
+#+begin_src sh :results output silent :dir (get-tangle-dir) :async
+guix home --load-path=. reconfigure solitude.scm
 #+end_src
 ** Bash profile
 #+begin_src sh :tangle (in-tangle-dir "bash_profile")
