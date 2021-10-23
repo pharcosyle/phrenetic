@@ -183,32 +183,24 @@ guix pull
 *** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (base-os)
-  #:use-module ((gnu system) #:select (operating-system %base-firmware %base-packages))
+  #:use-module ((gnu system) #:select (operating-system %base-packages))
   #:use-module ((gnu system accounts) #:select (user-account))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems))
   #:use-module ((gnu system shadow) #:select (%base-user-accounts))
   #:use-module ((gnu bootloader) #:select (bootloader-configuration))
   #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
-  #:use-module ((gnu services) #:select (service simple-service modify-services))
-  #:use-module ((gnu services base) #:select (guix-service-type guix-configuration udev-service-type %default-authorized-guix-keys))
+  #:use-module ((gnu services) #:select (service simple-service))
+  #:use-module ((gnu services base) #:select (udev-service-type))
   #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
   #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
   #:use-module ((gnu packages) #:select (specification->package))
   #:use-module ((gnu packages linux) #:select (brightnessctl))
-  #:use-module ((guix gexp) #:select (local-file))
-  #:use-module ((guix store) #:select (%default-substitute-urls))
-  #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((spartan-wm) #:select (spartan-wm)))
 
 (define-public (base-os kbl)
   (operating-system
-    (kernel linux)
-    (initrd microcode-initrd)
-    (firmware (cons* linux-firmware
-                     %base-firmware))
     (locale "en_US.utf8")
     (timezone "America/Los_Angeles")
     (keyboard-layout kbl)
@@ -249,16 +241,7 @@ guix pull
               (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
             (bluetooth-service #:auto-enable? #t)
-            (modify-services %desktop-services
-              (guix-service-type config =>
-                                 (guix-configuration
-                                  (inherit config)
-                                  (substitute-urls
-                                    (append %default-substitute-urls
-                                            (list "https://mirror.brielmaier.net")))
-                                  (authorized-keys
-                                    (append %default-authorized-guix-keys
-                                            (list (local-file "mirror.brielmaier.net.pub")))))))))
+            %desktop-services))
     (bootloader
       (bootloader-configuration
         (bootloader grub-efi-bootloader)
@@ -270,9 +253,55 @@ guix pull
     (file-systems %base-file-systems)
     (host-name #f)))
 #+end_src
+*** Linux Nonfree
+#+begin_src scheme :tangle (in-tangle-dir "linux-nonfree.scm")
+(define-module (linux-nonfree)
+  #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-services))
+  #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware))
+  #:use-module ((linux-nonfree-substitutes) #:select (with-linux-nonfree-substitutes)))
+
+(define-public (linux-nonfree os)
+  (operating-system
+    (inherit os)
+    (kernel linux)
+    (initrd microcode-initrd)
+    (firmware (cons* linux-firmware
+                     (operating-system-firmware os)))
+    (services (with-linux-nonfree-substitutes
+               (operating-system-user-services os)))))
+#+end_src
+**** Substitutes
+#+begin_src scheme :tangle (in-tangle-dir "linux-nonfree-substitutes.scm")
+(define-module (linux-nonfree-substitutes)
+  #:use-module ((gnu services) #:select (modify-services))
+  #:use-module ((gnu services base) #:select (guix-service-type guix-configuration %default-authorized-guix-keys))
+  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module ((guix store) #:select (%default-substitute-urls)))
+
+(define-public (with-linux-nonfree-substitutes services)
+  (modify-services services
+    (guix-service-type config =>
+                       (guix-configuration
+                        (inherit config)
+                        (substitute-urls
+                          (append %default-substitute-urls
+                                  (list "https://mirror.brielmaier.net")))
+                        (authorized-keys
+                          (append %default-authorized-guix-keys
+                                  (list (local-file "mirror.brielmaier.net.pub"))))))))
+#+end_src
+***** mirror.brielmaier.net.pub
+#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
+(public-key
+  (ecc
+    (curve Ed25519)
+    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+#+end_src
 *** Stateless
 #+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
 (define-module (stateless)
+  #:use-module ((gnu services) #:select (service))
   #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-user-services))
   #:use-module ((stateless-service) #:select (stateless-service-type)))
 
@@ -286,7 +315,7 @@ guix pull
     (services
      (append
       (operating-system-user-services os)
-      ;; Stateless service should be after base/desktop services state gets installed before them during activation.
+      ;; Stateless service should come after base/desktop services so state gets installed before them during activation.
       (list
        (service stateless-service-type
                 '(#:persist-dir "/.persist"
@@ -420,22 +449,25 @@ guix pull
                                           activate-state-gexp)))))
 #+end_src
 *** Macbook
+- TODO should depend on the linux-nonfree module but the applying the latter twice isn't idempotent presently and I already have it in my frostfire OS config
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
 (define-module (macbook)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
   #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta)))
 
-(define-public (macbook os-fn)
-  (let ((os (os-fn (keyboard-layout "us" #:model "macbook78"))))
-    (operating-system
-      (inherit os)
-      (kernel-arguments (let ((kargs %default-kernel-arguments)
-                              (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-                          (cons* (string-append (car kargs) "," blacklist) (cdr kargs))))
-      (kernel-loadable-modules (list broadcom-sta))
-      (firmware (cons* broadcom-bt-firmware
-                       (operating-system-firmware os))))))
+(define-public (macbook os)
+  (operating-system
+    (inherit os)
+    (kernel-arguments (let ((kernel-args %default-kernel-arguments)
+                            (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+                        (cons* (string-append (car kernel-args) "," blacklist) (cdr kernel-args))))
+    (kernel-loadable-modules (list broadcom-sta))
+    (firmware (cons* broadcom-bt-firmware
+                     (operating-system-firmware os)))))
+
+(define-public macbook-keyboard
+  (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
@@ -443,10 +475,7 @@ guix pull
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label uuid))
   #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping))
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((base-os) #:select (base-os))
-  #:use-module ((stateless) #:select (stateless))
-  #:use-module ((macbook) #:select (macbook)))
+  #:use-module ((ice-9 match) #:select (match-lambda)))
 
 (define my-cool-mapped-devices
   (list (mapped-device
@@ -463,7 +492,7 @@ guix pull
     (needed-for-boot? #t)
     (dependencies my-cool-mapped-devices)))
 
-(define (frostfire os)
+(define-public (frostfire os)
   (operating-system
     (inherit os)
     (host-name "frostfire")
@@ -519,18 +548,20 @@ guix pull
           (mount-point "/boot/efi")
           (type "vfat")))
        (operating-system-file-systems os)))))
+#+end_src
+*** Frostfire OS
+#+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm")
+(define-module (frostfire-os)
+  #:use-module ((base-os) #:select (base-os))
+  #:use-module ((linux-nonfree) #:select (linux-nonfree))
+  #:use-module ((stateless) #:select (stateless))
+  #:use-module ((macbook) #:select (macbook macbook-keyboard))
+  #:use-module ((frostfire) #:select (frostfire)))
 
-(frostfire (stateless (macbook base-os)))
+(frostfire (macbook (stateless (linux-nonfree (base-os macbook-keyboard)))))
 #+end_src
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
-sudo guix system --load-path=. reconfigure frostfire.scm
-#+end_src
-** mirror.brielmaier.net.pub
-#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
-(public-key
-  (ecc
-    (curve Ed25519)
-    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+sudo guix system --load-path=. reconfigure frostfire-os.scm
 #+end_src
 ** Xorg config
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
