@@ -96,7 +96,7 @@ mkfs.btrfs -L $root_label $crypt_mapping
 #+end_src
 *** Set up subvolumes
 #+begin_src sh
-# I don't know if they type argument is necessary but that's how Andrew Tropin had it.
+# I don't know if the type argument is necessary but that's how Andrew Tropin had it.
 mount -t btrfs LABEL=$root_label /mnt
 
 btrfs subvolume create /mnt/root
@@ -187,8 +187,6 @@ guix pull
   #:use-module ((gnu system accounts) #:select (user-account))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems))
   #:use-module ((gnu system shadow) #:select (%base-user-accounts))
-  #:use-module ((gnu bootloader) #:select (bootloader-configuration))
-  #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu services base) #:select (udev-service-type))
   #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
@@ -242,16 +240,34 @@ guix pull
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
             (bluetooth-service #:auto-enable? #t)
             %desktop-services))
-    (bootloader
-      (bootloader-configuration
-        (bootloader grub-efi-bootloader)
-        (targets '("/boot/efi"))
-        (timeout 1)
-        (keyboard-layout keyboard-layout)))
 
     ;; Override/extend these
+    (bootloader #f)
     (file-systems %base-file-systems)
     (host-name #f)))
+#+end_src
+*** Boot
+#+begin_src scheme :tangle (in-tangle-dir "boot.scm")
+(define-module (boot)
+  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
+  #:use-module ((gnu bootloader) #:select (bootloader-configuration))
+  #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
+  #:use-module ((gnu system file-systems) #:select (file-system file-system-label)))
+
+(define-public (boot target label kbl os)
+  (operating-system
+    (inherit os)
+    (bootloader (bootloader-configuration
+                  (bootloader grub-efi-bootloader)
+                  (targets `(,target))
+                  (timeout 1)
+                  (keyboard-layout kbl)))
+    (file-systems
+     (cons* (file-system
+              (device (file-system-label label))
+              (mount-point target)
+              (type "vfat"))
+            (operating-system-file-systems os)))))
 #+end_src
 *** Linux Nonfree
 #+begin_src scheme :tangle (in-tangle-dir "linux-nonfree.scm")
@@ -298,6 +314,22 @@ guix pull
     (curve Ed25519)
     (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
+*** Disk Encryption
+#+begin_src scheme :tangle (in-tangle-dir "disk-encryption.scm")
+(define-module (disk-encryption)
+  #:use-module ((gnu system) #:select (operating-system))
+  #:use-module ((gnu system file-systems) #:select (uuid))
+  #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping)))
+
+(define-public (disk-encryption source-uuid target-name os)
+  (operating-system
+    (inherit os)
+    (mapped-devices
+     (list (mapped-device
+            (source (uuid source-uuid))
+            (target target-name)
+            (type luks-device-mapping))))))
+#+end_src
 *** Stateless
 #+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
 (define-module (stateless)
@@ -305,7 +337,7 @@ guix pull
   #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-user-services))
   #:use-module ((stateless-service) #:select (stateless-service-type)))
 
-(define-public (stateless os)
+(define-public (stateless persist-dir os)
   (operating-system
     (inherit os)
     (initrd (lambda (file-systems . rest)
@@ -315,10 +347,10 @@ guix pull
     (services
      (append
       (operating-system-user-services os)
-      ;; Stateless service should come after base/desktop services so state gets installed before them during activation.
+      ;; Stateless service should come after base/desktop services so its state gets installed before theirs during activation.
       (list
        (service stateless-service-type
-                '(#:persist-dir "/.persist"
+                `(#:persist-dir ,persist-dir
                   #:paths ("/etc/machine-id"
                            "/var/lib/random-seed"
                            "/etc/NetworkManager/system-connections"
@@ -330,80 +362,30 @@ guix pull
 **** Service
 #+begin_src scheme :tangle (in-tangle-dir "stateless-service.scm")
 (define-module (stateless-service)
-  ;; #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
-  #:use-module (gnu)
-  #:use-module (gnu packages admin)
-  #:use-module (gnu packages linux)
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
+  #:use-module ((gnu services) #:select (service-type service-extension boot-service-type activation-service-type))
+  #:use-module ((guix gexp) #:select (gexp with-extensions with-imported-modules))
   #:use-module ((guix modules) #:select (source-module-closure)))
 
-(define (populate-gexp _)
+(define (populate-gexp config)
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
-                            '((gnu build install)
-                              (guix build utils)))
+                            '((gnu build install)))
       #~(begin
-          ;; (use-modules ((guix build utils) #:select (mkdir-p)))
-          (use-modules ((gnu build install) #:select (populate-root-file-system))
-                       (guix build utils))
+          (use-modules ((gnu build install) #:select (populate-root-file-system)))
 
-          (invoke #$(file-append coreutils "/bin/echo") "working!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!working")
+          (define* (populate #:key persist-dir #:allow-other-keys)
+            (let ((system-link (readlink "/var/guix/profiles/system"))
+                  (system-1-link (readlink "/var/guix/profiles/system-1-link")))
+              (populate-root-file-system system-1-link ""
+                                         #:extras `(("/var/guix/profiles/system" -> ,system-link))))
+            (for-each (lambda (path)
+                        (copy-file (string-append persist-dir path) path))
+                      '("/etc/group"
+                        "/etc/passwd"
+                        "/etc/shadow")))
 
-          ;; (with-output-to-file "asdffy.txt"
-          ;;   (lambda _
-          ;;     (invoke #$(file-append util-linux+udev "/bin/mount"))
-          ;;     ;; (display "asdffffffffffff")
-          ;;     ))
-
-          ;; (with-output-to-file "qwerty.txt"
-          ;;   (lambda _
-          ;;     (invoke #$(file-append tree "/bin/tree"))
-          ;;     ;; (display "asdffffffffffff")
-          ;;     ))
-
-
-          ;; (define (populate noclobber)
-
-          ;;   (define (stash-or-pop op)
-          ;;     (when (eq? op 'pop)
-          ;;       (for-each delete-file noclobber))
-          ;;     (for-each (lambda (path)
-          ;;                 (let ((paths `(,path ,(string-append path ".stash"))))
-          ;;                   (apply rename-file (if (eq? op 'stash)
-          ;;                                          paths (reverse paths)))))
-          ;;               noclobber))
-
-          ;;   (stash-or-pop 'stash)
-          ;;   (populate-root-file-system "dummy" "")
-          ;;   (stash-or-pop 'pop))
-
-          ;; (populate '("/var/guix/profiles/system"
-          ;;             "/var/guix/profiles/system-1-link"))
-
-
-          (let ((system-link (readlink "/var/guix/profiles/system"))
-                (system-1-link (readlink "/var/guix/profiles/system-1-link")))
-            (populate-root-file-system system-1-link ""
-                                       #:extras `(("/var/guix/profiles/system" -> ,system-link))))
-
-
-          ;; (define (install-state target file)
-          ;;   (mkdir-p (dirname target))
-          ;;   (symlink file target))
-          ;; (install-state "/var/lib/random-seed" "/.persist/var/lib/random-seed")
-
-
-          (copy-file "/.persist/etc/group" "/etc/group")
-          (copy-file "/.persist/etc/passwd" "/etc/passwd")
-          (copy-file "/.persist/etc/shadow" "/etc/shadow")
-
-
-          (invoke #$(file-append coreutils "/bin/echo") "done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!done")
-
-          ))
-  )
-
-  )
+          (apply populate '#$config)))))
 
 (define (activate-state-gexp config)
   #~(begin
@@ -472,93 +454,72 @@ guix pull
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
-  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
-  #:use-module ((gnu system file-systems) #:select (file-system file-system-label uuid))
-  #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping))
+  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems operating-system-mapped-devices))
+  #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
   #:use-module ((ice-9 match) #:select (match-lambda)))
 
-(define my-cool-mapped-devices
-  (list (mapped-device
-          (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
-          (target "ciphered")
-          (type luks-device-mapping))))
-
-(define my-cool-persist
-  (file-system
-    (device (file-system-label "firmament"))
-    (mount-point "/.persist")
-    (type "btrfs")
-    (options (format #f "subvol=~a,compress=zstd,autodefrag" 'persist))
-    (needed-for-boot? #t)
-    (dependencies my-cool-mapped-devices)))
-
-(define-public (frostfire os)
+(define-public (frostfire host-name label subvolumes-spec os)
   (operating-system
     (inherit os)
-    (host-name "frostfire")
-    (mapped-devices my-cool-mapped-devices)
+    (host-name host-name)
     (file-systems
       (append
        (map (match-lambda
-              ((subvol . mount-point)
+              ((subvol mount-point)
                (file-system
-                 (device (file-system-label "firmament"))
+                 (device (file-system-label label))
                  (mount-point mount-point)
                  (type "btrfs")
                  (options (format #f "subvol=~a,compress=zstd,autodefrag" subvol))
-                 (needed-for-boot? (if (memq subvol '(guix-var log)) #t #f))
-                 (dependencies mapped-devices))))
-            '((root-blank . "/")
-              (boot . "/boot")
-              (guix-store . "/gnu/store")
-              (guix-var . "/var/guix")
-              (log . "/var/log")
-              (home . "/home")
-              ; (persist . "/.persist")
-              ))
-       (list my-cool-persist)
-       (list
-        (file-system
-          (device "/.persist/etc/passwd")
-          (mount-point "/etc/passwd")
-          (type "none")
-          (flags '(bind-mount))
-          (mount? #f)
-          ;; (needed-for-boot? #t)
-          (dependencies (list my-cool-persist)))
-        (file-system
-          (device "/.persist/etc/group")
-          (mount-point "/etc/group")
-          (type "none")
-          (flags '(bind-mount))
-          (mount? #f)
-          ;; (needed-for-boot? #t)
-          (dependencies (list my-cool-persist)))
-        (file-system
-          (device "/.persist/etc/shadow")
-          (mount-point "/etc/shadow")
-          (type "none")
-          (flags '(bind-mount))
-          (mount? #f)
-          ;; (needed-for-boot? #t)
-          (dependencies (list my-cool-persist))))
-       (list
-        (file-system
-          (device (file-system-label "genesis"))
-          (mount-point "/boot/efi")
-          (type "vfat")))
+                 (needed-for-boot? (if (memq subvol '(guix-var log persist)) #t #f))
+                 (dependencies (operating-system-mapped-devices os))))) ; TODO make dependent on disk-encryption feature
+            (apply (lambda* (#:key root boot guix-store guix-var log home persist persist-path)
+                     `((,root "/")
+                       (,boot "/boot")
+                       (,guix-store "/gnu/store")
+                       (,guix-var "/var/guix")
+                       (,log "/var/log")
+                       (,home "/home")
+                       (,persist ,persist-path)))
+                   subvolumes-spec))
        (operating-system-file-systems os)))))
 #+end_src
 *** Frostfire OS
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm")
 (define-module (frostfire-os)
   #:use-module ((base-os) #:select (base-os))
+  #:use-module ((boot) #:select (boot))
   #:use-module ((linux-nonfree) #:select (linux-nonfree))
+  #:use-module ((disk-encryption) #:select (disk-encryption))
   #:use-module ((stateless) #:select (stateless))
   #:use-module ((macbook) #:select (macbook macbook-keyboard))
   #:use-module ((frostfire) #:select (frostfire)))
 
-(frostfire (macbook (stateless (linux-nonfree (base-os macbook-keyboard)))))
+(let ((kbl macbook-keyboard)
+      (persist-path "/.persist"))
+  (frostfire
+   "frostfire"
+   "firmament"
+   `(#:root root-blank
+     #:boot boot
+     #:guix-store guix-store
+     #:guix-var guix-var
+     #:log log
+     #:home home
+     #:persist persist
+     #:persist-path ,persist-path)
+   (macbook
+    (stateless
+     persist-path
+     (disk-encryption
+      "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
+      "ciphered"
+      (linux-nonfree
+       (boot
+        "/boot/efi"
+        "genesis"
+        kbl
+        (base-os kbl))))))))
 #+end_src
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 sudo guix system --load-path=. reconfigure frostfire-os.scm
