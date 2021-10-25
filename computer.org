@@ -1563,6 +1563,10 @@ done
 ;;       (let ((org-confirm-babel-evaluate nil))
 ;;         (org-babel-tangle)))))
 #+end_src
+***** Scheme :lang:
+#+begin_src elisp
+(setq-hook! 'scheme-mode-hook indent-tabs-mode nil)
+#+end_src
 *** packages.el
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
