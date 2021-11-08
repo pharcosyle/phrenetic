@@ -441,7 +441,7 @@ guix pull
 (define-public (macbook os)
   (operating-system
     (inherit os)
-    (kernel-arguments (let ((kernel-args %default-kernel-arguments)
+    (kernel-arguments (let ((kernel-args %default-kernel-arguments) ; TODO probably make this `operating-system-user-kernel-arguments`
                             (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
                         (cons* (string-append (car kernel-args) "," blacklist) (cdr kernel-args))))
     (kernel-loadable-modules (list broadcom-sta))
@@ -1022,7 +1022,7 @@ done
        (scheme +guile)
        sh
        web
-       yaml
+       yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 
        :app
        calendar
