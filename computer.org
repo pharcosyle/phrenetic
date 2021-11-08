@@ -1115,7 +1115,7 @@ done
 
       "s-SPC" doom-leader-map
 
-      ;; Copied from Doom MacOS bindings: ~/.emacs.d/modules/config/default/config.el:263
+      ;; Copied from Doom MacOS bindings: ~/.config/emacs/modules/config/default/config.el:263
       "s-`" #'other-frame
       "s-n" #'+default/new-buffer
       "s-z" #'undo
@@ -1283,7 +1283,7 @@ done
         :nv "s-E" #'er/contract-region)
   :config
   (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-  ;; Copied from Doom config: ~/.emacs.d/modules/config/default/+emacs.el:12
+  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
   (defadvice! biome--quit-expand-region-a (&rest _)
     "Properly abort an expand-region region."
     :before '(evil-escape doom/escape)
@@ -1319,7 +1319,7 @@ done
 #+begin_src elisp
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
-    ;; Doom overrides these imporant ivy hydra heads: ~/.emacs.d/modules/completion/ivy/autoload/hydras.el
+    ;; Doom overrides these imporant ivy hydra heads: ~/.config/emacs/modules/completion/ivy/autoload/hydras.el
     ("m" ivy-mark)
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
@@ -1424,7 +1424,7 @@ done
         "s-C-l" #'sp-forward-sexp
         "s-C-u" #'sp-backward-up-sexp
         "s-C-o" #'sp-up-sexp
-        :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.emacs.d/modules/config/default/config.el:447
+        :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
         "s-C-." #'sp-down-sexp
         "s-C-c" #'sp-splice-sexp
         "s-C-s" #'sp-splice-sexp-killing-backward
