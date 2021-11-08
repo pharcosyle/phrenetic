@@ -1030,19 +1030,6 @@ done
        :config
        (default +bindings +smartparens))
 #+end_src
-**** init-phase configuration
-***** Clojure :lang:clojure:bindings:
-#+begin_src elisp
-(use-package-hook! clojure-mode
-  :post-init
-  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding ; TODO did I already try putting this in a use-package `:init' section?
-#+end_src
-***** Lispyville :lisp:bindings:
-#+begin_src elisp
-(use-package-hook! lispyville
-  :post-init
-  (setq lispyville-key-theme nil))
-#+end_src
 *** Config
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "config.el")
@@ -1205,7 +1192,12 @@ done
   :config
   (display-battery-mode 1))
 #+end_src
-***** Clojure :lang:clojure:
+***** Clojure :lang:clojure:bindings:
+#+begin_src elisp :tangle (in-tangle-dir "init.el")
+(use-package-hook! clojure-mode
+  :post-init
+  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding ; TODO did I already try putting this in a use-package `:init' section?
+#+end_src
 #+begin_src elisp
 (after! clojure-mode
   (set-ligatures! 'clojure-mode :lambda "fn"))
@@ -1349,6 +1341,11 @@ done
 (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
 #+end_src
 ***** Lispyville :lisp:lang:prog_mode:bindings:
+#+begin_src elisp :tangle (in-tangle-dir "init.el")
+(use-package-hook! lispyville
+  :post-init
+  (setq lispyville-key-theme nil))
+#+end_src
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
