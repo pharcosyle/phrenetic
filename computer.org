@@ -941,7 +941,7 @@ done
 :PROPERTIES:
 :tangle-dir+: doom
 :END:
-*** init.el
+*** Init
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "init.el")
 :END:
@@ -1043,7 +1043,7 @@ done
   :post-init
   (setq lispyville-key-theme nil))
 #+end_src
-*** config.el
+*** Config
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "config.el")
 :END:
@@ -1567,7 +1567,7 @@ done
 #+begin_src elisp
 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil)
 #+end_src
-*** packages.el
+*** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
@@ -1889,7 +1889,7 @@ xss-lock -- slock &
 doom env
 exec dbus-launch --exit-with-session emacs -mm -l desktop.el # --debug-init
 #+end_src
-**** xsettingsd.conf :theming:
+**** Xsettings :theming:
 #+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
 # TODO these
 Net/EnableEventSounds 1
@@ -2071,7 +2071,7 @@ Gtk/CursorThemeSize 48
   (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h) ; TODO If I'm keeping this remember that I have to do something special to make saving the perspective not flub
   )
 #+end_src
-***** dunstrc :theming:
+***** Dunst :theming:
 #+begin_src conf :tangle (in-tangle-dir "dunstrc")
 [global]
     geometry = "500x10-200+50"
