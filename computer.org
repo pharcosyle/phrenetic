@@ -1835,7 +1835,7 @@ Can be an integer to determine the exact padding."
     '(#:modules ((guix build utils))
       #:builder
       (begin
-        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file substitute*)))
+        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
         (let* ((out (assoc-ref %outputs "out"))
                (get-input (lambda (k)
                             (assoc-ref %build-inputs k)))
