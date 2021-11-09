@@ -199,7 +199,7 @@ guix pull
 
 (define-public (base-os kbl)
   (operating-system
-    (locale "en_US.utf8")
+    (locale "en_US.utf8") ; TODO this is the default, maybe don't bother specifying
     (timezone "America/Los_Angeles")
     (keyboard-layout kbl)
     (users (cons* (user-account
@@ -1473,7 +1473,7 @@ done
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
 ***** Undo Tree :UI:
-- TODO am I commenting stuff or doing notangle?
+- TODO am I commenting code, doing notangle, or using the org ~COMMENT~ keyword (https://orgmode.org/manual/Comment-Lines.html)?
 #+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
