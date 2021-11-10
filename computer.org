@@ -434,16 +434,31 @@ guix pull
 - TODO should depend on the linux-nonfree module but the applying the latter twice isn't idempotent presently and I already have it in my frostfire OS config
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
 (define-module (macbook)
-  #:use-module ((gnu system) #:select (operating-system operating-system-firmware %default-kernel-arguments))
+  #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-kernel-arguments))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
-  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta)))
+  #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
+  #:use-module ((srfi srfi-1) #:select (any)))
+
+(define (with-blacklist kernel-args new)
+
+  (define (update-list pred l f)
+    (map (lambda (x)
+           (if (pred x) (f x) x))
+         l))
+
+  (define (blacklist? ka)
+    (string-prefix? "modprobe.blacklist" ka))
+
+  (if (any blacklist? kernel-args)
+      (update-list blacklist? kernel-args (lambda (blacklist)
+                                            (string-append blacklist "," new)))
+      (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
 (define-public (macbook os)
   (operating-system
     (inherit os)
-    (kernel-arguments (let ((kernel-args %default-kernel-arguments) ; TODO probably make this `operating-system-user-kernel-arguments`
-                            (blacklist "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-                        (cons* (string-append (car kernel-args) "," blacklist) (cdr kernel-args))))
+    (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
+                                      "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
     (kernel-loadable-modules (list broadcom-sta))
     (firmware (cons* broadcom-bt-firmware
                      (operating-system-firmware os)))))
