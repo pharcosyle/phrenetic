@@ -560,37 +560,37 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   #:use-module ((users) #:select (users))
   #:use-module ((frostfire) #:select (frostfire)))
 
+(define-syntax ->
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f1 . body) next ...) (-> (f1 value . body) next ...))
+    ((_ value f1 next ...) (-> (f1 value) next ...))))
+
 (let ((kbl macbook-kbl)
       (ciphered (encrypted-device "bdda56af-6ca0-4953-bc13-d5af8715e0e5" "ciphered"))
       (persist-path "/.persist"))
-  (frostfire
-   (users
-    (macbook
-     (stateless
-      (disk-encryption
-       (linux-nonfree
-        (boot
-         (base-os
-          empty-os
-          kbl)
-         "/boot/efi"
-         "genesis"
-         kbl))
-       ciphered)
-      persist-path))
-    "<<user-name>>"
-    "<<user-full-name>>")
-   "frostfire"
-   "firmament"
-   `(#:root "root-blank"
-     #:boot "boot"
-     #:guix-store "guix-store"
-     #:guix-var "guix-var"
-     #:log "log"
-     #:home "home"
-     #:persist "persist"
-     #:persist-path ,persist-path)
-   #:dependencies (list ciphered)))
+  (-> empty-os
+      (base-os kbl)
+      (boot "/boot/efi"
+            "genesis"
+            kbl)
+      linux-nonfree
+      (disk-encryption ciphered)
+      (stateless persist-path)
+      macbook
+      (users "<<user-name>>"
+             "<<user-full-name>>")
+      (frostfire "frostfire"
+                 "firmament"
+                 `(#:root "root-blank"
+                   #:boot "boot"
+                   #:guix-store "guix-store"
+                   #:guix-var "guix-var"
+                   #:log "log"
+                   #:home "home"
+                   #:persist "persist"
+                   #:persist-path ,persist-path)
+                 #:dependencies (list ciphered))))
 #+end_src
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 sudo guix system --load-path=. reconfigure frostfire-os.scm
