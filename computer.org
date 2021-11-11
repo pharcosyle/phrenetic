@@ -180,13 +180,24 @@ guix pull
 :tangle-dir+: system
 :END:
 ** ~operating-system~
+*** Empty OS
+#+begin_src scheme :tangle (in-tangle-dir "empty-os.scm") :noweb yes
+(define-module (empty-os)
+  #:use-module ((gnu system) #:select (operating-system))
+  #:use-module ((gnu system file-systems) #:select (%base-file-systems)))
+
+(define-public empty-os
+  (operating-system
+    (host-name #f)
+    (timezone #f)
+    (bootloader #f)
+    (services '())
+    (file-systems %base-file-systems)))
+#+end_src
 *** Base OS
-#+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
+#+begin_src scheme :tangle (in-tangle-dir "base-os.scm")
 (define-module (base-os)
-  #:use-module ((gnu system) #:select (operating-system %base-packages))
-  #:use-module ((gnu system accounts) #:select (user-account))
-  #:use-module ((gnu system file-systems) #:select (%base-file-systems))
-  #:use-module ((gnu system shadow) #:select (%base-user-accounts))
+  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu services base) #:select (udev-service-type))
   #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
@@ -195,56 +206,35 @@ guix pull
   #:use-module ((gnu packages linux) #:select (brightnessctl))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
-  #:use-module ((spartan-wm) #:select (spartan-wm)))
+  #:use-module ((spartan-wm) #:select (spartan-wm))
+  #:export (base-os))
 
-(define-public (base-os kbl)
+(define* (base-os os kbl #:key (bluetooth? #t))
   (operating-system
-    (locale "en_US.utf8") ; TODO this is the default, maybe don't bother specifying
+    (inherit os)
     (timezone "America/Los_Angeles")
     (keyboard-layout kbl)
-    (users (cons* (user-account
-                    (name "<<user-name>>")
-                    (comment "<<user-full-name>>")
-                    (group "users")
-                    (supplementary-groups
-                      '("wheel" "netdev" "audio" "video" "input"))) ; `input' group necessary for mtrack ; TODO (at present, maybe there's a way around this. Libinput doesn't need it, for example, but maybe it's "built in" or something. Also I'd ideally like the touchpad to work on the gdm login screen.)
-                  (user-account
-                    (name "pcoulson")
-                    (comment "Phil Coulson")
-                    (group "users")
-                    (supplementary-groups
-                      '("wheel" "netdev" "audio" "video" "input"))) ; TODO input for mtrack, might be removing this
-                  (user-account
-                    (name "gandalf")
-                    (comment "Speak Friend and Enter")
-                    (group "users")
-                    (supplementary-groups
-                      '("netdev" "audio" "video" "input")) ; TODO input for mtrack, might be removing this
-                    (password (crypt "mellon" "toosimple")))
-                  %base-user-accounts))
     (packages
       (append
         (list (specification->package "nss-certs")
               (specification->package "xf86-input-libinput")
               (specification->package "xf86-input-mtrack")
               spartan-wm)
-        %base-packages))
+        (operating-system-packages os)))
     (services
-     (cons* (service gnome-desktop-service-type)
-            (set-xorg-configuration
-             (xorg-configuration
-              (modules (cons* xf86-input-mtrack
-                              %default-xorg-modules))
-              (keyboard-layout keyboard-layout)
-              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
-            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl))
-            (bluetooth-service #:auto-enable? #t)
-            %desktop-services))
-
-    ;; Override/extend these
-    (bootloader #f)
-    (file-systems %base-file-systems)
-    (host-name #f)))
+     (append
+      (list (service gnome-desktop-service-type)
+             (set-xorg-configuration
+              (xorg-configuration
+               (modules (cons* xf86-input-mtrack
+                               %default-xorg-modules))
+               (keyboard-layout keyboard-layout)
+               (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
+      (if bluetooth?
+          (list (bluetooth-service #:auto-enable? #t)) '())
+      %desktop-services
+      (operating-system-user-services os)))))
 #+end_src
 *** Boot
 #+begin_src scheme :tangle (in-tangle-dir "boot.scm")
@@ -254,7 +244,7 @@ guix pull
   #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label)))
 
-(define-public (boot target label kbl os)
+(define-public (boot os target label kbl)
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
@@ -317,27 +307,32 @@ guix pull
 *** Disk Encryption
 #+begin_src scheme :tangle (in-tangle-dir "disk-encryption.scm")
 (define-module (disk-encryption)
-  #:use-module ((gnu system) #:select (operating-system))
+  #:use-module ((gnu system) #:select (operating-system operating-system-mapped-devices))
   #:use-module ((gnu system file-systems) #:select (uuid))
   #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping)))
 
-(define-public (disk-encryption source-uuid target-name os)
+(define-public (encrypted-device source-uuid target-name)
+  (mapped-device
+    (source (uuid source-uuid))
+    (target target-name)
+    (type luks-device-mapping)))
+
+(define-public (disk-encryption os encrypted-device)
   (operating-system
     (inherit os)
     (mapped-devices
-     (list (mapped-device
-            (source (uuid source-uuid))
-            (target target-name)
-            (type luks-device-mapping))))))
+     (cons* encrypted-device
+            (operating-system-mapped-devices os)))))
 #+end_src
 *** Stateless
 #+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
 (define-module (stateless)
   #:use-module ((gnu services) #:select (service))
   #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-user-services))
-  #:use-module ((stateless-service) #:select (stateless-service-type)))
+  #:use-module ((stateless-service) #:select (stateless-service-type))
+  #:export (stateless))
 
-(define-public (stateless persist-dir os)
+(define* (stateless os persist-dir #:key (bluetooth? #t))
   (operating-system
     (inherit os)
     (initrd (lambda (file-systems . rest)
@@ -351,13 +346,15 @@ guix pull
       (list
        (service stateless-service-type
                 `(#:persist-dir ,persist-dir
-                  #:paths ("/etc/machine-id"
-                           "/var/lib/random-seed"
-                           "/etc/NetworkManager/system-connections"
-                           "/var/lib/NetworkManager/secret_key"
-                           "/var/lib/bluetooth"
-                           "/etc/guix/signing-key.pub"
-                           "/etc/guix/signing-key.sec"))))))))
+                  #:paths ,(append
+                            '("/etc/machine-id"
+                              "/var/lib/random-seed"
+                              "/etc/NetworkManager/system-connections"
+                              "/var/lib/NetworkManager/secret_key"
+                              "/etc/guix/signing-key.pub"
+                              "/etc/guix/signing-key.sec")
+                            (if bluetooth?
+                                (list "/var/lib/bluetooth") '())))))))))
 #+end_src
 **** Service
 #+begin_src scheme :tangle (in-tangle-dir "stateless-service.scm")
@@ -379,6 +376,7 @@ guix pull
                   (system-1-link (readlink "/var/guix/profiles/system-1-link")))
               (populate-root-file-system system-1-link ""
                                          #:extras `(("/var/guix/profiles/system" -> ,system-link))))
+            ;; I'd like to do this during activation with the rest of the state but I can't get the activation service to run before account-service and I don't want to overwrite any changes it makes to these files.
             (for-each (lambda (path)
                         (copy-file (string-append persist-dir path) path))
                       '("/etc/group"
@@ -431,13 +429,14 @@ guix pull
                                           activate-state-gexp)))))
 #+end_src
 *** Macbook
-- TODO should depend on the linux-nonfree module but the applying the latter twice isn't idempotent presently and I already have it in my frostfire OS config
+I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
 (define-module (macbook)
-  #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-kernel-arguments))
+  #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-kernel-arguments operating-system-kernel-loadable-modules))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
   #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
-  #:use-module ((srfi srfi-1) #:select (any)))
+  #:use-module ((srfi srfi-1) #:select (any))
+  #:export (macbook))
 
 (define (with-blacklist kernel-args new)
 
@@ -454,26 +453,75 @@ guix pull
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
-(define-public (macbook os)
+(define* (macbook os #:key (bluetooth? #t))
   (operating-system
     (inherit os)
     (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
                                       "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-    (kernel-loadable-modules (list broadcom-sta))
-    (firmware (cons* broadcom-bt-firmware
-                     (operating-system-firmware os)))))
+    (kernel-loadable-modules (cons* broadcom-sta
+                                    (operating-system-kernel-loadable-modules os)))
+    (firmware (if bluetooth?
+                  (cons* broadcom-bt-firmware
+                         (operating-system-firmware os))
+                  (operating-system-firmware os)))))
 
-(define-public macbook-keyboard
+(define-public macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
+#+end_src
+*** Users
+#+begin_src scheme :tangle (in-tangle-dir "users.scm")
+(define-module (users)
+  #:use-module ((gnu system) #:select (operating-system operating-system-users))
+  #:use-module ((gnu system accounts) #:select (user-account))
+  #:export (users))
+
+;; TODO `input' group necessary for mtrack (at present, maybe there's a way around
+;; this. Libinput doesn't need it, for example, but maybe it's "built in" or
+;; something. Also I'd ideally like the touchpad to work on the gdm login screen.)
+(define* (user-groups #:optional bluetooth?)
+  (append '("netdev" "audio" "video" "input")
+          (if bluetooth? (list "lp") '())))
+
+(define (admin-groups bluetooth?)
+  (cons* "wheel" (user-groups bluetooth?)))
+
+(define (main-accounts user-name user-full-name bluetooth?)
+  (list
+   (user-account
+     (name user-name)
+     (comment user-full-name)
+     (group "users")
+     (supplementary-groups (admin-groups bluetooth?)))
+   (user-account
+     (name "pcoulson")
+     (comment "Phil Coulson")
+     (group "users")
+     (supplementary-groups (admin-groups bluetooth?)))))
+
+(define (guest-account)
+  (user-account
+    (name "gandalf")
+    (comment "Speak Friend and Enter")
+    (group "users")
+    (supplementary-groups (user-groups))
+    (password (crypt "mellon" "toosimple"))))
+
+(define* (users os user-name user-full-name #:key (bluetooth? #t) (guest? #t))
+  (operating-system
+    (inherit os)
+    (users (append (append (main-accounts user-name user-full-name bluetooth?)
+                           (if guest? (list (guest-account)) '()))
+                   (operating-system-users os)))))
 #+end_src
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
-  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems operating-system-mapped-devices))
+  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
-  #:use-module ((ice-9 match) #:select (match-lambda)))
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:export (frostfire))
 
-(define-public (frostfire host-name label subvolumes-spec os)
+(define* (frostfire os host-name label subvols-spec #:key dependencies)
   (operating-system
     (inherit os)
     (host-name host-name)
@@ -485,9 +533,9 @@ guix pull
                  (device (file-system-label label))
                  (mount-point mount-point)
                  (type "btrfs")
-                 (options (format #f "subvol=~a,compress=zstd,autodefrag" subvol))
-                 (needed-for-boot? (if (memq subvol '(guix-var log persist)) #t #f))
-                 (dependencies (operating-system-mapped-devices os))))) ; TODO make dependent on disk-encryption feature
+                 (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
+                 (needed-for-boot? (if (member subvol '("guix-var" "log" "persist")) #t #f))
+                 (dependencies (or dependencies '())))))
             (apply (lambda* (#:key root boot guix-store guix-var log home persist persist-path)
                      `((,root "/")
                        (,boot "/boot")
@@ -496,45 +544,53 @@ guix pull
                        (,log "/var/log")
                        (,home "/home")
                        (,persist ,persist-path)))
-                   subvolumes-spec))
+                   subvols-spec))
        (operating-system-file-systems os)))))
 #+end_src
 *** Frostfire OS
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm")
+#+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm") :noweb yes
 (define-module (frostfire-os)
+  #:use-module ((empty-os) #:select (empty-os))
   #:use-module ((base-os) #:select (base-os))
   #:use-module ((boot) #:select (boot))
   #:use-module ((linux-nonfree) #:select (linux-nonfree))
-  #:use-module ((disk-encryption) #:select (disk-encryption))
+  #:use-module ((disk-encryption) #:select (disk-encryption encrypted-device))
   #:use-module ((stateless) #:select (stateless))
-  #:use-module ((macbook) #:select (macbook macbook-keyboard))
+  #:use-module ((macbook) #:select (macbook macbook-kbl))
+  #:use-module ((users) #:select (users))
   #:use-module ((frostfire) #:select (frostfire)))
 
-(let ((kbl macbook-keyboard)
+(let ((kbl macbook-kbl)
+      (ciphered (encrypted-device "bdda56af-6ca0-4953-bc13-d5af8715e0e5" "ciphered"))
       (persist-path "/.persist"))
   (frostfire
+   (users
+    (macbook
+     (stateless
+      (disk-encryption
+       (linux-nonfree
+        (boot
+         (base-os
+          empty-os
+          kbl)
+         "/boot/efi"
+         "genesis"
+         kbl))
+       ciphered)
+      persist-path))
+    "<<user-name>>"
+    "<<user-full-name>>")
    "frostfire"
    "firmament"
-   `(#:root root-blank
-     #:boot boot
-     #:guix-store guix-store
-     #:guix-var guix-var
-     #:log log
-     #:home home
-     #:persist persist
+   `(#:root "root-blank"
+     #:boot "boot"
+     #:guix-store "guix-store"
+     #:guix-var "guix-var"
+     #:log "log"
+     #:home "home"
+     #:persist "persist"
      #:persist-path ,persist-path)
-   (macbook
-    (stateless
-     persist-path
-     (disk-encryption
-      "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
-      "ciphered"
-      (linux-nonfree
-       (boot
-        "/boot/efi"
-        "genesis"
-        kbl
-        (base-os kbl))))))))
+   #:dependencies (list ciphered)))
 #+end_src
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 sudo guix system --load-path=. reconfigure frostfire-os.scm
@@ -2080,7 +2136,7 @@ Gtk/CursorThemeSize 48
   (exwm-enable)
 
   ;; WIP
-  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h) ; TODO If I'm keeping this remember that I have to do something special to make saving the perspective not flub
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h) ; FIXME If I'm keeping this remember that I have to do something special to make saving the perspective not flub. When I quit EXWM I'm seeing some persp-mode errors I think are because of this and it makes me nervous
   )
 #+end_src
 ***** Dunst :theming:
