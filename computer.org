@@ -645,6 +645,8 @@ EndSection
 :END:
 ** ~home-environment~
 *** Solitude
+- TODO direnv
+  RDE and upstream Guix Home have incompatibly diverged for the moment, comment the direnv use-module and the `home-bash-direnv-service-type` usage line back in when they're back in sync.
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
@@ -653,7 +655,7 @@ EndSection
   #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
   ;; #:use-module (gnu home-services gnupg)
   ;; #:use-module (gnu home-services ssh)
-  ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type)) ; TODO RDE and upstream Guix Home have incompatibly diverged for the moment, comment this and the `home-bash-direnv-service-type` usage line below back in when they're back in sync.
+  ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
@@ -2204,6 +2206,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 ** emacs-temp
 *** doom-emacs-temp
+- TODO probably "export" the ~doom~ program to user profile
 #+begin_src scheme :tangle (in-tangle-dir "doom-emacs-temp.scm")
 (define-module (doom-emacs-temp)
   #:use-module ((guix packages) #:select (package))
