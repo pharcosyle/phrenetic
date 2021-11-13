@@ -2,7 +2,7 @@
 #+PROPERTY: header-args :mkdirp yes
 #+PROPERTY: tangle-dir gen
 
-* Org Functions
+* Meta
 #+begin_src elisp
 (defun tangle-dir* ()
   (or
@@ -18,7 +18,11 @@
 (defun in-tangle-dir (sub-path)
   (expand-file-name sub-path (tangle-dir*)))
 #+end_src
-* Org Locals
+** Git
+#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
+*
+#+end_src
+* Common
 #+name: user-name
 #+begin_src org
 pharcosyle
@@ -34,10 +38,6 @@ pharcosyle@gmail.com
 #+name: spartan-executable
 #+begin_src org
 spartan
-#+end_src
-* Version Control
-#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
-*
 #+end_src
 * Installation Guide
 ** Create bootable USB
