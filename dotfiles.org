@@ -301,7 +301,7 @@ guix pull
                           (append %default-authorized-guix-keys
                                   (list (local-file "mirror.brielmaier.net.pub"))))))))
 #+end_src
-***** Key
+***** Public Key
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
 (public-key
   (ecc
@@ -1615,7 +1615,7 @@ done
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
 #+end_src
-***** Tramp :path:
+***** Tramp :path:guix:
 #+begin_src elisp
 (after! tramp
   ;; Make tramp work on Guix.
