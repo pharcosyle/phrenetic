@@ -1596,6 +1596,21 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 #+end_src
+***** Tramp :path:guix:
+Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
+#+begin_src elisp :noweb yes
+(after! tramp
+  (prependq! tramp-remote-path
+             (-concat (-map (lambda (p)
+                              (concat p "/bin"))
+                            '(<<guix-extra-profiles>>))
+                      '("<<guix-home-profile>>/bin"
+                        "~/.config/guix/current/bin"
+                        "~/.guix-profile/bin"
+                        "~/.guix-profile/sbin"
+                        "/run/current-system/profile/bin"
+                        "/run/current-system/profile/sbin"))))
+#+end_src
 ***** Undo Fu
 #+begin_src elisp
 (after! undo-fu
@@ -1666,21 +1681,6 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   (map! (:map company-active-map
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
-#+end_src
-***** Tramp :path:guix:
-Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
-#+begin_src elisp :noweb yes
-(after! tramp
-  (prependq! tramp-remote-path
-             (-concat (-map (lambda (p)
-                              (concat p "/bin"))
-                            '(<<guix-extra-profiles>>))
-                      '("<<guix-home-profile>>/bin"
-                        "~/.config/guix/current/bin"
-                        "~/.guix-profile/bin"
-                        "~/.guix-profile/sbin"
-                        "/run/current-system/profile/bin"
-                        "/run/current-system/profile/sbin"))))
 #+end_src
 ***** Dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
