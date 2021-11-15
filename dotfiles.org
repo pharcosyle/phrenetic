@@ -1174,7 +1174,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 
 (defconst biome--very-big 1000000)
 #+end_src
-**** General :UI:
+**** General :UI:path:
 #+begin_src elisp
 ;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
 (setq org-directory biome--org-dir)
@@ -1501,7 +1501,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                             '(<<guix-extra-profiles>>))
                       '("<<guix-home-profile>>/include"))))
 #+end_src
-***** Org :org:UI:
+***** Org :org:UI:path:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -1516,7 +1516,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-***** Org Gcal :user:secret:persistence:
+***** Org Gcal :user:secret:persistence:path:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -1589,7 +1589,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   ;; (setq display-time-24hr-format t)
   (display-time-mode 1))
 #+end_src
-***** Tldr :persistence:
+***** Tldr :persistence:path:
 #+begin_src elisp
 (use-package! tldr
   :defer t
@@ -1608,7 +1608,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 ;;   (setq undo-tree-visualizer-timestamps t))
 #+end_src
 **** Projects
-***** Hyperdrive
+***** Hyperdrive :path:
 #+begin_src elisp
 (pushnew! safe-local-variable-values
           '(cider-preferred-build-tool . shadow-cljs)
@@ -1634,7 +1634,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   :cwd "~/Projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 #+end_src
-***** Massrealty
+***** Massrealty :path:
 #+begin_src elisp
 ;; (pushnew! safe-local-variable-values
 ;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
