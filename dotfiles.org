@@ -705,7 +705,6 @@ EndSection
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
-                   (with-emacs-variant (specification->package "emacs-exwm"))
                    (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
                    ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
                    (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
@@ -1703,14 +1702,19 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; -*- no-byte-compile: t; -*-
 
 (package! bluetooth :pin "147d4690087049c6647b5222ee40baa5002b7586")
-(package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718")
+(package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
 (package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
-;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
-;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
 (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
 (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
 (package! trashed :pin "23e782f78d9adf6b5479a01bfac90b2cfbf729fe")
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
+
+;; TODO these should probably be introduced by my exwm desktop environment org section or something
+(package! exwm :pin "833e5d89e7fc12e79766454ae9982cffeb7e4f5f")
+(package! desktop-environment :pin "2c3e0750c11485931f447ea82f80bc90ae07aeba")
+
+;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
 #+end_src
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
@@ -2063,11 +2067,6 @@ Gtk/CursorThemeSize 48
 :END:
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
-;; TODO TEMPORARY
-(add-to-list 'load-path "/home/pharcosyle/.guix-home/profile/share/emacs/site-lisp/xelb-0.18")
-(add-to-list 'load-path "/home/pharcosyle/.guix-home/profile/share/emacs/site-lisp/exwm-0.25")
-(add-to-list 'load-path "/home/pharcosyle/.guix-home/profile/share/emacs/site-lisp/desktop-environment-0.4.0")
-
 ;; TODO rename efs to biome
 ;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
 ;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
@@ -2311,30 +2310,62 @@ Gtk/CursorThemeSize 48
 #+end_src
 *** emacs-desktop-environment-temp
 #+begin_src scheme :tangle (in-tangle-dir "emacs-desktop-environment-temp.scm")
+;; (define-module (emacs-desktop-environment-temp)
+;;   #:use-module ((guix packages) #:select (package package-inputs))
+;;   #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
+;;   #:use-module ((gnu packages linux) #:select (brightnessctl))
+;;   #:use-module ((gnu packages music) #:select (playerctl))
+;;   #:use-module ((gnu packages xdisorg) #:select (scrot)))
+
+;; (define-public emacs-desktop-environment-temp
+;;   (package (inherit emacs-desktop-environment)
+;;     (inputs
+;;      `(,@(package-inputs emacs-desktop-environment) ; Just in case (there aren't any inputs at the time of this writing)
+;;        ("brightnessctl" ,brightnessctl)
+;;        ("playerctl" ,playerctl)
+;;        ("scrot" ,scrot)))
+;;     (arguments
+;;     '(#:phases
+;;       (modify-phases %standard-phases
+;;         (add-after 'unpack 'patch-executables
+;;           (lambda* (#:key inputs #:allow-other-keys)
+;;             (let ((cmd (lambda (input)
+;;                          (string-append (assoc-ref inputs input) "/bin/" input))))
+;;               (substitute* "desktop-environment.el"
+;;                 (("brightnessctl") (cmd "brightnessctl"))
+;;                 (("playerctl") (cmd "playerctl"))
+;;                 (("scrot") (cmd "scrot"))))
+;;             #t)))))))
+
 (define-module (emacs-desktop-environment-temp)
-  #:use-module ((guix packages) #:select (package package-inputs))
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((gnu packages linux) #:select (brightnessctl))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages xdisorg) #:select (scrot)))
 
 (define-public emacs-desktop-environment-temp
-  (package (inherit emacs-desktop-environment)
-    (inputs
-     `(,@(package-inputs emacs-desktop-environment) ; Just in case (there aren't any inputs at the time of this writing)
-       ("brightnessctl" ,brightnessctl)
+  (package
+    (name "emacs-desktop-environment-temp")
+    (version "0")
+    (source #f)
+    (propagated-inputs
+     `(("brightnessctl" ,brightnessctl)
        ("playerctl" ,playerctl)
        ("scrot" ,scrot)))
+    (build-system trivial-build-system)
     (arguments
-    '(#:phases
-      (modify-phases %standard-phases
-        (add-after 'unpack 'patch-executables
-          (lambda* (#:key inputs #:allow-other-keys)
-            (let ((cmd (lambda (input)
-                         (string-append (assoc-ref inputs input) "/bin/" input))))
-              (substitute* "desktop-environment.el"
-                (("brightnessctl") (cmd "brightnessctl"))
-                (("playerctl") (cmd "playerctl"))
-                (("scrot") (cmd "scrot"))))
-            #t)))))))
+    '(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+        (mkdir-p (string-append (assoc-ref %outputs "out") "/qwer"))
+        (with-output-to-file (string-append (assoc-ref %outputs "out") "/qwer/qwer.txt")
+          (lambda _
+            (display "qwerrrrrrr")))
+        #t)))
+    (synopsis #f)
+    (description synopsis)
+    (home-page #f)
+    (license #f)))
 #+end_src
