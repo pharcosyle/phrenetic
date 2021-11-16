@@ -1969,7 +1969,7 @@ Can be an integer to determine the exact padding."
     '(#:modules ((guix build utils))
       #:builder
       (begin
-        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
+        (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
         (let* ((out (assoc-ref %outputs "out"))
                (get-input (lambda (k)
                             (assoc-ref %build-inputs k)))
@@ -1993,7 +1993,6 @@ Can be an integer to determine the exact padding."
             (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-executable>>"))
                   (xsettingsd-conf-file (install-input "xsettingsd.conf")))
               (substitute* executable
-                (("/bin/sh") (cmd "bash" "sh"))
                 (("^xhost") (cmd "xhost"))
                 (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
                 (("^xset") (cmd "xset"))
@@ -2002,6 +2001,7 @@ Can be an integer to determine the exact padding."
                 (("emacs") (cmd "emacs"))
                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
                 (("desktop\\.el") desktop-el-file))
+              (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
               (chmod executable #o555))))
         #t)))
    (synopsis "Spartan")
