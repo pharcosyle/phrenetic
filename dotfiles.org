@@ -775,37 +775,43 @@ solitude
 guix home --load-path=. reconfigure solitude.scm
 #+end_src
 ** Bash profile
-#+begin_src sh :tangle (in-tangle-dir "bash_profile") :noweb yes
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "bash_profile")
+:END:
+*** Use Guix extra profiles
+#+begin_src sh :noweb yes
 gepp="<<guix-extra-profiles-path>>"
 GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
+
 for i in $GUIX_EXTRA_PROFILES/*; do
   profile=$i/$(basename "$i")
   if [ -f "$profile"/etc/profile ]; then
     GUIX_PROFILE="$profile"
     . "$GUIX_PROFILE"/etc/profile
-
-    # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
-    case $XDG_DATA_DIRS in
-      ,*"$profile"/profile/share*) ;;
-      ,*) export XDG_DATA_DIRS="$profile"/profile/share:$XDG_DATA_DIRS ;;
-    esac
-    case $MANPATH in
-      ,*"$profile"/profile/share/man*) ;;
-      ,*) export MANPATH="$profile"/profile/share/man:$MANPATH
-    esac
-    case $INFOPATH in
-      ,*"$profile"/profile/share/info*) ;;
-      ,*) export INFOPATH="$profile"/profile/share/info:$INFOPATH ;;
-    esac
-    case $XDG_CONFIG_DIRS in
-      ,*"$profile"/profile/etc/xdg*) ;;
-      ,*) export XDG_CONFIG_DIRS="$profile"/profile/etc/xdg:$XDG_CONFIG_DIRS ;;
-    esac
-    case $XCURSOR_PATH in
-      ,*"$profile"/profile/share/icons*) ;;
-      ,*) export XCURSOR_PATH="$profile"/profile/share/icons:$XCURSOR_PATH ;;
-    esac
   fi
+
+  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
+  case $XDG_DATA_DIRS in
+    ,*"$profile"/share*) ;;
+    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
+  esac
+  case $MANPATH in
+    ,*"$profile"/share/man*) ;;
+    ,*) export MANPATH="$profile"/share/man:$MANPATH
+  esac
+  case $INFOPATH in
+    ,*"$profile"/share/info*) ;;
+    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
+  esac
+  case $XDG_CONFIG_DIRS in
+    ,*"$profile"/etc/xdg*) ;;
+    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
+  esac
+  case $XCURSOR_PATH in
+    ,*"$profile"/share/icons*) ;;
+    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
+  esac
+
   unset profile
 done
 #+end_src
