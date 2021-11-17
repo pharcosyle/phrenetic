@@ -1272,7 +1272,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
       "s-y" (lookup-key doom-leader-map (kbd "i y"))
       "s-{" (lookup-key doom-leader-map (kbd "b p"))
       "s-}" (lookup-key doom-leader-map (kbd "b n"))
-      "s-p" (lookup-key global-map (kbd "C-~"))
+      "s-p" (lookup-key global-map (kbd "C-~")) ; TODO if I'm keeping this, improve it to first switch focus to a/the popup window if one isn't focused already
 
       "s-u" (lookup-key doom-leader-map (kbd "u"))
       "s-U" #'negative-argument         ; Trying this out.
@@ -1707,7 +1707,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
-(package! bluetooth :pin "147d4690087049c6647b5222ee40baa5002b7586")
+(package! bluetooth :pin "147d4690087049c6647b5222ee40baa5002b7586") ; TODO just maybe make this dependent on my "bluetooth feature"
 (package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
 (package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
 (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
