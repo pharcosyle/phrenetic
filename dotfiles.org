@@ -970,12 +970,19 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "btrfs-progs"
 
    ;; General
+   "curl"
    "zip"
    "unzip"
-   ;; "openssh" ; TODO Might want this at some point for command line ssh'ing and the like.
+   "openssh"
+   "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
+   "icedtea" ; For clojure-tools
+
+   ;; Nice-to-have ; TODO might get rid of these and just `guix shell' or install as-needed
+   "tree"
+   "woof"
 
    ;; Apps
-   ;; "gimp" ; TODO maybe. Or just install as-needed with `guix environment`
+   ;; "gimp" ; TODO maybe. Or just install as-needed with `guix shell`
    ))
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
