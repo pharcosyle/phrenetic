@@ -1304,10 +1304,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
         "p" #'org-gcal-post-at-point)))
 #+end_src
 **** Packages
+***** All-the-icons Dired
 #+begin_src elisp
 (after! all-the-icons-dired
   (setq all-the-icons-dired-monochrome nil))
-
+#+end_src
+***** Avy
+#+begin_src elisp
 (after! avy
   (setq avy-single-candidate-jump t))
 #+end_src
@@ -1369,7 +1372,8 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Emacs Lisp :lang:
 #+begin_src elisp
-(setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil)
+(after! elisp-mode
+  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
 #+end_src
 ***** Emojify :UI:
 #+begin_src elisp
@@ -1417,6 +1421,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Highlight Indent Guides :lang:prog_mode:UI:
 #+begin_src elisp
+;; I don't want indent guides on by default, remove all the Doom module's hooks.
 (remove-hook! '(prog-mode-hook
                 text-mode-hook
                 conf-mode-hook)
@@ -1451,7 +1456,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Lispy :lisp:
 #+begin_src elisp
-;; Not using lispy, remove the Doom module's hooks.
+;; Not using lispy, remove all the Doom module's hooks.
 (remove-hook! '(lisp-mode-hook
                 emacs-lisp-mode-hook
                 ielm-mode-hook
@@ -1701,7 +1706,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+end_src
 ***** Scheme :lang:
 #+begin_src elisp
-(setq-hook! 'scheme-mode-hook indent-tabs-mode nil)
+(after! scheme
+  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+#+end_src
 ***** Guix :guix:
 #+begin_src elisp
 (after! (guix-devel scheme)
