@@ -718,8 +718,7 @@ EndSection
               (home-bash-configuration
                (environment-variables
                 `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
-                  ("EDITOR" . "$VISUAL")
-                  ("LESSHISTFILE" . "$XDG_CACHE_HOME/.lesshst")))
+                  ("EDITOR" . "$VISUAL")))
                (bash-profile
                 `(,(local-file "bash_profile")
                   ,(file-append initialization "/script.sh"))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
