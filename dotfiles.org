@@ -1702,6 +1702,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ***** Scheme :lang:
 #+begin_src elisp
 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil)
+***** Guix :guix:
+#+begin_src elisp
+(after! (guix-devel scheme)
+  (add-hook! 'scheme-mode-hook #'guix-devel-mode))
+
+(after! guix-prettify
+  (global-guix-prettify-mode))
 #+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
