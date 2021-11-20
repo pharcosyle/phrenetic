@@ -2139,8 +2139,10 @@ Gtk/CursorThemeSize 48
   (exwm-workspace-rename-buffer exwm-class-name))
 
 (defun efs/exwm-update-title ()
-  (pcase exwm-class-name
-    ("Chromium-browser" (exwm-workspace-rename-buffer (format "Chromium: %s" exwm-title))))) ; TODO get rid of preceding or trailing "Chromium"
+  (exwm-workspace-rename-buffer
+   (pcase exwm-class-name
+     ("Chromium-browser" (format "Chromium: %s" exwm-title)) ; TODO get rid of preceding or trailing "Chromium"
+     (_ exwm-title))))
 
 (defun biome--shell-cmd (command)
   (start-process-shell-command command nil command))
