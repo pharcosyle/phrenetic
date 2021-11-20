@@ -2245,11 +2245,17 @@ Gtk/CursorThemeSize 48
   ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
   (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
 
-  (exwm-enable)
 
-  ;; WIP
-  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h) ; FIXME If I'm keeping this remember that I have to do something special to make saving the perspective not flub. When I quit EXWM I'm seeing some persp-mode errors I think are because of this and it makes me nervous
-  )
+  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
+
+  ;; Copied from online, not super sure what it does but it makes me feel safer. "Allow persp-mode to restore window configurations involving exwm buffers by only changing names of visible buffers." https://github.com/hlissner/doom-emacs/pull/4004/files#issuecomment-703164464
+  (defun exwm--update-utf8-title-advice (oldfun id &optional force)
+    (when (get-buffer-window (exwm--id->buffer id))
+      (funcall oldfun id force)))
+  (advice-add #'exwm--update-utf8-title :around #'exwm--update-utf8-title-advice)
+
+
+  (exwm-enable))
 #+end_src
 ***** Dunst :theming:
 #+begin_src conf :tangle (in-tangle-dir "dunstrc")
