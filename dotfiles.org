@@ -1723,6 +1723,14 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (after! guix-prettify
   (global-guix-prettify-mode))
 #+end_src
+***** Guix Packaging :guix:
+#+begin_src elisp
+(use-package! guix-packaging
+  :defer t
+  :init
+  (after! yasnippet
+    (prependq! yas-snippet-dirs (expand-file-name "snippets/" (file-name-directory (locate-library "guix-packaging")))))) ; TODO not sure but assuming this is necessary
+#+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
@@ -1736,6 +1744,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 
 (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
 (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; TODO trying out, might not be useful
+(package! guix-packaging ; TODO trying out
+  :recipe (:host github :repo "ryanprior/emacs-guix-packaging")
+  :pin "e843088252467db3c8a09de40ae9a62050196a0e")
 
 ;; TODO these should probably be introduced by my exwm desktop environment org section or something
 (package! exwm :pin "833e5d89e7fc12e79766454ae9982cffeb7e4f5f")
