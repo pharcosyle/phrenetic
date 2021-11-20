@@ -1535,6 +1535,14 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
+***** Org Persist :persistence:path:
+#+begin_src elisp
+(use-package! org-persist
+  :defer t
+  :init
+  (message (concat "Is the org-persist index loaded yet? " (if org-persist--index "yes" "no"))) ; TODO remove this once I restart and know the answer is "no"
+  (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
+#+end_src
 ***** Paren :UI:
 #+begin_src elisp
 (after! paren
