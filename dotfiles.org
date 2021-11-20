@@ -1418,6 +1418,11 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 #+end_src
+***** Geiser :persistence:path:
+#+begin_src elisp
+(after! geiser-repl
+  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
+#+end_src
 ***** Highlight Indent Guides :lang:prog_mode:UI:
 #+begin_src elisp
 ;; I don't want indent guides on by default, remove all the Doom module's hooks.
