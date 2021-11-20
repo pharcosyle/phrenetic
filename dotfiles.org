@@ -2101,7 +2101,7 @@ Gtk/CursorThemeSize 48
   :config
   (display-battery-mode 1))
 #+end_src
-**** Desktop Environment :bindings:
+**** Desktop Environment :bindings:path:
 #+begin_src elisp
 (use-package! desktop-environment
   :after exwm
@@ -2112,7 +2112,8 @@ Gtk/CursorThemeSize 48
         desktop-environment-volume-normal-increment "+5%"
         desktop-environment-volume-normal-decrement "-5%"
         desktop-environment-keyboard-backlight-normal-increment 26
-        desktop-environment-keyboard-backlight-normal-decrement -26)
+        desktop-environment-keyboard-backlight-normal-decrement -26
+        desktop-environment-screenshot-directory (or (getenv "XDG_DESKTOP_DIR") "~"))
   ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
   (map! :map desktop-environment-mode-map
         "s-l" nil
