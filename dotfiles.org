@@ -1743,7 +1743,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
 (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
 (package! guix-packaging ; REVIEW trying out
-  :recipe (:host github :repo "ryanprior/emacs-guix-packaging")
+  :recipe (:host github
+           :repo "ryanprior/emacs-guix-packaging"
+           :files (:defaults "snippets"))
   :pin "d843088252467db3c8a09de40ae9a62050196a0e")
 
 ;; TODO these should probably be introduced by my exwm desktop environment org section or something
