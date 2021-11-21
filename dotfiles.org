@@ -658,7 +658,9 @@ EndSection
 ** ~home-environment~
 *** Solitude
 - TODO direnv
-  RDE and upstream Guix Home have incompatibly diverged for the moment, comment the direnv use-module and the `home-bash-direnv-service-type` usage line back in when they're back in sync.
+  RDE and upstream Guix Home have incompatibly diverged for the moment, when they're back in sync:
+  + comment the direnv use-module and the `home-bash-direnv-service-type` usage lines back in
+  + remove (gnu packages shellutils #:select direnv) from the module definition and remove direnv from the package list
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
@@ -668,6 +670,7 @@ EndSection
   ;; #:use-module (gnu home-services gnupg)
   ;; #:use-module (gnu home-services ssh)
   ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
+  #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
   #:use-module ((gnu services) #:select (service simple-service))
   #:use-module ((gnu packages) #:select (specification->package))
@@ -702,6 +705,7 @@ EndSection
   (home-environment
    ;; (packages (list htop))
    (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
+                   direnv
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
