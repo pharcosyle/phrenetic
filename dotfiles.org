@@ -1636,6 +1636,20 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 #+end_src
+**** Guix System :guix:
+- TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
+#+begin_src elisp
+;; (let ((guix-source-path "???/guix"))
+
+;;   (after! yasnippet
+;;     (add-to-list 'yas-snippet-dirs (concat guix-source-path "/etc/snippets")))
+
+;;   (after! skeleton
+;;     (load-file (concat guix-source-path "/etc/copyright.el")))
+
+;;   (after! copyright
+;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
+#+end_src
 **** Projects
 ***** Hyperdrive :path:
 #+begin_src elisp
