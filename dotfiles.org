@@ -1695,6 +1695,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   (map! (:map company-active-map
          "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
          "s-]" #'company-show-location)))
+
+(after! evil-org
+  (map! :map evil-org-mode-map
+        (:prefix "g"
+         :nv "{" #'evil-backward-paragraph
+         :nv "}" #'evil-forward-paragraph)))
 #+end_src
 ***** Dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
