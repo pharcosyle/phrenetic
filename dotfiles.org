@@ -1740,20 +1740,50 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
 #+end_src
 ***** Guix :guix:
+****** Common
 #+begin_src elisp
-(after! (guix-devel scheme)
-  (add-hook! 'scheme-mode-hook #'guix-devel-mode))
-
-(after! guix-prettify
-  (global-guix-prettify-mode))
+(after! guix
+  (set-popup-rules!
+    '(("^\\*Guix" :height 0.5))))
+#+end_src
+****** Devel
+#+begin_src elisp
+(use-package! guix-devel
+  :hook (scheme-mode . guix-devel-mode))
+#+end_src
+****** Popup :bindings:
+#+begin_src elisp
+(use-package! guix-popup
+  :defer t
+  :init
+  (map! :leader
+        "a" #'guix))  ; TODO temporary binding?
+#+end_src
+****** Prettify :UI:
+#+begin_src elisp
+(use-package! guix-prettify
+  :hook (doom-first-buffer . global-guix-prettify-mode))
 #+end_src
 ***** Guix Packaging :guix:
 #+begin_src elisp
-(use-package! guix-packaging
+;; (use-package! guix-packaging
+;;   :defer t
+;;   :init
+;;   (after! yasnippet
+;;     (add-to-list 'yas-snippet-dirs (expand-file-name "snippets/" (file-name-directory (locate-library "guix-packaging"))))))
+#+end_src
+***** Dired-X :UI:hidden:
+#+begin_src elisp
+(use-package! dired-x
   :defer t
   :init
-  (after! yasnippet
-    (add-to-list 'yas-snippet-dirs (expand-file-name "snippets/" (file-name-directory (locate-library "guix-packaging")))))) ; TODO not sure but assuming this is necessary
+  ;; Don't hide things by default, remove the Doom module's hook.
+  (remove-hook! 'dired-mode-hook #'dired-omit-mode))
+#+end_src
+***** Counsel :UI:completion:hidden:
+#+begin_src elisp
+(after! counsel
+  (setq counsel-find-file-ignore-regexp nil)) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed.
 #+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
