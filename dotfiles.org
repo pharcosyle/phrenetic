@@ -1768,8 +1768,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (use-package! dired-x
   :defer t
   :init
-  ;; Don't hide things by default, remove the Doom module's hook.
-  (remove-hook! 'dired-mode-hook #'dired-omit-mode))
+  ;; Don't hide things by default. I can't just remove the Doom module's hook or its whole dired-x `use-package!' won't get run, so instead add another hook for `dired-omit-mode' at the end of the hooks list to toggle it off.
+  (add-hook! 'dired-mode-hook :append
+    (defun biome-disable-dired-omit-mode-h ()
+      (dired-omit-mode -1))))
 #+end_src
 ***** Counsel :UI:completion:hidden:
 #+begin_src elisp
