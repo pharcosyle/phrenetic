@@ -1996,7 +1996,7 @@ Can be an integer to determine the exact padding."
       ("xss-lock" ,xss-lock)
       ("xsettingsd" ,xsettingsd)
       ("dbus" ,dbus)
-      ("emacs" ,emacs)
+      ;; ("emacs" ,emacs)
       ("dunst" ,dunst)
       ("pasystray" ,pasystray)
       ("redshift:gtk" ,redshift "gtk")
@@ -2040,7 +2040,8 @@ Can be an integer to determine the exact padding."
                 (("^xset") (cmd "xset"))
                 (("^xss-lock") (cmd "xss-lock"))
                 (("dbus-launch") (cmd "dbus" "dbus-launch"))
-                (("emacs") (cmd "emacs"))
+                ;; (("emacs") (cmd "emacs"))
+                (("emacs") "/gnu/store/bkqjck9bm0xbxi0hkwnf3fjmwljr0k4f-emacs-native-comp-28.0.60-191.307d164/bin/emacs")
                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
                 (("desktop\\.el") desktop-el-file))
               (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
