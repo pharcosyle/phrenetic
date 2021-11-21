@@ -219,22 +219,22 @@ guix pull
     (timezone "America/Los_Angeles")
     (keyboard-layout kbl)
     (packages
-      (append
-        (list (specification->package "nss-certs")
-              (specification->package "xf86-input-libinput")
-              (specification->package "xf86-input-mtrack")
-              spartan-wm)
-        (operating-system-packages os)))
+     (append
+      (list (specification->package "nss-certs")
+            (specification->package "xf86-input-libinput")
+            (specification->package "xf86-input-mtrack")
+            spartan-wm)
+      (operating-system-packages os)))
     (services
      (append
       (list (service gnome-desktop-service-type)
-             (set-xorg-configuration
-              (xorg-configuration
-               (modules (cons* xf86-input-mtrack
-                               %default-xorg-modules))
-               (keyboard-layout keyboard-layout)
-               (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
-             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
+            (set-xorg-configuration
+             (xorg-configuration
+              (modules (cons* xf86-input-mtrack
+                              %default-xorg-modules))
+              (keyboard-layout keyboard-layout)
+              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
       (if bluetooth?
           (list (bluetooth-service #:auto-enable? #t)) '())
       %desktop-services
@@ -252,10 +252,10 @@ guix pull
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
-                  (bootloader grub-efi-bootloader)
-                  (targets `(,target))
-                  (timeout 1)
-                  (keyboard-layout kbl)))
+                 (bootloader grub-efi-bootloader)
+                 (targets `(,target))
+                 (timeout 1)
+                 (keyboard-layout kbl)))
     (file-systems
      (cons* (file-system
               (device (file-system-label label))
@@ -295,18 +295,18 @@ guix pull
                        (guix-configuration
                         (inherit config)
                         (substitute-urls
-                          (append %default-substitute-urls
-                                  (list "https://mirror.brielmaier.net")))
+                         (append %default-substitute-urls
+                                 (list "https://mirror.brielmaier.net")))
                         (authorized-keys
-                          (append %default-authorized-guix-keys
-                                  (list (local-file "mirror.brielmaier.net.pub"))))))))
+                         (append %default-authorized-guix-keys
+                                 (list (local-file "mirror.brielmaier.net.pub"))))))))
 #+end_src
 ***** Public Key
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
 (public-key
-  (ecc
-    (curve Ed25519)
-    (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+ (ecc
+  (curve Ed25519)
+  (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 *** Disk Encryption
 #+begin_src scheme :tangle (in-tangle-dir "disk-encryption.scm")
@@ -317,9 +317,9 @@ guix pull
 
 (define-public (encrypted-device source-uuid target-name)
   (mapped-device
-    (source (uuid source-uuid))
-    (target target-name)
-    (type luks-device-mapping)))
+   (source (uuid source-uuid))
+   (target target-name)
+   (type luks-device-mapping)))
 
 (define-public (disk-encryption os encrypted-device)
   (operating-system
@@ -492,23 +492,23 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
 (define (main-accounts user-name user-full-name bluetooth?)
   (list
    (user-account
-     (name user-name)
-     (comment user-full-name)
-     (group "users")
-     (supplementary-groups (admin-groups bluetooth?)))
+    (name user-name)
+    (comment user-full-name)
+    (group "users")
+    (supplementary-groups (admin-groups bluetooth?)))
    (user-account
-     (name "pcoulson")
-     (comment "Phil Coulson")
-     (group "users")
-     (supplementary-groups (admin-groups bluetooth?)))))
+    (name "pcoulson")
+    (comment "Phil Coulson")
+    (group "users")
+    (supplementary-groups (admin-groups bluetooth?)))))
 
 (define (guest-account)
   (user-account
-    (name "gandalf")
-    (comment "Speak Friend and Enter")
-    (group "users")
-    (supplementary-groups (user-groups))
-    (password (crypt "mellon" "toosimple"))))
+   (name "gandalf")
+   (comment "Speak Friend and Enter")
+   (group "users")
+   (supplementary-groups (user-groups))
+   (password (crypt "mellon" "toosimple"))))
 
 (define* (users os user-name user-full-name #:key (bluetooth? #t) (guest? #t))
   (operating-system
@@ -530,26 +530,26 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     (inherit os)
     (host-name host-name)
     (file-systems
-      (append
-       (map (match-lambda
-              ((subvol mount-point)
-               (file-system
-                 (device (file-system-label label))
-                 (mount-point mount-point)
-                 (type "btrfs")
-                 (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
-                 (needed-for-boot? (if (member subvol '("guix-var" "log" "persist")) #t #f))
-                 (dependencies (or dependencies '())))))
-            (apply (lambda* (#:key root boot guix-store guix-var log home persist persist-path)
-                     `((,root "/")
-                       (,boot "/boot")
-                       (,guix-store "/gnu/store")
-                       (,guix-var "/var/guix")
-                       (,log "/var/log")
-                       (,home "/home")
-                       (,persist ,persist-path)))
-                   subvols-spec))
-       (operating-system-file-systems os)))))
+     (append
+      (map (match-lambda
+             ((subvol mount-point)
+              (file-system
+                (device (file-system-label label))
+                (mount-point mount-point)
+                (type "btrfs")
+                (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
+                (needed-for-boot? (if (member subvol '("guix-var" "log" "persist")) #t #f))
+                (dependencies (or dependencies '())))))
+           (apply (lambda* (#:key root boot guix-store guix-var log home persist persist-path)
+                    `((,root "/")
+                      (,boot "/boot")
+                      (,guix-store "/gnu/store")
+                      (,guix-var "/var/guix")
+                      (,log "/var/log")
+                      (,home "/home")
+                      (,persist ,persist-path)))
+                  subvols-spec))
+      (operating-system-file-systems os)))))
 #+end_src
 *** Frostfire OS
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm") :noweb yes
@@ -620,28 +620,28 @@ EndSection
 
 (define-public spartan-wm
   (package
-   (name "spartan-wm")
-   (version "0")
-   (synopsis "Spartan Window Manager")
-   (source #f)
-   (build-system trivial-build-system)
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
-        (let* ((out (assoc-ref %outputs "out"))
-               (xsessions (string-append out "/share/xsessions")))
-          (mkdir-p xsessions)
-          (make-desktop-entry-file
-           (string-append xsessions "/" ,name ".desktop")
-           #:name "Spartan WM"
-           #:comment ,synopsis
-           #:exec "<<spartan-executable>>"))
-        #t)))
-   (description synopsis)
-   (home-page #f)
-   (license #f)))
+    (name "spartan-wm")
+    (version "0")
+    (synopsis "Spartan Window Manager")
+    (source #f)
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+         (let* ((out (assoc-ref %outputs "out"))
+                (xsessions (string-append out "/share/xsessions")))
+           (mkdir-p xsessions)
+           (make-desktop-entry-file
+            (string-append xsessions "/" ,name ".desktop")
+            #:name "Spartan WM"
+            #:comment ,synopsis
+            #:exec "<<spartan-executable>>"))
+         #t)))
+    (description synopsis)
+    (home-page #f)
+    (license #f)))
 #+end_src
 * Home
 :PROPERTIES:
@@ -695,7 +695,7 @@ EndSection
 
 (define emacs-variant emacs)
 
-; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare?
+;; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare?
 (define with-emacs-variant
   (package-input-rewriting `((,emacs . ,emacs-variant)
                              (,emacs-minimal . ,emacs-variant)
@@ -844,28 +844,28 @@ done
        ("xrandr" ,xrandr)))
     (build-system trivial-build-system)
     (arguments
-    '(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
-        (let* ((out (assoc-ref %outputs "out"))
-               (get-input (lambda (k)
-                            (assoc-ref %build-inputs k)))
-               (cmd (lambda* (input #:optional (executable input))
-                      (string-append (get-input input) "/bin/" executable)))
-               (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                (let ((newfile (string-append out "/" name)))
-                                  (mkdir-p (dirname newfile))
-                                  (copy-file (get-input input-file) newfile)
-                                  newfile))))
-          (let ((script-file (install-input "script.sh")))
-            (substitute* script-file
-              (("xkbcomp") (cmd "xkbcomp"))
-              (("xkb_source=" all) (string-append all (get-input "xkb-source")))
-              (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
-              (("xinput") (cmd "xinput"))
-              (("xrandr") (cmd "xrandr")))))
-        #t)))
+     '(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
+         (let* ((out (assoc-ref %outputs "out"))
+                (get-input (lambda (k)
+                             (assoc-ref %build-inputs k)))
+                (cmd (lambda* (input #:optional (executable input))
+                       (string-append (get-input input) "/bin/" executable)))
+                (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                 (let ((newfile (string-append out "/" name)))
+                                   (mkdir-p (dirname newfile))
+                                   (copy-file (get-input input-file) newfile)
+                                   newfile))))
+           (let ((script-file (install-input "script.sh")))
+             (substitute* script-file
+               (("xkbcomp") (cmd "xkbcomp"))
+               (("xkb_source=" all) (string-append all (get-input "xkb-source")))
+               (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
+               (("xinput") (cmd "xinput"))
+               (("xrandr") (cmd "xrandr")))))
+         #t)))
     (synopsis #f)
     (description #f)
     (home-page #f)
@@ -2034,78 +2034,78 @@ Can be an integer to determine the exact padding."
 
 (define-public spartan
   (package
-   (name "spartan")
-   (version "0")
-   (source #f)
-   (build-system trivial-build-system)
-   ;; At the time of this writing `xsettingsd.conf` and `dunstrc` have no substitutions and could just be regular inputs.
-   (native-inputs
-    `(("startup-script.sh" ,(local-file "startup-script.sh"))
-      ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
-      ("desktop.el" ,(local-file "desktop.el"))
-      ("dunstrc" ,(local-file "dunstrc"))))
-   (inputs
-    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
-      ("xhost" ,xhost)
-      ("xset" ,xset)
-      ("xss-lock" ,xss-lock)
-      ("xsettingsd" ,xsettingsd)
-      ("dbus" ,dbus)
-      ;; ("emacs" ,emacs)
-      ("dunst" ,dunst)
-      ("pasystray" ,pasystray)
-      ("redshift:gtk" ,redshift "gtk")
-      ("udiskie" ,udiskie)))
-   ;; TODO much later, see if there's a way to make any of these not propagated.
-   (propagated-inputs
-    `(("font-google-noto" ,font-google-noto)
-      ;; ("dracula-theme" ,dracula-theme)
-      ;; ("papirus-icon-theme" ,papirus-icon-theme)
-      ("pavucontrol" ,pavucontrol)))
-   (arguments
-    '(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
-        (let* ((out (assoc-ref %outputs "out"))
-               (get-input (lambda (k)
-                            (assoc-ref %build-inputs k)))
-               (cmd (lambda* (input #:optional (executable input))
-                      (string-append (get-input input) "/bin/" executable)))
-               (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                (let ((newfile (string-append out "/" name)))
-                                  (mkdir-p (dirname newfile))
-                                  (copy-file (get-input input-file) newfile)
-                                  newfile))))
-          (let ((desktop-el-file (install-input "desktop.el"))
-                (dunstrc-file (install-input "dunstrc")))
-            ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
-            (substitute* desktop-el-file
-              (("(dunstctl|dunst)" all) (case (string->symbol all)
-                                          ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
-                                          ((dunstctl) (cmd "dunst" "dunstctl"))))
-              (("pasystray") (cmd "pasystray"))
-              (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
-              (("udiskie") (cmd "udiskie")))
-            (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-executable>>"))
-                  (xsettingsd-conf-file (install-input "xsettingsd.conf")))
-              (substitute* executable
-                (("^xhost") (cmd "xhost"))
-                (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
-                (("^xset") (cmd "xset"))
-                (("^xss-lock") (cmd "xss-lock"))
-                (("dbus-launch") (cmd "dbus" "dbus-launch"))
-                ;; (("emacs") (cmd "emacs"))
-                (("emacs") "/gnu/store/bkqjck9bm0xbxi0hkwnf3fjmwljr0k4f-emacs-native-comp-28.0.60-191.307d164/bin/emacs")
-                (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-                (("desktop\\.el") desktop-el-file))
-              (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
-              (chmod executable #o555))))
-        #t)))
-   (synopsis "Spartan")
-   (description synopsis)
-   (home-page #f)
-   (license #f)))
+    (name "spartan")
+    (version "0")
+    (source #f)
+    (build-system trivial-build-system)
+    ;; At the time of this writing `xsettingsd.conf` and `dunstrc` have no substitutions and could just be regular inputs.
+    (native-inputs
+     `(("startup-script.sh" ,(local-file "startup-script.sh"))
+       ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
+       ("desktop.el" ,(local-file "desktop.el"))
+       ("dunstrc" ,(local-file "dunstrc"))))
+    (inputs
+     `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
+       ("xhost" ,xhost)
+       ("xset" ,xset)
+       ("xss-lock" ,xss-lock)
+       ("xsettingsd" ,xsettingsd)
+       ("dbus" ,dbus)
+       ;; ("emacs" ,emacs)
+       ("dunst" ,dunst)
+       ("pasystray" ,pasystray)
+       ("redshift:gtk" ,redshift "gtk")
+       ("udiskie" ,udiskie)))
+    ;; TODO much later, see if there's a way to make any of these not propagated.
+    (propagated-inputs
+     `(("font-google-noto" ,font-google-noto)
+       ;; ("dracula-theme" ,dracula-theme)
+       ;; ("papirus-icon-theme" ,papirus-icon-theme)
+       ("pavucontrol" ,pavucontrol)))
+    (arguments
+     '(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
+         (let* ((out (assoc-ref %outputs "out"))
+                (get-input (lambda (k)
+                             (assoc-ref %build-inputs k)))
+                (cmd (lambda* (input #:optional (executable input))
+                       (string-append (get-input input) "/bin/" executable)))
+                (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                 (let ((newfile (string-append out "/" name)))
+                                   (mkdir-p (dirname newfile))
+                                   (copy-file (get-input input-file) newfile)
+                                   newfile))))
+           (let ((desktop-el-file (install-input "desktop.el"))
+                 (dunstrc-file (install-input "dunstrc")))
+             ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
+             (substitute* desktop-el-file
+               (("(dunstctl|dunst)" all) (case (string->symbol all)
+                                           ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
+                                           ((dunstctl) (cmd "dunst" "dunstctl"))))
+               (("pasystray") (cmd "pasystray"))
+               (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
+               (("udiskie") (cmd "udiskie")))
+             (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-executable>>"))
+                   (xsettingsd-conf-file (install-input "xsettingsd.conf")))
+               (substitute* executable
+                 (("^xhost") (cmd "xhost"))
+                 (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
+                 (("^xset") (cmd "xset"))
+                 (("^xss-lock") (cmd "xss-lock"))
+                 (("dbus-launch") (cmd "dbus" "dbus-launch"))
+                 ;; (("emacs") (cmd "emacs"))
+                 (("emacs") "/gnu/store/bkqjck9bm0xbxi0hkwnf3fjmwljr0k4f-emacs-native-comp-28.0.60-191.307d164/bin/emacs")
+                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+                 (("desktop\\.el") desktop-el-file))
+               (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
+               (chmod executable #o555))))
+         #t)))
+    (synopsis "Spartan")
+    (description synopsis)
+    (home-page #f)
+    (license #f)))
 #+end_src
 *** Startup script
 #+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
@@ -2410,17 +2410,17 @@ Gtk/CursorThemeSize 48
        ("coreutils" ,coreutils)
        ("fd" ,fd)
        ("clang" ,clang))) ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
-      (build-system trivial-build-system)
+    (build-system trivial-build-system)
     (arguments
-    '(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-        (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
-        (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
-          (lambda _
-            (display "asdffffffffffff")))
-        #t)))
+     '(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p)))
+         (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
+         (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
+           (lambda _
+             (display "asdffffffffffff")))
+         #t)))
     (synopsis "An Emacs framework for the stubborn martian hacker")
     (description synopsis)
     (home-page "https://github.com/hlissner/doom-emacs")
@@ -2473,15 +2473,15 @@ Gtk/CursorThemeSize 48
        ("scrot" ,scrot)))
     (build-system trivial-build-system)
     (arguments
-    '(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-        (mkdir-p (string-append (assoc-ref %outputs "out") "/qwer"))
-        (with-output-to-file (string-append (assoc-ref %outputs "out") "/qwer/qwer.txt")
-          (lambda _
-            (display "qwerrrrrrr")))
-        #t)))
+     '(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p)))
+         (mkdir-p (string-append (assoc-ref %outputs "out") "/qwer"))
+         (with-output-to-file (string-append (assoc-ref %outputs "out") "/qwer/qwer.txt")
+           (lambda _
+             (display "qwerrrrrrr")))
+         #t)))
     (synopsis #f)
     (description synopsis)
     (home-page #f)
