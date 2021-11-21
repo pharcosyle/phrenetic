@@ -1426,11 +1426,14 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Highlight Indent Guides :lang:prog_mode:UI:
 #+begin_src elisp
-;; I don't want indent guides on by default, remove all the Doom module's hooks.
-(remove-hook! '(prog-mode-hook
-                text-mode-hook
-                conf-mode-hook)
-  #'highlight-indent-guides-mode)
+(use-package! highlight-indent-guides
+  :defer t
+  :init
+  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+  (remove-hook! '(prog-mode-hook
+                  text-mode-hook
+                  conf-mode-hook)
+    #'highlight-indent-guides-mode))
 #+end_src
 ***** Ivy :completion:bindings:UI:
 #+begin_src elisp
@@ -1461,19 +1464,22 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Lispy :lisp:
 #+begin_src elisp
-;; Not using lispy, remove all the Doom module's hooks.
-(remove-hook! '(lisp-mode-hook
-                emacs-lisp-mode-hook
-                ielm-mode-hook
-                scheme-mode-hook
-                racket-mode-hook
-                hy-mode-hook
-                lfe-mode-hook
-                dune-mode-hook
-                clojure-mode-hook
-                fennel-mode-hook)
-  #'lispy-mode)
-(remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h)
+(use-package! lispy
+  :defer t
+  :init
+  ;; Not using lispy, remove all the Doom module's hooks.
+  (remove-hook! '(lisp-mode-hook
+                  emacs-lisp-mode-hook
+                  ielm-mode-hook
+                  scheme-mode-hook
+                  racket-mode-hook
+                  hy-mode-hook
+                  lfe-mode-hook
+                  dune-mode-hook
+                  clojure-mode-hook
+                  fennel-mode-hook)
+    #'lispy-mode)
+  (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 #+end_src
 ***** Lispyville :lisp:lang:prog_mode:bindings:
 #+begin_src elisp :tangle (in-tangle-dir "init.el")
