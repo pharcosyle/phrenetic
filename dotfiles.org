@@ -1545,7 +1545,6 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 (use-package! org-persist
   :defer t
   :init
-  (message (concat "Is the org-persist index loaded yet? " (if org-persist--index "yes" "no"))) ; TODO remove this once I restart and know the answer is "no"
   (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
 #+end_src
 ***** Paren :UI:
