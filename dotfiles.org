@@ -1347,7 +1347,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
              #'highlight-numbers-mode
              #'rainbow-delimiters-mode
              #'yas-minor-mode-on
-             #'biome--sp-strict-h))
+             #'biome-sp-strict-h))
 #+end_src
 ***** Clj Refactor :lang:clojure:bindings:
 #+begin_src elisp
@@ -1565,7 +1565,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ***** Prog Mode :lang:prog_mode:
 #+begin_src elisp
-(add-hook! 'prog-mode-hook #'biome--sp-strict-h)
+(add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 #+end_src
 ***** Rainbow Delimiters :UI:theming:
 #+begin_src elisp
@@ -1606,7 +1606,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ****** Hook :bindings:
 #+begin_src elisp
-(defun biome--sp-strict-h ()
+(defun biome-sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
              #'turn-on-smartparens-strict-mode
              (lambda ()
