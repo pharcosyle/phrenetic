@@ -690,7 +690,7 @@ EndSection
   #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
   #:use-module ((gnu packages gtk) #:select (gtk+)))
 
-(define emacs-variant emacs-native-comp)
+(define emacs-variant emacs)
 
 ; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare?
 (define with-emacs-variant
