@@ -1325,13 +1325,12 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   (setq avy-single-candidate-jump t))
 #+end_src
 ***** Clojure :lang:clojure:bindings:
-#+begin_src elisp :tangle (in-tangle-dir "init.el")
-(use-package-hook! clojure-mode
-  :post-init
-  (setq clojure-refactor-map-prefix (kbd "s-M r"))) ; Has to be set before clojure-mode loads so don't put this in a hook. ; TODO temporary binding ; TODO did I already try putting this in a use-package `:init' section?
-#+end_src
 #+begin_src elisp
-(after! clojure-mode
+(use-package! clojure-mode
+  :defer t
+  :init
+  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; TODO temporary binding
+  :config
   (set-ligatures! 'clojure-mode :lambda "fn"))
 #+end_src
 ***** Cider :lang:clojure:persistence:
@@ -1486,21 +1485,17 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 #+end_src
 ***** Lispyville :lisp:lang:prog_mode:bindings:
-#+begin_src elisp :tangle (in-tangle-dir "init.el")
-(use-package-hook! lispyville
-  :post-init
-  (setq lispyville-key-theme nil))
-#+end_src
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
+  :init
+  (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
   :config
   (lispyville-set-key-theme
    '(operators
      c-w
      c-u
      commentary))
-
   (map! :map lispyville-mode-map
         "s-C-j" #'lispyville-beginning-of-next-defun
         "s-C-k" #'lispyville-beginning-of-defun
