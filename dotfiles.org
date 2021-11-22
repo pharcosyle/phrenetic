@@ -1420,9 +1420,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 #+end_src
-***** Geiser :persistence:path:
+***** Geiser :persistence:path:guix:
 #+begin_src elisp
-(after! geiser-repl
+(use-package! geiser
+  :defer t
+  :init
+  ;; It seems like it would be okay to not set variables in `:init' but hlissner does it this way for the Geiser package so I will too.
+  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
   (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
 #+end_src
 ***** Highlight Indent Guides :lang:prog_mode:UI:
