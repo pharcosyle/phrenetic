@@ -1351,9 +1351,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 ***** Clj Refactor :lang:clojure:bindings:
 #+begin_src elisp
 (after! clj-refactor
-  ;; TODO make sure this is still working after nesting in `after!'
-  (add-hook! 'clj-refactor-mode-hook
-    (cljr-add-keybindings-with-prefix "s-M R"))) ; TODO temporary binding
+  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 #+end_src
 ***** Counsel :completion:UI:
 #+begin_src elisp
