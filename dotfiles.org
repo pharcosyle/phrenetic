@@ -1602,7 +1602,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 (defun biome-sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
              #'turn-on-smartparens-strict-mode
-             (lambda ()
+             (defun biome-modify-sp-strict-mode-map-h ()
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
@@ -1725,11 +1725,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
 
 ;; (add-hook! 'org-mode-hook
-;;   (add-hook! 'after-save-hook :local
-;;     (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
-;;       ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
-;;       (let ((org-confirm-babel-evaluate nil))
-;;         (org-babel-tangle)))))
+;;   (defun biome-add-org-autotangle-after-save-hook-h ()
+;;     (add-hook! 'after-save-hook :local
+;;       (defun biome-autotangle-h ()
+;;         (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
+;;           (let ((org-confirm-babel-evaluate nil))
+;;             (org-babel-tangle)))))))
 #+end_src
 ***** Guix :guix:
 ****** Common
