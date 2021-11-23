@@ -661,6 +661,7 @@ EndSection
   RDE and upstream Guix Home have incompatibly diverged for the moment, when they're back in sync:
   + comment the direnv use-module and the `home-bash-direnv-service-type` usage lines back in
   + remove (gnu packages shellutils #:select direnv) from the module definition and remove direnv from the package list
+  If it doesn't get resolved before I need to use direnv just copy the direnv service code, it's tiny
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
@@ -695,7 +696,7 @@ EndSection
 
 (define emacs-variant emacs-native-comp)
 
-;; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare?
+;; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare? Update: actually my approach won't do transitive dependencies (and maybe emacs argument like e.g. exwm has?) so it's pretty flawed. Doesn't matter though, I'm not going to be using the guix emacs packages, right?
 (define with-emacs-variant
   (package-input-rewriting `((,emacs . ,emacs-variant)
                              (,emacs-minimal . ,emacs-variant)
@@ -751,14 +752,27 @@ EndSection
               ;;    (ssh-host "savannah"
               ;;              '((compression . #f))))))
               )
-     ;; (service home-keyboard-service-type
-     ;;          (keyboard-layout "us,ru" "dvorak,"
-     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-     ;; (service home-fontconfig-service-type)
+     ;; TODO I think this was my abortive attempt to customize the fonts service
      ;; (simple-service 'my-fontconfig-config-file
      ;;                 home-files-service-type
      ;;                 (list `("config/fontconfig/fonts.conf"
      ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
+     ;; TODO Examples from RDE I may want to make use of.
+     ;; (service home-keyboard-service-type
+     ;;          (keyboard-layout "us,ru" "dvorak,"
+     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+     ;; (service home-fontconfig-service-type)
+     ;; (service home-mcron-service-type
+     ;;          (home-mcron-configuration
+     ;;           (jobs
+     ;;            (list
+     ;;             #~(job
+     ;;                next-minute-from
+     ;;                (lambda ()
+     ;;                  (call-with-output-file
+     ;;                      (string-append (getenv "HOME") "/tmp-mcron-test-file")
+     ;;                    (lambda (port)
+     ;;                       (display "Mcron service" port)))))))))
      ;; (service home-gnupg-service-type
      ;;          (home-gnupg-configuration
      ;;           (gpg-agent-config
