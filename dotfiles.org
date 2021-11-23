@@ -668,7 +668,7 @@ EndSection
   ;; #:use-module (gnu home services mcron)
   #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
   ;; #:use-module (gnu home-services gnupg)
-  ;; #:use-module (gnu home-services ssh)
+  #:use-module ((gnu home-services ssh) #:select (home-ssh-service-type))
   ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
@@ -704,8 +704,8 @@ EndSection
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
-                   direnv
+   (packages (list direnv
+                   ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
@@ -744,6 +744,13 @@ EndSection
                      (list `("config/doom"
                              ,(local-file "doom" #:recursive? #t))))
      ;; (service home-bash-direnv-service-type)
+     (service home-ssh-service-type
+              ;; (home-ssh-configuration
+              ;;  (extra-config
+              ;;   (list
+              ;;    (ssh-host "savannah"
+              ;;              '((compression . #f))))))
+              )
      ;; (service home-keyboard-service-type
      ;;          (keyboard-layout "us,ru" "dvorak,"
      ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
@@ -752,12 +759,6 @@ EndSection
      ;;                 home-files-service-type
      ;;                 (list `("config/fontconfig/fonts.conf"
      ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
-     ;; (service home-ssh-service-type
-     ;;          (home-ssh-configuration
-     ;;           (extra-config
-     ;;            (list
-     ;;             (ssh-host "savannah"
-     ;;                       '((compression . #f)))))))
      ;; (service home-gnupg-service-type
      ;;          (home-gnupg-configuration
      ;;           (gpg-agent-config
@@ -978,7 +979,6 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "curl"
    "zip"
    "unzip"
-   "openssh"
    "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
    "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" or is that a bad idea / a pain?
 
