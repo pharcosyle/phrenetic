@@ -2396,14 +2396,14 @@ Gtk/CursorThemeSize 48
     (name "doom-emacs-temp")
     (version "0")
     (source #f)
-    ;; TODO Ideally these wouldn't be propagated inputs
+    ;; TODO Ideally these wouldn't be propagated inputs. Instead of tracking down usages of these and doing `substitute' everywhere maybe `wrap-prgram' is an option? However maybe there are other things in these inputs than just binaries Doom depends on or it has parts outside of emacs that recquire them?
     (propagated-inputs
      `(;; Required
        ;; ("emacs" ,emacs) ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
        ("git" ,git)
        ("ripgrep" ,ripgrep)
        ;; Optional
-       ("coreutils" ,coreutils)
+       ("coreutils" ,coreutils) ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
        ("fd" ,fd)
        ("clang" ,clang))) ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
     (build-system trivial-build-system)
