@@ -850,11 +850,11 @@ done
     (version "0")
     (source #f)
     (native-inputs
-     `(("script.sh" ,(local-file "script.sh"))))
+     `(("script.sh" ,(local-file "script.sh"))
+       ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
+       ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))))
     (inputs
      `(("xkbcomp" ,xkbcomp)
-       ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
-       ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))
        ("xinput" ,xinput)
        ("xrandr" ,xrandr)))
     (build-system trivial-build-system)
@@ -2049,7 +2049,6 @@ Can be an integer to determine the exact padding."
     (version "0")
     (source #f)
     (build-system trivial-build-system)
-    ;; At the time of this writing `xsettingsd.conf` and `dunstrc` have no substitutions and could just be regular inputs.
     (native-inputs
      `(("startup-script.sh" ,(local-file "startup-script.sh"))
        ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
