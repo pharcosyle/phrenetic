@@ -1523,12 +1523,11 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 #+end_src
-***** Magit :UI:persistence:
+***** Magit :UI:
 #+begin_src elisp
 (after! magit
   (setq git-commit-style-convention-checks '(non-empty-second-line))
-  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
-  (setq transient-history-limit biome--very-big))
+  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 #+end_src
 ***** Man :guix:
 #+begin_src elisp :noweb yes
@@ -1647,6 +1646,11 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                         "~/.guix-profile/sbin"
                         "/run/current-system/profile/bin"
                         "/run/current-system/profile/sbin"))))
+#+end_src
+***** Transient :persistence:
+#+begin_src elisp
+(after! transient
+  (setq transient-history-limit biome--very-big))
 #+end_src
 ***** Undo Fu
 #+begin_src elisp
