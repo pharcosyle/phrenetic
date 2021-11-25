@@ -211,9 +211,14 @@ guix pull
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((spartan-wm) #:select (spartan-wm))
+
+  #:use-module ((gnu services) #:select (modify-services))
+  #:use-module ((gnu services base) #:select (console-font-service-type))
+  #:use-module ((gnu packages fonts) #:select (font-terminus))
+
   #:export (base-os))
 
-(define* (base-os os kbl #:key (bluetooth? #t))
+(define* (base-os* os kbl #:key (bluetooth? #t))
   (operating-system
     (inherit os)
     (timezone "America/Los_Angeles")
@@ -239,6 +244,23 @@ guix pull
           (list (bluetooth-service #:auto-enable? #t)) '())
       %desktop-services
       (operating-system-user-services os)))))
+
+
+
+(define (with-hidpi-console-font services)
+  (modify-services services
+    (console-font-service-type config =>
+                               (map (lambda (tty-and-font)
+                                      (cons (car tty-and-font)
+                                            (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                    config))))
+
+(define* (base-os os kbl #:key (bluetooth? #t))
+  (define os (base-os* kbl #:bluetooth? bluetooth?))
+  (operating-system
+    (inherit os)
+    (services (with-hidpi-console-font
+               (operating-system-user-services os)))))
 #+end_src
 *** Boot
 #+begin_src scheme :tangle (in-tangle-dir "boot.scm")
