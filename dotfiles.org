@@ -723,7 +723,7 @@ EndSection
                 `(,(local-file "bash_profile")
                   ,(file-append initialization "/script.sh"))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
      (service home-xdg-user-directories-service-type
-              (let* ((xdg-user-subdir "/xdg-user")
+              (let* ((xdg-user-subdir "/files")
                      (xdg-dir (lambda (path)
                                 (string-append "$HOME" xdg-user-subdir path))))
                 (home-xdg-user-directories-configuration
