@@ -150,14 +150,14 @@ herd start cow-store /mnt
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/Projects/dotfiles/gen/home/channels.scm ~/.config/guix
+cp ~/projects/dotfiles/gen/home/channels.scm ~/.config/guix
 guix pull
 hash guix
 
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/Projects/dotfiles/gen/system
+cd ~/projects/dotfiles/gen/system
 guix system --load-path=. init frostfire.scm /mnt
 #+end_src
 *** Post-installation
@@ -1034,7 +1034,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (cons* (channel
         (name 'penitent-tangent)
-        (url "file:///home/pharcosyle/Projects/penitent-tangent"))
+        (url "file:///home/pharcosyle/projects/penitent-tangent"))
        (channel
         (name 'flat)
         (url "https://github.com/flatwhatson/guix-channel.git")
@@ -1063,7 +1063,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 
 ;; (append (channel
 ;;          (name 'penitent-tangent)
-;;          (url "file:///home/pharcosyle/Projects/penitent-tangent"))
+;;          (url "file:///home/pharcosyle/projects/penitent-tangent"))
 ;;         (channel
 ;;          (name 'flat)
 ;;          (url "https://github.com/flatwhatson/guix-channel.git")
@@ -1708,14 +1708,14 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   :name "Amplify Mock"
   :command "amplify"
   :args '("mock")
-  :cwd "~/Projects/Krush/hyperdrive/apps/singularity"
+  :cwd "~/projects/Krush/hyperdrive/apps/singularity"
   :kill-process-buffer-on-stop t)
 
 (prodigy-define-service
   :name "Datomic Access (exogenesis)"
   :command "bash"
   :args '("datomic" "client" "access" "exogenesis")
-  :cwd "~/Projects/Krush/hyperdrive/ion/team"
+  :cwd "~/projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 #+end_src
 ***** Massrealty :path:
@@ -1764,7 +1764,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ***** Dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
-;; (setq biome--dotfiles-dir "~/Projects/dotfiles")
+;; (setq biome--dotfiles-dir "~/projects/dotfiles")
 
 ;; (add-hook! 'org-mode-hook
 ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
