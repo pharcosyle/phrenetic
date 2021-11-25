@@ -711,7 +711,6 @@ EndSection
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
                    (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
-                   ;; (list gtk+ "bin") ; For `gtk-launch' for counsel-linux-app ; TODO make this an input to a/the counsel package ; TODO using this package massively increases the number of used inodes and build time, figure out why later
                    (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
    (services
     (list
@@ -988,13 +987,15 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "ublock-origin-chromium" ; For/with ungoogled-chromium
    "protonvpn-cli"
    "btrfs-progs"
+   "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
+   "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
 
    ;; General
+   "xdg-utils"
+   "gtk+:bin"
    "curl"
    "zip"
    "unzip"
-   "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
-   "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" or is that a bad idea / a pain?
 
    ;; Nice-to-have ; TODO might get rid of these and just `guix shell' or install as-needed
    "tree"
