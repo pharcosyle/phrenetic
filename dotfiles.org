@@ -668,6 +668,7 @@ EndSection
   #:use-module ((gnu home services) #:select (home-files-service-type))
   ;; #:use-module (gnu home services mcron)
   #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
+  #:use-module ((gnu home services xdg) #:select (home-xdg-user-directories-service-type home-xdg-user-directories-configuration))
   ;; #:use-module (gnu home-services gnupg)
   #:use-module ((gnu home-services ssh) #:select (home-ssh-service-type))
   ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
@@ -691,8 +692,7 @@ EndSection
   #:use-module ((spartan core) #:select (spartan))
 
   #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
-  #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp))
-  #:use-module ((gnu packages gtk) #:select (gtk+)))
+  #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp)))
 
 (define emacs-variant emacs-native-comp)
 
@@ -714,10 +714,6 @@ EndSection
                    (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
    (services
     (list
-     (simple-service 'my-channels
-                     home-files-service-type
-                     (list `("config/guix/channels.scm"
-                             ,(local-file "channels.scm"))))
      (service home-bash-service-type
               (home-bash-configuration
                (environment-variables
@@ -726,6 +722,19 @@ EndSection
                (bash-profile
                 `(,(local-file "bash_profile")
                   ,(file-append initialization "/script.sh"))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+     (service home-xdg-user-directories-service-type
+              (let* ((xdg-user-subdir "/xdg-user")
+                     (xdg-dir (lambda (path)
+                                (string-append "$HOME" xdg-user-subdir path))))
+                (home-xdg-user-directories-configuration
+                 (desktop "$HOME/desktop")
+                 (documents (xdg-dir "/docs"))
+                 (download "$HOME/dl")
+                 (music (xdg-dir "/music"))
+                 (pictures (xdg-dir "/pics"))
+                 (publicshare (xdg-dir "/public"))
+                 (templates (xdg-dir "/templates"))
+                 (videos (xdg-dir "/vids")))))
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -739,10 +748,6 @@ EndSection
                   ;; (sendmail
                   ;;  ((annotate . #t)))
                   ))))
-     (simple-service 'my-doomdir
-                     home-files-service-type
-                     (list `("config/doom"
-                             ,(local-file "doom" #:recursive? #t))))
      ;; (service home-bash-direnv-service-type)
      (service home-ssh-service-type
               ;; (home-ssh-configuration
@@ -751,6 +756,14 @@ EndSection
               ;;    (ssh-host "savannah"
               ;;              '((compression . #f))))))
               )
+     (simple-service 'my-channels
+                     home-files-service-type
+                     (list `("config/guix/channels.scm"
+                             ,(local-file "channels.scm"))))
+     (simple-service 'my-doomdir
+                     home-files-service-type
+                     (list `("config/doom"
+                             ,(local-file "doom" #:recursive? #t))))
      ;; TODO I think this was my abortive attempt to customize the fonts service
      ;; (simple-service 'my-fontconfig-config-file
      ;;                 home-files-service-type
