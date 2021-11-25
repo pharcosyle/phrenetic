@@ -1526,6 +1526,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 ***** Magit :UI:persistence:
 #+begin_src elisp
 (after! magit
+  (setq git-commit-style-convention-checks '(non-empty-second-line))
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))
   (setq transient-history-limit biome--very-big))
 #+end_src
