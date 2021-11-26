@@ -520,16 +520,13 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
 *** Nix
 #+begin_src scheme :tangle (in-tangle-dir "nix.scm")
 (define-module (nix)
-  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
+  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
   #:use-module ((gnu services) #:select (service))
-  #:use-module ((gnu services nix) #:select (nix-service-type))
-  #:use-module ((gnu packages package-management) #:select (nix)))
+  #:use-module ((gnu services nix) #:select (nix-service-type)))
 
 (define (nix os)
   (operating-system
     (inherit os)
-    (packages (cons* nix
-                     (operating-system-packages os)))
     (services (cons* (service nix-service-type)
                      (operating-system-user-services os)))))
 #+end_src
