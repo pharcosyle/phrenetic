@@ -688,7 +688,7 @@ EndSection
 (define-module (solitude)
   #:use-module ((gnu home) #:select (home-environment))
   #:use-module ((gnu home services) #:select (home-files-service-type))
-  ;; #:use-module (gnu home services mcron)
+  #:use-module ((gnu home services mcron) #:select (home-mcron-service-type home-mcron-configuration))
   #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
   #:use-module ((gnu home services xdg) #:select (home-xdg-user-directories-service-type home-xdg-user-directories-configuration))
   ;; #:use-module (gnu home-services gnupg)
@@ -702,7 +702,7 @@ EndSection
   ;; #:use-module (gnu packages admin)
   ;; #:use-module (gnu packages gnupg)
   ;; #:use-module (gnu system keyboard)
-  #:use-module ((guix gexp) #:select (file-append local-file))
+  #:use-module ((guix gexp) #:select (gexp file-append local-file))
 
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
@@ -757,6 +757,16 @@ EndSection
                  (publicshare (xdg-dir "/public"))
                  (templates (xdg-dir "/templates"))
                  (videos (xdg-dir "/vids")))))
+     (service home-mcron-service-type
+              (home-mcron-configuration
+               (jobs
+                (list
+                 #~(job '(next-hour)
+                        (lambda ()
+                          (call-with-output-file "/tmp/test-mcron-file"
+                            (lambda (port)
+                              (display "Output!" port))))
+                        "Test mcron output")))))
      (service home-git-service-type
               (home-git-configuration
                (config
@@ -795,18 +805,6 @@ EndSection
      ;; (service home-keyboard-service-type
      ;;          (keyboard-layout "us,ru" "dvorak,"
      ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-     ;; (service home-fontconfig-service-type)
-     ;; (service home-mcron-service-type
-     ;;          (home-mcron-configuration
-     ;;           (jobs
-     ;;            (list
-     ;;             #~(job
-     ;;                next-minute-from
-     ;;                (lambda ()
-     ;;                  (call-with-output-file
-     ;;                      (string-append (getenv "HOME") "/tmp-mcron-test-file")
-     ;;                    (lambda (port)
-     ;;                       (display "Mcron service" port)))))))))
      ;; (service home-gnupg-service-type
      ;;          (home-gnupg-configuration
      ;;           (gpg-agent-config
