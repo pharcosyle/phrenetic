@@ -211,14 +211,9 @@ guix pull
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((penitent-tangent packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:use-module ((spartan-wm) #:select (spartan-wm))
-
-  #:use-module ((gnu services) #:select (modify-services))
-  #:use-module ((gnu services base) #:select (console-font-service-type))
-  #:use-module ((gnu packages fonts) #:select (font-terminus))
-
   #:export (base-os))
 
-(define* (base-os* os kbl #:key (bluetooth? #t))
+(define* (base-os os kbl #:key (bluetooth? #t))
   (operating-system
     (inherit os)
     (timezone "America/Los_Angeles")
@@ -244,23 +239,6 @@ guix pull
           (list (bluetooth-service #:auto-enable? #t)) '())
       %desktop-services
       (operating-system-user-services os)))))
-
-
-
-(define (with-hidpi-console-font services)
-  (modify-services services
-    (console-font-service-type config =>
-                               (map (lambda (tty-and-font)
-                                      (cons (car tty-and-font)
-                                            (file-append font-terminus "/share/consolefonts/ter-132n")))
-                                    config))))
-
-(define* (base-os os kbl #:key (bluetooth? #t))
-  (define os (base-os* kbl #:bluetooth? bluetooth?))
-  (operating-system
-    (inherit os)
-    (services (with-hidpi-console-font
-               (operating-system-user-services os)))))
 #+end_src
 *** Boot
 #+begin_src scheme :tangle (in-tangle-dir "boot.scm")
@@ -539,6 +517,45 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                            (if guest? (list (guest-account)) '()))
                    (operating-system-users os)))))
 #+end_src
+*** Nix
+#+begin_src scheme :tangle (in-tangle-dir "nix.scm")
+(define-module (nix)
+  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
+  #:use-module ((gnu services) #:select (service))
+  #:use-module ((gnu services nix) #:select (nix-service-type))
+  #:use-module ((gnu packages package-management) #:select (nix)))
+
+(define (nix os)
+  (operating-system
+    (inherit os)
+    (packages (cons* nix
+                     (operating-system-packages os)))
+    (services (cons* (service nix-service-type)
+                     (operating-system-user-services os)))))
+#+end_src
+*** HiDPI Console Font
+#+begin_src scheme :tangle (in-tangle-dir "hidpi-console-font.scm")
+(define-module (hidpi-console-font)
+  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
+  #:use-module ((gnu services) #:select (modify-services))
+  #:use-module ((gnu services base) #:select (console-font-service-type))
+  #:use-module ((gnu packages fonts) #:select (font-terminus))
+  #:use-module ((guix gexp) #:select (file-append)))
+
+(define (with-hidpi-console-font services)
+  (modify-services services
+    (console-font-service-type config =>
+                               (map (lambda (tty-and-font)
+                                      (cons (car tty-and-font)
+                                            (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                    config))))
+
+(define-public (base-os os)
+  (operating-system
+    (inherit os)
+    (services (with-hidpi-console-font
+               (operating-system-user-services os)))))
+#+end_src
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
@@ -584,6 +601,8 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   #:use-module ((stateless) #:select (stateless))
   #:use-module ((macbook) #:select (macbook macbook-kbl))
   #:use-module ((users) #:select (users))
+  #:use-module ((nix) #:select (nix))
+  #:use-module ((hidpi-console-font) #:select (hidpi-console-font))
   #:use-module ((frostfire) #:select (frostfire)))
 
 (define-syntax ->
@@ -606,6 +625,8 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
       macbook
       (users "<<user-name>>"
              "<<user-full-name>>")
+      nix
+      hidpi-console-font
       (frostfire "frostfire"
                  "firmament"
                  `(#:root "root-blank"
@@ -864,6 +885,10 @@ for i in $GUIX_EXTRA_PROFILES/*; do
 
   unset profile
 done
+#+end_src
+*** Load Nix environment
+#+begin_src sh
+. /run/current-system/profile/etc/profile.d/nix.sh
 #+end_src
 ** Initialization
 :PROPERTIES:
