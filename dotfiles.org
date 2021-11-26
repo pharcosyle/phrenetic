@@ -524,7 +524,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   #:use-module ((gnu services) #:select (service))
   #:use-module ((gnu services nix) #:select (nix-service-type)))
 
-(define (nix os)
+(define-public (nix os)
   (operating-system
     (inherit os)
     (services (cons* (service nix-service-type)
@@ -547,7 +547,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                                             (file-append font-terminus "/share/consolefonts/ter-132n")))
                                     config))))
 
-(define-public (base-os os)
+(define-public (hidpi-console-font os)
   (operating-system
     (inherit os)
     (services (with-hidpi-console-font
