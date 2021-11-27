@@ -5,12 +5,10 @@
 * Meta
 #+begin_src elisp
 (defun tangle-dir* ()
-  (or
-   (-> (org-entry-get (point) "tangle-dir" 'inherit)
-       (split-string " ")
-       (string-join "/"))
-   ;; (default-directory)
-   ))
+  (thread-first
+    (org-entry-get (point) "tangle-dir" 'inherit)
+    (split-string " ")
+    (string-join "/")))
 
 (defun get-tangle-dir ()
   (expand-file-name (tangle-dir*)))
