@@ -240,6 +240,50 @@ guix pull
       %desktop-services
       (operating-system-user-services os)))))
 #+end_src
+**** Xorg config
+#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
+Section "InputClass"
+  Identifier      "Keyboards"
+  Driver          "libinput"
+  MatchIsKeyboard "on"
+EndSection
+Section "InputClass"
+  Identifier      "Touchpads"
+  Driver          "mtrack"
+  MatchIsTouchpad "on"
+EndSection
+#+end_src
+**** Spartan WM
+#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm") :noweb yes
+(define-module (spartan-wm)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
+
+(define-public spartan-wm
+  (package
+    (name "spartan-wm")
+    (version "0")
+    (synopsis "Spartan Window Manager")
+    (source #f)
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+         (let* ((out (assoc-ref %outputs "out"))
+                (xsessions (string-append out "/share/xsessions")))
+           (mkdir-p xsessions)
+           (make-desktop-entry-file
+            (string-append xsessions "/" ,name ".desktop")
+            #:name "Spartan WM"
+            #:comment ,synopsis
+            #:exec "<<spartan-executable>>"))
+         #t)))
+    (description synopsis)
+    (home-page #f)
+    (license #f)))
+#+end_src
 *** Boot
 #+begin_src scheme :tangle (in-tangle-dir "boot.scm")
 (define-module (boot)
@@ -517,7 +561,8 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                            (if guest? (list (guest-account)) '()))
                    (operating-system-users os)))))
 #+end_src
-*** Nix
+*** Miscellany
+**** Nix
 #+begin_src scheme :tangle (in-tangle-dir "nix.scm")
 (define-module (nix)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
@@ -530,7 +575,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     (services (cons* (service nix-service-type)
                      (operating-system-user-services os)))))
 #+end_src
-*** HiDPI Console Font
+**** HiDPI Console Font
 #+begin_src scheme :tangle (in-tangle-dir "hidpi-console-font.scm")
 (define-module (hidpi-console-font)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
@@ -553,6 +598,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     (services (with-hidpi-console-font
                (operating-system-user-services os)))))
 #+end_src
+** Hosts
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
 (define-module (frostfire)
@@ -638,50 +684,6 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
 #+end_src
 #+begin_src sh :results output silent :dir (get-tangle-dir) :async
 sudo guix system --load-path=. reconfigure frostfire-os.scm
-#+end_src
-** Xorg config
-#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
-Section "InputClass"
-  Identifier      "Keyboards"
-  Driver          "libinput"
-  MatchIsKeyboard "on"
-EndSection
-Section "InputClass"
-  Identifier      "Touchpads"
-  Driver          "mtrack"
-  MatchIsTouchpad "on"
-EndSection
-#+end_src
-** Spartan WM
-#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm") :noweb yes
-(define-module (spartan-wm)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
-
-(define-public spartan-wm
-  (package
-    (name "spartan-wm")
-    (version "0")
-    (synopsis "Spartan Window Manager")
-    (source #f)
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
-         (let* ((out (assoc-ref %outputs "out"))
-                (xsessions (string-append out "/share/xsessions")))
-           (mkdir-p xsessions)
-           (make-desktop-entry-file
-            (string-append xsessions "/" ,name ".desktop")
-            #:name "Spartan WM"
-            #:comment ,synopsis
-            #:exec "<<spartan-executable>>"))
-         #t)))
-    (description synopsis)
-    (home-page #f)
-    (license #f)))
 #+end_src
 * Home
 :PROPERTIES:
@@ -2459,7 +2461,7 @@ Gtk/CursorThemeSize 48
   ;; (setq display-time-24hr-format t)
   (display-time-mode 1))
 #+end_src
-** emacs-temp
+** WIP emacs
 *** doom-emacs-temp
 - TODO probably "export" the ~doom~ program to user profile
 #+begin_src scheme :tangle (in-tangle-dir "doom-emacs-temp.scm")
