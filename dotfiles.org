@@ -1,6 +1,6 @@
 #+TITLE: Dotfiles
 #+PROPERTY: header-args :mkdirp yes
-#+PROPERTY: tangle-dir ebullient-prism
+#+PROPERTY: tangle-dir ebullient
 
 * Meta
 #+begin_src elisp
@@ -18,7 +18,7 @@
 
 ;; TODO Don't duplicate with file-level tangle-dir property
 (defun base-tangle-dir ()
-  "ebullient-prism")
+  "ebullient")
 #+end_src
 ** Git
 #+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
@@ -112,6 +112,7 @@ btrfs subvolume create /mnt/guix-var
 btrfs subvolume create /mnt/log
 btrfs subvolume create /mnt/home
 btrfs subvolume create /mnt/persist
+btrfs subvolume create /mnt/nix
 
 # Take an empty readonly snapshot of the root subvolume (might be useful later for rolling back or comparison)
 btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
@@ -151,14 +152,14 @@ herd start cow-store /mnt
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/projects/dotfiles/ebullient-prism/home/channels.scm ~/.config/guix
+cp ~/projects/dotfiles/ebullient/home/channels.scm ~/.config/guix
 guix pull
 hash guix
 
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/projects/dotfiles/ebullient-prism
+cd ~/projects/dotfiles/ebullient
 guix system --load-path=. init system/frostfire.scm /mnt
 #+end_src
 *** Post-installation
@@ -184,14 +185,14 @@ guix pull
 :PROPERTIES:
 :tangle-dir+: system
 :END:
-** ~operating-system~
-*** Empty OS
-#+begin_src scheme :tangle (in-tangle-dir "empty-os.scm") :noweb yes
-(define-module (empty-os)
+** Components
+*** Barebones OS
+#+begin_src scheme :tangle (in-tangle-dir "barebones-os.scm")
+(define-module (ebullient system barebones-os)
   #:use-module ((gnu system) #:select (operating-system))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems)))
 
-(define-public empty-os
+(define-public barebones-os
   (operating-system
     (host-name #f)
     (timezone #f)
@@ -199,101 +200,28 @@ guix pull
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-*** Base OS
-#+begin_src scheme :tangle (in-tangle-dir "base-os.scm")
-(define-module (base-os)
-  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
-  #:use-module ((gnu services) #:select (service simple-service))
-  #:use-module ((gnu services base) #:select (udev-service-type))
-  #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service %desktop-services))
-  #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
-  #:use-module ((gnu packages) #:select (specification->package))
-  #:use-module ((gnu packages linux) #:select (brightnessctl))
-  #:use-module ((ice-9 rdelim) #:select (read-string))
-  #:use-module ((ebullient-prism packages xf86-input-mtrack) :select (xf86-input-mtrack))
-  #:use-module ((spartan-wm) #:select (spartan-wm))
-  #:export (base-os))
+*** Basic Info
+#+begin_src scheme :tangle (in-tangle-dir "basic-info.scm")
+(define-module (ebullient system basic-info)
+  #:use-module ((gnu system) #:select (operating-system)))
 
-(define* (base-os os kbl #:key (bluetooth? #t))
+(define-public (basic-info os host-name tz locale)
   (operating-system
     (inherit os)
-    (timezone "America/Los_Angeles")
-    (keyboard-layout kbl)
-    (packages
-     (append
-      (list (specification->package "nss-certs")
-            (specification->package "xf86-input-libinput")
-            (specification->package "xf86-input-mtrack")
-            spartan-wm)
-      (operating-system-packages os)))
-    (services
-     (append
-      (list (service gnome-desktop-service-type)
-            (set-xorg-configuration
-             (xorg-configuration
-              (modules (cons* xf86-input-mtrack
-                              %default-xorg-modules))
-              (keyboard-layout keyboard-layout)
-              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
-            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
-      (if bluetooth?
-          (list (bluetooth-service #:auto-enable? #t)) '())
-      %desktop-services
-      (operating-system-user-services os)))))
-#+end_src
-**** Xorg config
-#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
-Section "InputClass"
-  Identifier      "Keyboards"
-  Driver          "libinput"
-  MatchIsKeyboard "on"
-EndSection
-Section "InputClass"
-  Identifier      "Touchpads"
-  Driver          "mtrack"
-  MatchIsTouchpad "on"
-EndSection
-#+end_src
-**** Spartan WM
-#+begin_src scheme :tangle (in-tangle-dir "spartan-wm.scm") :noweb yes
-(define-module (spartan-wm)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system)))
-
-(define-public spartan-wm
-  (package
-    (name "spartan-wm")
-    (version "0")
-    (synopsis "Spartan Window Manager")
-    (source #f)
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
-         (let* ((out (assoc-ref %outputs "out"))
-                (xsessions (string-append out "/share/xsessions")))
-           (mkdir-p xsessions)
-           (make-desktop-entry-file
-            (string-append xsessions "/" ,name ".desktop")
-            #:name "Spartan WM"
-            #:comment ,synopsis
-            #:exec "<<spartan-executable>>"))
-         #t)))
-    (description synopsis)
-    (home-page #f)
-    (license #f)))
+    (host-name host-name)
+    (timezone tz)
+    (locale locale)))
 #+end_src
 *** Boot
 #+begin_src scheme :tangle (in-tangle-dir "boot.scm")
-(define-module (boot)
+(define-module (ebullient system boot)
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
   #:use-module ((gnu bootloader) #:select (bootloader-configuration))
   #:use-module ((gnu bootloader grub) #:select (grub-efi-bootloader))
-  #:use-module ((gnu system file-systems) #:select (file-system file-system-label)))
+  #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
+  #:export (boot))
 
-(define-public (boot os target label kbl)
+(define* (boot os target label #:optional kbl)
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
@@ -308,27 +236,44 @@ EndSection
               (type "vfat"))
             (operating-system-file-systems os)))))
 #+end_src
+*** Desktop Services
+Other modules may wish to modify the list of operating system services so use this in the module chain early.
+#+begin_src scheme :tangle (in-tangle-dir "desktop-services.scm")
+(define-module (ebullient system desktop-services)
+  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
+  #:use-module ((gnu services desktop) #:select (%desktop-services)))
+
+(define-public (desktop-services os)
+  (operating-system
+    (inherit os)
+    (services
+     (append %desktop-services
+             (operating-system-user-services os)))))
+#+end_src
 *** Linux Nonfree
 #+begin_src scheme :tangle (in-tangle-dir "linux-nonfree.scm")
-(define-module (linux-nonfree)
+(define-module (ebullient system linux-nonfree)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-services))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware))
-  #:use-module ((linux-nonfree-substitutes) #:select (with-linux-nonfree-substitutes)))
+  #:use-module ((ebullient system linux-nonfree-substitutes) #:select (with-linux-nonfree-substitutes))
+  #:export (linux-nonfree))
 
-(define-public (linux-nonfree os)
+(define* (linux-nonfree os #:key (substitutes? #t))
   (operating-system
     (inherit os)
     (kernel linux)
     (initrd microcode-initrd)
     (firmware (cons* linux-firmware
                      (operating-system-firmware os)))
-    (services (with-linux-nonfree-substitutes
-               (operating-system-user-services os)))))
+    (services (let ((user-services (operating-system-user-services os)))
+                (if substitutes?
+                    (with-linux-nonfree-substitutes user-services)
+                    user-services)))))
 #+end_src
 **** Substitutes
 #+begin_src scheme :tangle (in-tangle-dir "linux-nonfree-substitutes.scm")
-(define-module (linux-nonfree-substitutes)
+(define-module (ebullient system linux-nonfree-substitutes)
   #:use-module ((gnu services) #:select (modify-services))
   #:use-module ((gnu services base) #:select (guix-service-type guix-configuration %default-authorized-guix-keys))
   #:use-module ((guix gexp) #:select (local-file))
@@ -355,7 +300,7 @@ EndSection
 #+end_src
 *** Disk Encryption
 #+begin_src scheme :tangle (in-tangle-dir "disk-encryption.scm")
-(define-module (disk-encryption)
+(define-module (ebullient system disk-encryption)
   #:use-module ((gnu system) #:select (operating-system operating-system-mapped-devices))
   #:use-module ((gnu system file-systems) #:select (uuid))
   #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping)))
@@ -374,24 +319,29 @@ EndSection
             (operating-system-mapped-devices os)))))
 #+end_src
 *** Stateless
+The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services and users of this module should include it at the end of their module chain.
 #+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
-(define-module (stateless)
+(define-module (ebullient system stateless)
   #:use-module ((gnu services) #:select (service))
-  #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-user-services))
-  #:use-module ((stateless-service) #:select (stateless-service-type))
+  #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-file-systems operating-system-user-services))
+  #:use-module ((ebullient system stateless-file-systems) #:select (stateless-file-systems))
+  #:use-module ((ebullient system stateless-service) #:select (stateless-service-type))
   #:export (stateless))
 
-(define* (stateless os persist-dir #:key (bluetooth? #t))
+(define* (stateless os label persist-dir subvols #:optional dependencies #:key (nix? #t) (bluetooth? #t))
   (operating-system
     (inherit os)
     (initrd (lambda (file-systems . rest)
               (apply (operating-system-initrd os) file-systems
                      #:volatile-root? #t
                      rest)))
+    (file-systems
+     (append
+      (stateless-file-systems label persist-dir subvols dependencies nix?)
+      (operating-system-file-systems os)))
     (services
      (append
       (operating-system-user-services os)
-      ;; Stateless service should come after base/desktop services so its state gets installed before theirs during activation.
       (list
        (service stateless-service-type
                 `(#:persist-dir ,persist-dir
@@ -405,9 +355,39 @@ EndSection
                             (if bluetooth?
                                 (list "/var/lib/bluetooth") '())))))))))
 #+end_src
+**** File Systems
+#+begin_src scheme :tangle (in-tangle-dir "stateless-file-systems.scm")
+(define-module (ebullient system stateless-file-systems)
+  #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:export (stateless-file-systems))
+
+(define* (stateless-file-systems label persist-dir mountables dependencies nix?)
+  (map (match-lambda
+         ((purpose subvol mount-point)
+          (file-system
+            (device (file-system-label label))
+            (mount-point mount-point)
+            (type "btrfs")
+            (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
+            (needed-for-boot? (if (member purpose '(#:guix-var #:log #:persist)) #t #f))
+            (dependencies (or dependencies '())))))
+       (apply (lambda* (#:key root boot guix-store guix-var log home persist nix)
+                (append
+                 `((#:root ,root "/")
+                   (#:boot ,boot "/boot")
+                   (#:guix-store ,guix-store "/gnu/store")
+                   (#:guix-var ,guix-var "/var/guix")
+                   (#:log ,log "/var/log")
+                   (#:home ,home "/home")
+                   (#:persist ,persist ,persist-dir))
+                 ;; (if nix? `((#:nix ,nix "/nix") '()))
+                 ))
+              mountables)))
+#+end_src
 **** Service
 #+begin_src scheme :tangle (in-tangle-dir "stateless-service.scm")
-(define-module (stateless-service)
+(define-module (ebullient system stateless-service)
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu services) #:select (service-type service-extension boot-service-type activation-service-type))
   #:use-module ((guix gexp) #:select (gexp with-extensions with-imported-modules))
@@ -477,10 +457,109 @@ EndSection
                        (service-extension activation-service-type
                                           activate-state-gexp)))))
 #+end_src
+*** Users
+#+begin_src scheme :tangle (in-tangle-dir "users.scm")
+(define-module (ebullient system users)
+  #:use-module ((gnu system) #:select (operating-system operating-system-users))
+  #:use-module ((gnu system accounts) #:select (user-account))
+  #:export (users))
+
+(define* (account user-name user-full-name #:key admin? password bluetooth?)
+  (user-account
+   (name user-name)
+   (comment user-full-name)
+   (group "users")
+   ;; TODO `input' group necessary for mtrack (at present, maybe there's a way around
+   ;; this. Libinput doesn't need it, for example, but maybe it's "built in" or
+   ;; something. Also I'd ideally like the touchpad to work on the gdm login screen.)
+   (supplementary-groups (append '("netdev" "audio" "video" "input")
+                                 (if admin? (list "wheel") '())
+                                 (if bluetooth? (list "lp") '())))
+   (password (if password
+                 (crypt password "toosimple")
+                 #f))))
+
+(define* (users os user-list #:key (bluetooth? #t))
+  (operating-system
+    (inherit os)
+    (users (append (map (lambda* (user)
+                          (apply account (append user `(#:bluetooth? ,bluetooth?))))
+                        user-list)
+                   (operating-system-users os)))))
+#+end_src
+*** Nix
+#+begin_src scheme :tangle (in-tangle-dir "nix.scm")
+(define-module (ebullient system nix)
+  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
+  #:use-module ((gnu services) #:select (service))
+  #:use-module ((gnu services nix) #:select (nix-service-type)))
+
+(define-public (nix os)
+  (operating-system
+    (inherit os)
+    (services (cons* (service nix-service-type)
+                     (operating-system-user-services os)))))
+#+end_src
+*** HiDPI Console Font
+#+begin_src scheme :tangle (in-tangle-dir "hidpi-console-font.scm")
+(define-module (ebullient system hidpi-console-font)
+  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
+  #:use-module ((gnu services) #:select (modify-services))
+  #:use-module ((gnu services base) #:select (console-font-service-type))
+  #:use-module ((gnu packages fonts) #:select (font-terminus))
+  #:use-module ((guix gexp) #:select (file-append)))
+
+(define (with-hidpi-console-font services)
+  (modify-services services
+    (console-font-service-type config =>
+                               (map (lambda (tty-and-font)
+                                      (cons (car tty-and-font)
+                                            (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                    config))))
+
+(define-public (hidpi-console-font os)
+  (operating-system
+    (inherit os)
+    (services (with-hidpi-console-font
+               (operating-system-user-services os)))))
+#+end_src
+*** Mtrack
+- TODO Get the setting of keyboard-layout into et-cetera
+#+begin_src scheme :tangle (in-tangle-dir "mtrack.scm")
+(define-module (ebullient system mtrack)
+  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
+  #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
+  #:use-module ((ice-9 rdelim) #:select (read-string))
+  #:use-module ((ebullient packages xf86-input-mtrack) :select (xf86-input-mtrack))
+  #:export (mtrack))
+
+(define* (mtrack #:optional kbl)
+  (operating-system
+    (inherit os)
+    (packages
+     (cons* xf86-input-mtrack
+            (operating-system-packages os)))
+    (services
+     (cons* (set-xorg-configuration
+             (xorg-configuration
+              (modules (cons* xf86-input-mtrack
+                              %default-xorg-modules))
+              (keyboard-layout kbl)
+              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+            (operating-system-user-services os)))))
+#+end_src
+**** Xorg config
+#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
+Section "InputClass"
+  Identifier      "Touchpads"
+  Driver          "mtrack"
+  MatchIsTouchpad "on"
+EndSection
+#+end_src
 *** Macbook
 I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
 #+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
-(define-module (macbook)
+(define-module (ebullient system macbook)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-kernel-arguments operating-system-kernel-loadable-modules))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
   #:use-module ((nongnu packages linux) #:select (broadcom-bt-firmware broadcom-sta))
@@ -509,145 +588,89 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                                       "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
     (kernel-loadable-modules (cons* broadcom-sta
                                     (operating-system-kernel-loadable-modules os)))
-    (firmware (if bluetooth?
-                  (cons* broadcom-bt-firmware
-                         (operating-system-firmware os))
-                  (operating-system-firmware os)))))
+    (firmware (append
+               (if bluetooth? (list broadcom-bt-firmware) '())
+               (operating-system-firmware os)))))
 
 (define-public macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
-*** Users
-#+begin_src scheme :tangle (in-tangle-dir "users.scm")
-(define-module (users)
-  #:use-module ((gnu system) #:select (operating-system operating-system-users))
-  #:use-module ((gnu system accounts) #:select (user-account))
-  #:export (users))
+*** Custom WM
+#+begin_src scheme :tangle (in-tangle-dir "custom-wm.scm")
+(define-module (ebullient system custom-wm)
+  #:use-module ((gnu system) #:select (operating-system operating-system-packages))
+  #:use-module ((ebullient system custom-wm-desktop-entry) #:select (custom-wm-desktop-entry)))
 
-;; TODO `input' group necessary for mtrack (at present, maybe there's a way around
-;; this. Libinput doesn't need it, for example, but maybe it's "built in" or
-;; something. Also I'd ideally like the touchpad to work on the gdm login screen.)
-(define* (user-groups #:optional bluetooth?)
-  (append '("netdev" "audio" "video" "input")
-          (if bluetooth? (list "lp") '())))
-
-(define (admin-groups bluetooth?)
-  (cons* "wheel" (user-groups bluetooth?)))
-
-(define (main-accounts user-name user-full-name bluetooth?)
-  (list
-   (user-account
-    (name user-name)
-    (comment user-full-name)
-    (group "users")
-    (supplementary-groups (admin-groups bluetooth?)))
-   (user-account
-    (name "pcoulson")
-    (comment "Phil Coulson")
-    (group "users")
-    (supplementary-groups (admin-groups bluetooth?)))))
-
-(define (guest-account)
-  (user-account
-   (name "gandalf")
-   (comment "Speak Friend and Enter")
-   (group "users")
-   (supplementary-groups (user-groups))
-   (password (crypt "mellon" "toosimple"))))
-
-(define* (users os user-name user-full-name #:key (bluetooth? #t) (guest? #t))
+(define-public (custom-wm os package-name desktop-name executable)
   (operating-system
     (inherit os)
-    (users (append (append (main-accounts user-name user-full-name bluetooth?)
-                           (if guest? (list (guest-account)) '()))
-                   (operating-system-users os)))))
+    (packages (cons* (custom-wm-desktop-entry executable)
+                     (operating-system-packages os)))))
 #+end_src
-*** Miscellany
-**** Nix
-#+begin_src scheme :tangle (in-tangle-dir "nix.scm")
-(define-module (nix)
-  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
-  #:use-module ((gnu services) #:select (service))
-  #:use-module ((gnu services nix) #:select (nix-service-type)))
+**** Desktop Entry
+#+begin_src scheme :tangle (in-tangle-dir "custom-wm-desktop-entry.scm")
+(define-module (ebullient system custom-wm-desktop-entry)
+  #:use-module ((guix packages) #:select (package))
+  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module ((ebullient utils) #:select (private-package)))
 
-(define-public (nix os)
-  (operating-system
-    (inherit os)
-    (services (cons* (service nix-service-type)
-                     (operating-system-user-services os)))))
+(define-public (custom-wm-desktop-entry package-name desktop-name executable)
+  (package
+    (inherit (private-package package-name))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       (begin
+         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+         (let* ((out (assoc-ref %outputs "out"))
+                (xsessions (string-append out "/share/xsessions")))
+           (mkdir-p xsessions)
+           (make-desktop-entry-file
+            (string-append xsessions "/" ,name ".desktop")
+            #:name ,desktop-name
+            #:comment ,desktop-name
+            #:exec ,executable))
+         #t)))))
 #+end_src
-**** HiDPI Console Font
-#+begin_src scheme :tangle (in-tangle-dir "hidpi-console-font.scm")
-(define-module (hidpi-console-font)
-  #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
-  #:use-module ((gnu services) #:select (modify-services))
-  #:use-module ((gnu services base) #:select (console-font-service-type))
-  #:use-module ((gnu packages fonts) #:select (font-terminus))
-  #:use-module ((guix gexp) #:select (file-append)))
+*** Et Cetera
+#+begin_src scheme :tangle (in-tangle-dir "et-cetera.scm")
+(define-module (ebullient system et-cetera)
+  #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
+  #:use-module ((gnu services) #:select (service simple-service))
+  #:use-module ((gnu services base) #:select (udev-service-type))
+  #:use-module ((gnu services desktop) #:select (gnome-desktop-service-type bluetooth-service))
+  ;; #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration))
+  #:use-module ((gnu packages) #:select (specification->package))
+  #:use-module ((gnu packages linux) #:select (brightnessctl))
+  #:export (et-cetera))
 
-(define (with-hidpi-console-font services)
-  (modify-services services
-    (console-font-service-type config =>
-                               (map (lambda (tty-and-font)
-                                      (cons (car tty-and-font)
-                                            (file-append font-terminus "/share/consolefonts/ter-132n")))
-                                    config))))
-
-(define-public (hidpi-console-font os)
+(define* (et-cetera os #:optional kbl #:key (bluetooth? #t))
   (operating-system
     (inherit os)
-    (services (with-hidpi-console-font
-               (operating-system-user-services os)))))
+    (keyboard-layout kbl)
+    (packages
+     (cons* (specification->package "nss-certs")
+            (operating-system-packages os)))
+    (services
+     (append
+      (list (service gnome-desktop-service-type)
+            ;; (set-xorg-configuration
+            ;;  (xorg-configuration
+            ;;   (keyboard-layout keyboard-layout)))
+            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
+      (if bluetooth?
+          (list (bluetooth-service #:auto-enable? #t)) '())
+      (operating-system-user-services os)))))
 #+end_src
 ** Hosts
+:PROPERTIES:
+:tangle-dir+: hosts
+:END:
 *** Frostfire
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm")
-(define-module (frostfire)
-  #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
-  #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:export (frostfire))
-
-(define* (frostfire os host-name label subvols-spec #:key dependencies)
-  (operating-system
-    (inherit os)
-    (host-name host-name)
-    (file-systems
-     (append
-      (map (match-lambda
-             ((subvol mount-point)
-              (file-system
-                (device (file-system-label label))
-                (mount-point mount-point)
-                (type "btrfs")
-                (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
-                (needed-for-boot? (if (member subvol '("guix-var" "log" "persist")) #t #f))
-                (dependencies (or dependencies '())))))
-           (apply (lambda* (#:key root boot guix-store guix-var log home persist persist-path)
-                    `((,root "/")
-                      (,boot "/boot")
-                      (,guix-store "/gnu/store")
-                      (,guix-var "/var/guix")
-                      (,log "/var/log")
-                      (,home "/home")
-                      (,persist ,persist-path)))
-                  subvols-spec))
-      (operating-system-file-systems os)))))
-#+end_src
-*** Frostfire OS
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-os.scm") :noweb yes
-(define-module (frostfire-os)
-  #:use-module ((empty-os) #:select (empty-os))
-  #:use-module ((base-os) #:select (base-os))
-  #:use-module ((boot) #:select (boot))
-  #:use-module ((linux-nonfree) #:select (linux-nonfree))
-  #:use-module ((disk-encryption) #:select (disk-encryption encrypted-device))
-  #:use-module ((stateless) #:select (stateless))
-  #:use-module ((macbook) #:select (macbook macbook-kbl))
-  #:use-module ((users) #:select (users))
-  #:use-module ((nix) #:select (nix))
-  #:use-module ((hidpi-console-font) #:select (hidpi-console-font))
-  #:use-module ((frostfire) #:select (frostfire)))
+#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
+(define-module (ebullient system hosts frostfire)
+  #:use-module (ebullient system))
 
 (define-syntax ->
   (syntax-rules ()
@@ -656,35 +679,36 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     ((_ value f1 next ...) (-> (f1 value) next ...))))
 
 (let ((kbl macbook-kbl)
-      (ciphered (encrypted-device "bdda56af-6ca0-4953-bc13-d5af8715e0e5" "ciphered"))
-      (persist-path "/.persist"))
-  (-> empty-os
-      (base-os kbl)
-      (boot "/boot/efi"
-            "genesis"
-            kbl)
+      (ciphered (encrypted-device "bdda56af-6ca0-4953-bc13-d5af8715e0e5" "ciphered")))
+  (-> barebones-os
+      (basic-info "frostfire" "America/Los_Angeles" "en_US.utf8")
+      (boot "/boot/efi" "genesis" kbl)
+      desktop-services
       linux-nonfree
       (disk-encryption ciphered)
-      (stateless persist-path)
-      macbook
-      (users "<<user-name>>"
-             "<<user-full-name>>")
+      (users '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
+               ("pcoulson" "Phil Coulson" #:admin? #t)
+               ("gandalf" "Speak Friend and Enter" #:password "mellon")))
       nix
       hidpi-console-font
-      (frostfire "frostfire"
-                 "firmament"
-                 `(#:root "root-blank"
+      (mtrack kbl)
+      macbook
+      (custom-wm "spartan-wm" "Spartan WM" "<<spartan-executable>>")
+      (et-cetera kbl)
+      (stateless "firmament"
+                 "/.persist"
+                 '(#:root "root-blank"
                    #:boot "boot"
                    #:guix-store "guix-store"
                    #:guix-var "guix-var"
                    #:log "log"
                    #:home "home"
                    #:persist "persist"
-                   #:persist-path ,persist-path)
-                 #:dependencies (list ciphered))))
+                   #:nix "nix")
+                 (list ciphered))))
 #+end_src
 #+begin_src sh :results output silent :dir (base-tangle-dir) :async
-sudo guix system --load-path=. reconfigure system/frostfire.scm
+sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
 #+end_src
 * Home
 :PROPERTIES:
@@ -899,13 +923,12 @@ done
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
-  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr)))
+  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
+  #:use-module ((ebullient utils) #:select (private-package)))
 
 (define-public initialization
   (package
-    (name "Initialization")
-    (version "0")
-    (source #f)
+    (inherit (private-package "initialization"))
     (native-inputs
      `(("script.sh" ,(local-file "script.sh"))
        ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
@@ -937,11 +960,7 @@ done
                (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
                (("xinput") (cmd "xinput"))
                (("xrandr") (cmd "xrandr")))))
-         #t)))
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
+         #t)))))
 #+end_src
 *** Script
 #+begin_src sh :tangle (in-tangle-dir "script.sh")
@@ -1044,7 +1063,10 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
  '("ungoogled-chromium"
    "ublock-origin-chromium" ; For/with ungoogled-chromium
    "protonvpn-cli"
-   "btrfs-progs"
+
+   "btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
+
+   ;; Code
    "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
    "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
 
@@ -2106,14 +2128,12 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
-  ;; #:use-module ((ebullient-prism packages dracula-theme) #:select (dracula-theme))
-  )
+  ;; #:use-module ((ebullient packages dracula-theme) #:select (dracula-theme))
+  #:use-module ((ebullient utils) #:select (private-package)))
 
 (define-public spartan
   (package
-    (name "spartan")
-    (version "0")
-    (source #f)
+    (inherit (private-package "spartan"))
     (build-system trivial-build-system)
     (native-inputs
      `(("startup-script.sh" ,(local-file "startup-script.sh"))
@@ -2176,11 +2196,7 @@ Can be an integer to determine the exact padding."
                  (("desktop\\.el") desktop-el-file))
                (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
                (chmod executable #o555))))
-         #t)))
-    (synopsis "Spartan")
-    (description synopsis)
-    (home-page #f)
-    (license #f)))
+         #t)))))
 #+end_src
 *** Startup script
 #+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
@@ -2614,7 +2630,7 @@ Gtk/CursorThemeSize 48
 :END:
 ** Dracula Theme
 #+begin_src scheme :tangle (in-tangle-dir "dracula-theme.scm")
-(define-module (ebullient-prism packages dracula-theme)
+(define-module (ebullient packages dracula-theme)
   #:use-module ((guix packages) #:select (package origin base32))
   #:use-module ((guix git-download) #:select (git-version git-fetch git-reference))
   #:use-module ((gnu packages gnome-xyz) #:select (nordic-theme)))
@@ -2646,7 +2662,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 ** xf86-input-mtrack
 #+begin_src scheme :tangle (in-tangle-dir "xf86-input-mtrack.scm")
-(define-module (ebullient-prism packages xf86-input-mtrack)
+(define-module (ebullient packages xf86-input-mtrack)
   #:use-module ((guix packages) #:select (package origin base32))
   #:use-module ((guix git-download) #:select (git-version git-fetch git-reference))
   #:use-module ((guix build-system gnu) #:select (gnu-build-system))
@@ -2681,4 +2697,20 @@ Gtk/CursorThemeSize 48
       (description "An Xorg driver for multitouch trackpads. Supports any trackpad whose kernel driver uses the slotted multitouch protocol.")
       (home-page "https://github.com/p2rkw/xf86-input-mtrack")
       (license license:gpl2+))))
+#+end_src
+* Utils
+#+begin_src scheme :tangle (in-tangle-dir "utils.scm")
+(define-module (ebullient utils)
+  #:use-module ((guix packages) #:select (package)))
+
+(define-public (private-package package-name)
+  (package
+    (name package-name)
+    (version "0")
+    (source #f)
+    (build-system #f)
+    (synopsis name)
+    (description synopsis)
+    (home-page #f)
+    (license #f)))
 #+end_src
