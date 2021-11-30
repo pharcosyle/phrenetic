@@ -215,7 +215,8 @@ guix pull
   #:use-module (ebullient packages xf86-input-mtrack)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (define-system-comp
+  #:export (system-comp
+            define-system-comp
             barebones-os
             basic-info
             boot
@@ -330,23 +331,25 @@ Other components may wish to modify the list of operating system services so use
 #+end_src
 *** Disk encryption
 #+begin_src scheme
-(define-system-comp (disk-encryption #:key source-uuid target encrypted-mount-points)
+(define* (disk-encryption os #:key source-uuid target encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
                            (target target)
                            (type luks-device-mapping))))
-    (mapped-devices
-     (cons* encrypted-device
-            (operating-system-mapped-devices os)))
-    (file-systems
-     (map (lambda (fs)
-            (if (member (file-system-mount-point fs) encrypted-mount-points)
-                (file-system
-                  (inherit fs)
-                  (dependencies (cons* encrypted-device
-                                       (file-system-dependencies fs))))
-                fs))
-          (operating-system-file-systems os)))))
+    (system-comp
+     os
+     (mapped-devices
+      (cons* encrypted-device
+             (operating-system-mapped-devices os)))
+     (file-systems
+      (map (lambda (fs)
+             (if (member (file-system-mount-point fs) encrypted-mount-points)
+                 (file-system
+                   (inherit fs)
+                   (dependencies (cons* encrypted-device
+                                        (file-system-dependencies fs))))
+                 fs))
+           (operating-system-file-systems os))))))
 #+end_src
 *** Stateless
 The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so users of this component should include it at the end of their component chain.
