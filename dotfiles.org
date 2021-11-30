@@ -299,36 +299,11 @@ Other components may wish to modify the list of operating system services so use
 #+end_src
 *** Linux nonfree
 #+begin_src scheme
-(define-system-comp (linux-nonfree #:key substitutes?)
+(define-system-comp (linux-nonfree)
   (kernel linux)
   (initrd microcode-initrd)
   (firmware (cons* linux-firmware
-                   (operating-system-firmware os)))
-  (services (let ((user-services (operating-system-user-services os)))
-              (if substitutes?
-                  (with-nonguix-substitutes user-services)
-                  user-services))))
-#+end_src
-**** Substitutes
-#+begin_src scheme
-(define (with-nonguix-substitutes services)
-  (modify-services services
-    (guix-service-type config =>
-                       (guix-configuration
-                        (inherit config)
-                        (substitute-urls
-                         (append %default-substitute-urls
-                                 (list "https://mirror.brielmaier.net")))
-                        (authorized-keys
-                         (append %default-authorized-guix-keys
-                                 (list (local-file "mirror.brielmaier.net.pub"))))))))
-#+end_src
-***** Public key
-#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
-(public-key
- (ecc
-  (curve Ed25519)
-  (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
+                   (operating-system-firmware os))))
 #+end_src
 *** Disk encryption
 #+begin_src scheme
@@ -499,14 +474,14 @@ The stateless service should come after base/desktop services (potentially other
                                             (file-append font-terminus "/share/consolefonts/ter-132n")))
                                     config))))
 
-(define-system-comp (hidpi-console-font os)
+(define-system-comp (hidpi-console-font)
   (services (with-hidpi-console-font
              (operating-system-user-services os))))
 #+end_src
 *** mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
 #+begin_src scheme
-(define-system-comp (mtrack os)
+(define-system-comp (mtrack)
   (packages
    (cons* xf86-input-mtrack
           (operating-system-packages os)))
@@ -528,6 +503,27 @@ Section "InputClass"
   Driver          "mtrack"
   MatchIsTouchpad "on"
 EndSection
+#+end_src
+*** Nonguix substitutes
+#+begin_src scheme
+(define-system-comp (nonguix-substitutes)
+  (services (modify-services (operating-system-user-services os)
+              (guix-service-type config =>
+                                 (guix-configuration
+                                  (inherit config)
+                                  (substitute-urls
+                                   (append %default-substitute-urls
+                                           (list "https://mirror.brielmaier.net")))
+                                  (authorized-keys
+                                   (append %default-authorized-guix-keys
+                                           (list (local-file "mirror.brielmaier.net.pub")))))))))
+#+end_src
+**** Public key
+#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
+(public-key
+ (ecc
+  (curve Ed25519)
+  (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 *** Macbook
 I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
@@ -651,7 +647,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (boot #:label "genesis"
             #:target "/boot/efi")
       (initial-services #:desktop? desktop?)
-      (linux-nonfree #:substitutes? #t)
+      linux-nonfree
       (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
                      ("pcoulson" "Phil Coulson" #:admin? #t)
                      ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
@@ -665,6 +661,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                            #:desktop-name "Spartan WM"
                            #:executable "<<spartan-exe>>"))
             $))
+      nonguix-substitutes
       (as-> $
         (if macbook?
             (macbook $ #:bluetooth? bluetooth?) $))
