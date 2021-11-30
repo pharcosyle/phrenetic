@@ -255,56 +255,48 @@ guix pull
 *** Basics
 Other components may inherit ~keyboard-value~ so use this component early. At the time of this writing, nothing depends on the values of hostname, etc but I could see them being useful base values to have present early.
 #+begin_src scheme
-(define* (basics os #:key host-name timezone locale keyboard-layout)
-  (operating-system
-    (inherit os)
-    (host-name host-name)
-    (timezone timezone)
-    (locale locale)
-    (keyboard-layout keyboard-layout)))
+(define-system-comp (basics os #:key host-name timezone locale keyboard-layout)
+  (host-name host-name)
+  (timezone timezone)
+  (locale locale)
+  (keyboard-layout keyboard-layout))
 #+end_src
 *** Boot
 #+begin_src scheme
-(define* (boot os #:key label target)
-  (operating-system
-    (inherit os)
-    (bootloader (bootloader-configuration
-                 (bootloader grub-efi-bootloader)
-                 (targets `(,target))
-                 (timeout 1)
-                 (keyboard-layout (operating-system-keyboard-layout os))))
-    (file-systems
-     (cons* (file-system
-              (device (file-system-label label))
-              (mount-point target)
-              (type "vfat"))
-            (operating-system-file-systems os)))))
+(define-system-comp (boot os #:key label target)
+  (bootloader (bootloader-configuration
+               (bootloader grub-efi-bootloader)
+               (targets `(,target))
+               (timeout 1)
+               (keyboard-layout (operating-system-keyboard-layout os))))
+  (file-systems
+   (cons* (file-system
+            (device (file-system-label label))
+            (mount-point target)
+            (type "vfat"))
+          (operating-system-file-systems os))))
 #+end_src
 *** Initial services
 Other components may wish to modify the list of operating system services so use this in the component chain early.
 #+begin_src scheme
-(define* (initial-services os #:key desktop?)
-  (operating-system
-    (inherit os)
-    (services
-     (append (if desktop?
-                 %desktop-services
-                 %base-services)
-             (operating-system-user-services os)))))
+(define-system-comp (initial-services os #:key desktop?)
+  (services
+   (append (if desktop?
+               %desktop-services
+               %base-services)
+           (operating-system-user-services os))))
 #+end_src
 *** Linux nonfree
 #+begin_src scheme
-(define* (linux-nonfree os #:key substitutes?)
-  (operating-system
-    (inherit os)
-    (kernel linux)
-    (initrd microcode-initrd)
-    (firmware (cons* linux-firmware
-                     (operating-system-firmware os)))
-    (services (let ((user-services (operating-system-user-services os)))
-                (if substitutes?
-                    (with-nonguix-substitutes user-services)
-                    user-services)))))
+(define-system-comp (linux-nonfree os #:key substitutes?)
+  (kernel linux)
+  (initrd microcode-initrd)
+  (firmware (cons* linux-firmware
+                   (operating-system-firmware os)))
+  (services (let ((user-services (operating-system-user-services os)))
+              (if substitutes?
+                  (with-nonguix-substitutes user-services)
+                  user-services))))
 #+end_src
 **** Substitutes
 #+begin_src scheme
@@ -339,20 +331,18 @@ Other components may wish to modify the list of operating system services so use
              fs))
        file-systems))
 
-(define* (disk-encryption os #:key source-uuid target encrypted-mount-points)
+(define-system-comp (disk-encryption os #:key source-uuid target encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
                            (target target)
                            (type luks-device-mapping))))
-    (operating-system
-      (inherit os)
-      (mapped-devices
-       (cons* encrypted-device
-              (operating-system-mapped-devices os)))
-      (file-systems
-       (with-dependencies encrypted-mount-points
-                          encrypted-device
-                          (operating-system-file-systems os))))))
+    (mapped-devices
+     (cons* encrypted-device
+            (operating-system-mapped-devices os)))
+    (file-systems
+     (with-dependencies encrypted-mount-points
+                        encrypted-device
+                        (operating-system-file-systems os)))))
 #+end_src
 *** Stateless
 The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so and users of this component should include it at the end of their component chain.
@@ -367,30 +357,28 @@ The stateless service should come after base/desktop services (potentially other
              fs))
        file-systems))
 
-(define* (stateless os #:key persist-dir bluetooth?)
-  (operating-system
-    (inherit os)
-    (initrd (lambda (file-systems . rest)
-              (apply (operating-system-initrd os) file-systems
-                     #:volatile-root? #t
-                     rest)))
-    (file-systems
-     (with-needed-for-boot-flags persist-dir (operating-system-file-systems os)))
-    (services
-     (append
-      (operating-system-user-services os)
-      (list
-       (service stateless-service-type
-                `(#:persist-dir ,persist-dir
-                  #:paths ,(append
-                            '("/etc/machine-id"
-                              "/var/lib/random-seed"
-                              "/etc/NetworkManager/system-connections"
-                              "/var/lib/NetworkManager/secret_key"
-                              "/etc/guix/signing-key.pub"
-                              "/etc/guix/signing-key.sec")
-                            (if bluetooth?
-                                (list "/var/lib/bluetooth") '())))))))))
+(define-system-comp (stateless os #:key persist-dir bluetooth?)
+  (initrd (lambda (file-systems . rest)
+            (apply (operating-system-initrd os) file-systems
+                   #:volatile-root? #t
+                   rest)))
+  (file-systems
+   (with-needed-for-boot-flags persist-dir (operating-system-file-systems os)))
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (service stateless-service-type
+              `(#:persist-dir ,persist-dir
+                #:paths ,(append
+                          '("/etc/machine-id"
+                            "/var/lib/random-seed"
+                            "/etc/NetworkManager/system-connections"
+                            "/var/lib/NetworkManager/secret_key"
+                            "/etc/guix/signing-key.pub"
+                            "/etc/guix/signing-key.sec")
+                          (if bluetooth?
+                              (list "/var/lib/bluetooth") '()))))))))
 #+end_src
 **** Service
 #+begin_src scheme
@@ -490,13 +478,11 @@ The stateless service should come after base/desktop services (potentially other
                  (crypt password salt)
                  #f))))
 
-(define* (users os #:key who bluetooth?)
-  (operating-system
-    (inherit os)
-    (users (append (map (lambda* (user)
-                          (apply account (append user `(#:bluetooth? ,bluetooth?))))
-                        who)
-                   (operating-system-users os)))))
+(define-system-comp (users os #:key who bluetooth?)
+  (users (append (map (lambda* (user)
+                        (apply account (append user `(#:bluetooth? ,bluetooth?))))
+                      who)
+                 (operating-system-users os))))
 #+end_src
 *** HiDPI console font
 #+begin_src scheme
@@ -508,29 +494,25 @@ The stateless service should come after base/desktop services (potentially other
                                             (file-append font-terminus "/share/consolefonts/ter-132n")))
                                     config))))
 
-(define (hidpi-console-font os)
-  (operating-system
-    (inherit os)
-    (services (with-hidpi-console-font
-               (operating-system-user-services os)))))
+(define-system-comp (hidpi-console-font os)
+  (services (with-hidpi-console-font
+             (operating-system-user-services os))))
 #+end_src
 *** mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
 #+begin_src scheme
-(define (mtrack os)
-  (operating-system
-    (inherit os)
-    (packages
-     (cons* xf86-input-mtrack
-            (operating-system-packages os)))
-    (services
-     (cons* (set-xorg-configuration
-             (xorg-configuration
-              (modules (cons* xf86-input-mtrack
-                              %default-xorg-modules))
-              (keyboard-layout (operating-system-keyboard-layout os))
-              (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
-            (operating-system-user-services os)))))
+(define-system-comp (mtrack os)
+  (packages
+   (cons* xf86-input-mtrack
+          (operating-system-packages os)))
+  (services
+   (cons* (set-xorg-configuration
+           (xorg-configuration
+            (modules (cons* xf86-input-mtrack
+                            %default-xorg-modules))
+            (keyboard-layout (operating-system-keyboard-layout os))
+            (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+          (operating-system-user-services os))))
 #+end_src
 **** Xorg config
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
@@ -558,27 +540,23 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
-(define* (macbook os #:key bluetooth?)
-  (operating-system
-    (inherit os)
-    (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
-                                      "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-    (kernel-loadable-modules (cons* broadcom-sta
-                                    (operating-system-kernel-loadable-modules os)))
-    (firmware (append
-               (if bluetooth? (list broadcom-bt-firmware) '())
-               (operating-system-firmware os)))))
+(define-system-comp (macbook os #:key bluetooth?)
+  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
+                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+  (kernel-loadable-modules (cons* broadcom-sta
+                                  (operating-system-kernel-loadable-modules os)))
+  (firmware (append
+             (if bluetooth? (list broadcom-bt-firmware) '())
+             (operating-system-firmware os))))
 
 (define macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 *** Custom WM
 #+begin_src scheme
-(define* (custom-wm os #:key package-name desktop-name executable)
-  (operating-system
-    (inherit os)
-    (packages (cons* (custom-wm-desktop-entry package-name desktop-name executable)
-                     (operating-system-packages os)))))
+(define-system-comp (custom-wm os #:key package-name desktop-name executable)
+  (packages (cons* (custom-wm-desktop-entry package-name desktop-name executable)
+                   (operating-system-packages os))))
 #+end_src
 **** Desktop entry
 #+begin_src scheme
@@ -603,29 +581,27 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
 #+begin_src scheme
-(define* (miscellany os #:key backlight-control? nix? bluetooth?)
-  (operating-system
-    (inherit os)
-    (packages
-     (cons* (specification->package "nss-certs")
-            (operating-system-packages os)))
-    (services
-     (append
-      (list (service gnome-desktop-service-type)
-            ;; (set-xorg-configuration
-            ;;  (xorg-configuration
-            ;;   (keyboard-layout (operating-system-keyboard-layout os))))
-            )
-      (if backlight-control?
-          (list (simple-service 'brightnessctl-udev-rules
-                                udev-service-type
-                                (list brightnessctl)))
-          '())
-      (if nix?
-          (list (service nix-service-type)) '())
-      (if bluetooth?
-          (list (bluetooth-service #:auto-enable? #t)) '())
-      (operating-system-user-services os)))))
+(define-system-comp (miscellany os #:key backlight-control? nix? bluetooth?)
+  (packages
+   (cons* (specification->package "nss-certs")
+          (operating-system-packages os)))
+  (services
+   (append
+    (list (service gnome-desktop-service-type)
+          ;; (set-xorg-configuration
+          ;;  (xorg-configuration
+          ;;   (keyboard-layout (operating-system-keyboard-layout os))))
+          )
+    (if backlight-control?
+        (list (simple-service 'brightnessctl-udev-rules
+                              udev-service-type
+                              (list brightnessctl)))
+        '())
+    (if nix?
+        (list (service nix-service-type)) '())
+    (if bluetooth?
+        (list (bluetooth-service #:auto-enable? #t)) '())
+    (operating-system-user-services os))))
 #+end_src
 ** Hosts
 :PROPERTIES:
