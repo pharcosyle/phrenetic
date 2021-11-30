@@ -633,8 +633,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
      (let ((name expr))
        (as-> form name form* ...)))))
 
-
-
 (define-system-comp (btrfs #:key label subvols)
   (file-systems
    (append
@@ -651,15 +649,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 (let* ((kbl macbook-kbl)
        (nix? #t)
        (persist-dir "/.persist")
-       (subvols (append
-                 `(("root-blank" "/")
-                   ("boot" "/boot")
-                   ("guix-store" "/gnu/store")
-                   ("guix-var" "/var/guix")
-                   ("log" "/var/log")
-                   ("home" "/home")
-                   ("persist" ,persist-dir))
-                 (if nix? '(("nix" "/nix") '()))))
        (bluetooth? #t))
   (-> barebones-os
       (basic-info #:host-name "frostfire"
@@ -675,18 +664,30 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                      ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
              #:bluetooth? bluetooth?)
       (as-> $
-            (if nix? (nix $) $))
+        (if nix? (nix $) $))
       hidpi-console-font
       (mtrack #:kbl kbl)
       (macbook #:bluetooth? bluetooth?)
       (custom-wm #:package-name "spartan-wm"
                  #:desktop-name "Spartan WM"
                  #:executable "<<spartan-exe>>")
-      (btrfs #:label "firmament"
-             #:subvols subvols)
-      (disk-encryption #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
-                       #:target "ciphered"
-                       #:encrypted-mount-points (map cadr subvols))
+      (as-> $
+        (let ((subvols
+               (append
+                `(("root-blank" "/")
+                  ("boot" "/boot")
+                  ("guix-store" "/gnu/store")
+                  ("guix-var" "/var/guix")
+                  ("log" "/var/log")
+                  ("home" "/home")
+                  ("persist" ,persist-dir))
+                (if nix? '(("nix" "/nix") '())))))
+          (-> $
+              (btrfs #:label "firmament"
+                     #:subvols subvols)
+              (disk-encryption #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
+                               #:target "ciphered"
+                               #:encrypted-mount-points (map cadr subvols)))))
       (et-cetera #:kbl kbl
                  #:bluetooth? bluetooth?)
       (stateless #:persist-dir persist-dir
