@@ -186,6 +186,22 @@ guix pull
 :tangle-dir+: system
 :END:
 ** Components
+#+begin_src scheme
+(define-module (ebullient system)
+  #:use-module ((gnu system) #:select (operating-system)))
+
+(define-syntax-rule (os-comp os form ...)
+  (operating-system
+    (inherit os)
+    form ...))
+
+(define-syntax-rule (define-os-comp (name arg ...) body ...)
+  (begin
+    (define* (name os arg...)
+      (comp-os os
+               body ...))
+    (export foo)))
+#+end_src
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "components.scm")
 :END:
