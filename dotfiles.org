@@ -639,13 +639,15 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
      (let ((name expr))
        (as-> form name form* ...)))))
 
-(let* ((desktop? #t)
-       (laptop? #t)
-       (macbook? #t)
-       (nix? #t)
-       (bluetooth? #t))
+(define* (create-os #:key
+                    host-name
+                    (desktop? #t)
+                    (laptop? #t)
+                    (macbook? #t)
+                    (nix? #t)
+                    (bluetooth? #t))
   (-> barebones-os
-      (basics #:host-name "frostfire"
+      (basics #:host-name host-name
               #:timezone "America/Los_Angeles"
               #:locale "en_US.utf8"
               #:keyboard-layout (if macbook?
@@ -675,17 +677,17 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   #:nix? nix?
                   #:bluetooth? bluetooth?)
       (as-> $
-        (let ((persist-dir "/.persist")
-              (subvols
-               (append
-                `(("root-blank" "/")
-                  ("boot" "/boot")
-                  ("guix-store" "/gnu/store")
-                  ("guix-var" "/var/guix")
-                  ("log" "/var/log")
-                  ("home" "/home")
-                  ("persist" ,persist-dir))
-                (if nix? '(("nix" "/nix") '())))))
+        (let* ((persist-dir "/.persist")
+               (subvols
+                (append
+                 `(("root-blank" "/")
+                   ("boot" "/boot")
+                   ("guix-store" "/gnu/store")
+                   ("guix-var" "/var/guix")
+                   ("log" "/var/log")
+                   ("home" "/home")
+                   ("persist" ,persist-dir))
+                 (if nix? '(("nix" "/nix") '())))))
           (-> $
               (btrfs #:label "firmament"
                      #:subvols subvols)
@@ -694,6 +696,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                #:encrypted-mount-points (map cadr subvols))
               (stateless #:persist-dir persist-dir
                          #:bluetooth? bluetooth?))))))
+
+(create-os #:host-name "frostfire")
 #+end_src
 #+begin_src sh :results output silent :dir (base-tangle-dir) :async
 sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
