@@ -233,16 +233,14 @@ guix pull
             et-cetera))
 #+end_src
 #+begin_src scheme
-(define-syntax-rule (os-comp os form ...)
+(define-syntax-rule (system-comp os form ...)
   (operating-system
     (inherit os)
     form ...))
 
-(define-syntax-rule (define-os-comp (name arg ...) body ...)
-  (begin
-    (define* (name os arg...)
-      (comp-os os body ...))
-    (export foo)))
+(define-syntax-rule (define-system-comp (name arg ...) body ...)
+  (define* (name os arg...)
+    (system-comp os body ...)))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
@@ -265,7 +263,7 @@ guix pull
 #+end_src
 *** Boot
 #+begin_src scheme
-(define* (boot os #:key target label kbl)
+(define* (boot os #:key label target kbl)
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
@@ -341,9 +339,9 @@ Other components may wish to modify the list of operating system services so use
             (operating-system-mapped-devices os)))))
 #+end_src
 *** Stateless
-The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services and users of this component should include it at the end of their component chain.
+The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so and users of this component should include it at the end of their component chain.
 #+begin_src scheme
-(define* (stateless os #:key label persist-dir mountables dependencies  nix? bluetooth?)
+(define* (stateless os #:key persist-dir bluetooth?)
   (operating-system
     (inherit os)
     (initrd (lambda (file-systems . rest)
@@ -351,9 +349,7 @@ The stateless service should come after base/desktop services (potentially other
                      #:volatile-root? #t
                      rest)))
     (file-systems
-     (append
-      (stateless-file-systems label persist-dir mountables dependencies nix?)
-      (operating-system-file-systems os)))
+     (stateless-file-systems persist-dir (operating-system-file-systems os)))
     (services
      (append
       (operating-system-user-services os)
@@ -372,28 +368,15 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 **** File systems
 #+begin_src scheme
-(define (stateless-file-systems label persist-dir mountables dependencies nix?)
-  (map (match-lambda
-         ((role subvol mount-point)
-          (file-system
-            (device (file-system-label label))
-            (mount-point mount-point)
-            (type "btrfs")
-            (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
-            (needed-for-boot? (if (member role '(#:guix-var #:log #:persist)) #t #f))
-            (dependencies (or dependencies '())))))
-       (apply (lambda* (#:key root boot guix-store guix-var log home persist nix)
-                (append
-                 `((#:root ,root "/")
-                   (#:boot ,boot "/boot")
-                   (#:guix-store ,guix-store "/gnu/store")
-                   (#:guix-var ,guix-var "/var/guix")
-                   (#:log ,log "/var/log")
-                   (#:home ,home "/home")
-                   (#:persist ,persist ,persist-dir))
-                 ;; (if nix? `((#:nix ,nix "/nix") '()))
-                 ))
-              mountables)))
+(define (stateless-file-systems persist-dir file-systems)
+  (map (lambda (fs)
+         (if (member (file-system-mount-point fs)
+                     '("/var/guix" "/var/log" ,persist-dir))
+             (file-system
+               (inherit fs)
+               (needed-for-boot? #t))
+             fs))
+       file-systems))
 #+end_src
 **** Service
 #+begin_src scheme
@@ -639,21 +622,37 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
      (let ((name expr))
        (as-> form name form* ...)))))
 
+
+
+(define-system-comp (btrfs #:key label subvols dependencies)
+  (file-systems
+   (append
+    (map (match-lambda
+           ((subvol mount-point)
+            (file-system
+              (device (file-system-label label))
+              (mount-point mount-point)
+              (type "btrfs")
+              (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
+              (dependencies (or dependencies '())))))
+         subvols)
+    (operating-system-file-systems os))))
+
 (let ((bluetooth? #t)
       (nix? #t)
       (kbl macbook-kbl)
+      (persist-dir "/.persist")
       (ciphered (encrypted-device #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
                                   #:target-name "ciphered")))
   (-> barebones-os
       (basic-info #:host-name "frostfire"
                   #:timezone "America/Los_Angeles"
                   #:locale "en_US.utf8")
-      (boot #:target "/boot/efi"
-            #:label "genesis"
+      (boot #:label "genesis"
+            #:target "/boot/efi"
             #:kbl kbl)
       (initial-services #:desktop? #t)
       (linux-nonfree #:substitutes? #t)
-      (disk-encryption #:encrypted-device ciphered)
       (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
                      ("pcoulson" "Phil Coulson" #:admin? #t)
                      ("gandalf" "Speak Friend and Enter" #:password "mellon"))
@@ -666,20 +665,21 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (custom-wm #:package-name "spartan-wm"
                  #:desktop-name "Spartan WM"
                  #:executable "<<spartan-exe>>")
+      (btrfs #:label "firmament"
+             #:subvols (append
+                        `(("root-blank" "/")
+                          ("boot" "/boot")
+                          ("guix-store" "/gnu/store")
+                          ("guix-var" "/var/guix")
+                          ("log" "/var/log")
+                          ("home" "/home")
+                          ("persist" ,persist-dir))
+                        (if nix? '(("nix" "/nix") '())))
+             #:dependencies (list ciphered))
+      (disk-encryption #:encrypted-device ciphered)
       (et-cetera #:kbl kbl
                  #:bluetooth? bluetooth?)
-      (stateless #:label "firmament"
-                 #:persist-dir "/.persist"
-                 #:mountables '(#:root "root-blank"
-                                #:boot "boot"
-                                #:guix-store "guix-store"
-                                #:guix-var "guix-var"
-                                #:log "log"
-                                #:home "home"
-                                #:persist "persist"
-                                #:nix "nix")
-                 #:dependencies (list ciphered)
-                 #:nix? nix?
+      (stateless #:persist-dir persist-dir
                  #:bluetooth? bluetooth?)))
 #+end_src
 #+begin_src sh :results output silent :dir (base-tangle-dir) :async
