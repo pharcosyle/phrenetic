@@ -632,28 +632,27 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
 **** Desktop entry
 #+begin_src scheme
 (define-module (ebullient system custom-wm-desktop-entry)
-  #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((ebullient utils) #:select (private-package)))
 
 (define-public (custom-wm-desktop-entry package-name desktop-name executable)
-  (package
-    (inherit (private-package package-name))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
-         (let* ((out (assoc-ref %outputs "out"))
-                (xsessions (string-append out "/share/xsessions")))
-           (mkdir-p xsessions)
-           (make-desktop-entry-file
-            (string-append xsessions "/" ,name ".desktop")
-            #:name ,desktop-name
-            #:comment ,desktop-name
-            #:exec ,executable))
-         #t)))))
+  (private-package
+   (name package-name)
+   (build-system trivial-build-system)
+   (arguments
+    `(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (xsessions (string-append out "/share/xsessions")))
+          (mkdir-p xsessions)
+          (make-desktop-entry-file
+           (string-append xsessions "/" ,name ".desktop")
+           #:name ,desktop-name
+           #:comment ,desktop-name
+           #:exec ,executable))
+        #t)))))
 #+end_src
 *** Et cetera
 #+begin_src scheme
@@ -963,47 +962,46 @@ done
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm")
 (define-module (initialization core)
-  #:use-module ((guix packages) #:select (package))
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
   #:use-module ((ebullient utils) #:select (private-package)))
 
 (define-public initialization
-  (package
-    (inherit (private-package "initialization"))
-    (native-inputs
-     `(("script.sh" ,(local-file "script.sh"))
-       ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
-       ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))))
-    (inputs
-     `(("xkbcomp" ,xkbcomp)
-       ("xinput" ,xinput)
-       ("xrandr" ,xrandr)))
-    (build-system trivial-build-system)
-    (arguments
-     '(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
-         (let* ((out (assoc-ref %outputs "out"))
-                (get-input (lambda (k)
-                             (assoc-ref %build-inputs k)))
-                (cmd (lambda* (input #:optional (executable input))
-                       (string-append (get-input input) "/bin/" executable)))
-                (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                 (let ((newfile (string-append out "/" name)))
-                                   (mkdir-p (dirname newfile))
-                                   (copy-file (get-input input-file) newfile)
-                                   newfile))))
-           (let ((script-file (install-input "script.sh")))
-             (substitute* script-file
-               (("xkbcomp") (cmd "xkbcomp"))
-               (("xkb_source=" all) (string-append all (get-input "xkb-source")))
-               (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
-               (("xinput") (cmd "xinput"))
-               (("xrandr") (cmd "xrandr")))))
-         #t)))))
+  (private-package
+   (name "initialization")
+   (native-inputs
+    `(("script.sh" ,(local-file "script.sh"))
+      ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
+      ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))))
+   (inputs
+    `(("xkbcomp" ,xkbcomp)
+      ("xinput" ,xinput)
+      ("xrandr" ,xrandr)))
+   (build-system trivial-build-system)
+   (arguments
+    '(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (get-input (lambda (k)
+                            (assoc-ref %build-inputs k)))
+               (cmd (lambda* (input #:optional (executable input))
+                      (string-append (get-input input) "/bin/" executable)))
+               (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                (let ((newfile (string-append out "/" name)))
+                                  (mkdir-p (dirname newfile))
+                                  (copy-file (get-input input-file) newfile)
+                                  newfile))))
+          (let ((script-file (install-input "script.sh")))
+            (substitute* script-file
+              (("xkbcomp") (cmd "xkbcomp"))
+              (("xkb_source=" all) (string-append all (get-input "xkb-source")))
+              (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
+              (("xinput") (cmd "xinput"))
+              (("xrandr") (cmd "xrandr")))))
+        #t)))))
 #+end_src
 *** Script
 #+begin_src sh :tangle (in-tangle-dir "script.sh")
@@ -2158,7 +2156,6 @@ Can be an integer to determine the exact padding."
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm") :noweb yes
 (define-module (spartan core)
-  #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((gnu packages bash) #:select (bash))
@@ -2175,71 +2172,71 @@ Can be an integer to determine the exact padding."
   #:use-module ((ebullient utils) #:select (private-package)))
 
 (define-public spartan
-  (package
-    (inherit (private-package "spartan"))
-    (build-system trivial-build-system)
-    (native-inputs
-     `(("startup-script.sh" ,(local-file "startup-script.sh"))
-       ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
-       ("desktop.el" ,(local-file "desktop.el"))
-       ("dunstrc" ,(local-file "dunstrc"))))
-    (inputs
-     `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
-       ("xhost" ,xhost)
-       ("xset" ,xset)
-       ("xss-lock" ,xss-lock)
-       ("xsettingsd" ,xsettingsd)
-       ("dbus" ,dbus)
-       ("emacs" ,emacs)
-       ("dunst" ,dunst)
-       ("pasystray" ,pasystray)
-       ("redshift:gtk" ,redshift "gtk")
-       ("udiskie" ,udiskie)))
-    ;; TODO much later, see if there's a way to make any of these not propagated.
-    (propagated-inputs
-     `(("font-google-noto" ,font-google-noto)
-       ;; ("dracula-theme" ,dracula-theme)
-       ;; ("papirus-icon-theme" ,papirus-icon-theme)
-       ("pavucontrol" ,pavucontrol)))
-    (arguments
-     '(#:modules ((guix build utils))
-       #:builder
-       (begin
-         (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
-         (let* ((out (assoc-ref %outputs "out"))
-                (get-input (lambda (k)
-                             (assoc-ref %build-inputs k)))
-                (cmd (lambda* (input #:optional (executable input))
-                       (string-append (get-input input) "/bin/" executable)))
-                (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                 (let ((newfile (string-append out "/" name)))
-                                   (mkdir-p (dirname newfile))
-                                   (copy-file (get-input input-file) newfile)
-                                   newfile))))
-           (let ((desktop-el-file (install-input "desktop.el"))
-                 (dunstrc-file (install-input "dunstrc")))
-             ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
-             (substitute* desktop-el-file
-               (("(dunstctl|dunst)" all) (case (string->symbol all)
-                                           ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
-                                           ((dunstctl) (cmd "dunst" "dunstctl"))))
-               (("pasystray") (cmd "pasystray"))
-               (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
-               (("udiskie") (cmd "udiskie")))
-             (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-exe>>"))
-                   (xsettingsd-conf-file (install-input "xsettingsd.conf")))
-               (substitute* executable
-                 (("^xhost") (cmd "xhost"))
-                 (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
-                 (("^xset") (cmd "xset"))
-                 (("^xss-lock") (cmd "xss-lock"))
-                 (("dbus-launch") (cmd "dbus" "dbus-launch"))
-                 (("emacs") (cmd "emacs"))
-                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-                 (("desktop\\.el") desktop-el-file))
-               (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
-               (chmod executable #o555))))
-         #t)))))
+  (private-package
+   (name "spartan")
+   (build-system trivial-build-system)
+   (native-inputs
+    `(("startup-script.sh" ,(local-file "startup-script.sh"))
+      ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
+      ("desktop.el" ,(local-file "desktop.el"))
+      ("dunstrc" ,(local-file "dunstrc"))))
+   (inputs
+    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
+      ("xhost" ,xhost)
+      ("xset" ,xset)
+      ("xss-lock" ,xss-lock)
+      ("xsettingsd" ,xsettingsd)
+      ("dbus" ,dbus)
+      ("emacs" ,emacs)
+      ("dunst" ,dunst)
+      ("pasystray" ,pasystray)
+      ("redshift:gtk" ,redshift "gtk")
+      ("udiskie" ,udiskie)))
+   ;; TODO much later, see if there's a way to make any of these not propagated.
+   (propagated-inputs
+    `(("font-google-noto" ,font-google-noto)
+      ;; ("dracula-theme" ,dracula-theme)
+      ;; ("papirus-icon-theme" ,papirus-icon-theme)
+      ("pavucontrol" ,pavucontrol)))
+   (arguments
+    '(#:modules ((guix build utils))
+      #:builder
+      (begin
+        (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
+        (let* ((out (assoc-ref %outputs "out"))
+               (get-input (lambda (k)
+                            (assoc-ref %build-inputs k)))
+               (cmd (lambda* (input #:optional (executable input))
+                      (string-append (get-input input) "/bin/" executable)))
+               (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                (let ((newfile (string-append out "/" name)))
+                                  (mkdir-p (dirname newfile))
+                                  (copy-file (get-input input-file) newfile)
+                                  newfile))))
+          (let ((desktop-el-file (install-input "desktop.el"))
+                (dunstrc-file (install-input "dunstrc")))
+            ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
+            (substitute* desktop-el-file
+              (("(dunstctl|dunst)" all) (case (string->symbol all)
+                                          ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
+                                          ((dunstctl) (cmd "dunst" "dunstctl"))))
+              (("pasystray") (cmd "pasystray"))
+              (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
+              (("udiskie") (cmd "udiskie")))
+            (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-exe>>"))
+                  (xsettingsd-conf-file (install-input "xsettingsd.conf")))
+              (substitute* executable
+                (("^xhost") (cmd "xhost"))
+                (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
+                (("^xset") (cmd "xset"))
+                (("^xss-lock") (cmd "xss-lock"))
+                (("dbus-launch") (cmd "dbus" "dbus-launch"))
+                (("emacs") (cmd "emacs"))
+                (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+                (("desktop\\.el") desktop-el-file))
+              (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
+              (chmod executable #o555))))
+        #t)))))
 #+end_src
 *** Startup script
 #+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
@@ -2746,9 +2743,9 @@ Gtk/CursorThemeSize 48
 (define-module (ebullient utils)
   #:use-module ((guix packages) #:select (package)))
 
-(define-public (private-package package-name)
+(define barebones-package
   (package
-    (name package-name)
+    (name #f)
     (version "0")
     (source #f)
     (build-system #f)
@@ -2756,4 +2753,9 @@ Gtk/CursorThemeSize 48
     (description synopsis)
     (home-page #f)
     (license #f)))
+
+(define-syntax-rule (private-package body ...)
+  (package
+    (inherit barebones-package)
+    body ...))
 #+end_src
