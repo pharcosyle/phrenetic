@@ -267,7 +267,7 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
 (define-system-comp (boot #:key label target)
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
-               (targets `(,target))
+               (targets (list target))
                (timeout 1)
                (keyboard-layout (operating-system-keyboard-layout os))))
   (file-systems
@@ -285,8 +285,9 @@ Other components may wish to modify the list of operating system services so use
             (member (service-kind service)
                     (list gdm-service-type ; Kind of a presumptuous default.
                           ;; TODO remove if I don't end up needing this for pipewire. Removal might be behind a pipewire flag, also.
-                          pulseaudio-service-type
-                          alsa-service-type)))
+                          ;; pulseaudio-service-type
+                          ;; alsa-service-type
+                          )))
           %desktop-services))
 
 (define-system-comp (initial-services #:key desktop?)
