@@ -457,7 +457,7 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** Users
 #+begin_src scheme
-(define* (account user-name user-full-name #:key admin? password bluetooth?)
+(define* (account user-name user-full-name #:key admin? password salt bluetooth?)
   (user-account
    (name user-name)
    (comment user-full-name)
@@ -469,7 +469,7 @@ The stateless service should come after base/desktop services (potentially other
                                  (if admin? (list "wheel") '())
                                  (if bluetooth? (list "lp") '())))
    (password (if password
-                 (crypt password "toosimple")
+                 (crypt password salt)
                  #f))))
 
 (define* (users os #:key who bluetooth?)
@@ -672,7 +672,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (linux-nonfree #:substitutes? #t)
       (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
                      ("pcoulson" "Phil Coulson" #:admin? #t)
-                     ("gandalf" "Speak Friend and Enter" #:password "mellon"))
+                     ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
              #:bluetooth? bluetooth?)
       (as-> $
             (if nix? (nix $) $))
