@@ -255,7 +255,7 @@ guix pull
 *** Basics
 Other components may inherit ~keyboard-value~ so use this component early. At the time of this writing, nothing depends on the values of hostname, etc but I could see them being useful base values to have present early.
 #+begin_src scheme
-(define-system-comp (basics os #:key host-name timezone locale keyboard-layout)
+(define-system-comp (basics #:key host-name timezone locale keyboard-layout)
   (host-name host-name)
   (timezone timezone)
   (locale locale)
@@ -263,7 +263,7 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
 #+end_src
 *** Boot
 #+begin_src scheme
-(define-system-comp (boot os #:key label target)
+(define-system-comp (boot #:key label target)
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
                (targets `(,target))
@@ -288,7 +288,7 @@ Other components may wish to modify the list of operating system services so use
                           alsa-service-type)))
           %desktop-services))
 
-(define-system-comp (initial-services os #:key desktop?)
+(define-system-comp (initial-services #:key desktop?)
   (services
    (append (if desktop?
                selective-desktop-services
@@ -297,7 +297,7 @@ Other components may wish to modify the list of operating system services so use
 #+end_src
 *** Linux nonfree
 #+begin_src scheme
-(define-system-comp (linux-nonfree os #:key substitutes?)
+(define-system-comp (linux-nonfree #:key substitutes?)
   (kernel linux)
   (initrd microcode-initrd)
   (firmware (cons* linux-firmware
@@ -340,7 +340,7 @@ Other components may wish to modify the list of operating system services so use
              fs))
        file-systems))
 
-(define-system-comp (disk-encryption os #:key source-uuid target encrypted-mount-points)
+(define-system-comp (disk-encryption #:key source-uuid target encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
                            (target target)
@@ -366,7 +366,7 @@ The stateless service should come after base/desktop services (potentially other
              fs))
        file-systems))
 
-(define-system-comp (stateless os #:key persist-dir bluetooth?)
+(define-system-comp (stateless #:key persist-dir bluetooth?)
   (initrd (lambda (file-systems . rest)
             (apply (operating-system-initrd os) file-systems
                    #:volatile-root? #t
@@ -487,7 +487,7 @@ The stateless service should come after base/desktop services (potentially other
                  (crypt password salt)
                  #f))))
 
-(define-system-comp (users os #:key who bluetooth?)
+(define-system-comp (users #:key who bluetooth?)
   (users (append (map (lambda* (user)
                         (apply account (append user `(#:bluetooth? ,bluetooth?))))
                       who)
@@ -551,7 +551,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
-(define-system-comp (macbook os #:key bluetooth?)
+(define-system-comp (macbook #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
                                     "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
   (kernel-loadable-modules (cons* broadcom-sta
@@ -565,7 +565,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Custom WM
 #+begin_src scheme
-(define-system-comp (custom-wm os #:key package-name desktop-name executable)
+(define-system-comp (custom-wm #:key package-name desktop-name executable)
   (packages (cons* (custom-wm-desktop-entry package-name desktop-name executable)
                    (operating-system-packages os))))
 #+end_src
@@ -592,7 +592,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
 #+begin_src scheme
-(define-system-comp (miscellany os #:key laptop? nix? bluetooth?)
+(define-system-comp (miscellany #:key laptop? nix? bluetooth?)
   (packages
    (cons* (specification->package "nss-certs")
           (operating-system-packages os)))
