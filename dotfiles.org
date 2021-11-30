@@ -330,16 +330,6 @@ Other components may wish to modify the list of operating system services so use
 #+end_src
 *** Disk encryption
 #+begin_src scheme
-(define (with-dependencies encrypted-mount-points encrypted-device file-systems)
-  (map (lambda (fs)
-         (if (member (file-system-mount-point fs) encrypted-mount-points)
-             (file-system
-               (inherit fs)
-               (dependencies (cons* encrypted-device
-                                    (file-system-dependencies fs))))
-             fs))
-       file-systems))
-
 (define-system-comp (disk-encryption #:key source-uuid target encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
@@ -349,30 +339,32 @@ Other components may wish to modify the list of operating system services so use
      (cons* encrypted-device
             (operating-system-mapped-devices os)))
     (file-systems
-     (with-dependencies encrypted-mount-points
-                        encrypted-device
-                        (operating-system-file-systems os)))))
+     (map (lambda (fs)
+            (if (member (file-system-mount-point fs) encrypted-mount-points)
+                (file-system
+                  (inherit fs)
+                  (dependencies (cons* encrypted-device
+                                       (file-system-dependencies fs))))
+                fs))
+          (operating-system-file-systems os)))))
 #+end_src
 *** Stateless
 The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so users of this component should include it at the end of their component chain.
 #+begin_src scheme
-(define (with-needed-for-boot-flags persist-dir file-systems)
-  (map (lambda (fs)
-         (if (member (file-system-mount-point fs)
-                     '("/var/guix" "/var/log" ,persist-dir))
-             (file-system
-               (inherit fs)
-               (needed-for-boot? #t))
-             fs))
-       file-systems))
-
 (define-system-comp (stateless #:key persist-dir bluetooth?)
   (initrd (lambda (file-systems . rest)
             (apply (operating-system-initrd os) file-systems
                    #:volatile-root? #t
                    rest)))
   (file-systems
-   (with-needed-for-boot-flags persist-dir (operating-system-file-systems os)))
+   (map (lambda (fs)
+          (if (member (file-system-mount-point fs)
+                      '("/var/guix" "/var/log" ,persist-dir))
+              (file-system
+                (inherit fs)
+                (needed-for-boot? #t))
+              fs))
+        (operating-system-file-systems os)))
   (services
    (append
     (operating-system-user-services os)
