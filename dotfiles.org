@@ -186,8 +186,11 @@ guix pull
 :tangle-dir+: system
 :END:
 ** Components
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "components.scm")
+:END:
 *** Barebones OS
-#+begin_src scheme :tangle (in-tangle-dir "barebones-os.scm")
+#+begin_src scheme
 (define-module (ebullient system barebones-os)
   #:use-module ((gnu system) #:select (operating-system))
   #:use-module ((gnu system file-systems) #:select (%base-file-systems)))
@@ -201,7 +204,7 @@ guix pull
     (file-systems %base-file-systems)))
 #+end_src
 *** Basic Info
-#+begin_src scheme :tangle (in-tangle-dir "basic-info.scm")
+#+begin_src scheme
 (define-module (ebullient system basic-info)
   #:use-module ((gnu system) #:select (operating-system)))
 
@@ -213,7 +216,7 @@ guix pull
     (locale locale)))
 #+end_src
 *** Boot
-#+begin_src scheme :tangle (in-tangle-dir "boot.scm")
+#+begin_src scheme
 (define-module (ebullient system boot)
   #:use-module ((gnu system) #:select (operating-system operating-system-file-systems))
   #:use-module ((gnu bootloader) #:select (bootloader-configuration))
@@ -238,7 +241,7 @@ guix pull
 #+end_src
 *** Initial Services
 Other modules may wish to modify the list of operating system services so use this in the module chain early.
-#+begin_src scheme :tangle (in-tangle-dir "initial-services.scm")
+#+begin_src scheme
 (define-module (ebullient system initial-services)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
   #:use-module ((gnu services base) #:select (%base-services))
@@ -252,7 +255,7 @@ Other modules may wish to modify the list of operating system services so use th
              (operating-system-user-services os)))))
 #+end_src
 *** Linux Nonfree
-#+begin_src scheme :tangle (in-tangle-dir "linux-nonfree.scm")
+#+begin_src scheme
 (define-module (ebullient system linux-nonfree)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-services))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
@@ -273,7 +276,7 @@ Other modules may wish to modify the list of operating system services so use th
                     user-services)))))
 #+end_src
 **** Substitutes
-#+begin_src scheme :tangle (in-tangle-dir "linux-nonfree-substitutes.scm")
+#+begin_src scheme
 (define-module (ebullient system linux-nonfree-substitutes)
   #:use-module ((gnu services) #:select (modify-services))
   #:use-module ((gnu services base) #:select (guix-service-type guix-configuration %default-authorized-guix-keys))
@@ -300,7 +303,7 @@ Other modules may wish to modify the list of operating system services so use th
   (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 *** Disk Encryption
-#+begin_src scheme :tangle (in-tangle-dir "disk-encryption.scm")
+#+begin_src scheme
 (define-module (ebullient system disk-encryption)
   #:use-module ((gnu system) #:select (operating-system operating-system-mapped-devices))
   #:use-module ((gnu system file-systems) #:select (uuid))
@@ -321,7 +324,7 @@ Other modules may wish to modify the list of operating system services so use th
 #+end_src
 *** Stateless
 The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services and users of this module should include it at the end of their module chain.
-#+begin_src scheme :tangle (in-tangle-dir "stateless.scm")
+#+begin_src scheme
 (define-module (ebullient system stateless)
   #:use-module ((gnu services) #:select (service))
   #:use-module ((gnu system) #:select (operating-system operating-system-initrd operating-system-file-systems operating-system-user-services))
@@ -357,7 +360,7 @@ The stateless service should come after base/desktop services (potentially other
                                 (list "/var/lib/bluetooth") '())))))))))
 #+end_src
 **** File Systems
-#+begin_src scheme :tangle (in-tangle-dir "stateless-file-systems.scm")
+#+begin_src scheme
 (define-module (ebullient system stateless-file-systems)
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -387,7 +390,7 @@ The stateless service should come after base/desktop services (potentially other
               mountables)))
 #+end_src
 **** Service
-#+begin_src scheme :tangle (in-tangle-dir "stateless-service.scm")
+#+begin_src scheme
 (define-module (ebullient system stateless-service)
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu services) #:select (service-type service-extension boot-service-type activation-service-type))
@@ -459,7 +462,7 @@ The stateless service should come after base/desktop services (potentially other
                                           activate-state-gexp)))))
 #+end_src
 *** Users
-#+begin_src scheme :tangle (in-tangle-dir "users.scm")
+#+begin_src scheme
 (define-module (ebullient system users)
   #:use-module ((gnu system) #:select (operating-system operating-system-users))
   #:use-module ((gnu system accounts) #:select (user-account))
@@ -489,7 +492,7 @@ The stateless service should come after base/desktop services (potentially other
                    (operating-system-users os)))))
 #+end_src
 *** Nix
-#+begin_src scheme :tangle (in-tangle-dir "nix.scm")
+#+begin_src scheme
 (define-module (ebullient system nix)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
   #:use-module ((gnu services) #:select (service))
@@ -502,7 +505,7 @@ The stateless service should come after base/desktop services (potentially other
                      (operating-system-user-services os)))))
 #+end_src
 *** HiDPI Console Font
-#+begin_src scheme :tangle (in-tangle-dir "hidpi-console-font.scm")
+#+begin_src scheme
 (define-module (ebullient system hidpi-console-font)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
   #:use-module ((gnu services) #:select (modify-services))
@@ -526,7 +529,7 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** Mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
-#+begin_src scheme :tangle (in-tangle-dir "mtrack.scm")
+#+begin_src scheme
 (define-module (ebullient system mtrack)
   #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
   #:use-module ((gnu services xorg) #:select (xorg-configuration set-xorg-configuration %default-xorg-modules))
@@ -559,7 +562,7 @@ EndSection
 #+end_src
 *** Macbook
 I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
-#+begin_src scheme :tangle (in-tangle-dir "macbook.scm")
+#+begin_src scheme
 (define-module (ebullient system macbook)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-kernel-arguments operating-system-kernel-loadable-modules))
   #:use-module ((gnu system keyboard) #:select (keyboard-layout))
@@ -597,7 +600,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 *** Custom WM
-#+begin_src scheme :tangle (in-tangle-dir "custom-wm.scm")
+#+begin_src scheme
 (define-module (ebullient system custom-wm)
   #:use-module ((gnu system) #:select (operating-system operating-system-packages))
   #:use-module ((ebullient system custom-wm-desktop-entry) #:select (custom-wm-desktop-entry)))
@@ -609,7 +612,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                      (operating-system-packages os)))))
 #+end_src
 **** Desktop Entry
-#+begin_src scheme :tangle (in-tangle-dir "custom-wm-desktop-entry.scm")
+#+begin_src scheme
 (define-module (ebullient system custom-wm-desktop-entry)
   #:use-module ((guix packages) #:select (package))
   #:use-module ((guix build-system trivial) #:select (trivial-build-system))
@@ -635,7 +638,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
          #t)))))
 #+end_src
 *** Et Cetera
-#+begin_src scheme :tangle (in-tangle-dir "et-cetera.scm")
+#+begin_src scheme
 (define-module (ebullient system et-cetera)
   #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
   #:use-module ((gnu services) #:select (service simple-service))
