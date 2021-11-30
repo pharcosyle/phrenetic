@@ -423,7 +423,7 @@ The stateless service should come after base/desktop services (potentially other
 
 (define (activate-state-gexp config)
   #~(begin
-      (use-modules ((ice-9 match) #:select (match)))
+      (use-modules (ice-9 match))
 
       (define* (activate-state #:key persist-dir paths)
 
@@ -589,7 +589,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
     `(#:modules ((guix build utils))
       #:builder
       (begin
-        (use-modules ((guix build utils) #:select (mkdir-p make-desktop-entry-file)))
+        (use-modules (guix build utils))
         (let* ((out (assoc-ref %outputs "out"))
                (xsessions (string-append out "/share/xsessions")))
           (mkdir-p xsessions)
@@ -709,23 +709,23 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
   If it doesn't get resolved before I need to use direnv just copy the direnv service code, it's tiny
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (solitude)
-  #:use-module ((gnu home) #:select (home-environment))
-  #:use-module ((gnu home services) #:select (home-files-service-type))
-  #:use-module ((gnu home services mcron) #:select (home-mcron-service-type home-mcron-configuration))
-  #:use-module ((gnu home services shells) #:select (home-bash-service-type home-bash-configuration))
-  #:use-module ((gnu home services xdg) #:select (home-xdg-user-directories-service-type home-xdg-user-directories-configuration))
+  #:use-module (guix gexp)
+  #:use-module (gnu home)
+  #:use-module (gnu home services)
+  #:use-module (gnu home services mcron)
+  #:use-module (gnu home services shells)
+  #:use-module (gnu home services xdg)
   ;; #:use-module (gnu home-services gnupg)
-  #:use-module ((gnu home-services ssh) #:select (home-ssh-service-type))
-  ;; #:use-module ((gnu home-services shellutils) #:select (home-bash-direnv-service-type))
-  #:use-module ((gnu packages shellutils) #:select (direnv))
-  #:use-module ((gnu home-services version-control) #:select (home-git-service-type home-git-configuration))
-  #:use-module ((gnu services) #:select (service simple-service))
-  #:use-module ((gnu packages) #:select (specification->package))
-  ;; #:use-module (gnu packages linux)
+  #:use-module (gnu home-services ssh)
+  ;; #:use-module (gnu home-services shellutils)
+  #:use-module (gnu home-services version-control)
+  #:use-module (gnu packages)
   ;; #:use-module (gnu packages admin)
   ;; #:use-module (gnu packages gnupg)
+  ;; #:use-module (gnu packages linux)
+  #:use-module ((gnu packages shellutils) #:select (direnv))
+  #:use-module (gnu services)
   ;; #:use-module (gnu system keyboard)
-  #:use-module ((guix gexp) #:select (gexp file-append local-file))
 
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
@@ -733,11 +733,11 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
 
-  #:use-module ((initialization core) #:select (initialization))
-  #:use-module ((spartan core) #:select (spartan))
+  #:use-module (initialization core)
+  #:use-module (spartan core)
 
-  #:use-module ((doom-emacs-temp) #:select (doom-emacs-temp))
-  #:use-module ((emacs-desktop-environment-temp) #:select (emacs-desktop-environment-temp)))
+  #:use-module (doom-emacs-temp)
+  #:use-module (emacs-desktop-environment-temp))
 
 (define emacs-variant emacs-native-comp)
 
@@ -898,10 +898,10 @@ done
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm")
 (define-module (initialization core)
-  #:use-module ((guix gexp) #:select (local-file))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module (guix gexp)
+  #:use-module (guix build-system trivial)
   #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
-  #:use-module ((ebullient utils) #:select (private-package)))
+  #:use-module (ebullient utils))
 
 (define-public initialization
   (private-package
@@ -919,7 +919,7 @@ done
     '(#:modules ((guix build utils))
       #:builder
       (begin
-        (use-modules ((guix build utils) #:select (mkdir-p substitute*)))
+        (use-modules (guix build utils))
         (let* ((out (assoc-ref %outputs "out"))
                (get-input (lambda (k)
                             (assoc-ref %build-inputs k)))
@@ -2092,8 +2092,8 @@ Can be an integer to determine the exact padding."
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm") :noweb yes
 (define-module (spartan core)
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
-  #:use-module ((guix gexp) #:select (local-file))
+  #:use-module (guix build-system trivial)
+  #:use-module (guix gexp)
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages dunst) #:select (dunst))
   #:use-module ((gnu packages emacs) #:select (emacs))
@@ -2104,8 +2104,8 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
-  ;; #:use-module ((ebullient packages dracula-theme) #:select (dracula-theme))
-  #:use-module ((ebullient utils) #:select (private-package)))
+  ;; #:use-module (ebullient packages dracula-theme)
+  #:use-module (ebullient utils))
 
 (define-public spartan
   (private-package
@@ -2138,7 +2138,7 @@ Can be an integer to determine the exact padding."
     '(#:modules ((guix build utils))
       #:builder
       (begin
-        (use-modules ((guix build utils) #:select (mkdir-p patch-shebang substitute*)))
+        (use-modules (guix build utils))
         (let* ((out (assoc-ref %outputs "out"))
                (get-input (lambda (k)
                             (assoc-ref %build-inputs k)))
@@ -2453,8 +2453,8 @@ Gtk/CursorThemeSize 48
 - TODO probably "export" the ~doom~ program to user profile
 #+begin_src scheme :tangle (in-tangle-dir "doom-emacs-temp.scm")
 (define-module (doom-emacs-temp)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module (guix packages)
+  #:use-module (guix build-system trivial)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((gnu packages base) #:select (coreutils))
   ;; #:use-module ((gnu packages emacs) #:select (emacs))
@@ -2482,7 +2482,7 @@ Gtk/CursorThemeSize 48
      '(#:modules ((guix build utils))
        #:builder
        (begin
-         (use-modules ((guix build utils) #:select (mkdir-p)))
+         (use-modules (guix build utils))
          (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
          (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
            (lambda _
@@ -2496,7 +2496,7 @@ Gtk/CursorThemeSize 48
 *** emacs-desktop-environment-temp
 #+begin_src scheme :tangle (in-tangle-dir "emacs-desktop-environment-temp.scm")
 ;; (define-module (emacs-desktop-environment-temp)
-;;   #:use-module ((guix packages) #:select (package package-inputs))
+;;   #:use-module (guix packages)
 ;;   #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
 ;;   #:use-module ((gnu packages linux) #:select (brightnessctl))
 ;;   #:use-module ((gnu packages music) #:select (playerctl))
@@ -2523,8 +2523,8 @@ Gtk/CursorThemeSize 48
 ;;             #t)))))))
 
 (define-module (emacs-desktop-environment-temp)
-  #:use-module ((guix packages) #:select (package))
-  #:use-module ((guix build-system trivial) #:select (trivial-build-system))
+  #:use-module (guix packages)
+  #:use-module (guix build-system trivial)
   #:use-module ((gnu packages linux) #:select (brightnessctl))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages xdisorg) #:select (scrot)))
@@ -2543,7 +2543,7 @@ Gtk/CursorThemeSize 48
      '(#:modules ((guix build utils))
        #:builder
        (begin
-         (use-modules ((guix build utils) #:select (mkdir-p)))
+         (use-modules (guix build utils))
          (mkdir-p (string-append (assoc-ref %outputs "out") "/qwer"))
          (with-output-to-file (string-append (assoc-ref %outputs "out") "/qwer/qwer.txt")
            (lambda _
@@ -2556,9 +2556,9 @@ Gtk/CursorThemeSize 48
 #+end_src
 *** Emacs Application Framework
 #+begin_src scheme :tangle (in-tangle-dir "emacs-application-framework.scm")
-;; (use-modules (guix packages)
+;; (use-modules (guix build-system emacs)
 ;;              (guix git-download)
-;;              ((guix build-system emacs) #:select (emacs-build-system))
+;;              (guix packages)
 ;;              ((guix licenses) #:prefix license:))
 
 ;; (let ((commit "5c99dc6962fbe2f95033678d82b6dc1414460c0a")
@@ -2607,8 +2607,8 @@ Gtk/CursorThemeSize 48
 ** Dracula Theme
 #+begin_src scheme :tangle (in-tangle-dir "dracula-theme.scm")
 (define-module (ebullient packages dracula-theme)
-  #:use-module ((guix packages) #:select (package origin base32))
-  #:use-module ((guix git-download) #:select (git-version git-fetch git-reference))
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
   #:use-module ((gnu packages gnome-xyz) #:select (nordic-theme)))
 
 (define-public dracula-theme
@@ -2639,10 +2639,10 @@ Gtk/CursorThemeSize 48
 ** xf86-input-mtrack
 #+begin_src scheme :tangle (in-tangle-dir "xf86-input-mtrack.scm")
 (define-module (ebullient packages xf86-input-mtrack)
-  #:use-module ((guix packages) #:select (package origin base32))
-  #:use-module ((guix git-download) #:select (git-version git-fetch git-reference))
-  #:use-module ((guix build-system gnu) #:select (gnu-build-system))
+  #:use-module (guix build-system gnu)
+  #:use-module (guix git-download)
   #:use-module ((guix licenses) #:prefix license:)
+  #:use-module (guix packages)
   #:use-module ((gnu packages pkg-config) #:select (pkg-config))
   #:use-module ((gnu packages xorg) #:select (xorg-server inputproto xproto))
   #:use-module ((gnu packages xdisorg) #:select (mtdev)))
@@ -2677,7 +2677,7 @@ Gtk/CursorThemeSize 48
 * Utils
 #+begin_src scheme :tangle (in-tangle-dir "utils.scm")
 (define-module (ebullient utils)
-  #:use-module ((guix packages) #:select (package)))
+  #:use-module (guix packages))
 
 (define barebones-package
   (package
