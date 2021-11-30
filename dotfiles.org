@@ -186,10 +186,15 @@ guix pull
 :tangle-dir+: system
 :END:
 ** Components
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "components.scm")
+:END:
 #+begin_src scheme
-(define-module (ebullient system)
-  #:use-module ((gnu system) #:select (operating-system)))
-
+(define-module (ebullient system components)
+  #:use-module (gnu system)
+  #:use-module (gnu system file-systems))
+#+end_src
+#+begin_src scheme
 (define-syntax-rule (os-comp os form ...)
   (operating-system
     (inherit os)
@@ -202,9 +207,6 @@ guix pull
                body ...))
     (export foo)))
 #+end_src
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "components.scm")
-:END:
 *** Barebones OS
 #+begin_src scheme
 (define-module (ebullient system barebones-os)
