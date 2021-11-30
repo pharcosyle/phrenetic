@@ -251,25 +251,27 @@ guix pull
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-*** Basic info
+*** Basics
+Other components may inherit ~keyboard-value~ so use this component early. At the time of this writing, nothing depends on the values of hostname, etc but I could see them being useful base values to have present early.
 #+begin_src scheme
-(define* (basic-info os #:key host-name timezone locale)
+(define* (basics os #:key host-name timezone locale keyboard-layout)
   (operating-system
     (inherit os)
     (host-name host-name)
     (timezone timezone)
-    (locale locale)))
+    (locale locale)
+    (keyboard-layout keyboard-layout)))
 #+end_src
 *** Boot
 #+begin_src scheme
-(define* (boot os #:key label target kbl)
+(define* (boot os #:key label target)
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
                  (bootloader grub-efi-bootloader)
                  (targets `(,target))
                  (timeout 1)
-                 (keyboard-layout kbl)))
+                 (keyboard-layout (operating-system-keyboard-layout os))))
     (file-systems
      (cons* (file-system
               (device (file-system-label label))
@@ -507,7 +509,7 @@ The stateless service should come after base/desktop services (potentially other
 *** mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
 #+begin_src scheme
-(define* (mtrack #:key kbl)
+(define (mtrack os)
   (operating-system
     (inherit os)
     (packages
@@ -518,7 +520,7 @@ The stateless service should come after base/desktop services (potentially other
              (xorg-configuration
               (modules (cons* xf86-input-mtrack
                               %default-xorg-modules))
-              (keyboard-layout kbl)
+              (keyboard-layout (operating-system-keyboard-layout os))
               (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
             (operating-system-user-services os)))))
 #+end_src
@@ -593,10 +595,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Et cetera
 #+begin_src scheme
-(define* (et-cetera os #:key kbl bluetooth?)
+(define* (et-cetera os bluetooth?)
   (operating-system
     (inherit os)
-    (keyboard-layout kbl)
     (packages
      (cons* (specification->package "nss-certs")
             (operating-system-packages os)))
@@ -605,7 +606,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (list (service gnome-desktop-service-type)
             ;; (set-xorg-configuration
             ;;  (xorg-configuration
-            ;;   (keyboard-layout keyboard-layout)))
+            ;;   (keyboard-layout (operating-system-keyboard-layout os))))
             (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
       (if bluetooth?
           (list (bluetooth-service #:auto-enable? #t)) '())
@@ -646,17 +647,18 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
          subvols)
     (operating-system-file-systems os))))
 
-(let* ((kbl macbook-kbl)
-       (nix? #t)
-       (persist-dir "/.persist")
-       (bluetooth? #t))
+(let* ((nix? #t)
+       (bluetooth? #t)
+       (macbook? #t)
+       (persist-dir "/.persist"))
   (-> barebones-os
-      (basic-info #:host-name "frostfire"
-                  #:timezone "America/Los_Angeles"
-                  #:locale "en_US.utf8")
+      (basics #:host-name "frostfire"
+              #:timezone "America/Los_Angeles"
+              #:locale "en_US.utf8"
+              #:keyboard-layout (if macbook?
+                                    macbook-kbl #f))
       (boot #:label "genesis"
-            #:target "/boot/efi"
-            #:kbl kbl)
+            #:target "/boot/efi")
       (initial-services #:desktop? #t)
       (linux-nonfree #:substitutes? #t)
       (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
@@ -666,8 +668,10 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (as-> $
         (if nix? (nix $) $))
       hidpi-console-font
-      (mtrack #:kbl kbl)
-      (macbook #:bluetooth? bluetooth?)
+      mtrack
+      (as-> $
+        (if macbook?
+            (macbook $ #:bluetooth? bluetooth?) $))
       (custom-wm #:package-name "spartan-wm"
                  #:desktop-name "Spartan WM"
                  #:executable "<<spartan-exe>>")
@@ -688,8 +692,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
               (disk-encryption #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
                                #:target "ciphered"
                                #:encrypted-mount-points (map cadr subvols)))))
-      (et-cetera #:kbl kbl
-                 #:bluetooth? bluetooth?)
+      (et-cetera #:bluetooth? bluetooth?)
       (stateless #:persist-dir persist-dir
                  #:bluetooth? bluetooth?)))
 #+end_src
