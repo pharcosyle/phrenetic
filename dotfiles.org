@@ -219,7 +219,7 @@ guix pull
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-*** Basic Info
+*** Basic info
 #+begin_src scheme
 (define-module (ebullient system basic-info)
   #:use-module ((gnu system) #:select (operating-system)))
@@ -255,7 +255,7 @@ guix pull
               (type "vfat"))
             (operating-system-file-systems os)))))
 #+end_src
-*** Initial Services
+*** Initial services
 Other modules may wish to modify the list of operating system services so use this in the module chain early.
 #+begin_src scheme
 (define-module (ebullient system initial-services)
@@ -270,7 +270,7 @@ Other modules may wish to modify the list of operating system services so use th
      (append %desktop-services
              (operating-system-user-services os)))))
 #+end_src
-*** Linux Nonfree
+*** Linux nonfree
 #+begin_src scheme
 (define-module (ebullient system linux-nonfree)
   #:use-module ((gnu system) #:select (operating-system operating-system-firmware operating-system-user-services))
@@ -311,14 +311,14 @@ Other modules may wish to modify the list of operating system services so use th
                          (append %default-authorized-guix-keys
                                  (list (local-file "mirror.brielmaier.net.pub"))))))))
 #+end_src
-***** Public Key
+***** Public key
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
-*** Disk Encryption
+*** Disk encryption
 #+begin_src scheme
 (define-module (ebullient system disk-encryption)
   #:use-module ((gnu system) #:select (operating-system operating-system-mapped-devices))
@@ -375,7 +375,7 @@ The stateless service should come after base/desktop services (potentially other
                             (if bluetooth?
                                 (list "/var/lib/bluetooth") '())))))))))
 #+end_src
-**** File Systems
+**** File systems
 #+begin_src scheme
 (define-module (ebullient system stateless-file-systems)
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
@@ -520,7 +520,7 @@ The stateless service should come after base/desktop services (potentially other
     (services (cons* (service nix-service-type)
                      (operating-system-user-services os)))))
 #+end_src
-*** HiDPI Console Font
+*** HiDPI console font
 #+begin_src scheme
 (define-module (ebullient system hidpi-console-font)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
@@ -543,7 +543,7 @@ The stateless service should come after base/desktop services (potentially other
     (services (with-hidpi-console-font
                (operating-system-user-services os)))))
 #+end_src
-*** Mtrack
+*** mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
 #+begin_src scheme
 (define-module (ebullient system mtrack)
@@ -627,7 +627,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     (packages (cons* (custom-wm-desktop-entry executable)
                      (operating-system-packages os)))))
 #+end_src
-**** Desktop Entry
+**** Desktop entry
 #+begin_src scheme
 (define-module (ebullient system custom-wm-desktop-entry)
   #:use-module ((guix packages) #:select (package))
@@ -653,7 +653,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
             #:exec ,executable))
          #t)))))
 #+end_src
-*** Et Cetera
+*** Et cetera
 #+begin_src scheme
 (define-module (ebullient system et-cetera)
   #:use-module ((gnu system) #:select (operating-system operating-system-packages operating-system-user-services))
