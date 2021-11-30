@@ -241,8 +241,7 @@ guix pull
 (define-syntax-rule (define-os-comp (name arg ...) body ...)
   (begin
     (define* (name os arg...)
-      (comp-os os
-               body ...))
+      (comp-os os body ...))
     (export foo)))
 #+end_src
 *** Barebones OS
@@ -375,13 +374,13 @@ The stateless service should come after base/desktop services (potentially other
 #+begin_src scheme
 (define (stateless-file-systems label persist-dir mountables dependencies nix?)
   (map (match-lambda
-         ((purpose subvol mount-point)
+         ((role subvol mount-point)
           (file-system
             (device (file-system-label label))
             (mount-point mount-point)
             (type "btrfs")
             (options (string-append "subvol=" subvol ",compress=zstd,autodefrag"))
-            (needed-for-boot? (if (member purpose '(#:guix-var #:log #:persist)) #t #f))
+            (needed-for-boot? (if (member role '(#:guix-var #:log #:persist)) #t #f))
             (dependencies (or dependencies '())))))
        (apply (lambda* (#:key root boot guix-store guix-var log home persist nix)
                 (append
