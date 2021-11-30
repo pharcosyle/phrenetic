@@ -457,6 +457,21 @@ The stateless service should come after base/desktop services (potentially other
                        (service-extension activation-service-type
                                           activate-state-gexp)))))
 #+end_src
+*** Btrfs
+#+begin_src scheme
+(define-system-comp (btrfs #:key label subvols)
+  (file-systems
+   (append
+    (map (match-lambda
+           ((subvol mount-point)
+            (file-system
+              (device (file-system-label label))
+              (mount-point mount-point)
+              (type "btrfs")
+              (options (string-append "subvol=" subvol ",compress=zstd,autodefrag")))))
+         subvols)
+    (operating-system-file-systems os))))
+#+end_src
 *** Users
 #+begin_src scheme
 (define* (account user-name user-full-name #:key admin? password salt bluetooth?)
@@ -632,19 +647,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
-
-(define-system-comp (btrfs #:key label subvols)
-  (file-systems
-   (append
-    (map (match-lambda
-           ((subvol mount-point)
-            (file-system
-              (device (file-system-label label))
-              (mount-point mount-point)
-              (type "btrfs")
-              (options (string-append "subvol=" subvol ",compress=zstd,autodefrag")))))
-         subvols)
-    (operating-system-file-systems os))))
 
 (let* ((nix? #t)
        (bluetooth? #t)
