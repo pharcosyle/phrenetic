@@ -37,7 +37,7 @@ Krzysztof Baranowski
 #+begin_src org
 pharcosyle@gmail.com
 #+end_src
-#+name: spartan-executable
+#+name: spartan-exe
 #+begin_src org
 spartan
 #+end_src
@@ -205,11 +205,11 @@ guix pull
 (define-module (ebullient system basic-info)
   #:use-module ((gnu system) #:select (operating-system)))
 
-(define-public (basic-info os host-name tz locale)
+(define-public (basic-info os #:key host-name timezone locale)
   (operating-system
     (inherit os)
     (host-name host-name)
-    (timezone tz)
+    (timezone timezone)
     (locale locale)))
 #+end_src
 *** Boot
@@ -221,7 +221,7 @@ guix pull
   #:use-module ((gnu system file-systems) #:select (file-system file-system-label))
   #:export (boot))
 
-(define* (boot os target label #:optional kbl)
+(define* (boot os #:key target label kbl)
   (operating-system
     (inherit os)
     (bootloader (bootloader-configuration
@@ -236,14 +236,15 @@ guix pull
               (type "vfat"))
             (operating-system-file-systems os)))))
 #+end_src
-*** Desktop Services
+*** Initial Services
 Other modules may wish to modify the list of operating system services so use this in the module chain early.
-#+begin_src scheme :tangle (in-tangle-dir "desktop-services.scm")
-(define-module (ebullient system desktop-services)
+#+begin_src scheme :tangle (in-tangle-dir "initial-services.scm")
+(define-module (ebullient system initial-services)
   #:use-module ((gnu system) #:select (operating-system operating-system-user-services))
+  #:use-module ((gnu services base) #:select (%base-services))
   #:use-module ((gnu services desktop) #:select (%desktop-services)))
 
-(define-public (desktop-services os)
+(define-public (initial-services os #:key desktop?)
   (operating-system
     (inherit os)
     (services
@@ -259,7 +260,7 @@ Other modules may wish to modify the list of operating system services so use th
   #:use-module ((ebullient system linux-nonfree-substitutes) #:select (with-linux-nonfree-substitutes))
   #:export (linux-nonfree))
 
-(define* (linux-nonfree os #:key (substitutes? #t))
+(define* (linux-nonfree os #:key substitutes?)
   (operating-system
     (inherit os)
     (kernel linux)
@@ -305,13 +306,13 @@ Other modules may wish to modify the list of operating system services so use th
   #:use-module ((gnu system file-systems) #:select (uuid))
   #:use-module ((gnu system mapped-devices) #:select (mapped-device luks-device-mapping)))
 
-(define-public (encrypted-device source-uuid target-name)
+(define-public (encrypted-device #:key source-uuid target-name)
   (mapped-device
    (source (uuid source-uuid))
    (target target-name)
    (type luks-device-mapping)))
 
-(define-public (disk-encryption os encrypted-device)
+(define-public (disk-encryption os #:key encrypted-device)
   (operating-system
     (inherit os)
     (mapped-devices
@@ -328,7 +329,7 @@ The stateless service should come after base/desktop services (potentially other
   #:use-module ((ebullient system stateless-service) #:select (stateless-service-type))
   #:export (stateless))
 
-(define* (stateless os label persist-dir subvols #:optional dependencies #:key (nix? #t) (bluetooth? #t))
+(define* (stateless os #:key label persist-dir mountables dependencies  nix? bluetooth?)
   (operating-system
     (inherit os)
     (initrd (lambda (file-systems . rest)
@@ -337,7 +338,7 @@ The stateless service should come after base/desktop services (potentially other
                      rest)))
     (file-systems
      (append
-      (stateless-file-systems label persist-dir subvols dependencies nix?)
+      (stateless-file-systems label persist-dir mountables dependencies nix?)
       (operating-system-file-systems os)))
     (services
      (append
@@ -479,12 +480,12 @@ The stateless service should come after base/desktop services (potentially other
                  (crypt password "toosimple")
                  #f))))
 
-(define* (users os user-list #:key (bluetooth? #t))
+(define* (users os #:key who bluetooth?)
   (operating-system
     (inherit os)
     (users (append (map (lambda* (user)
                           (apply account (append user `(#:bluetooth? ,bluetooth?))))
-                        user-list)
+                        who)
                    (operating-system-users os)))))
 #+end_src
 *** Nix
@@ -533,7 +534,7 @@ The stateless service should come after base/desktop services (potentially other
   #:use-module ((ebullient packages xf86-input-mtrack) :select (xf86-input-mtrack))
   #:export (mtrack))
 
-(define* (mtrack #:optional kbl)
+(define* (mtrack #:key kbl)
   (operating-system
     (inherit os)
     (packages
@@ -581,7 +582,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
-(define* (macbook os #:key (bluetooth? #t))
+(define* (macbook os #:key bluetooth?)
   (operating-system
     (inherit os)
     (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
@@ -601,7 +602,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   #:use-module ((gnu system) #:select (operating-system operating-system-packages))
   #:use-module ((ebullient system custom-wm-desktop-entry) #:select (custom-wm-desktop-entry)))
 
-(define-public (custom-wm os package-name desktop-name executable)
+(define-public (custom-wm os #:key package-name desktop-name executable)
   (operating-system
     (inherit os)
     (packages (cons* (custom-wm-desktop-entry executable)
@@ -645,7 +646,7 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
   #:use-module ((gnu packages linux) #:select (brightnessctl))
   #:export (et-cetera))
 
-(define* (et-cetera os #:optional kbl #:key (bluetooth? #t))
+(define* (et-cetera os #:key kbl bluetooth?)
   (operating-system
     (inherit os)
     (keyboard-layout kbl)
@@ -678,34 +679,55 @@ I'm not sure if this requires [[Linux Nonfree][Linux Nonfree]] and/or if the bla
     ((_ value (f1 . body) next ...) (-> (f1 value . body) next ...))
     ((_ value f1 next ...) (-> (f1 value) next ...))))
 
-(let ((kbl macbook-kbl)
-      (ciphered (encrypted-device "bdda56af-6ca0-4953-bc13-d5af8715e0e5" "ciphered")))
+(define-syntax as->
+  (syntax-rules ()
+    ((_ expr name) expr)
+    ((_ expr name form form* ...)
+     (let ((name expr))
+       (as-> form name form* ...)))))
+
+(let ((bluetooth? #t)
+      (nix? #t)
+      (kbl macbook-kbl)
+      (ciphered (encrypted-device #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
+                                  #:target-name "ciphered")))
   (-> barebones-os
-      (basic-info "frostfire" "America/Los_Angeles" "en_US.utf8")
-      (boot "/boot/efi" "genesis" kbl)
-      desktop-services
-      linux-nonfree
-      (disk-encryption ciphered)
-      (users '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
-               ("pcoulson" "Phil Coulson" #:admin? #t)
-               ("gandalf" "Speak Friend and Enter" #:password "mellon")))
-      nix
+      (basic-info #:host-name "frostfire"
+                  #:timezone "America/Los_Angeles"
+                  #:locale "en_US.utf8")
+      (boot #:target "/boot/efi"
+            #:label "genesis"
+            #:kbl kbl)
+      (initial-services #:desktop? #t)
+      (linux-nonfree #:substitutes? #t)
+      (disk-encryption #:encrypted-device ciphered)
+      (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
+                     ("pcoulson" "Phil Coulson" #:admin? #t)
+                     ("gandalf" "Speak Friend and Enter" #:password "mellon"))
+             #:bluetooth? bluetooth?)
+      (as-> $
+            (if nix? (nix $) $))
       hidpi-console-font
-      (mtrack kbl)
-      macbook
-      (custom-wm "spartan-wm" "Spartan WM" "<<spartan-executable>>")
-      (et-cetera kbl)
-      (stateless "firmament"
-                 "/.persist"
-                 '(#:root "root-blank"
-                   #:boot "boot"
-                   #:guix-store "guix-store"
-                   #:guix-var "guix-var"
-                   #:log "log"
-                   #:home "home"
-                   #:persist "persist"
-                   #:nix "nix")
-                 (list ciphered))))
+      (mtrack #:kbl kbl)
+      (macbook #:bluetooth? bluetooth?)
+      (custom-wm #:package-name "spartan-wm"
+                 #:desktop-name "Spartan WM"
+                 #:executable "<<spartan-exe>>")
+      (et-cetera #:kbl kbl
+                 #:bluetooth? bluetooth?)
+      (stateless #:label "firmament"
+                 #:persist-dir "/.persist"
+                 #:mountables '(#:root "root-blank"
+                                #:boot "boot"
+                                #:guix-store "guix-store"
+                                #:guix-var "guix-var"
+                                #:log "log"
+                                #:home "home"
+                                #:persist "persist"
+                                #:nix "nix")
+                 #:dependencies (list ciphered)
+                 #:nix? nix?
+                 #:bluetooth? bluetooth?)))
 #+end_src
 #+begin_src sh :results output silent :dir (base-tangle-dir) :async
 sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
@@ -2183,7 +2205,7 @@ Can be an integer to determine the exact padding."
                (("pasystray") (cmd "pasystray"))
                (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
                (("udiskie") (cmd "udiskie")))
-             (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-executable>>"))
+             (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-exe>>"))
                    (xsettingsd-conf-file (install-input "xsettingsd.conf")))
                (substitute* executable
                  (("^xhost") (cmd "xhost"))
