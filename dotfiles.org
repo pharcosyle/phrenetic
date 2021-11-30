@@ -482,14 +482,6 @@ The stateless service should come after base/desktop services (potentially other
                         who)
                    (operating-system-users os)))))
 #+end_src
-*** Nix
-#+begin_src scheme
-(define (nix os)
-  (operating-system
-    (inherit os)
-    (services (cons* (service nix-service-type)
-                     (operating-system-user-services os)))))
-#+end_src
 *** HiDPI console font
 #+begin_src scheme
 (define (with-hidpi-console-font services)
@@ -593,9 +585,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
            #:exec ,executable))
         #t)))))
 #+end_src
-*** Et cetera
+*** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
 #+begin_src scheme
-(define* (et-cetera os bluetooth?)
+(define* (miscellany os #:key backlight-control? nix? bluetooth?)
   (operating-system
     (inherit os)
     (packages
@@ -607,7 +599,14 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
             ;; (set-xorg-configuration
             ;;  (xorg-configuration
             ;;   (keyboard-layout (operating-system-keyboard-layout os))))
-            (simple-service 'my-brightnessctl-udev-rules udev-service-type (list brightnessctl)))
+            )
+      (if backlight-control?
+          (list (simple-service 'brightnessctl-udev-rules
+                                udev-service-type
+                                (list brightnessctl)))
+          '())
+      (if nix?
+          (list (service nix-service-type)) '())
       (if bluetooth?
           (list (bluetooth-service #:auto-enable? #t)) '())
       (operating-system-user-services os)))))
@@ -665,8 +664,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                      ("pcoulson" "Phil Coulson" #:admin? #t)
                      ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
              #:bluetooth? bluetooth?)
-      (as-> $
-        (if nix? (nix $) $))
       hidpi-console-font
       mtrack
       (as-> $
@@ -675,6 +672,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (custom-wm #:package-name "spartan-wm"
                  #:desktop-name "Spartan WM"
                  #:executable "<<spartan-exe>>")
+      (miscellany #:backlight-control? #t
+                  #:nix? #t
+                  #:bluetooth? bluetooth?)
       (as-> $
         (let ((subvols
                (append
@@ -692,7 +692,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
               (disk-encryption #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
                                #:target "ciphered"
                                #:encrypted-mount-points (map cadr subvols)))))
-      (et-cetera #:bluetooth? bluetooth?)
       (stateless #:persist-dir persist-dir
                  #:bluetooth? bluetooth?)))
 #+end_src
@@ -822,11 +821,11 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
               ;;    (ssh-host "savannah"
               ;;              '((compression . #f))))))
               )
-     (simple-service 'my-channels
+     (simple-service 'rename-me-channels
                      home-files-service-type
                      (list `("config/guix/channels.scm"
                              ,(local-file "channels.scm"))))
-     (simple-service 'my-doomdir
+     (simple-service 'doomdir
                      home-files-service-type
                      (list `("config/doom"
                              ,(local-file "doom" #:recursive? #t))))
