@@ -215,7 +215,8 @@ guix pull
   #:use-module (ebullient packages xf86-input-mtrack)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (barebones-os
+  #:export (define-system-comp
+            barebones-os
             basic-info
             boot
             initial-services
@@ -650,8 +651,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 
 (let* ((nix? #t)
        (bluetooth? #t)
-       (macbook? #t)
-       (persist-dir "/.persist"))
+       (macbook? #t))
   (-> barebones-os
       (basics #:host-name "frostfire"
               #:timezone "America/Los_Angeles"
@@ -678,7 +678,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   #:nix? #t
                   #:bluetooth? bluetooth?)
       (as-> $
-        (let ((subvols
+        (let ((persist-dir "/.persist")
+              (subvols
                (append
                 `(("root-blank" "/")
                   ("boot" "/boot")
@@ -693,9 +694,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                      #:subvols subvols)
               (disk-encryption #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
                                #:target "ciphered"
-                               #:encrypted-mount-points (map cadr subvols)))))
-      (stateless #:persist-dir persist-dir
-                 #:bluetooth? bluetooth?)))
+                               #:encrypted-mount-points (map cadr subvols))
+              (stateless #:persist-dir persist-dir
+                         #:bluetooth? bluetooth?))))))
 #+end_src
 #+begin_src sh :results output silent :dir (base-tangle-dir) :async
 sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
