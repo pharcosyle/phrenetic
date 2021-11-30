@@ -279,10 +279,19 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
 *** Initial services
 Other components may wish to modify the list of operating system services so use this in the component chain early.
 #+begin_src scheme
+(define selective-desktop-services
+  (remove (lambda (service)
+            (member (service-kind service)
+                    (list gdm-service-type ; Kind of a presumptuous default.
+                          ;; TODO remove if I don't end up needing this for pipewire. Removal might be behind a pipewire flag, also.
+                          pulseaudio-service-type
+                          alsa-service-type)))
+          %desktop-services))
+
 (define-system-comp (initial-services os #:key desktop?)
   (services
    (append (if desktop?
-               %desktop-services
+               selective-desktop-services
                %base-services)
            (operating-system-user-services os))))
 #+end_src
@@ -345,7 +354,7 @@ Other components may wish to modify the list of operating system services so use
                         (operating-system-file-systems os)))))
 #+end_src
 *** Stateless
-The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so and users of this component should include it at the end of their component chain.
+The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so users of this component should include it at the end of their component chain.
 #+begin_src scheme
 (define (with-needed-for-boot-flags persist-dir file-systems)
   (map (lambda (fs)
@@ -506,12 +515,14 @@ The stateless service should come after base/desktop services (potentially other
    (cons* xf86-input-mtrack
           (operating-system-packages os)))
   (services
-   (cons* (set-xorg-configuration
-           (xorg-configuration
-            (modules (cons* xf86-input-mtrack
-                            %default-xorg-modules))
-            (keyboard-layout (operating-system-keyboard-layout os))
-            (extra-config (list (with-input-from-file "xorg.conf" read-string))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+   (cons* (service gdm-service-type
+                   (gdm-configuration
+                    (xorg-configuration
+                     (xorg-configuration
+                      (modules (cons* xf86-input-mtrack
+                                      %default-xorg-modules))
+                      (keyboard-layout (operating-system-keyboard-layout os))
+                      (extra-config (list (with-input-from-file "xorg.conf" read-string))))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
           (operating-system-user-services os))))
 #+end_src
 **** Xorg config
@@ -581,18 +592,21 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
 #+begin_src scheme
-(define-system-comp (miscellany os #:key backlight-control? nix? bluetooth?)
+(define-system-comp (miscellany os #:key laptop? nix? bluetooth?)
   (packages
    (cons* (specification->package "nss-certs")
           (operating-system-packages os)))
   (services
    (append
-    (list (service gnome-desktop-service-type)
-          ;; (set-xorg-configuration
-          ;;  (xorg-configuration
-          ;;   (keyboard-layout (operating-system-keyboard-layout os))))
-          )
-    (if backlight-control?
+    (if desktop?
+        (list (service gdm-service-type
+                       (gdm-configuration
+                        (xorg-configuration
+                         (xorg-configuration
+                          (keyboard-layout (operating-system-keyboard-layout os))))))
+              (service gnome-desktop-service-type))
+        '())
+    (if laptop?
         (list (simple-service 'brightnessctl-udev-rules
                               udev-service-type
                               (list brightnessctl)))
@@ -625,9 +639,11 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
      (let ((name expr))
        (as-> form name form* ...)))))
 
-(let* ((nix? #t)
-       (bluetooth? #t)
-       (macbook? #t))
+(let* ((desktop? #t)
+       (laptop? #t)
+       (macbook? #t)
+       (nix? #t)
+       (bluetooth? #t))
   (-> barebones-os
       (basics #:host-name "frostfire"
               #:timezone "America/Los_Angeles"
@@ -636,22 +652,27 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                     macbook-kbl #f))
       (boot #:label "genesis"
             #:target "/boot/efi")
-      (initial-services #:desktop? #t)
+      (initial-services #:desktop? desktop?)
       (linux-nonfree #:substitutes? #t)
       (users #:who '(("<<user-name>>" "<<user-full-name>>" #:admin? #t)
                      ("pcoulson" "Phil Coulson" #:admin? #t)
                      ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
              #:bluetooth? bluetooth?)
-      hidpi-console-font
-      mtrack
+      (as-> $
+        (if desktop?
+            (-> $
+                hidpi-console-font
+                mtrack
+                (custom-wm #:package-name "spartan-wm"
+                           #:desktop-name "Spartan WM"
+                           #:executable "<<spartan-exe>>"))
+            $))
       (as-> $
         (if macbook?
             (macbook $ #:bluetooth? bluetooth?) $))
-      (custom-wm #:package-name "spartan-wm"
-                 #:desktop-name "Spartan WM"
-                 #:executable "<<spartan-exe>>")
-      (miscellany #:backlight-control? #t
-                  #:nix? #t
+      (miscellany #:desktop desktop?
+                  #:laptop? laptop?
+                  #:nix? nix?
                   #:bluetooth? bluetooth?)
       (as-> $
         (let ((persist-dir "/.persist")
