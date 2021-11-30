@@ -558,29 +558,25 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 *** Custom WM
 #+begin_src scheme
 (define-system-comp (custom-wm #:key package-name desktop-name executable)
-  (packages (cons* (custom-wm-desktop-entry package-name desktop-name executable)
-                   (operating-system-packages os))))
-#+end_src
-**** Desktop entry
-#+begin_src scheme
-(define (custom-wm-desktop-entry package-name desktop-name executable)
-  (private-package
-   (name package-name)
-   (build-system trivial-build-system)
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules (guix build utils))
-        (let* ((out (assoc-ref %outputs "out"))
-               (xsessions (string-append out "/share/xsessions")))
-          (mkdir-p xsessions)
-          (make-desktop-entry-file
-           (string-append xsessions "/" ,name ".desktop")
-           #:name ,desktop-name
-           #:comment ,desktop-name
-           #:exec ,executable))
-        #t)))))
+  (packages
+   (cons* (private-package
+           (name package-name)
+           (build-system trivial-build-system)
+           (arguments
+            `(#:modules ((guix build utils))
+              #:builder
+              (begin
+                (use-modules (guix build utils))
+                (let* ((out (assoc-ref %outputs "out"))
+                       (xsessions (string-append out "/share/xsessions")))
+                  (mkdir-p xsessions)
+                  (make-desktop-entry-file
+                   (string-append xsessions "/" ,name ".desktop")
+                   #:name ,desktop-name
+                   #:comment ,desktop-name
+                   #:exec ,executable))
+                #t))))
+          (operating-system-packages os))))
 #+end_src
 *** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
 #+begin_src scheme
