@@ -2710,3 +2710,14 @@ Gtk/CursorThemeSize 48
     (inherit barebones-package)
     body ...))
 #+end_src
+* Dev
+** Emacs directory-local variables
+#+begin_src elisp :tangle .dir-locals.el
+((nil
+  (eval . (with-eval-after-load 'geiser-guile
+            (let ((root-dir
+                   (file-name-directory
+                    (locate-dominating-file default-directory ".dir-locals.el"))))
+              (make-local-variable 'geiser-guile-load-path)
+              (add-to-list 'geiser-guile-load-path root-dir))))))
+#+end_src
