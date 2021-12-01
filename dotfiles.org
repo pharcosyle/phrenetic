@@ -480,6 +480,7 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** mtrack
 - TODO Get the setting of keyboard-layout into et-cetera
+- TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
 #+begin_src scheme
 (define-system-comp (mtrack)
   (packages
@@ -493,7 +494,7 @@ The stateless service should come after base/desktop services (potentially other
                       (modules (cons* xf86-input-mtrack
                                       %default-xorg-modules))
                       (keyboard-layout (operating-system-keyboard-layout os))
-                      (extra-config (list (with-input-from-file "xorg.conf" read-string))))))) ; TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+                      (extra-config (list (with-input-from-file "xorg.conf" read-string)))))))
           (operating-system-user-services os))))
 #+end_src
 **** Xorg config
