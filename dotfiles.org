@@ -1,6 +1,5 @@
 #+TITLE: Dotfiles
 #+PROPERTY: header-args :mkdirp yes
-#+PROPERTY: tangle-dir ebullient
 
 * Meta
 #+begin_src elisp
@@ -16,13 +15,15 @@
 (defun in-tangle-dir (sub-path)
   (expand-file-name sub-path (tangle-dir*)))
 
-;; TODO Don't duplicate with file-level tangle-dir property
-(defun base-tangle-dir ()
+;; TODO Don't hardcode
+(defun scheme-dir ()
   "ebullient")
 #+end_src
 ** Git
-#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
-*
+#+begin_src gitignore :tangle .gitignore
+/.gitignore
+/ebullient/
+/.dir-locals.el
 #+end_src
 * Common
 #+name: user-name
@@ -183,7 +184,7 @@ guix pull
 #+end_src
 * System
 :PROPERTIES:
-:tangle-dir+: system
+:tangle-dir+: ebullient/system
 :END:
 ** Components
 :PROPERTIES:
@@ -689,12 +690,12 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 
 (create-os #:host-name "frostfire")
 #+end_src
-#+begin_src sh :results output silent :dir (base-tangle-dir) :async
+#+begin_src sh :results output silent :dir (scheme-dir) :async
 sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
 #+end_src
 * Home
 :PROPERTIES:
-:tangle-dir+: home
+:tangle-dir+: ebullient/home
 :END:
 #+name: guix-home-profile
 #+begin_src sh
@@ -848,7 +849,7 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
 
 solitude
 #+end_src
-#+begin_src sh :results output silent :dir (base-tangle-dir) :async
+#+begin_src sh :results output silent :dir (scheme-dir) :async
 guix home --load-path=. reconfigure home/solitude.scm
 #+end_src
 ** Bash profile
@@ -2617,7 +2618,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 * Packages
 :PROPERTIES:
-:tangle-dir+: packages
+:tangle-dir+: ebullient/packages
 :END:
 ** Dracula Theme
 #+begin_src scheme :tangle (in-tangle-dir "dracula-theme.scm")
@@ -2690,6 +2691,9 @@ Gtk/CursorThemeSize 48
       (license license:gpl2+))))
 #+end_src
 * Utils
+:PROPERTIES:
+:tangle-dir+: ebullient
+:END:
 #+begin_src scheme :tangle (in-tangle-dir "utils.scm")
 (define-module (ebullient utils)
   #:use-module (guix packages))
