@@ -1864,6 +1864,17 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (after! counsel
   (setq counsel-find-file-ignore-regexp nil)) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed.
 #+end_src
+***** Projects
+****** Dotfiles
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(eval . (with-eval-after-load 'geiser-guile
+                     (let ((root-dir
+                            (file-name-directory
+                             (locate-dominating-file default-directory ".dir-locals.el"))))
+                       (make-local-variable 'geiser-guile-load-path)
+                       (add-to-list 'geiser-guile-load-path root-dir)))))
+#+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
