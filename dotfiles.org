@@ -4,11 +4,17 @@
 
 * Meta
 #+begin_src elisp
+(defun tangle-dir* ()
+  (thread-first
+    (org-entry-get (point) "tangle-dir" 'inherit)
+    (split-string " /")
+    (string-join "/")))
+
 (defun get-tangle-dir ()
-  (org-entry-get (point) "tangle-dir" 'inherit))
+  (expand-file-name (tangle-dir*)))
 
 (defun in-tangle-dir (sub-path)
-  (concat (get-tangle-dir) "/" sub-path))
+  (expand-file-name (concat "/" sub-path) (tangle-dir*)))
 
 ;; TODO Don't hardcode
 (defun scheme-dir ()
