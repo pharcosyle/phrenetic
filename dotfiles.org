@@ -12,10 +12,6 @@
 
 (defun in-tangle-dir (sub-path)
   (concat (get-tangle-dir) "/" sub-path))
-
-;; TODO Don't hardcode
-(defun scheme-dir ()
-  "ebullient")
 #+end_src
 * Common
 #+name: user-name
@@ -682,8 +678,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 
 (create-os #:host-name "frostfire")
 #+end_src
-#+begin_src sh :results output silent :dir (scheme-dir) :async
-sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
+#+begin_src sh :results output silent :dir base-tangle-dir :async
+sudo guix system --load-path=. reconfigure ebullient/system/hosts/frostfire.scm
 #+end_src
 * Home
 :PROPERTIES:
@@ -841,8 +837,8 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
 
 solitude
 #+end_src
-#+begin_src sh :results output silent :dir (scheme-dir) :async
-guix home --load-path=. reconfigure home/solitude.scm
+#+begin_src sh :results output silent :dir base-tangle-dir :async
+guix home --load-path=. reconfigure ebullient/home/solitude.scm
 #+end_src
 ** Bash profile
 :PROPERTIES:
