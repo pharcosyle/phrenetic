@@ -11,10 +11,10 @@
     (string-join "/")))
 
 (defun get-tangle-dir ()
-  (expand-file-name (tangle-dir*)))
+  (tangle-dir*))
 
 (defun in-tangle-dir (sub-path)
-  (expand-file-name (concat "/" sub-path) (tangle-dir*)))
+  (concat (tangle-dir*) "/" sub-path))
 
 ;; TODO Don't hardcode
 (defun scheme-dir ()
