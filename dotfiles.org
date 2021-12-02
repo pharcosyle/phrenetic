@@ -20,7 +20,7 @@
   "ebullient")
 #+end_src
 ** Git
-#+begin_src gitignore :tangle .gitignore
+#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
 /.gitignore
 /ebullient/
 /.dir-locals.el
@@ -2716,7 +2716,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 * Dev
 ** Emacs directory-local variables
-#+begin_src elisp :tangle .dir-locals.el
+#+begin_src elisp :tangle (in-tangle-dir ".dir-locals.el")
 ((nil
   (eval . (with-eval-after-load 'geiser-guile
             (let ((root-dir
