@@ -1,19 +1,20 @@
 #+TITLE: Dotfiles
 #+PROPERTY: header-args :mkdirp yes
+#+PROPERTY: tangle-dir .
 
 * Meta
 #+begin_src elisp
 (defun tangle-dir* ()
   (thread-first
     (org-entry-get (point) "tangle-dir" 'inherit)
-    (split-string " ")
+    (split-string " /")
     (string-join "/")))
 
 (defun get-tangle-dir ()
   (expand-file-name (tangle-dir*)))
 
 (defun in-tangle-dir (sub-path)
-  (expand-file-name sub-path (tangle-dir*)))
+  (expand-file-name (concat "/" sub-path) (tangle-dir*)))
 
 ;; TODO Don't hardcode
 (defun scheme-dir ()
@@ -184,7 +185,7 @@ guix pull
 #+end_src
 * System
 :PROPERTIES:
-:tangle-dir+: ebullient/system
+:tangle-dir+: /ebullient/system
 :END:
 ** Components
 :PROPERTIES:
@@ -609,7 +610,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 ** Hosts
 :PROPERTIES:
-:tangle-dir+: hosts
+:tangle-dir+: /hosts
 :END:
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
@@ -695,7 +696,7 @@ sudo guix system --load-path=. reconfigure system/hosts/frostfire.scm
 #+end_src
 * Home
 :PROPERTIES:
-:tangle-dir+: ebullient/home
+:tangle-dir+: /ebullient/home
 :END:
 #+name: guix-home-profile
 #+begin_src sh
@@ -899,7 +900,7 @@ done
 #+end_src
 ** Initialization
 :PROPERTIES:
-:tangle-dir+: initialization
+:tangle-dir+: /initialization
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm")
 (define-module (initialization core)
@@ -996,7 +997,7 @@ xkb_symbols "semicolon_to_control" {
 #+end_src
 ** Guix extra profiles
 :PROPERTIES:
-:tangle-dir+: manifests
+:tangle-dir+: /manifests
 :END:
 #+name: install-profiles
 #+begin_src sh :results output silent :dir (get-tangle-dir) :noweb yes :async
@@ -1148,7 +1149,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ** Doom
 :PROPERTIES:
-:tangle-dir+: doom
+:tangle-dir+: /doom
 :END:
 *** Init
 :PROPERTIES:
@@ -2104,7 +2105,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 ** Spartan :UI:
 :PROPERTIES:
-:tangle-dir+: spartan
+:tangle-dir+: /spartan
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "core.scm") :noweb yes
 (define-module (spartan core)
@@ -2618,7 +2619,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 * Packages
 :PROPERTIES:
-:tangle-dir+: ebullient/packages
+:tangle-dir+: /ebullient/packages
 :END:
 ** Dracula Theme
 #+begin_src scheme :tangle (in-tangle-dir "dracula-theme.scm")
@@ -2692,7 +2693,7 @@ Gtk/CursorThemeSize 48
 #+end_src
 * Utils
 :PROPERTIES:
-:tangle-dir+: ebullient
+:tangle-dir+: /ebullient
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "utils.scm")
 (define-module (ebullient utils)
