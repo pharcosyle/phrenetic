@@ -30,7 +30,7 @@ pharcosyle@gmail.com
 #+begin_src org
 spartan
 #+end_src
-* Installation Guide
+* Installation
 ** Create bootable USB
 Download (or create) a Guix installation ISO
 - I'm using the [[https://github.com/SystemCrafters/guix-installer/releases/latest][System Crafters Guix Installer]] since it's kept up-to-date which should speed things up a bit.
@@ -202,10 +202,11 @@ guix pull
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((ice-9 rdelim) #:select (read-string))
+  #:use-module ((srfi srfi-1) #:select (any remove))
   #:use-module (ebullient packages xf86-input-mtrack)
   #:use-module (ebullient utils)
-  #:use-module (ice-9 match)
-  #:use-module (srfi srfi-1)
   #:export (system-comp
             define-system-comp
             barebones-os
@@ -232,9 +233,13 @@ guix pull
     (inherit os)
     form ...))
 
-(define-syntax-rule (define-system-comp (name arg ...) body ...)
-  (define* (name os arg ...)
-    (system-comp os body ...)))
+(define-syntax define-system-comp
+  (lambda (x)
+    (syntax-case x ()
+      ((_ (name arg ...) body ...)
+       (with-syntax ((os (datum->syntax x 'os)))
+         #'(define* (name os arg ...)
+             (system-comp os body ...)))))))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
@@ -487,7 +492,7 @@ The stateless service should come after base/desktop services (potentially other
                       (modules (cons* xf86-input-mtrack
                                       %default-xorg-modules))
                       (keyboard-layout (operating-system-keyboard-layout os))
-                      (extra-config (list (with-input-from-file "xorg.conf" read-string)))))))
+                      (extra-config (list (with-input-from-file "../xorg.conf" read-string)))))))
           (operating-system-user-services os))))
 #+end_src
 **** Xorg config
@@ -582,11 +587,12 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
   (services
    (append
     (if desktop?
-        (list (service gdm-service-type
-                       (gdm-configuration
-                        (xorg-configuration
-                         (xorg-configuration
-                          (keyboard-layout (operating-system-keyboard-layout os))))))
+        (list ;; TODO bring this back once mtrack stuff is resolved
+              ;; (service gdm-service-type
+              ;;          (gdm-configuration
+              ;;           (xorg-configuration
+              ;;            (xorg-configuration
+              ;;             (keyboard-layout (operating-system-keyboard-layout os))))))
               (service gnome-desktop-service-type))
         '())
     (if laptop?
@@ -644,7 +650,7 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
       (as-> $
         (if macbook?
             (macbook $ #:bluetooth? bluetooth?) $))
-      (miscellany #:desktop desktop?
+      (miscellany #:desktop? desktop?
                   #:laptop? laptop?
                   #:nix? nix?
                   #:bluetooth? bluetooth?)
@@ -659,7 +665,7 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
                    ("log" "/var/log")
                    ("home" "/home")
                    ("persist" ,persist-dir))
-                 (if nix? '(("nix" "/nix") '())))))
+                 (if nix? '(("nix" "/nix")) '()))))
           (-> $
               (btrfs #:label "firmament"
                      #:subvols subvols)
