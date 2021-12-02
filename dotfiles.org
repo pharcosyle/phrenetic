@@ -572,7 +572,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                 #t))))
           (operating-system-packages os))))
 #+end_src
-*** Miscellany (nss-certs, GDM, Gnome, backlight control, Nix, bluetooth)
+*** Miscellany
+nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
 #+begin_src scheme
 (define-system-comp (miscellany #:key desktop? laptop? nix? bluetooth?)
   (packages
@@ -1367,18 +1368,18 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
         "p" #'org-gcal-post-at-point)))
 #+end_src
 **** Packages
-***** All-the-icons Dired
+***** all-the-icons-dired
 #+begin_src elisp
 (after! all-the-icons-dired
   (setq all-the-icons-dired-monochrome nil))
 #+end_src
-***** Avy
+***** avy
 #+begin_src elisp
 ;; REVIEW Trying out not having this so I can use avy dispatch commands.
 ;; (after! avy
 ;;   (setq avy-single-candidate-jump t))
 #+end_src
-***** Clojure :lang:clojure:bindings:
+***** clojure :lang:clojure:bindings:
 #+begin_src elisp
 (use-package! clojure-mode
   :defer t
@@ -1387,7 +1388,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   :config
   (set-ligatures! 'clojure-mode :lambda "fn"))
 #+end_src
-***** Cider :lang:clojure:persistence:
+***** cider :lang:clojure:persistence:
 #+begin_src elisp
 (after! cider
   (setq cider-repl-history-size biome--very-big
@@ -1402,63 +1403,63 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
              #'yas-minor-mode-on
              #'biome-sp-strict-h))
 #+end_src
-***** Clj Refactor :lang:clojure:bindings:
+***** clj-refactor :lang:clojure:bindings:
 #+begin_src elisp
 (after! clj-refactor
   (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
 #+end_src
-***** Counsel :completion:UI:
+***** counsel :completion:UI:
 #+begin_src elisp
 (after! counsel
   (setq counsel-yank-pop-separator "\n--------------------------------\n"))
 #+end_src
-***** Doom Modeline :UI:
+***** doom-modeline :UI:
 #+begin_src elisp
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
   (setq doom-modeline-major-mode-icon t)
   (setq doom-modeline-persp-name t))
 #+end_src
-***** Doom Themes :UI:
+***** doom-themes :UI:
 #+begin_src elisp
 ;; TODO get rid of this if I'm not going to try it out again
 ;; (after! doom-themes
 ;;   (doom-themes-visual-bell-config))
 #+end_src
-***** Emacs Lisp :lang:
+***** emacs-lisp :lang:
 #+begin_src elisp
 (after! elisp-mode
   (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
 #+end_src
-***** Emojify :UI:
+***** emojify :UI:
 #+begin_src elisp
 (after! emojify
   (setq emojify-display-style 'unicode))
 #+end_src
-***** Eshell :persistence:
+***** eshell :persistence:
 #+begin_src elisp
 (after! eshell
   (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
 #+end_src
-***** Evil :UI:theming:
+***** evil :UI:theming:
 #+begin_src elisp
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
         evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
 #+end_src
-***** Evil Org :org:bindings:
+***** evil-org :org:bindings:
 #+begin_src elisp
 (after! evil-org
   (map! :map evil-org-mode-map
         :nv "C-j" #'outline-forward-same-level
         :nv "C-k" #'outline-backward-same-level))
 #+end_src
-***** Evil Multiedit
+***** evil-multiedit
 #+begin_src elisp
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 #+end_src
-***** Expand Region :bindings:
+***** expand-region :bindings:
 #+begin_src elisp
 (use-package! expand-region
   :defer t
@@ -1474,7 +1475,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 #+end_src
-***** Geiser :persistence:path:guix:
+***** geiser :persistence:path:guix:
 #+begin_src elisp
 (use-package! geiser
   :defer t
@@ -1483,7 +1484,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
   (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
   (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
 #+end_src
-***** Highlight Indent Guides :lang:prog_mode:UI:
+***** highlight-indent-guides :lang:prog_mode:UI:
 #+begin_src elisp
 (use-package! highlight-indent-guides
   :defer t
@@ -1494,7 +1495,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                   conf-mode-hook)
     #'highlight-indent-guides-mode))
 #+end_src
-***** Ivy :completion:bindings:UI:
+***** ivy :completion:bindings:UI:
 #+begin_src elisp
 (after! ivy
   (setq +ivy-buffer-preview t
@@ -1512,7 +1513,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
         "C-k" #'previous-line
         "s-D" #'ivy-reverse-i-search-kill)) ; TODO temporary binding
 #+end_src
-***** Ivy Hydra :completion:bindings:
+***** ivy-hydra :completion:bindings:
 #+begin_src elisp
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
@@ -1521,7 +1522,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
 #+end_src
-***** Lispy :lisp:
+***** lispy :lisp:
 #+begin_src elisp
 (use-package! lispy
   :defer t
@@ -1540,7 +1541,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
     #'lispy-mode)
   (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 #+end_src
-***** Lispyville :lisp:lang:prog_mode:bindings:
+***** lispyville :lisp:lang:prog_mode:bindings:
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
@@ -1562,13 +1563,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 #+end_src
-***** Magit :UI:
+***** magit :UI:
 #+begin_src elisp
 (after! magit
   (setq git-commit-style-convention-checks '(non-empty-second-line))
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 #+end_src
-***** Man :guix:
+***** man :guix:
 #+begin_src elisp :noweb yes
 (after! man
   (prependq! Man-header-file-path
@@ -1577,7 +1578,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                             '(<<guix-extra-profiles>>))
                       '("<<guix-home-profile>>/include"))))
 #+end_src
-***** Org :org:UI:path:
+***** org :org:UI:path:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -1592,7 +1593,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-***** Org Gcal :user:secret:persistence:path:
+***** org-gcal :user:secret:persistence:path:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -1602,33 +1603,33 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
-***** Org Persist :persistence:path:
+***** org-persist :persistence:path:
 #+begin_src elisp
 (use-package! org-persist
   :defer t
   :init
   (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
 #+end_src
-***** Paren :UI:
+***** paren :UI:
 #+begin_src elisp
 (after! paren
   (setq! show-paren-delay 0))
 #+end_src
-***** Prog Mode :lang:prog_mode:
+***** prog-mode :lang:prog_mode:
 #+begin_src elisp
 (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 #+end_src
-***** Rainbow Delimiters :UI:theming:
+***** rainbow-delimiters :UI:theming:
 #+begin_src elisp
 (after! rainbow-delimiters
   (setq rainbow-delimiters-max-face-count 8)) ; TODO make sure this is working and I didn't need to put it in an `:init'`or anything
 #+end_src
-***** Recentf :persistence:
+***** recentf :persistence:
 #+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
 #+end_src
-***** Smartparens :bindings:
+***** smartparens :bindings:
 #+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
@@ -1664,14 +1665,14 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
-***** Tldr :persistence:path:
+***** tldr :persistence:path:
 #+begin_src elisp
 (use-package! tldr
   :defer t
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 #+end_src
-***** Tramp :path:guix:
+***** tramp :path:guix:
 Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
 #+begin_src elisp :noweb yes
 (after! tramp
@@ -1686,17 +1687,17 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                         "/run/current-system/profile/bin"
                         "/run/current-system/profile/sbin"))))
 #+end_src
-***** Transient :persistence:
+***** transient :persistence:
 #+begin_src elisp
 (after! transient
   (setq transient-history-limit biome--very-big))
 #+end_src
-***** Undo Fu
+***** undo-fu
 #+begin_src elisp
 (after! undo-fu
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
-***** Undo Tree :UI:
+***** undo-tree :UI:
 - TODO am I commenting code, doing notangle, or using the org ~COMMENT~ keyword (https://orgmode.org/manual/Comment-Lines.html)?
 #+begin_src elisp
 ;; (after! undo-tree
@@ -1800,24 +1801,24 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;           (let ((org-confirm-babel-evaluate nil))
 ;;             (org-babel-tangle)))))))
 #+end_src
-***** Scheme :lang:
+***** scheme :lang:
 #+begin_src elisp
 (after! scheme
   (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
 #+end_src
-***** Guix :guix:
-****** Common :UI:
+***** guix :guix:
+****** guix :UI:
 #+begin_src elisp
 (after! guix
   (set-popup-rules!
     '(("^\\*Guix" :height 0.5))))
 #+end_src
-****** Devel :lang:
+****** guix-devel :lang:
 #+begin_src elisp
 (use-package! guix-devel
   :hook (scheme-mode . guix-devel-mode))
 #+end_src
-****** Popup :bindings:
+****** guix-popup :bindings:
 #+begin_src elisp
 (use-package! guix-popup
   :defer t
@@ -1825,12 +1826,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   (map! :leader
         "a" #'guix))  ; TODO temporary binding?
 #+end_src
-****** Prettify :UI:
+****** guix-prettify :UI:
 #+begin_src elisp
 (use-package! guix-prettify
   :hook (doom-first-buffer . global-guix-prettify-mode))
 #+end_src
-***** Dired-X :UI:hidden:
+***** dired-x :UI:hidden:
 #+begin_src elisp
 (use-package! dired-x
   :defer t
@@ -1840,7 +1841,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
     (defun biome-disable-dired-omit-mode-h ()
       (dired-omit-mode -1))))
 #+end_src
-***** Counsel :UI:completion:hidden:
+***** counsel :UI:completion:hidden:
 #+begin_src elisp
 (after! counsel
   (setq counsel-find-file-ignore-regexp nil)) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed.
@@ -2223,19 +2224,21 @@ Gtk/CursorThemeSize 48
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "desktop.el")
 :END:
+**** Header
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 ;; TODO rename efs to biome
 ;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
 ;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
 #+end_src
-**** Battery
+**** Packages
+***** battery
 #+begin_src elisp
 (use-package! battery
   :config
   (display-battery-mode 1))
 #+end_src
-**** Desktop Environment :bindings:path:
+***** desktop-environment :bindings:path:
 #+begin_src elisp
 (use-package! desktop-environment
   :after exwm
@@ -2257,7 +2260,7 @@ Gtk/CursorThemeSize 48
         "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
   (desktop-environment-mode))
 #+end_src
-**** EXWM :bindings:
+***** exwm :bindings:
 #+begin_src elisp
 (defun efs/run-in-background (command)
   (let ((command-parts (split-string command "[ ]+")))
@@ -2394,7 +2397,7 @@ Gtk/CursorThemeSize 48
 
   (exwm-enable))
 #+end_src
-***** Dunst :theming:
+****** Dunst :theming:
 #+begin_src conf :tangle (in-tangle-dir "dunstrc")
 [global]
     geometry = "500x10-200+50"
@@ -2436,7 +2439,7 @@ Gtk/CursorThemeSize 48
     frame_color = "#ff0000"
     timeout = 0
 #+end_src
-**** Time
+***** time
 #+begin_src elisp
 (use-package! time
   :config
