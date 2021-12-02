@@ -17,12 +17,6 @@
 (defun scheme-dir ()
   "ebullient")
 #+end_src
-** Git
-#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
-/.gitignore
-/ebullient/
-/.dir-locals.el
-#+end_src
 * Common
 #+name: user-name
 #+begin_src org
@@ -2713,6 +2707,12 @@ Gtk/CursorThemeSize 48
     body ...))
 #+end_src
 * Dev
+** Git Ignore
+#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
+/.gitignore
+/ebullient/
+/.dir-locals.el
+#+end_src
 ** Emacs directory-local variables
 #+begin_src elisp :tangle (in-tangle-dir ".dir-locals.el")
 ((nil
