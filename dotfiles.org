@@ -7,10 +7,8 @@
 
 (defun get-tangle-dir ()
   (concat base-tangle-dir
-          (thread-first
-            (org-entry-get (point) "tangle-dir" 'inherit)
-            (split-string " /")
-            (string-join "/"))))
+          (when-let ((dirs (org-entry-get (point) "tangle-dir" 'inherit)))
+            (thread-first dirs (split-string " /") (string-join "/")))))
 
 (defun in-tangle-dir (sub-path)
   (concat (get-tangle-dir) "/" sub-path))
