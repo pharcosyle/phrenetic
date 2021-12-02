@@ -1,20 +1,19 @@
 #+TITLE: Dotfiles
 #+PROPERTY: header-args :mkdirp yes
-#+PROPERTY: tangle-dir .
 
 * Meta
 #+begin_src elisp
-(defun tangle-dir* ()
-  (thread-first
-    (org-entry-get (point) "tangle-dir" 'inherit)
-    (split-string " /")
-    (string-join "/")))
+(setq base-tangle-dir ".")
 
 (defun get-tangle-dir ()
-  (tangle-dir*))
+  (concat base-tangle-dir
+          (thread-first
+            (org-entry-get (point) "tangle-dir" 'inherit)
+            (split-string " /")
+            (string-join "/"))))
 
 (defun in-tangle-dir (sub-path)
-  (concat (tangle-dir*) "/" sub-path))
+  (concat (get-tangle-dir) "/" sub-path))
 
 ;; TODO Don't hardcode
 (defun scheme-dir ()
