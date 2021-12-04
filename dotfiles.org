@@ -477,7 +477,8 @@ The stateless service should come after base/desktop services (potentially other
              (operating-system-user-services os))))
 #+end_src
 *** mtrack
-- TODO Get the setting of keyboard-layout into et-cetera
+- TODO Get the setting of keyboard-layout and xorg-config into et-cetera
+  Note: The catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration
 - TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
 #+begin_src scheme
 (define-system-comp (mtrack)
@@ -498,9 +499,16 @@ The stateless service should come after base/desktop services (potentially other
 **** Xorg config
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
 Section "InputClass"
+  Identifier      "Keyboards"
+  MatchIsKeyboard "on"
+  MatchDevicePath "/dev/input/event*"
+  Driver          "libinput"
+EndSection
+Section "InputClass"
   Identifier      "Touchpads"
-  Driver          "mtrack"
   MatchIsTouchpad "on"
+  MatchDevicePath "/dev/input/event*"
+  Driver          "mtrack"
 EndSection
 #+end_src
 *** Nonguix substitutes
@@ -963,6 +971,7 @@ xrandr --fb 2724x1800 --output eDP-1 --transform 1,0,-156,0,1,0,0,0,1
 #+end_src
 *** XKB
 - TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
+- TODO The base xkb_symbols is a bit different on pcoulson, it's =pc+macintosh_vndr/us+us:2+inet(evdev)=. Could this be because I generated this keymap from a boot that was older / using evdev and not libinput?
 **** current_setxkbmap_print
 #+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print.xkb")
 xkb_keymap {
