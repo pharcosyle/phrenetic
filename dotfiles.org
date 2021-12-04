@@ -622,7 +622,8 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system hosts frostfire)
   #:use-module (ebullient system components)
-  #:use-module (ebullient utils))
+  #:use-module (ebullient utils)
+  #:export (frostfire))
 
 (define* (create-os #:key
                     host-name
@@ -683,10 +684,11 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
               (stateless #:persist-dir persist-dir
                          #:bluetooth? bluetooth?))))))
 
-(create-os #:host-name "frostfire")
+(define frostfire
+  (create-os #:host-name "frostfire"))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-sudo guix system --load-path=. reconfigure ebullient/system/hosts/frostfire.scm
+sudo guix system --load-path=. --expression='(@ (ebullient system hosts frostfire) frostfire)' reconfigure
 #+end_src
 * Home
 :PROPERTIES:
@@ -700,8 +702,7 @@ sudo guix system --load-path=. reconfigure ebullient/system/hosts/frostfire.scm
 #+begin_src sh
 ~/.guix-extra-profiles
 #+end_src
-** ~home-environment~
-*** Solitude
+** Solitude
 - TODO direnv
   RDE and upstream Guix Home have incompatibly diverged for the moment, when they're back in sync:
   + comment the direnv use-module and the `home-bash-direnv-service-type` usage lines back in
@@ -737,7 +738,9 @@ sudo guix system --load-path=. reconfigure ebullient/system/hosts/frostfire.scm
   #:use-module (ebullient home spartan core)
 
   #:use-module (ebullient home doom-emacs-temp)
-  #:use-module (ebullient home emacs-desktop-environment-temp))
+  #:use-module (ebullient home emacs-desktop-environment-temp)
+
+  #:export (solitude))
 
 (define emacs-variant emacs-native-comp)
 
@@ -841,11 +844,9 @@ sudo guix system --load-path=. reconfigure ebullient/system/hosts/frostfire.scm
      ;;            (state-git "/home/bob/tmp/talkes/"
      ;;                       "git@git.sr.ht:~abcdw/rde"))))
      ))))
-
-solitude
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-guix home --load-path=. reconfigure ebullient/home/solitude.scm
+guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
 #+end_src
 ** Bash profile
 :PROPERTIES:
