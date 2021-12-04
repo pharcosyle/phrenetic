@@ -336,7 +336,7 @@ The stateless service should come after base/desktop services (potentially other
   (file-systems
    (map (lambda (fs)
           (if (member (file-system-mount-point fs)
-                      '("/var/guix" "/var/log" ,persist-dir))
+                      `("/var/guix" "/var/log" ,persist-dir))
               (file-system
                 (inherit fs)
                 (needed-for-boot? #t))
@@ -492,7 +492,7 @@ The stateless service should come after base/desktop services (potentially other
                       (modules (cons* xf86-input-mtrack
                                       %default-xorg-modules))
                       (keyboard-layout (operating-system-keyboard-layout os))
-                      (extra-config (list (with-input-from-file "../xorg.conf" read-string)))))))
+                      (extra-config (list (with-input-from-file "ebullient/system/xorg.conf" read-string)))))))
           (operating-system-user-services os))))
 #+end_src
 **** Xorg config
