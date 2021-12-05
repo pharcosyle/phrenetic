@@ -368,11 +368,18 @@ The stateless service should come after base/desktop services (potentially other
           (use-modules ((gnu build install) #:select (populate-root-file-system)))
 
           (define* (populate #:key persist-dir #:allow-other-keys)
-            (let ((system-link (readlink "/var/guix/profiles/system"))
-                  (system-1-link (readlink "/var/guix/profiles/system-1-link")))
+            (let* ((system-path "/var/guix/profiles/system")
+                   (system-1-path "/var/guix/profiles/system-1-link")
+                   (system-1-exists? (file-exists? system-1-path))
+                   (system-link (readlink system-path))
+                   (system-1-link (if system-1-exists?
+                                      (readlink system-1-path)
+                                      system-link)))
               (populate-root-file-system system-1-link ""
-                                         #:extras `(("/var/guix/profiles/system" -> ,system-link))))
-            ;; I'd like to do this during activation with the rest of the state but I can't get the activation service to run before account-service and I don't want to overwrite any changes it makes to these files.
+                                         #:extras `((,system-path -> ,system-link)))
+              (unless system-1-exists?
+                (delete-file system-1-path)))
+            ;; I'd like to do this during activation with the rest of the state but I can't get the activation service to run before account-service and I don't want to overwrite any changes it makes to these files so I can see and (manually) preserve them.
             (for-each (lambda (path)
                         (copy-file (string-append persist-dir path) path))
                       '("/etc/group"
