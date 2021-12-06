@@ -902,6 +902,10 @@ done
 #+begin_src sh
 . /run/current-system/profile/etc/profile.d/nix.sh
 #+end_src
+*** Make Flatpak apps visible
+#+begin_src sh
+export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
+#+end_src
 ** Initialization
 :PROPERTIES:
 :tangle-dir+: /initialization
@@ -1087,18 +1091,27 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("bastille")>>"
 #+end_src
-** Nix channels
+** Nix
+*** Nix channels
 #+begin_src conf :tangle (in-tangle-dir "nix-channels")
 https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+end_src
-** Nixpkgs config
+*** Nixpkgs config
 #+begin_src nix :tangle (in-tangle-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
-** WIP Nix
+*** WIP Nix
 Ran this manually but it ought to be done either programmatically by Guix Home (either imperatively or add a home-files-service to a symlink, if that's possible)
 #+begin_src sh
 ln -s "/nix/var/nix/profiles/per-user/$USER/profile" ~/.nix-profile
+#+end_src
+** WIP Flatpak
+Ran these manually
+#+begin_src sh
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+flatpak install --user flathub com.spotify.Client
+flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ** Doom
 :PROPERTIES:
