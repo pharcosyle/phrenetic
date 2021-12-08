@@ -194,6 +194,7 @@ guix pull
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module (gnu services nix)
+  #:use-module (gnu services sddm)
   #:use-module (gnu services xorg)
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
@@ -493,8 +494,8 @@ The stateless service should come after base/desktop services (potentially other
    (cons* xf86-input-mtrack
           (operating-system-packages os)))
   (services
-   (cons* (service gdm-service-type
-                   (gdm-configuration
+   (cons* (service sddm-service-type
+                   (sddm-configuration
                     (xorg-configuration
                      (xorg-configuration
                       (modules (cons* xf86-input-mtrack
@@ -593,7 +594,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
           (operating-system-packages os))))
 #+end_src
 *** Miscellany
-nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
+nss-certs, SDDM, Gnome, backlight control, Nix, bluetooth
 #+begin_src scheme
 (define-system-comp (miscellany #:key desktop? laptop? nix? bluetooth?)
   (packages
