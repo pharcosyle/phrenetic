@@ -224,7 +224,7 @@ guix pull
             nonguix-substitutes
             macbook
             macbook-kbl
-            custom-wm
+            custom-session
             miscellany))
 #+end_src
 #+begin_src scheme
@@ -569,9 +569,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 (define macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
-*** Custom WM
+*** Custom Session
 #+begin_src scheme
-(define-system-comp (custom-wm #:key package-name desktop-name executable)
+(define-system-comp (custom-session #:key package-name desktop-name executable)
   (packages
    (cons* (private-package
            (name package-name)
@@ -658,9 +658,9 @@ nss-certs, GDM, Gnome, backlight control, Nix, bluetooth
             (-> $
                 hidpi-console-font
                 mtrack
-                (custom-wm #:package-name "spartan-wm"
-                           #:desktop-name "Spartan WM"
-                           #:executable "<<spartan-exe>>"))
+                (custom-session #:package-name "spartan-wm"
+                                #:desktop-name "Spartan WM"
+                                #:executable "<<spartan-exe>>"))
             $))
       nonguix-substitutes
       (as-> $
