@@ -506,7 +506,7 @@ The stateless service should come after base/desktop services (potentially other
 (define (auto-login-for-vt auto-logins vt*)
   (first
    (filter (lambda* (_ #:key vt #:allow-other-keys)
-             (equals? vt vt*))
+             (equal? vt vt*))
            auto-logins)))
 
 (define (slim-config vt display auto-logins)
@@ -533,8 +533,8 @@ The stateless service should come after base/desktop services (potentially other
 
 (define-system-comp (slim #:key vts (auto-logins '()))
   (services
-   (append (slim-services vts auto-logins))
-   (operating-system-user-services os)))
+   (append (slim-services vts auto-logins)
+           (operating-system-user-services os))))
 #+end_src
 **** Xorg modifier
 #+begin_src scheme
@@ -554,7 +554,7 @@ The stateless service should come after base/desktop services (potentially other
   (services
    (xorg-modifier (operating-system-user-services os)
                   (keyboard-layout (operating-system-keyboard-layout os))
-                  (extra-config (cons* (string-appnend
+                  (extra-config (cons* (string-append
                                         (with-input-from-file "ebullient/system/xorg.conf" read-string)
                                         "\n")
                                        (xorg-configuration-extra-config cx))))))
@@ -562,10 +562,10 @@ The stateless service should come after base/desktop services (potentially other
 **** Conf
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
 Section "InputClass"
-  Identifier      "Keyboards"
-  MatchIsKeyboard "on"
-  MatchDevicePath "/dev/input/event*"
-  Driver          "libinput"
+    Identifier "Keyboards"
+    MatchIsKeyboard "on"
+    MatchDevicePath "/dev/input/event*"
+    Driver "libinput"
 EndSection
 #+end_src
 *** HiDPI console font
@@ -588,7 +588,7 @@ EndSection
    (xorg-modifier (operating-system-user-services os)
                   (modules (cons* xf86-input-mtrack
                                   (xorg-configuration-modules cx)))
-                  (extra-config (cons* (string-appnend
+                  (extra-config (cons* (string-append
                                         (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
                                         "\n")
                                        (xorg-configuration-extra-config cx))))))
@@ -596,10 +596,10 @@ EndSection
 **** Xorg conf
 #+begin_src conf :tangle (in-tangle-dir "xorg-touchpads.conf")
 Section "InputClass"
-  Identifier      "Touchpads"
-  MatchIsTouchpad "on"
-  MatchDevicePath "/dev/input/event*"
-  Driver          "mtrack"
+    Identifier "Touchpads"
+    MatchIsTouchpad "on"
+    MatchDevicePath "/dev/input/event*"
+    Driver "mtrack"
 EndSection
 #+end_src
 *** Nonguix substitutes
