@@ -207,9 +207,7 @@ guix pull
   #:use-module ((srfi srfi-1) #:select (any remove iota))
   #:use-module (ebullient packages xf86-input-mtrack)
   #:use-module (ebullient utils)
-  #:export (system-comp
-            define-system-comp
-            barebones-os
+  #:export (barebones-os
             basics
             boot
             initial-services
@@ -218,6 +216,9 @@ guix pull
             stateless
             btrfs
             users
+            slim
+            modify-slim-xorg
+            xorg
             nix
             hidpi-console-font
             mtrack
@@ -228,18 +229,34 @@ guix pull
             miscellany))
 #+end_src
 #+begin_src scheme
-(define-syntax-rule (system-comp os form ...)
+(define-syntax-rule (system-comp os field ...)
   (operating-system
     (inherit os)
-    form ...))
+    field ...))
 
 (define-syntax define-system-comp
   (lambda (x)
     (syntax-case x ()
-      ((_ (name arg ...) body ...)
+      ((_ (name arg ...) field ...)
        (with-syntax ((os (datum->syntax x 'os)))
          #'(define* (name os arg ...)
-             (system-comp os body ...)))))))
+             (system-comp os field ...)))))))
+
+(define-syntax-rule (modify-xorg services
+                                 dm-service-type
+                                 dm-configuration
+                                 dm-config-xorg
+                                 dm-config-xorg-accessor
+                                 field ...)
+  (modify-services services
+    (dm-service-type config =>
+                     (dm-configuration
+                      (inherit config)
+                      (dm-config-xorg
+                       (let ((cx (dm-config-xorg-accessor config)))
+                         (xorg-configuration
+                          (inherit cx)
+                          field ...)))))))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
@@ -477,14 +494,7 @@ The stateless service should come after base/desktop services (potentially other
                  (operating-system-users os))))
 #+end_src
 *** SLiM display manager
-- TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
-- TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
 #+begin_src scheme
-(define (xorg-config os)
-  (xorg-configuration
-   (keyboard-layout (operating-system-keyboard-layout os))
-   (extra-config (list (with-input-from-file "ebullient/system/xorg-keyboards.conf" read-string)))))
-
 (define (first l)
   (if (not (null? l))
       (car l) #f))
@@ -497,7 +507,6 @@ The stateless service should come after base/desktop services (potentially other
 
 (define (slim-config vt display auto-logins)
   (let ((config (slim-configuration
-                 (xorg-configuration (xorg-config os))
                  (display (string-append ":" (number->string display)))
                  (vt (string-append "vt" (number->string vt)))))
         (auto-login (auto-login-for-vt auto-logins vt)))
@@ -523,8 +532,31 @@ The stateless service should come after base/desktop services (potentially other
    (append (slim-services vts auto-logins))
    (operating-system-user-services os)))
 #+end_src
-**** Xorg config
-#+begin_src conf :tangle (in-tangle-dir "xorg-keyboards.conf")
+**** Xorg modifier
+#+begin_src scheme
+(define-syntax-rule (modify-slim-xorg services field ...)
+  (modify-xorg services
+               slim-service-type
+               slim-configuration
+               xorg-configuration
+               slim-configuration-xorg
+               field ...))
+#+end_src
+*** Xorg
+- TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
+- TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
+#+begin_src scheme
+(define-system-comp (xorg #:key xorg-modifier)
+  (services
+   (xorg-modifier (operating-system-user-services os)
+                  (keyboard-layout (operating-system-keyboard-layout os))
+                  (extra-config (cons* (string-appnend
+                                        (with-input-from-file "ebullient/system/xorg.conf" read-string)
+                                        "\n")
+                                       (xorg-configuration-extra-config cx))))))
+#+end_src
+**** Conf
+#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
 Section "InputClass"
   Identifier      "Keyboards"
   MatchIsKeyboard "on"
@@ -544,28 +576,20 @@ EndSection
                                      config)))))
 #+end_src
 *** Mtrack
-- TODO Parameterize the desktop manager service type and configuration type, don't hardcode SLiM's.
 #+begin_src scheme
-(define-system-comp (mtrack)
+(define-system-comp (mtrack #:key xorg-modifier)
   (packages (cons* xf86-input-mtrack
                    (operating-system-packages os)))
   (services
-   (modify-services (operating-system-user-services os)
-     (slim-service-type config =>
-                        (slim-configuration
-                         (inherit config)
-                         (xorg-configuration
-                          (let ((cx (slim-configuration-xorg config)))
-                            (xorg-configuration
-                             (inherit cx)
-                             (modules (cons* xf86-input-mtrack
-                                             (xorg-configuration-modules cx)))
-                             (extra-config (cons* (string-appnend
-                                                   (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
-                                                   "\n")
-                                                  (xorg-configuration-extra-config cx))))))))))
+   (xorg-modifier (operating-system-user-services os)
+                  (modules (cons* xf86-input-mtrack
+                                  (xorg-configuration-modules cx)))
+                  (extra-config (cons* (string-appnend
+                                        (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
+                                        "\n")
+                                       (xorg-configuration-extra-config cx))))))
 #+end_src
-**** Xorg config
+**** Xorg conf
 #+begin_src conf :tangle (in-tangle-dir "xorg-touchpads.conf")
 Section "InputClass"
   Identifier      "Touchpads"
@@ -622,7 +646,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
   (firmware (append
              (if bluetooth? (list broadcom-bt-firmware) '())
              (operating-system-firmware os))))
-
+#+end_src
+**** Keyboard layout
+#+begin_src scheme
 (define macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
@@ -689,8 +715,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     (macbook? #t)
                     (disk-encryption? #t)
                     (nix? #t)
-                    (bluetooth? #t)
-                    (user-name "<<user-name>>"))
+                    (bluetooth? desktop?)
+                    (primary-user-name "<<user-name>>"))
   (-> barebones-os
       (basics #:host-name host-name
               #:timezone "America/Los_Angeles"
@@ -701,7 +727,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
             #:target "/boot/efi")
       (initial-services #:desktop? desktop?)
       linux-nonfree
-      (users #:who `((,user-name "<<user-full-name>>" #:admin? #t)
+      (users #:who `((,primary-user-name "<<user-full-name>>" #:admin? #t)
                      ("pcoulson" "Phil Coulson" #:admin? #t)
                      ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
              #:bluetooth? bluetooth?)
@@ -713,13 +739,17 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     (-> $
                         (slim #:vts '(7 8 9)
                               #:auto-logins (if disk-encryption?
-                                                `((,user-name #:session ,session-exe #:vt 7))
+                                                `((,primary-user-name #:session ,session-exe #:vt 7))
                                                 '()))
                         (custom-session #:package-name "spartan-wm"
                                         #:desktop-name "Spartan WM"
                                         #:executable session-exe))))
-                hidpi-console-font
-                mtrack)
+                (as-> $
+                  (let ((xorg-modifier slim-xorg-modifier))
+                    (-> $
+                        (xorg #:xorg-modifier xorg-modifier)
+                        (mtrack #:xorg-modifier xorg-modifier))))
+                hidpi-console-font)
             $))
       nonguix-substitutes
       (as-> $
