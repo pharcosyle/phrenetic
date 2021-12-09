@@ -281,7 +281,7 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
   (locale locale)
   (keyboard-layout keyboard-layout))
 #+end_src
-*** Boot
+*** EFI Boot
 #+begin_src scheme
 (define-system-comp (boot #:key label target)
   (bootloader (bootloader-configuration
@@ -716,11 +716,12 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     host-name
                     (desktop? #t)
                     (laptop? #t)
-                    (macbook? #t)
+                    macbook?
                     (disk-encryption? #t)
                     (nix? #t)
                     (bluetooth? desktop?)
-                    (primary-user-name "<<user-name>>"))
+                    (aux-admin? #t)
+                    (guest? laptop?))
   (-> barebones-os
       (basics #:host-name host-name
               #:timezone "America/Los_Angeles"
@@ -731,9 +732,11 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
             #:target "/boot/efi")
       (initial-services #:desktop? desktop?)
       linux-nonfree
-      (users #:who `((,primary-user-name "<<user-full-name>>" #:admin? #t)
-                     ("pcoulson" "Phil Coulson" #:admin? #t)
-                     ("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple"))
+      (users #:who (append '(("<<user-name>>" "<<user-full-name>>" #:admin? #t))
+                           (if aux-admin?
+                               '(("pcoulson" "Phil Coulson" #:admin? #t)) '())
+                           (if guest?
+                               '(("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple")) '()))
              #:bluetooth? bluetooth?)
       (as-> $
         (if desktop?
@@ -743,7 +746,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     (-> $
                         (slim #:vts '(7 8 9)
                               #:auto-logins (if disk-encryption?
-                                                `((,primary-user-name #:session ,session-exe #:vt 7))
+                                                `(("<<user-name>>" #:session ,session-exe #:vt 7))
                                                 '()))
                         (custom-session #:package-name "spartan-wm"
                                         #:desktop-name "Spartan WM"
@@ -788,7 +791,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                          #:bluetooth? bluetooth?))))))
 
 (define frostfire
-  (create-os #:host-name "frostfire"))
+  (create-os #:host-name "frostfire"
+             #:macbook? #t))
 #+end_src
 **** LUKS UUID
 - REVIEW ~source-uuid~ is a kind of generated state (it gets created on install), perhaps I should treat it specially, like e.g. a channels lockfile. Currently I'm just putting it in this special org block, review once I've figured out how I'm doing generated state (putting it in files, redirecting it into the org file itself...)
