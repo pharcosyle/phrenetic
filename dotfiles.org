@@ -242,21 +242,25 @@ guix pull
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 
-(define-syntax-rule (modify-xorg services
-                                 dm-service-type
-                                 dm-configuration
-                                 dm-config-xorg
-                                 dm-config-xorg-accessor
-                                 field ...)
-  (modify-services services
-    (dm-service-type config =>
-                     (dm-configuration
-                      (inherit config)
-                      (dm-config-xorg
-                       (let ((cx (dm-config-xorg-accessor config)))
-                         (xorg-configuration
-                          (inherit cx)
-                          field ...)))))))
+(define-syntax modify-xorg
+  (lambda (x)
+    (syntax-case x ()
+      ((_ services
+          dm-service-type
+          dm-configuration
+          dm-config-xorg
+          dm-config-xorg-accessor
+          field ...)
+       (with-syntax ((cx (datum->syntax x 'cx)))
+         #'(modify-services services
+             (dm-service-type config =>
+                              (dm-configuration
+                               (inherit config)
+                               (dm-config-xorg
+                                (let ((cx (dm-config-xorg-accessor config)))
+                                  (xorg-configuration
+                                   (inherit cx)
+                                   field ...)))))))))))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
