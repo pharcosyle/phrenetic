@@ -780,7 +780,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                      #:subvols subvols)
               (as-> $
                 (if disk-encryption?
-                    (disk-encryption $ #:source-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"
+                    (disk-encryption $ #:source-uuid "<<frostfire-luks-uuid>>"
                                      #:target "ciphered"
                                      #:encrypted-mount-points (map cadr subvols))
                     $))
@@ -789,6 +789,12 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 
 (define frostfire
   (create-os #:host-name "frostfire"))
+#+end_src
+**** LUKS UUID
+- REVIEW ~source-uuid~ is a kind of generated state (it gets created on install), perhaps I should treat it specially, like e.g. a channels lockfile. Currently I'm just putting it in this special org block, review once I've figured out how I'm doing generated state (putting it in files, redirecting it into the org file itself...)
+#+name: frostfire-luks-uuid
+#+begin_src org
+bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 * Home
 :PROPERTIES:
