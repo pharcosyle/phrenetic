@@ -701,27 +701,24 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
         (list (bluetooth-service #:auto-enable? #t)) '())
     (operating-system-user-services os))))
 #+end_src
-** Hosts
-:PROPERTIES:
-:tangle-dir+: /hosts
-:END:
-*** Frostfire
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
-(define-module (ebullient system hosts frostfire)
+** Base OS
+#+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
+(define-module (ebullient system base-os)
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
-  #:export (frostfire))
+  #:export (base-os))
 
-(define* (create-os #:key
-                    host-name
-                    (desktop? #t)
-                    (laptop? #t)
-                    macbook?
-                    (disk-encryption? #t)
-                    (nix? #t)
-                    (bluetooth? desktop?)
-                    (aux-admin? #t)
-                    (guest? laptop?))
+(define* (base-os #:key
+                  host-name
+                  luks-uuid
+                  (desktop? #t)
+                  (laptop? #t)
+                  macbook?
+                  (disk-encryption? #t)
+                  (nix? #t)
+                  (bluetooth? desktop?)
+                  (aux-admin? #t)
+                  (guest? laptop?))
   (-> barebones-os
       (basics #:host-name host-name
               #:timezone "America/Los_Angeles"
@@ -783,16 +780,27 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                      #:subvols subvols)
               (as-> $
                 (if disk-encryption?
-                    (disk-encryption $ #:source-uuid "<<frostfire-luks-uuid>>"
+                    (disk-encryption $ #:source-uuid luks-uuid
                                      #:target "ciphered"
                                      #:encrypted-mount-points (map cadr subvols))
                     $))
               (stateless #:persist-dir persist-dir
                          #:bluetooth? bluetooth?))))))
+#+end_src
+** Hosts
+:PROPERTIES:
+:tangle-dir+: /hosts
+:END:
+*** Frostfire
+#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
+(define-module (ebullient system hosts frostfire)
+  #:use-module (ebullient system base-os)
+  #:use-module (ebullient utils))
 
-(define frostfire
-  (create-os #:host-name "frostfire"
-             #:macbook? #t))
+(define-public frostfire
+  (base-os #:host-name "frostfire"
+           #:luks-uuid "<<frostfire-luks-uuid>>"
+           #:macbook? #t))
 #+end_src
 **** LUKS UUID
 - REVIEW ~source-uuid~ is a kind of generated state (it gets created on install), perhaps I should treat it specially, like e.g. a channels lockfile. Currently I'm just putting it in this special org block, review once I've figured out how I'm doing generated state (putting it in files, redirecting it into the org file itself...)
