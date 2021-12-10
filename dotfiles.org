@@ -716,14 +716,17 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
   #:export (base-os))
 
 (define* (base-os #:key
+                  ;; Required
                   host-name
-                  luks-uuid
+                  luks-uuid ; Required if using disk-encryption.
+                  ;; Wide features
                   (desktop? #t)
                   (laptop? #t)
                   macbook?
                   (disk-encryption? #t)
                   (nix? #t)
                   (bluetooth? desktop?)
+                  ;; Narrow features
                   (aux-admin? #t)
                   (guest? laptop?))
   (-> barebones-os
