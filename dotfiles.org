@@ -488,7 +488,7 @@ The stateless service should come after base/desktop services (potentially other
                  #f))))
 
 (define-system-comp (users #:key who bluetooth?)
-  (users (append (map (lambda* (user)
+  (users (append (map (lambda (user)
                         (apply account (append user `(#:bluetooth? ,bluetooth?))))
                       who)
                  (operating-system-users os))))
@@ -501,8 +501,10 @@ The stateless service should come after base/desktop services (potentially other
 
 (define (auto-login-for-vt auto-logins vt*)
   (first
-   (filter (lambda* (_ #:key vt #:allow-other-keys)
-             (equal? vt vt*))
+   (filter (lambda (al)
+             (apply (lambda* (_ #:key vt #:allow-other-keys)
+                      (equal? vt vt*))
+                    al))
            auto-logins)))
 
 (define (slim-config vt display auto-logins)
