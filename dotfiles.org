@@ -2961,7 +2961,7 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
     body ...))
 #+end_src
 * Dev
-** Git Ignore
+** Git ignore
 #+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
 /.gitignore
 /ebullient/
@@ -2970,6 +2970,22 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 # WIP
 /frostfire-channels.scm
 /solitude-channels.scm
+#+end_src
+** Github
+*** Git config
+#+begin_src gitconfig :tangle (in-tangle-dir ".git/config")
+[remote "origin"]
+	url = https://github.com/pharcosyle/dotfiles.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+#+end_src
+* Dev local
+** Git config
+#+begin_src gitconfig :tangle (in-tangle-dir ".git/config")
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
 #+end_src
 ** Emacs directory-local variables
 #+begin_src elisp :tangle (in-tangle-dir ".dir-locals.el")
