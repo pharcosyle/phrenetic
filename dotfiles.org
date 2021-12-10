@@ -536,7 +536,7 @@ The stateless service should come after base/desktop services (potentially other
    (append (slim-services vts auto-logins)
            (operating-system-user-services os))))
 #+end_src
-**** Xorg modifier
+**** Modify Xorg fn
 #+begin_src scheme
 (define-syntax-rule (modify-slim-xorg services field ...)
   (modify-xorg services
@@ -550,14 +550,14 @@ The stateless service should come after base/desktop services (potentially other
 - TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
 - TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
 #+begin_src scheme
-(define-system-comp (xorg #:key xorg-modifier)
+(define-system-comp (xorg #:key modify-xorg)
   (services
-   (xorg-modifier (operating-system-user-services os)
-                  (keyboard-layout (operating-system-keyboard-layout os))
-                  (extra-config (cons* (string-append
-                                        (with-input-from-file "ebullient/system/xorg.conf" read-string)
-                                        "\n")
-                                       (xorg-configuration-extra-config cx))))))
+   (modify-xorg (operating-system-user-services os)
+                (keyboard-layout (operating-system-keyboard-layout os))
+                (extra-config (cons* (string-append
+                                      (with-input-from-file "ebullient/system/xorg.conf" read-string)
+                                      "\n")
+                                     (xorg-configuration-extra-config cx))))))
 #+end_src
 **** Conf
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
@@ -581,17 +581,17 @@ EndSection
 #+end_src
 *** Mtrack
 #+begin_src scheme
-(define-system-comp (mtrack #:key xorg-modifier)
+(define-system-comp (mtrack #:key modify-xorg)
   (packages (cons* xf86-input-mtrack
                    (operating-system-packages os)))
   (services
-   (xorg-modifier (operating-system-user-services os)
-                  (modules (cons* xf86-input-mtrack
-                                  (xorg-configuration-modules cx)))
-                  (extra-config (cons* (string-append
-                                        (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
-                                        "\n")
-                                       (xorg-configuration-extra-config cx))))))
+   (modify-xorg (operating-system-user-services os)
+                (modules (cons* xf86-input-mtrack
+                                (xorg-configuration-modules cx)))
+                (extra-config (cons* (string-append
+                                      (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
+                                      "\n")
+                                     (xorg-configuration-extra-config cx))))))
 #+end_src
 **** Xorg conf
 #+begin_src conf :tangle (in-tangle-dir "xorg-touchpads.conf")
@@ -752,10 +752,10 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                                         #:desktop-name "Spartan WM"
                                         #:executable session-exe))))
                 (as-> $
-                  (let ((xorg-modifier slim-xorg-modifier))
+                  (let ((modify-xorg-fn modify-slim-xorg))
                     (-> $
-                        (xorg #:xorg-modifier xorg-modifier)
-                        (mtrack #:xorg-modifier xorg-modifier))))
+                        (xorg #:modify-xorg modify-xorg-fn)
+                        (mtrack #:modify-xorg modify-xorg-fn))))
                 hidpi-console-font)
             $))
       nonguix-substitutes
