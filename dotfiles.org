@@ -217,7 +217,7 @@ guix pull
             btrfs
             users
             slim
-            modify-slim-xorg
+            update-slim-xorg
             xorg
             nix
             hidpi-console-font
@@ -242,25 +242,21 @@ guix pull
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 
-(define-syntax modify-xorg
-  (lambda (x)
-    (syntax-case x ()
-      ((_ services
-          dm-service-type
-          dm-configuration
-          dm-config-xorg
-          dm-config-xorg-accessor
-          field ...)
-       (with-syntax ((cx (datum->syntax x 'cx)))
-         #'(modify-services services
-             (dm-service-type config =>
-                              (dm-configuration
-                               (inherit config)
-                               (dm-config-xorg
-                                (let ((cx (dm-config-xorg-accessor config)))
-                                  (xorg-configuration
-                                   (inherit cx)
-                                   field ...)))))))))))
+(define (update-services services kind update-fn)
+  (update-list
+   services
+   (lambda (svc)
+     (eq? (service-kind svc) kind))
+   (lambda (svc)
+     (service (service-kind svc)
+              (update-fn (service-value svc))))))
+
+(define (update-xorg dm-service-type dm-update-fn)
+  (lambda (services)
+    (update-services
+     services
+     dm-service-type
+     dm-update-fn)))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
@@ -536,28 +532,34 @@ The stateless service should come after base/desktop services (potentially other
    (append (slim-services vts auto-logins)
            (operating-system-user-services os))))
 #+end_src
-**** Modify Xorg fn
+**** Update Xorg fn
 #+begin_src scheme
-(define-syntax-rule (modify-slim-xorg services field ...)
-  (modify-xorg services
-               slim-service-type
-               slim-configuration
-               xorg-configuration
-               slim-configuration-xorg
-               field ...))
+(define (update-slim-xorg services xorg-update-fn)
+  ((update-xorg
+    slim-service-type
+    (lambda (config)
+      (slim-configuration
+       (inherit config)
+       (xorg-configuration
+        (xorg-update-fn (slim-configuration-xorg config))))))
+   services))
 #+end_src
 *** Xorg
 - TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
 - TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
 #+begin_src scheme
-(define-system-comp (xorg #:key modify-xorg)
+(define-system-comp (xorg #:key update-xorg-fn)
   (services
-   (modify-xorg (operating-system-user-services os)
-                (keyboard-layout (operating-system-keyboard-layout os))
-                (extra-config (cons* (string-append
-                                      (with-input-from-file "ebullient/system/xorg.conf" read-string)
-                                      "\n")
-                                     (xorg-configuration-extra-config cx))))))
+   (update-xorg-fn
+    (operating-system-user-services os)
+    (lambda (config)
+      (xorg-configuration
+       (inherit config)
+       (keyboard-layout (operating-system-keyboard-layout os))
+       (extra-config (cons* (string-append
+                             (with-input-from-file "ebullient/system/xorg.conf" read-string)
+                             "\n")
+                            (xorg-configuration-extra-config config))))))))
 #+end_src
 **** Conf
 #+begin_src conf :tangle (in-tangle-dir "xorg.conf")
@@ -572,26 +574,32 @@ EndSection
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
   (services
-   (modify-services (operating-system-user-services os)
-     (console-font-service-type config =>
-                                (map (lambda (tty-and-font)
-                                       (cons (car tty-and-font)
-                                             (file-append font-terminus "/share/consolefonts/ter-132n")))
-                                     config)))))
+   (update-services
+    (operating-system-user-services os)
+    console-font-service-type
+    (lambda (config)
+      (map (lambda (tty-and-font)
+             (cons (car tty-and-font)
+                   (file-append font-terminus "/share/consolefonts/ter-132n")))
+           config)))))
 #+end_src
 *** Mtrack
 #+begin_src scheme
-(define-system-comp (mtrack #:key modify-xorg)
+(define-system-comp (mtrack #:key update-xorg-fn)
   (packages (cons* xf86-input-mtrack
                    (operating-system-packages os)))
   (services
-   (modify-xorg (operating-system-user-services os)
-                (modules (cons* xf86-input-mtrack
-                                (xorg-configuration-modules cx)))
-                (extra-config (cons* (string-append
-                                      (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
-                                      "\n")
-                                     (xorg-configuration-extra-config cx))))))
+   (update-xorg-fn
+    (operating-system-user-services os)
+    (lambda (config)
+      (xorg-configuration
+       (inherit config)
+       (modules (cons* xf86-input-mtrack
+                       (xorg-configuration-modules config)))
+       (extra-config (cons* (string-append
+                             (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
+                             "\n")
+                            (xorg-configuration-extra-config config))))))))
 #+end_src
 **** Xorg conf
 #+begin_src conf :tangle (in-tangle-dir "xorg-touchpads.conf")
@@ -606,16 +614,18 @@ EndSection
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
-   (modify-services (operating-system-user-services os)
-     (guix-service-type config =>
-                        (guix-configuration
-                         (inherit config)
-                         (substitute-urls
-                          (append %default-substitute-urls
-                                  (list "https://mirror.brielmaier.net")))
-                         (authorized-keys
-                          (append %default-authorized-guix-keys
-                                  (list (local-file "mirror.brielmaier.net.pub")))))))))
+   (update-services
+    (operating-system-user-services os)
+    guix-service-type
+    (lambda (config)
+      (guix-configuration
+       (inherit config)
+       (substitute-urls
+        (append %default-substitute-urls
+                (list "https://mirror.brielmaier.net")))
+       (authorized-keys
+        (append %default-authorized-guix-keys
+                (list (local-file "mirror.brielmaier.net.pub")))))))))
 #+end_src
 **** Public key
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
@@ -629,16 +639,11 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+begin_src scheme
 (define (with-blacklist kernel-args new)
 
-  (define (update-list pred l f)
-    (map (lambda (x)
-           (if (pred x) (f x) x))
-         l))
-
   (define (blacklist? ka)
     (string-prefix? "modprobe.blacklist" ka))
 
   (if (any blacklist? kernel-args)
-      (update-list blacklist? kernel-args (lambda (blacklist)
+      (update-list kernel-args blacklist? (lambda (blacklist)
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
@@ -749,10 +754,10 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                                         #:desktop-name "Spartan WM"
                                         #:executable session-exe))))
                 (as-> $
-                  (let ((modify-xorg-fn modify-slim-xorg))
+                  (let ((update-xorg-fn update-slim-xorg))
                     (-> $
-                        (xorg #:modify-xorg modify-xorg-fn)
-                        (mtrack #:modify-xorg modify-xorg-fn))))
+                        (xorg #:update-xorg-fn update-xorg-fn)
+                        (mtrack #:update-xorg-fn update-xorg-fn))))
                 hidpi-console-font)
             $))
       nonguix-substitutes
@@ -2914,9 +2919,15 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 #+begin_src scheme :tangle (in-tangle-dir "utils.scm")
 (define-module (ebullient utils)
   #:use-module (guix packages)
-  #:export (->
+  #:export (update-list
+            ->
             as->
             private-package))
+
+(define (update-list l pred f)
+  (map (lambda (x)
+         (if (pred x) (f x) x))
+       l))
 
 (define-syntax ->
   (syntax-rules ()
