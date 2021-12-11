@@ -1968,6 +1968,14 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                        (make-local-variable 'geiser-guile-load-path)
                        (add-to-list 'geiser-guile-load-path root-dir)))))
 #+end_src
+***** org-tanglesync
+#+begin_src elisp
+(use-package! org-tanglesync
+  :hook ((org-mode . org-tanglesync-mode)
+         ((prog-mode text-mode) . org-tanglesync-watch-mode))
+  :config
+  (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
+#+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
@@ -1993,6 +2001,8 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
+
+(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
 #+end_src
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
