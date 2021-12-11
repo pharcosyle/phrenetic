@@ -716,17 +716,14 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
   #:export (base-os))
 
 (define* (base-os #:key
-                  ;; Required
                   host-name
-                  luks-uuid ; Required if using disk-encryption.
-                  ;; Wide features
                   (desktop? #t)
                   (laptop? #t)
                   macbook?
                   (disk-encryption? #t)
+                  luks-uuid
                   (nix? #t)
                   (bluetooth? desktop?)
-                  ;; Narrow features
                   (aux-admin? #t)
                   (guest? laptop?))
   (-> barebones-os
@@ -807,7 +804,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
   #:use-module (ebullient system base-os)
   #:use-module (ebullient utils))
 
-(define-public frostfire
+(define-public os
   (base-os #:host-name "frostfire"
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:macbook? #t))
@@ -2953,8 +2950,10 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
     (version "0")
     (source #f)
     (build-system #f)
-    (synopsis name)
-    (description synopsis)
+    ;; (synopsis name)
+    ;; (description synopsis)
+    (synopsis #f)
+    (description #f)
     (home-page #f)
     (license #f)))
 
