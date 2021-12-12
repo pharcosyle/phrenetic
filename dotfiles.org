@@ -472,10 +472,10 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** Users
 #+begin_src scheme
-(define* (account user-name user-full-name #:key admin? password salt bluetooth?)
+(define* (account #:key name comment admin? password salt bluetooth?)
   (user-account
-   (name user-name)
-   (comment user-full-name)
+   (name name)
+   (comment (or comment ""))
    (group "users")
    ;; TODO `input' group necessary for mtrack (at present, maybe there's a way around
    ;; this. Libinput doesn't need it, for example, but maybe it's "built in" or
@@ -488,10 +488,11 @@ The stateless service should come after base/desktop services (potentially other
                  #f))))
 
 (define-system-comp (users #:key who bluetooth?)
-  (users (append (map (lambda (user)
-                        (apply account (append user `(#:bluetooth? ,bluetooth?))))
-                      who)
-                 (operating-system-users os))))
+  (users
+   (append (map (lambda (user)
+                  (apply account (append user `(#:bluetooth? ,bluetooth?))))
+                who)
+           (operating-system-users os))))
 #+end_src
 *** SLiM display manager
 #+begin_src scheme
@@ -513,10 +514,10 @@ The stateless service should come after base/desktop services (potentially other
                  (vt (string-append "vt" (number->string vt)))))
         (auto-login (auto-login-for-vt auto-logins vt)))
     (if auto-login
-        (apply (lambda* (user-name #:key session #:allow-other-keys)
+        (apply (lambda* (#:key user session #:allow-other-keys)
                  (slim-configuration
                   (inherit config)
-                  (default-user user-name)
+                  (default-user user)
                   (auto-login? #t)
                   (auto-login-session session)))
                auto-login)
@@ -736,11 +737,12 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
             #:target "/boot/efi")
       (initial-services #:desktop? desktop?)
       linux-nonfree
-      (users #:who (append '(("<<user-name>>" "<<user-full-name>>" #:admin? #t))
-                           (if aux-admin?
-                               '(("pcoulson" "Phil Coulson" #:admin? #t)) '())
-                           (if guest?
-                               '(("gandalf" "Speak Friend and Enter" #:password "mellon" #:salt "toosimple")) '()))
+      (users #:who (append
+                    '((#:name "<<user-name>>" #:comment "<<user-full-name>>" #:admin? #t))
+                    (if aux-admin?
+                        '((#:name "pcoulson" #:comment "Phil Coulson" #:admin? #t)) '())
+                    (if guest?
+                        '((#:name "gandalf" #:comment "Speak Friend and Enter" #:password "mellon" #:salt "toosimple")) '()))
              #:bluetooth? bluetooth?)
       (as-> $
         (if desktop?
@@ -750,8 +752,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     (-> $
                         (slim #:vts '(7 8 9)
                               #:auto-logins (if disk-encryption?
-                                                `(("<<user-name>>" #:session ,session-exe #:vt 7))
-                                                '()))
+                                                `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '()))
                         (custom-session #:package-name "spartan-wm"
                                         #:desktop-name "Spartan WM"
                                         #:executable session-exe))))
