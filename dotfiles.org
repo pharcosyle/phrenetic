@@ -503,7 +503,7 @@ The stateless service should come after base/desktop services (potentially other
 (define (auto-login-for-vt auto-logins vt*)
   (first
    (filter (lambda (al)
-             (apply (lambda* (_ #:key vt #:allow-other-keys)
+             (apply (lambda* (#:key vt #:allow-other-keys)
                       (equal? vt vt*))
                     al))
            auto-logins)))
