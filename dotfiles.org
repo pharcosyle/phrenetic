@@ -625,12 +625,22 @@ EndSection
        (inherit config)
        (substitute-urls
         (append %default-substitute-urls
-                (list "https://mirror.brielmaier.net")))
+                (list "https://substitutes.nonguix.org"
+                      "https://mirror.brielmaier.net")))
        (authorized-keys
         (append %default-authorized-guix-keys
-                (list (local-file "mirror.brielmaier.net.pub")))))))))
+                (list (local-file "substitutes.nonguix.org.pub")
+                      (local-file "mirror.brielmaier.net.pub")))))))))
 #+end_src
-**** Public key
+**** Signing keys
+***** substitutes.nonguix.org
+#+begin_src scheme :tangle (in-tangle-dir "substitutes.nonguix.org.pub")
+(public-key
+ (ecc
+  (curve Ed25519)
+  (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
+#+end_src
+***** mirror.brielmaier.net
 #+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
 (public-key
  (ecc
