@@ -295,20 +295,18 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
 *** Initial services
 Other components may wish to modify the list of operating system services so use this in the component chain early.
 #+begin_src scheme
-(define selective-desktop-services
+(define (selective-desktop-services pipewire?)
   (remove (lambda (service)
             (member (service-kind service)
-                    (list gdm-service-type ; Kind of a presumptuous default.
-                          ;; TODO remove if I don't end up needing this for pipewire. Removal might be behind a pipewire flag, also.
-                          ;; pulseaudio-service-type
-                          ;; alsa-service-type
-                          )))
+                    (append (list gdm-service-type)
+                            (if pipewire?
+                                (list pulseaudio-service-type alsa-service-type) '()))))
           %desktop-services))
 
-(define-system-comp (initial-services #:key desktop?)
+(define-system-comp (initial-services #:key desktop? pipewire?)
   (services
    (append (if desktop?
-               selective-desktop-services
+               (selective-desktop-services pipewire?)
                %base-services)
            (operating-system-user-services os))))
 #+end_src
@@ -734,6 +732,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                   (disk-encryption? #t)
                   luks-uuid
                   (nix? #t)
+                  (pipewire? #f) ; FIXME Remove and uncomment line below when my pipewire work is done.
+                  ;; (pipewire? desktop?)
                   (bluetooth? desktop?)
                   (aux-admin? #t)
                   (guest? laptop?))
@@ -745,7 +745,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                                     macbook-kbl #f))
       (boot #:label "genesis"
             #:target "/boot/efi")
-      (initial-services #:desktop? desktop?)
+      (initial-services #:desktop? desktop?
+                        #:pipewire? pipewire?)
       linux-nonfree
       (users #:who (append
                     '((#:name "<<user-name>>" #:comment "<<user-full-name>>" #:admin? #t))
