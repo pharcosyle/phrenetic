@@ -624,11 +624,11 @@ EndSection
       (guix-configuration
        (inherit config)
        (substitute-urls
-        (append %default-substitute-urls
+        (append (guix-configuration-substitute-urls config)
                 (list "https://substitutes.nonguix.org"
                       "https://mirror.brielmaier.net")))
        (authorized-keys
-        (append %default-authorized-guix-keys
+        (append (guix-configuration-authorized-keys config)
                 (list (local-file "substitutes.nonguix.org.pub")
                       (local-file "mirror.brielmaier.net.pub")))))))))
 #+end_src
