@@ -258,6 +258,27 @@ guix pull
      services
      dm-service-type
      dm-update-fn)))
+
+(use-modules (srfi srfi-1)
+             (guix channels)
+             (guix inferior))
+(define inferior
+  (let* ((channels
+          (list (channel
+                 (name 'nonguix)
+                 (url "https://gitlab.com/nonguix/nonguix")
+                 (commit "971aa95535df085050a8baa224f900c54ecd1e62"))
+                (channel
+                 (name 'guix)
+                 (url "https://git.savannah.gnu.org/git/guix.git")
+                 (commit "05deb26be92c314b6a60ed2ca93596b895515ca6"))))
+         (inferior
+          (inferior-for-channels channels)))
+    inferior))
+(define linux
+  (first (lookup-inferior-packages inferior "linux")))
+(define broadcom-sta
+  (first (lookup-inferior-packages inferior "broadcom-sta")))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
