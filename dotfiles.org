@@ -194,6 +194,7 @@ guix pull
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module (gnu services nix)
+  #:use-module (gnu services sound)
   #:use-module (gnu services xorg)
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
@@ -2878,6 +2879,13 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
          ("inputproto" ,inputproto)
          ("xproto" ,xproto)
          ("mtdev" ,mtdev)))
+      ;; (native-inputs
+      ;;  (list pkg-config))
+      ;; (inputs
+      ;;  (list xorg-server
+      ;;        inputproto
+      ;;        xproto
+      ;;        mtdev))
       (synopsis "Multitouch trackpad driver")
       (description "An Xorg driver for multitouch trackpads. Supports any trackpad whose kernel driver uses the slotted multitouch protocol.")
       (home-page "https://github.com/p2rkw/xf86-input-mtrack")
