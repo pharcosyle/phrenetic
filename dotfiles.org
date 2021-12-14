@@ -2884,7 +2884,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
       (license license:gpl2+))))
 #+end_src
 ** Pipewire
-- REVIEW Using a patch for a newer pipewire because it's available and why not, remove this when updated (and wireplumber is added) in Guix.
   #+begin_src scheme :tangle (in-tangle-dir "linux.scm")
 (define-module (ebullient packages linux)
   #:use-module (gnu packages)
@@ -2906,36 +2905,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
   #:use-module (guix packages)
   #:use-module (guix gexp))
 
-(define-public pipewire-0.3.39
-  (package
-    (inherit pipewire)
-    (name "pipewire")
-    (version "0.3.39")
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://gitlab.freedesktop.org/pipewire/pipewire/")
-                    (commit version)))
-              (file-name (git-file-name name version))
-              (sha256
-               (base32
-                "0crfhyaqac42lam5fylivi3l2vi5wwxg1vxssrh1chvfwgbx5r55"))))
-    (arguments
-     `(#:meson ,meson-0.55
-       #:configure-flags
-       (list
-        "-Dsession-managers="
-        (string-append "-Dudevrulesdir=" (assoc-ref %outputs "out")
-                       "/lib/udev/rules.d")
-        "-Dsystemd=disabled")))
-    (inputs
-     (append (package-inputs pipewire)
-             `(("bluez" ,bluez)
-               ("jack" ,jack-2)
-               ("pulseaudio" ,pulseaudio)
-               ("vulkan-loader" ,vulkan-loader)
-               ("vulkan-headers" ,vulkan-headers))))))
-
 (define-public wireplumber
   (package
     (name "wireplumber")
@@ -2951,8 +2920,7 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
                 "0vr84xlnwlhrfq9l13rxh8cb8s389wlyafvi6bah444acmpx1lwv"))))
     (build-system meson-build-system)
     (arguments
-     `(#:meson ,meson-next ;; Needs at least 0.56.0
-       #:configure-flags (list "-Dsystem-lua=true")))
+     `(#:configure-flags (list "-Dsystem-lua=true")))
     (native-inputs
      `(("pkg-config" ,pkg-config)
        ("glib-bin" ,glib "bin")))
@@ -2960,7 +2928,7 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
      `(("dbus" ,dbus)
        ("glib" ,glib)
        ("lua" ,lua)
-       ("pipewire" ,pipewire-0.3.39)))
+       ("pipewire" ,pipewire-0.3)))
     (home-page "https://pipewire.org/")
     (synopsis "Modular session and policy manager for PipeWire")
     (description "WirePlumber is a daemon that links streams from applications to their
