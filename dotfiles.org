@@ -665,7 +665,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
    (name "old-bsta")
    (native-inputs
     `(("bsta" ,(local-file "/gnu/store/c58r6ambrw9cs00gnmr90yg3wm8x8lf6-broadcom-sta-6.30.223.271" #:recursive? #t))))
-   (build-system (@ (guix build-system trivial) trivial-build-system))
+   (build-system trivial-build-system)
    (arguments
     '(#:modules ((guix build utils))
       #:builder
@@ -684,7 +684,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                )
           (let ((newfile (string-append out "/lib")))
             (mkdir-p newfile)
-            (copy-file (string-append (get-input "bsta") "/lib") newfile)))
+            (copy-recursively (string-append (get-input "bsta") "/lib") newfile #:follow-symlinks? #t)))
         #t)))))
 
 (define-system-comp (macbook #:key bluetooth?)
