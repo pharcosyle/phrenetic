@@ -2875,7 +2875,7 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module ((gnu packages pkg-config) #:select (pkg-config))
-  #:use-module ((gnu packages xorg) #:select (xorg-server inputproto xproto))
+  #:use-module ((gnu packages xorg) #:select (xorg-server xorgproto xproto))
   #:use-module ((gnu packages xdisorg) #:select (mtdev)))
 
 (define-public xf86-input-mtrack
@@ -2897,7 +2897,7 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
        `(("pkg-config" ,pkg-config)))
       (inputs
        `(("xorg-server" ,xorg-server)
-         ("inputproto" ,inputproto)
+         ("xorgproto" ,xorgproto)
          ("xproto" ,xproto)
          ("mtdev" ,mtdev)))
       ;; (native-inputs
