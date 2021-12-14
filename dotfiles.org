@@ -705,17 +705,16 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
            (arguments
             `(#:modules ((guix build utils))
               #:builder
-              (begin
-                (use-modules (guix build utils))
-                (let* ((out (assoc-ref %outputs "out"))
-                       (xsessions (string-append out "/share/xsessions")))
-                  (mkdir-p xsessions)
-                  (make-desktop-entry-file
-                   (string-append xsessions "/" ,name ".desktop")
-                   #:name ,desktop-name
-                   #:comment ,desktop-name
-                   #:exec ,executable))
-                #t))))
+              ,#~(begin
+                   (use-modules (guix build utils))
+                   (let* ((xsessions (string-append #$output "/share/xsessions")))
+                     (mkdir-p xsessions)
+                     (make-desktop-entry-file
+                      (string-append xsessions "/" ,name ".desktop")
+                      #:name ,desktop-name
+                      #:comment ,desktop-name
+                      #:exec ,executable))
+                   #t))))
           (operating-system-packages os))))
 #+end_src
 *** Miscellany
@@ -1081,33 +1080,30 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
       ("xkb-source" ,(local-file "current_setxkbmap_print.xkb"))
       ("xkb-custom" ,(local-file "xkb_custom" #:recursive? #t))))
    (inputs
-    `(("xkbcomp" ,xkbcomp)
-      ("xinput" ,xinput)
-      ("xrandr" ,xrandr)))
+    (list xkbcomp xinput xrandr))
    (build-system trivial-build-system)
    (arguments
-    '(#:modules ((guix build utils))
+    `(#:modules ((guix build utils))
       #:builder
-      (begin
-        (use-modules (guix build utils))
-        (let* ((out (assoc-ref %outputs "out"))
-               (get-input (lambda (k)
-                            (assoc-ref %build-inputs k)))
-               (cmd (lambda* (input #:optional (executable input))
-                      (string-append (get-input input) "/bin/" executable)))
-               (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                (let ((newfile (string-append out "/" name)))
-                                  (mkdir-p (dirname newfile))
-                                  (copy-file (get-input input-file) newfile)
-                                  newfile))))
-          (let ((script-file (install-input "script.sh")))
-            (substitute* script-file
-              (("xkbcomp") (cmd "xkbcomp"))
-              (("xkb_source=" all) (string-append all (get-input "xkb-source")))
-              (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
-              (("xinput") (cmd "xinput"))
-              (("xrandr") (cmd "xrandr")))))
-        #t)))))
+      ,#~(begin
+           (use-modules (guix build utils))
+           (let* ((get-input (lambda (k)
+                               (assoc-ref %build-inputs k)))
+                  (cmd (lambda* (input #:optional (executable input))
+                         (string-append (get-input input) "/bin/" executable)))
+                  (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                   (let ((newfile (string-append #$output "/" name)))
+                                     (mkdir-p (dirname newfile))
+                                     (copy-file (get-input input-file) newfile)
+                                     newfile))))
+             (let ((script-file (install-input "script.sh")))
+               (substitute* script-file
+                 (("xkbcomp") (cmd "xkbcomp"))
+                 (("xkb_source=" all) (string-append all (get-input "xkb-source")))
+                 (("xkb_custom=" all) (string-append all (get-input "xkb-custom")))
+                 (("xinput") (cmd "xinput"))
+                 (("xrandr") (cmd "xrandr")))))
+           #t)))))
 #+end_src
 *** Script
 #+begin_src sh :tangle (in-tangle-dir "script.sh")
@@ -2264,62 +2260,61 @@ Can be an integer to determine the exact padding."
       ("desktop.el" ,(local-file "desktop.el"))
       ("dunstrc" ,(local-file "dunstrc"))))
    (inputs
-    `(("bash" ,bash) ; TODO `bash-minimal' might be okay/preferable here
-      ("xhost" ,xhost)
-      ("xset" ,xset)
-      ("xss-lock" ,xss-lock)
-      ("xsettingsd" ,xsettingsd)
-      ("dbus" ,dbus)
-      ;; ("emacs" ,emacs)
-      ("dunst" ,dunst)
-      ("pasystray" ,pasystray)
-      ("redshift:gtk" ,redshift "gtk")
-      ("udiskie" ,udiskie)))
+    (list bash ; TODO `bash-minimal' might be okay/preferable here
+          xhost
+          xset
+          xss-lock
+          xsettingsd
+          dbus
+          ;; emacs
+          dunst
+          pasystray
+          `(,redshift "gtk")
+          udiskie))
    ;; TODO much later, see if there's a way to make any of these not propagated.
    (propagated-inputs
-    `(("font-google-noto" ,font-google-noto)
-      ;; ("dracula-theme" ,dracula-theme)
-      ;; ("papirus-icon-theme" ,papirus-icon-theme)
-      ("pavucontrol" ,pavucontrol)))
+    (list font-google-noto
+          ;; dracula-theme
+          ;; papirus-icon-theme
+          pavucontrol))
    (arguments
-    '(#:modules ((guix build utils))
+    `(#:modules ((guix build utils))
       #:builder
-      (begin
-        (use-modules (guix build utils))
-        (let* ((out (assoc-ref %outputs "out"))
-               (get-input (lambda (k)
-                            (assoc-ref %build-inputs k)))
-               (cmd (lambda* (input #:optional (executable input))
-                      (string-append (get-input input) "/bin/" executable)))
-               (install-input (lambda* (input-file #:optional (name (basename input-file)))
-                                (let ((newfile (string-append out "/" name)))
-                                  (mkdir-p (dirname newfile))
-                                  (copy-file (get-input input-file) newfile)
-                                  newfile))))
-          (let ((desktop-el-file (install-input "desktop.el"))
-                (dunstrc-file (install-input "dunstrc")))
-            ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
-            (substitute* desktop-el-file
-              (("(dunstctl|dunst)" all) (case (string->symbol all)
-                                          ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
-                                          ((dunstctl) (cmd "dunst" "dunstctl"))))
-              (("pasystray") (cmd "pasystray"))
-              (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
-              (("udiskie") (cmd "udiskie")))
-            (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-exe>>"))
-                  (xsettingsd-conf-file (install-input "xsettingsd.conf")))
-              (substitute* executable
-                (("^xhost") (cmd "xhost"))
-                (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
-                (("^xset") (cmd "xset"))
-                (("^xss-lock") (cmd "xss-lock"))
-                (("dbus-launch") (cmd "dbus" "dbus-launch"))
-                ;; (("emacs") (cmd "emacs"))
-                (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-                (("desktop\\.el") desktop-el-file))
-              (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
-              (chmod executable #o555))))
-        #t)))))
+      ,#~(begin
+           (use-modules (guix build utils))
+           (let* ((get-input (lambda (k)
+                               (assoc-ref %build-inputs k)))
+                  (cmd (lambda* (input #:optional (executable input))
+                         (string-append (get-input input) "/bin/" executable)))
+                  (install-input (lambda* (input-file #:optional (name (basename input-file)))
+                                   (let ((newfile (string-append #$output "/" name)))
+                                     (mkdir-p (dirname newfile))
+                                     (copy-file (get-input input-file) newfile)
+                                     newfile))))
+             (let ((desktop-el-file (install-input "desktop.el"))
+                   (dunstrc-file (install-input "dunstrc")))
+               ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
+               (substitute* desktop-el-file
+                 (("(dunstctl|dunst)" all) (case (string->symbol all)
+                                             ((dunst) (string-append (cmd "dunst") " -config " dunstrc-file))
+                                             ((dunstctl) (cmd "dunst" "dunstctl"))))
+                 (("pasystray") (cmd "pasystray"))
+                 (("redshift-gtk") (cmd "redshift:gtk" "redshift-gtk"))
+                 (("udiskie") (cmd "udiskie")))
+               (let ((executable (install-input "startup-script.sh" "/bin/<<spartan-exe>>"))
+                     (xsettingsd-conf-file (install-input "xsettingsd.conf")))
+                 (substitute* executable
+                   (("^xhost") (cmd "xhost"))
+                   (("^xsettingsd") (string-append (cmd "xsettingsd") " --config=" xsettingsd-conf-file))
+                   (("^xset") (cmd "xset"))
+                   (("^xss-lock") (cmd "xss-lock"))
+                   (("dbus-launch") (cmd "dbus" "dbus-launch"))
+                   ;; (("emacs") (cmd "emacs"))
+                   (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+                   (("desktop\\.el") desktop-el-file))
+                 (patch-shebang executable (list (string-append (get-input "bash") "/bin")))
+                 (chmod executable #o555))))
+           #t)))))
 #+end_src
 *** Startup script
 #+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
@@ -2618,25 +2613,27 @@ Gtk/CursorThemeSize 48
     (source #f)
     ;; TODO Ideally these wouldn't be propagated inputs. Instead of tracking down usages of these and doing `substitute' everywhere maybe `wrap-prgram' is an option? However maybe there are other things in these inputs than just binaries Doom depends on or it has parts outside of emacs that recquire them?
     (propagated-inputs
-     `(;; Required
-       ;; ("emacs" ,emacs) ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
-       ("git" ,git)
-       ("ripgrep" ,ripgrep)
-       ;; Optional
-       ("coreutils" ,coreutils) ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
-       ("fd" ,fd)
-       ("clang" ,clang))) ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
+     (list
+      ;; Required
+      ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
+      git
+      ripgrep
+      ;; Optional
+      coreutils ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
+      fd
+      clang ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
+      ))
     (build-system trivial-build-system)
     (arguments
-     '(#:modules ((guix build utils))
+     `(#:modules ((guix build utils))
        #:builder
-       (begin
-         (use-modules (guix build utils))
-         (mkdir-p (string-append (assoc-ref %outputs "out") "/asdf"))
-         (with-output-to-file (string-append (assoc-ref %outputs "out") "/asdf/asdf.txt")
-           (lambda _
-             (display "asdffffffffffff")))
-         #t)))
+       ,#~(begin
+            (use-modules (guix build utils))
+            (mkdir-p (string-append #$output "/asdf"))
+            (with-output-to-file (string-append (assoc-ref #$output "out") "/asdf/asdf.txt")
+              (lambda _
+                (display "asdffffffffffff")))
+            #t)))
     (synopsis "An Emacs framework for the stubborn martian hacker")
     (description synopsis)
     (home-page "https://github.com/hlissner/doom-emacs")
@@ -2684,20 +2681,18 @@ Gtk/CursorThemeSize 48
     (version "0")
     (source #f)
     (propagated-inputs
-     `(("brightnessctl" ,brightnessctl)
-       ("playerctl" ,playerctl)
-       ("scrot" ,scrot)))
+     (list brightnessctl playerctl scrot))
     (build-system trivial-build-system)
     (arguments
-     '(#:modules ((guix build utils))
+     `(#:modules ((guix build utils))
        #:builder
-       (begin
-         (use-modules (guix build utils))
-         (mkdir-p (string-append (assoc-ref %outputs "out") "/qwer"))
-         (with-output-to-file (string-append (assoc-ref %outputs "out") "/qwer/qwer.txt")
-           (lambda _
-             (display "qwerrrrrrr")))
-         #t)))
+       ,#~(begin
+            (use-modules (guix build utils))
+            (mkdir-p (string-append #$output "/qwer"))
+            (with-output-to-file (string-append #$output "/qwer/qwer.txt")
+              (lambda _
+                (display "qwerrrrrrr")))
+            #t)))
     (synopsis #f)
     (description synopsis)
     (home-page #f)
@@ -2726,7 +2721,7 @@ Gtk/CursorThemeSize 48
                 ""))))
     (build-system emacs-build-system)
     (native-inputs
-     `(("emacs-ert-runner" ,emacs-ert-runner)))
+     (list emacs-ert-runner))
     (arguments
      `(#:tests? #t
        #:test-command '("ert-runner")
@@ -2894,19 +2889,9 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
                   "0zl2mi4dsyji23dk43693mwkm5n4b335gfkpbx16009z52qgj9mi"))))
       (build-system gnu-build-system)
       (native-inputs
-       `(("pkg-config" ,pkg-config)))
+       (list pkg-config))
       (inputs
-       `(("xorg-server" ,xorg-server)
-         ("xorgproto" ,xorgproto)
-         ("xproto" ,xproto)
-         ("mtdev" ,mtdev)))
-      ;; (native-inputs
-      ;;  (list pkg-config))
-      ;; (inputs
-      ;;  (list xorg-server
-      ;;        inputproto
-      ;;        xproto
-      ;;        mtdev))
+       (list xorg-server xorgproto xproto mtdev))
       (synopsis "Multitouch trackpad driver")
       (description "An Xorg driver for multitouch trackpads. Supports any trackpad whose kernel driver uses the slotted multitouch protocol.")
       (home-page "https://github.com/p2rkw/xf86-input-mtrack")
@@ -2951,13 +2936,9 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
     (arguments
      `(#:configure-flags (list "-Dsystem-lua=true")))
     (native-inputs
-     `(("pkg-config" ,pkg-config)
-       ("glib-bin" ,glib "bin")))
+     (list pkg-config `(,glib "bin")))
     (inputs
-     `(("dbus" ,dbus)
-       ("glib" ,glib)
-       ("lua" ,lua)
-       ("pipewire" ,pipewire-0.3)))
+     (list dbus glib lua pipewire-0.3))
     (home-page "https://pipewire.org/")
     (synopsis "Modular session and policy manager for PipeWire")
     (description "WirePlumber is a daemon that links streams from applications to their
