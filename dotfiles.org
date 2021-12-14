@@ -660,38 +660,10 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                             (string-append blacklist "," new)))
       (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
 
-(define-public old-bsta
-  (private-package
-   (name "old-bsta")
-   (native-inputs
-    `(("bsta" ,(local-file "/gnu/store/c58r6ambrw9cs00gnmr90yg3wm8x8lf6-broadcom-sta-6.30.223.271" #:recursive? #t))))
-   (build-system trivial-build-system)
-   (arguments
-    '(#:modules ((guix build utils))
-      #:builder
-      (begin
-        (use-modules (guix build utils))
-        (let* ((out (assoc-ref %outputs "out"))
-               (get-input (lambda (k)
-                            (assoc-ref %build-inputs k)))
-               ;; (cmd (lambda* (input #:optional (executable input))
-               ;;        (string-append (get-input input) "/bin/" executable)))
-               ;; (install-input (lambda* (input-file #:optional (name (basename input-file)))
-               ;;                  (let ((newfile (string-append out "/" name)))
-               ;;                    (mkdir-p (dirname newfile))
-               ;;                    (copy-file (get-input input-file) newfile)
-               ;;                    newfile)))
-               )
-          (let ((newfile (string-append out "/lib")))
-            (mkdir-p newfile)
-            (copy-recursively (string-append (get-input "bsta") "/lib") newfile #:follow-symlinks? #t)))
-        #t)))))
-
 (define-system-comp (macbook #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
                                     "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-  (kernel-loadable-modules (cons* old-bsta
-                                  ;; broadcom-sta
+  (kernel-loadable-modules (cons* broadcom-sta
                                   (operating-system-kernel-loadable-modules os)))
   (firmware (append
              (if bluetooth? (list broadcom-bt-firmware) '())
