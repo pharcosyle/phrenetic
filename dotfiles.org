@@ -700,10 +700,13 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Custom Session
 #+begin_src scheme
-(define-system-comp (custom-session #:key package-name desktop-name exe system-services)
+(define-system-comp (custom-session #:key name exe system-services)
   (packages
    (cons* (private-package
-           (name package-name)
+           (name (-> name
+                     string-downcase
+                     (string-tokenize (char-set-complement char-set:whitespace))
+                     (string-join "-")))
            (build-system trivial-build-system)
            (arguments
             `(#:modules ((guix build utils))
@@ -714,8 +717,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                      (mkdir-p xsessions)
                      (make-desktop-entry-file
                       (string-append xsessions "/" ,name ".desktop")
-                      #:name ,desktop-name
-                      #:comment ,desktop-name
+                      #:name ,name
+                      #:comment ,name
                       #:exec ,exe))
                    #t))))
           (operating-system-packages os)))
@@ -794,8 +797,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                         (slim #:vts '(7 8 9)
                               #:auto-logins (if disk-encryption?
                                                 `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '()))
-                        (custom-session #:package-name "spartan-wm"
-                                        #:desktop-name "Spartan WM"
+                        (custom-session #:name "Spartan WM"
                                         #:exe session-exe
                                         #:system-services (list (screen-locker-service slock))))))
                 (as-> $
