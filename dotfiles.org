@@ -1101,8 +1101,8 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
       #:builder
       ,#~(begin
            (use-modules (guix build utils))
-           (mkdir #$output)
            (substitute* (let ((newfile (string-append #$output "/script.sh")))
+                          (mkdir #$output)
                           (copy-file #$(this-package-native-input "script.sh") newfile)
                           newfile)
              (("xkbcomp") (string-append #$(this-package-input "xkbcomp")
@@ -2297,8 +2297,8 @@ Can be an integer to determine the exact padding."
       #:builder
       ,#~(begin
            (use-modules (guix build utils))
-           (mkdir #$output)
            (let ((desktop-el-file (let ((newfile (string-append #$output "/desktop.el")))
+                                    (mkdir #$output)
                                     (copy-file #$(this-package-native-input "desktop.el") newfile)
                                     newfile)))
              ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
