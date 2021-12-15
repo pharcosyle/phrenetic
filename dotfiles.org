@@ -2246,7 +2246,8 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
-  #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
+  #:use-module ((gnu packages xdisorg) #:select (xss-lock xsettingsd))
+  ;; #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
   ;; #:use-module (ebullient packages dracula-theme)
   #:use-module (ebullient utils))
 
@@ -2272,7 +2273,7 @@ Can be an integer to determine the exact padding."
           dunst
           network-manager-applet
           pasystray
-          `(,redshift "gtk")
+          ;; `(,redshift "gtk")
           udiskie))
    ;; TODO much later, see if there's a way to make any of these not propagated.
    (propagated-inputs
@@ -2301,8 +2302,8 @@ Can be an integer to determine the exact padding."
                                              "/bin/nm-applet"))
                (("pasystray") (string-append #$(this-package-input "pasystray")
                                              "/bin/pasystray"))
-               (("redshift-gtk") (string-append #$(this-package-input "redshift")
-                                                "/bin/redshift-gtk"))
+               ;; (("redshift-gtk") (string-append #$(this-package-input "redshift")
+               ;;                                  "/bin/redshift-gtk"))
                (("udiskie") (string-append #$(this-package-input "udiskie")
                                            "/bin/udiskie")))
              (let ((executable (let ((newfile (string-append #$output "/bin/<<spartan-exe>>")))
@@ -2428,7 +2429,7 @@ Gtk/CursorThemeSize 48
   (efs/run-in-background "dunst")
   (efs/run-in-background "nm-applet")
   (efs/run-in-background "pasystray")
-  (efs/run-in-background "redshift-gtk -l 47:-123")
+  ;; (efs/run-in-background "redshift-gtk -l 47:-123")
   (efs/run-in-background "udiskie -t"))
 
 (defun efs/exwm-update-class ()
