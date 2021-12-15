@@ -1073,6 +1073,8 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
   #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
   #:use-module (ebullient utils))
 
+;; REVIEW I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
+
 (define-public initialization
   (private-package
    (name "initialization")
@@ -2246,6 +2248,8 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
   ;; #:use-module (ebullient packages dracula-theme)
   #:use-module (ebullient utils))
+
+;; REVIEW I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
 
 (define-public spartan
   (private-package
