@@ -2265,6 +2265,7 @@ Can be an integer to determine the exact padding."
           dbus
           ;; emacs
           dunst
+          network-manager-applet
           pasystray
           `(,redshift "gtk")
           udiskie))
@@ -2291,6 +2292,8 @@ Can be an integer to determine the exact padding."
                                                                    #$(this-package-native-input "dunstrc")))
                                            ((dunstctl) (string-append #$(this-package-input "dunst")
                                                                       "/bin/dunstctl"))))
+               (("nm-applet") (string-append #$(this-package-input "network-manager-applet")
+                                             "/bin/nm-applet"))
                (("pasystray") (string-append #$(this-package-input "pasystray")
                                              "/bin/pasystray"))
                (("redshift-gtk") (string-append #$(this-package-input "redshift")
