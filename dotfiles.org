@@ -1073,7 +1073,7 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
   #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
   #:use-module (ebullient utils))
 
-;; REVIEW I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
+;; TODO I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
 
 (define-public initialization
   (private-package
@@ -2251,7 +2251,7 @@ Can be an integer to determine the exact padding."
   ;; #:use-module (ebullient packages dracula-theme)
   #:use-module (ebullient utils))
 
-;; REVIEW I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
+;; TODO I don't need or want to add any files to the profile, just to the store (except for the spartan exe). Having the other files be part of the packge might not be the right way to do this?
 
 (define-public spartan
   (private-package
