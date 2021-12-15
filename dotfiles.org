@@ -700,10 +700,10 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Custom Session
 #+begin_src scheme
-(define-system-comp (custom-session #:key name exe system-services)
+(define-system-comp (custom-session #:key session-name exe system-services)
   (packages
    (cons* (private-package
-           (name (-> name
+           (name (-> session-name
                      string-downcase
                      (string-tokenize (char-set-complement char-set:whitespace))
                      (string-join "-")))
@@ -716,10 +716,10 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                    (let* ((xsessions (string-append #$output "/share/xsessions")))
                      (mkdir-p xsessions)
                      (make-desktop-entry-file
-                      (string-append xsessions "/" ,name ".desktop")
-                      #:name ,name
-                      #:comment ,name
-                      #:exec ,exe))
+                      (string-append xsessions "/" #$name ".desktop")
+                      #:name #$session-name
+                      #:comment #$session-name
+                      #:exec #$exe))
                    #t))))
           (operating-system-packages os)))
   (services
@@ -797,7 +797,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                         (slim #:vts '(7 8 9)
                               #:auto-logins (if disk-encryption?
                                                 `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '()))
-                        (custom-session #:name "Spartan WM"
+                        (custom-session #:session-name "Spartan WM"
                                         #:exe session-exe
                                         #:system-services (list (screen-locker-service slock))))))
                 (as-> $
