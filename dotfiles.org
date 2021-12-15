@@ -320,9 +320,12 @@ Other components may wish to modify the list of operating system services so use
 (define (selective-desktop-services pipewire?)
   (remove (lambda (service)
             (member (service-kind service)
-                    (append (list gdm-service-type)
+                    (append (list gdm-service-type
+                                  screen-locker-service-type)
                             (if pipewire?
-                                (list pulseaudio-service-type alsa-service-type) '()))))
+                                (list pulseaudio-service-type
+                                      alsa-service-type)
+                                '()))))
           %desktop-services))
 
 (define-system-comp (initial-services #:key desktop? pipewire?)
@@ -697,7 +700,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 *** Custom Session
 #+begin_src scheme
-(define-system-comp (custom-session #:key package-name desktop-name executable)
+(define-system-comp (custom-session #:key package-name desktop-name exe system-services)
   (packages
    (cons* (private-package
            (name package-name)
@@ -713,9 +716,12 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                       (string-append xsessions "/" ,name ".desktop")
                       #:name ,desktop-name
                       #:comment ,desktop-name
-                      #:exec ,executable))
+                      #:exec ,exe))
                    #t))))
-          (operating-system-packages os))))
+          (operating-system-packages os)))
+  (services
+   (append system-services
+           (operating-system-user-services os))))
 #+end_src
 *** Miscellany
 nss-certs, Gnome, backlight control, Nix, bluetooth
@@ -742,6 +748,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (ebullient system base-os)
+  #:use-module ((gnu services xorg) #:select (screen-locker-service))
+  #:use-module ((gnu packages suckless) #:select (slock))
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (base-os))
@@ -788,7 +796,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                                                 `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '()))
                         (custom-session #:package-name "spartan-wm"
                                         #:desktop-name "Spartan WM"
-                                        #:executable session-exe))))
+                                        #:exe session-exe
+                                        #:system-services (list (screen-locker-service slock))))))
                 (as-> $
                   (let ((update-xorg-fn update-slim-xorg))
                     (-> $
@@ -2306,11 +2315,11 @@ Can be an integer to determine the exact padding."
                ;;                                  "/bin/redshift-gtk"))
                (("udiskie") (string-append #$(this-package-input "udiskie")
                                            "/bin/udiskie")))
-             (let ((executable (let ((newfile (string-append #$output "/bin/<<spartan-exe>>")))
-                                 (mkdir-p (dirname newfile))
-                                 (copy-file #$(this-package-native-input "startup-script.sh") newfile)
-                                 newfile)))
-               (substitute* executable
+             (let ((exe (let ((newfile (string-append #$output "/bin/<<spartan-exe>>")))
+                          (mkdir-p (dirname newfile))
+                          (copy-file #$(this-package-native-input "startup-script.sh") newfile)
+                          newfile)))
+               (substitute* exe
                  (("^xhost") (string-append #$(this-package-input "xhost")
                                             "/bin/xhost"))
                  (("^xsettingsd") (string-append #$(this-package-input "xsettingsd")
@@ -2320,14 +2329,15 @@ Can be an integer to determine the exact padding."
                                            "/bin/xset"))
                  (("^xss-lock") (string-append #$(this-package-input "xss-lock")
                                                "/bin/xss-lock"))
+                 (("slock") "/run/setuid-programs/slock")
                  (("dbus-launch") (string-append #$(this-package-input "dbus")
                                                  "/bin/dbus-launch"))
                  ;; (("emacs") (string-append #$(this-package-input "emacs")
                  ;;                           "/bin/emacs"))
                  (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
                  (("desktop\\.el") desktop-el-file))
-               (patch-shebang executable (list (string-append #$(this-package-input "bash") "/bin")))
-               (chmod executable #o555)))
+               (patch-shebang exe (list (string-append #$(this-package-input "bash") "/bin")))
+               (chmod exe #o555)))
            #t)))))
 #+end_src
 *** Startup script
