@@ -940,7 +940,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   ("EDITOR" . "$VISUAL")))
                (bash-profile
                 `(,(local-file "bash_profile")
-                  ,(file-append initialization "/script.sh"))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                  ,(file-append initialization))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
      (service home-xdg-user-directories-service-type
               (let* ((xdg-user-subdir "/files")
                      (xdg-dir (lambda (path)
@@ -1079,40 +1079,21 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+begin_src scheme :tangle (in-tangle-dir "core.scm")
 (define-module (ebullient home initialization core)
   #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module (guix build-system trivial)
-  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr))
-  #:use-module (ebullient utils))
-
-;; TODO I don't think creating a package is really the right way to do this: I don't need or want to add any files to the profile, just to the store.
+  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr)))
 
 (define-public initialization
-  (private-package
-   (name "initialization")
-   (native-inputs
-    `(("script.sh" ,(local-file "script.sh"))
-      ("current_setxkbmap_print.xkb" ,(local-file "current_setxkbmap_print.xkb"))
-      ("xkb_custom" ,(local-file "xkb_custom" #:recursive? #t))))
-   (inputs
-    (list xkbcomp xinput xrandr))
-   (build-system trivial-build-system)
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      ,#~(begin
-           (use-modules (guix build utils))
-           (substitute* (let ((newfile (string-append #$output "/script.sh")))
-                          (mkdir #$output)
-                          (copy-file #$(this-package-native-input "script.sh") newfile)
-                          newfile)
-             (("xkbcomp") (string-append #$(this-package-input "xkbcomp")
-                                         "/bin/xkbcomp"))
-             (("xkb_source=" all) (string-append all #$(this-package-native-input "current_setxkbmap_print.xkb")))
-             (("xkb_custom=" all) (string-append all #$(this-package-native-input "xkb_custom")))
-             (("xinput") (string-append #$(this-package-input "xinput")
-                                        "/bin/xinput"))
-             (("xrandr") (string-append #$(this-package-input "xrandr") "/bin/xrandr")))
-           #t)))))
+  (computed-file
+   "initialization.sh"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules (guix build utils))
+         (copy-file #$(local-file "script.sh") #$output)
+         (substitute* #$output
+           (("xkbcomp") #$(file-append xkbcomp "/bin/xkbcomp"))
+           (("xkb_source=" all) (string-append all #$(local-file "current_setxkbmap_print.xkb")))
+           (("xkb_custom=" all) (string-append all #$(local-file "xkb_custom" #:recursive? #t)))
+           (("xinput") #$(file-append xinput "/bin/xinput"))
+           (("xrandr") #$(file-append xrandr "/bin/xrandr")))))))
 #+end_src
 *** Script
 #+begin_src sh :tangle (in-tangle-dir "script.sh")
@@ -2262,30 +2243,49 @@ Can be an integer to determine the exact padding."
   ;; #:use-module (ebullient packages dracula-theme)
   #:use-module (ebullient utils))
 
-;; TODO I don't need or want to add any files to the profile, just to the store (except for the spartan exe). Having the other files be part of the packge might not be the right way to do this?
+(define desktop-el
+  (computed-file
+   "desktop.el"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules (guix build utils))
+         (copy-file #$(local-file "desktop.el") #$output)
+         ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
+         (substitute* #$output
+           (("(dunstctl|dunst)" all) (case (string->symbol all)
+                                       ((dunst) (string-append #$(file-append dunst "/bin/dunst")
+                                                               " -config " #$(local-file "dunstrc")))
+                                       ((dunstctl) #$(file-append dunst "/bin/dunstctl"))))
+           (("nm-applet") #$(file-append network-manager-applet "/bin/nm-applet"))
+           (("pasystray") #$(file-append pasystray "/bin/pasystray"))
+           ;; (("redshift-gtk") #$(file-append redshift:gtk "/bin/redshift-gtk"))
+           (("udiskie") #$(file-append udiskie "/bin/udiskie")))))))
+
+(define startup-script
+  (computed-file
+   "startup-script.sh"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules (guix build utils))
+         (copy-file #$(local-file "startup-script.sh") #$output)
+         (substitute* #$output
+           (("^xhost") #$(file-append xhost "/bin/xhost"))
+           (("^xsettingsd") (string-append #$(file-append xsettingsd "/bin/xsettingsd")
+                                           " --config=" #$(local-file "xsettingsd.conf")))
+           (("^xset") #$(file-append xset "/bin/xset"))
+           (("^xss-lock") #$(file-append xss-lock "/bin/xss-lock"))
+           (("slock") "/run/setuid-programs/slock")
+           (("dbus-launch") #$(file-append dbus "/bin/dbus-launch"))
+           ;; (("emacs") #$(file-append emacs "/bin/emacs"))
+           (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
+           (("desktop\\.el") #$desktop-el))
+         (patch-shebang #$output (list #$(file-append bash "/bin"))) ; TODO `bash-minimal' might be okay/preferable here
+         (chmod #$output #o555)))))
 
 (define-public spartan
   (private-package
    (name "spartan")
    (build-system trivial-build-system)
-   (native-inputs
-    `(("startup-script.sh" ,(local-file "startup-script.sh"))
-      ("xsettingsd.conf" ,(local-file "xsettingsd.conf"))
-      ("desktop.el" ,(local-file "desktop.el"))
-      ("dunstrc" ,(local-file "dunstrc"))))
-   (inputs
-    (list bash ; TODO `bash-minimal' might be okay/preferable here
-          xhost
-          xset
-          xss-lock
-          xsettingsd
-          dbus
-          ;; emacs
-          dunst
-          network-manager-applet
-          pasystray
-          ;; `(,redshift "gtk")
-          udiskie))
    ;; TODO much later, see if there's a way to make any of these not propagated.
    (propagated-inputs
     (list font-google-noto
@@ -2297,49 +2297,9 @@ Can be an integer to determine the exact padding."
       #:builder
       ,#~(begin
            (use-modules (guix build utils))
-           (let ((desktop-el-file (let ((newfile (string-append #$output "/desktop.el")))
-                                    (mkdir #$output)
-                                    (copy-file #$(this-package-native-input "desktop.el") newfile)
-                                    newfile)))
-             ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
-             (substitute* desktop-el-file
-               (("(dunstctl|dunst)" all) (case (string->symbol all)
-                                           ((dunst) (string-append #$(this-package-input "dunst")
-                                                                   "/bin/dunst -config "
-                                                                   #$(this-package-native-input "dunstrc")))
-                                           ((dunstctl) (string-append #$(this-package-input "dunst")
-                                                                      "/bin/dunstctl"))))
-               (("nm-applet") (string-append #$(this-package-input "network-manager-applet")
-                                             "/bin/nm-applet"))
-               (("pasystray") (string-append #$(this-package-input "pasystray")
-                                             "/bin/pasystray"))
-               ;; (("redshift-gtk") (string-append #$(this-package-input "redshift")
-               ;;                                  "/bin/redshift-gtk"))
-               (("udiskie") (string-append #$(this-package-input "udiskie")
-                                           "/bin/udiskie")))
-             (let ((exe (let ((newfile (string-append #$output "/bin/<<spartan-exe>>")))
-                          (mkdir-p (dirname newfile))
-                          (copy-file #$(this-package-native-input "startup-script.sh") newfile)
-                          newfile)))
-               (substitute* exe
-                 (("^xhost") (string-append #$(this-package-input "xhost")
-                                            "/bin/xhost"))
-                 (("^xsettingsd") (string-append #$(this-package-input "xsettingsd")
-                                                 "/bin/xsettingsd --config="
-                                                 #$(this-package-native-input "xsettingsd.conf")))
-                 (("^xset") (string-append #$(this-package-input "xset")
-                                           "/bin/xset"))
-                 (("^xss-lock") (string-append #$(this-package-input "xss-lock")
-                                               "/bin/xss-lock"))
-                 (("slock") "/run/setuid-programs/slock")
-                 (("dbus-launch") (string-append #$(this-package-input "dbus")
-                                                 "/bin/dbus-launch"))
-                 ;; (("emacs") (string-append #$(this-package-input "emacs")
-                 ;;                           "/bin/emacs"))
-                 (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-                 (("desktop\\.el") desktop-el-file))
-               (patch-shebang exe (list (string-append #$(this-package-input "bash") "/bin")))
-               (chmod exe #o555)))
+           (let ((exe (string-append #$output "/bin/<<spartan-exe>>")))
+             (mkdir-p (dirname exe))
+             (symlink #$startup-script exe))
            #t)))))
 #+end_src
 *** Startup script
