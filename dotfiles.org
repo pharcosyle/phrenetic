@@ -795,8 +795,9 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                   (let ((session-exe "<<spartan-exe>>"))
                     (-> $
                         (slim #:vts '(7 8 9)
-                              #:auto-logins (if disk-encryption?
-                                                `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '()))
+                              ;; #:auto-logins (if disk-encryption?
+                              ;;                   `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '())
+                              )
                         (custom-session #:session-name "Spartan WM"
                                         #:exe session-exe
                                         #:system-services (list (screen-locker-service slock))))))
