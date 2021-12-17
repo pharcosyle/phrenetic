@@ -1194,11 +1194,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 **** multiverse
 #+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
 (specifications->manifest
- '("ungoogled-chromium-wayland"
-   "ublock-origin-chromium" ; For/with ungoogled-chromium
-   "protonvpn-cli"
+ '("btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
 
-   "btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
+   ;; "protonvpn-cli" ; REVIEW Appears to be broken after the big Guix frozen-updates upgrade.
+
+   ;; Chromium
+   "ungoogled-chromium-wayland"
+   "ublock-origin-chromium" ; For/with ungoogled-chromium
 
    ;; Code
    ;;; Clojure
@@ -2277,7 +2279,7 @@ Can be an integer to determine the exact padding."
            (("^xss-lock") #$(file-append xss-lock "/bin/xss-lock"))
            (("slock") "/run/setuid-programs/slock")
            (("dbus-launch") #$(file-append dbus "/bin/dbus-launch"))
-           ;; (("emacs") #$(file-append emacs "/bin/emacs"))
+           ;; (("emacs") #$(file-append emacs "/bin/emacs")) ; TODO When this was a package I was going to change this with input-rewriting, will that still work?
            (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
            (("desktop\\.el") #$desktop-el))
          (patch-shebang #$output (list #$(file-append bash "/bin"))) ; TODO `bash-minimal' might be okay/preferable here
