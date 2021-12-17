@@ -1194,7 +1194,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 **** multiverse
 #+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
 (specifications->manifest
- '("ungoogled-chromium"
+ '("ungoogled-chromium-wayland"
    "ublock-origin-chromium" ; For/with ungoogled-chromium
    "protonvpn-cli"
 
@@ -1207,7 +1207,8 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "clj-kondo" ; TODO comes from nonguix channel, I might be making that explicit later
 
    "flatpak"
-   "xdg-desktop-portal-gtk" ; For flatpak. Not sure how useful it'll be without a full-er desktop environment.
+   "xdg-desktop-portal" ; For flatpak. Not sure how useful it'll be without a full-er desktop environment.
+   "xdg-desktop-portal-wlr" ; For flatpak. Not sure how useful it'll be without a full-er desktop environment.
 
    ;; General
    "xdg-utils"
