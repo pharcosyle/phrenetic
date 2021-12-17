@@ -904,7 +904,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
 
-  #:use-module (ebullient home initialization core)
+  ;; #:use-module (ebullient home initialization core)
   #:use-module (ebullient home spartan core)
 
   #:use-module (ebullient home doom-emacs-temp)
@@ -940,7 +940,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   ("EDITOR" . "$VISUAL")))
                (bash-profile
                 `(,(local-file "bash_profile")
-                  ,(file-append initialization))))) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                  ;; ,(file-append initialization) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                  ))))
      (service home-xdg-user-directories-service-type
               (let* ((xdg-user-subdir "/files")
                      (xdg-dir (lambda (path)
@@ -1234,7 +1235,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
 ;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
 (specifications->manifest
- '("emacs-native-comp"))
+ '("emacs-pgtk-native-comp"))
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("bastille")>>"
@@ -2243,6 +2244,7 @@ Can be an integer to determine the exact padding."
   #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
   #:use-module ((gnu packages xorg) #:select (xhost xset))
   #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
+  #:use-module (ebullient home initialization core)
   ;; #:use-module (ebullient packages dracula-theme)
   #:use-module (ebullient utils))
 
@@ -2272,6 +2274,7 @@ Can be an integer to determine the exact padding."
          (use-modules (guix build utils))
          (copy-file #$(local-file "startup-script.sh") #$output)
          (substitute* #$output
+           (("initialization\\.sh") #$(file-append initialization))
            (("^xhost") #$(file-append xhost "/bin/xhost"))
            (("^xsettingsd") (string-append #$(file-append xsettingsd "/bin/xsettingsd")
                                            " --config=" #$(local-file "xsettingsd.conf")))
@@ -2280,6 +2283,7 @@ Can be an integer to determine the exact padding."
            (("slock") "/run/setuid-programs/slock")
            (("dbus-launch") #$(file-append dbus "/bin/dbus-launch"))
            ;; (("emacs") #$(file-append emacs "/bin/emacs")) ; TODO When this was a package I was going to change this with input-rewriting, will that still work?
+           (("emacs") "/home/pharcosyle/.guix-extra-profiles/bastille/bastille-6-link/bin/emacs") ; TODO hardcoded here temporarily
            (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
            (("desktop\\.el") #$desktop-el))
          (patch-shebang #$output (list #$(file-append bash "/bin"))) ; TODO `bash-minimal' might be okay/preferable here
@@ -2308,6 +2312,7 @@ Can be an integer to determine the exact padding."
 *** Startup script
 #+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
 #!/bin/sh
+source initialization.sh
 xhost +SI:localuser:$USER
 export _JAVA_AWT_WM_NONREPARENTING=1
 xsettingsd &
