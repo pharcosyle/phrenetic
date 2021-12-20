@@ -1185,12 +1185,6 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "ungoogled-chromium-wayland"
    "ublock-origin-chromium" ; For/with ungoogled-chromium
 
-   ;; Code
-   ;;; Clojure
-   "clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
-   "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
-   "clj-kondo" ; TODO comes from nonguix channel, I might be making that explicit later
-
    "flatpak"
    "xdg-desktop-portal" ; For flatpak. Not sure how useful it'll be without a full-er desktop environment.
    "xdg-desktop-portal-wlr" ; For flatpak. Not sure how useful it'll be without a full-er desktop environment.
@@ -1221,6 +1215,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("bastille")>>"
+#+end_src
+**** clojure manifest WIP
+#+begin_src scheme
+(specifications->manifest
+ '("clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
+   "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
+   "clj-kondo")) ; TODO comes from nonguix channel, I might be making that explicit later
 #+end_src
 ** Nix
 *** Nix channels
