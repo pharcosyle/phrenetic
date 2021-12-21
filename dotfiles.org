@@ -807,8 +807,10 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
       (as-> $
         (if desktop?
             (-> $
-                (gdm #:auto-login (if disk-encryption?
-                                      "<<user-name>>" #f))
+                (gdm
+                 ;; #:auto-login (if disk-encryption?
+                 ;;                      "<<user-name>>" #f)
+                 )
                 (wm #:package sway
                     #:services (list (screen-locker-service swaylock)))
                 (as-> $
