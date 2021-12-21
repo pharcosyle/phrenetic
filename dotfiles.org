@@ -759,8 +759,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
         '())
     (if nix?
         (list (service nix-service-type)) '())
-    (if bluetooth?
-        (list (bluetooth-service #:auto-enable? #t)) '())
+    ;; (if bluetooth?
+    ;;     (list (bluetooth-service #:auto-enable? #t)) '())
     (operating-system-user-services os))))
 #+end_src
 ** Base OS
