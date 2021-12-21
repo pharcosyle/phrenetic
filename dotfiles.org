@@ -217,6 +217,8 @@ guix pull
             stateless
             btrfs
             users
+            gdm
+            update-gdm-xorg
             slim
             update-slim-xorg
             xorg
@@ -228,6 +230,8 @@ guix pull
             macbook-kbl
             custom-session
             miscellany))
+
+(define gdm-configuration-xorg (@@ (gnu services xorg) gdm-configuration-xorg))
 #+end_src
 #+begin_src scheme
 (define-syntax-rule (system-comp os field ...)
@@ -495,6 +499,29 @@ The stateless service should come after base/desktop services (potentially other
                   (apply account (append user `(#:bluetooth? ,bluetooth?))))
                 who)
            (operating-system-users os))))
+#+end_src
+*** GDM display manager
+#+begin_src scheme
+(define-system-comp (gdm #:key auto-login)
+  (services
+   (cons* (service gdm-service-type
+                   (gdm-configuration
+                    (auto-login? (if auto-login #t #f))
+                    (default-user auto-login)
+                    (wayland? #t)))
+          (operating-system-user-services os))))
+#+end_src
+**** Update Xorg fn
+#+begin_src scheme
+(define (update-gdm-xorg services xorg-update-fn)
+  ((update-xorg
+    gdm-service-type
+    (lambda (config)
+      (gdm-configuration
+       (inherit config)
+       (xorg-configuration
+        (xorg-update-fn (gdm-configuration-xorg config))))))
+   services))
 #+end_src
 *** SLiM display manager
 #+begin_src scheme
@@ -770,18 +797,20 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
       (as-> $
         (if desktop?
             (-> $
+                (gdm #:auto-login (if disk-encryption?
+                                      "<<user-name>>" #f))
                 (as-> $
                   (let ((session-exe "<<spartan-exe>>"))
                     (-> $
-                        (slim #:vts '(7 8 9)
-                              ;; #:auto-logins (if disk-encryption?
-                              ;;                   `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '())
-                              )
+                        ;; (slim #:vts '(7 8 9)
+                        ;;       ;; #:auto-logins (if disk-encryption?
+                        ;;       ;;                   `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '())
+                        ;;       )
                         (custom-session #:session-name "Spartan WM"
                                         #:exe session-exe
                                         #:system-services (list (screen-locker-service slock))))))
                 (as-> $
-                  (let ((update-xorg-fn update-slim-xorg))
+                  (let ((update-xorg-fn update-gdm-xorg))
                     (-> $
                         (xorg #:update-xorg-fn update-xorg-fn)
                         (mtrack #:update-xorg-fn update-xorg-fn))))
