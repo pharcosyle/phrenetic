@@ -768,6 +768,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 (define-module (ebullient system base-os)
   #:use-module ((gnu services xorg) #:select (screen-locker-service))
   #:use-module ((gnu packages suckless) #:select (slock))
+  #:use-module ((gnu packages wm) #:select (sway swaylock))
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (base-os))
@@ -808,6 +809,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
             (-> $
                 (gdm #:auto-login (if disk-encryption?
                                       "<<user-name>>" #f))
+                (wm #:package sway
+                    #:services (list (screen-locker-service swaylock)))
                 (as-> $
                   (let ((session-exe "<<spartan-exe>>"))
                     (-> $
