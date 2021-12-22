@@ -190,6 +190,7 @@ guix pull
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl))
+  #:use-module ((gnu packages wm) #:select (sway))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -231,6 +232,7 @@ guix pull
             macbook
             macbook-kbl
             wm
+            sway-wm
             custom-session
             miscellany))
 
@@ -715,6 +717,13 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
    (append services
            (operating-system-user-services os))))
 #+end_src
+**** Sway
+#+begin_src scheme
+(define (sway-wm os)
+  (wm os
+      #:package sway
+      #:services ((feature-system-services-getter (feature-sway)) (rde-config))))
+#+end_src
 **** Custom session
 #+begin_src scheme
 (define* (custom-session os #:key session-name exe services)
@@ -767,7 +776,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 (define-module (ebullient system base-os)
   #:use-module ((gnu services xorg) #:select (screen-locker-service))
   #:use-module ((gnu packages suckless) #:select (slock))
-  #:use-module ((gnu packages wm) #:select (sway swaylock))
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (base-os))
@@ -809,8 +817,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
-                (wm #:package sway
-                    #:services (list (screen-locker-service swaylock)))
+                sway-wm
                 (as-> $
                   (let ((session-exe "<<spartan-exe>>"))
                     (-> $
