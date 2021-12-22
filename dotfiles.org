@@ -203,6 +203,8 @@ guix pull
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module (rde features)
+  #:use-module ((rde features linux) #:select (feature-pipewire))
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
@@ -249,13 +251,11 @@ guix pull
              (system-comp os field ...)))))))
 
 (define (update-services services kind update-fn)
-  (update-list
+  (update-services*
    services
    (lambda (svc)
      (eq? (service-kind svc) kind))
-   (lambda (svc)
-     (service (service-kind svc)
-              (update-fn (service-value svc))))))
+   update-fn))
 
 (define (update-xorg dm-service-type dm-update-fn)
   (lambda (services)
@@ -744,7 +744,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 *** Miscellany
 nss-certs, Gnome, backlight control, Nix, bluetooth
 #+begin_src scheme
-(define-system-comp (miscellany #:key desktop? laptop? nix? bluetooth?)
+(define-system-comp (miscellany #:key desktop? laptop? nix? pipewire? bluetooth?)
   (packages
    (cons* (specification->package "nss-certs")
           (operating-system-packages os)))
@@ -754,6 +754,8 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
         (list (service gnome-desktop-service-type)) '())
     (if laptop?
         (list (udev-rules-service 'backlight-add brightnessctl)) '())
+    (if pipewire?
+        ((feature-system-services-getter (feature-pipewire)) (rde-config)) '())
     (if nix?
         (list (service nix-service-type)) '())
     ;; (if bluetooth?
@@ -778,8 +780,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                   (disk-encryption? #t)
                   luks-uuid
                   (nix? #t)
-                  (pipewire? #f) ; FIXME Remove and uncomment line below when my pipewire work is done.
-                  ;; (pipewire? desktop?)
+                  (pipewire? desktop?)
                   (bluetooth? desktop?)
                   (aux-admin? #t)
                   (guest? laptop?))
@@ -834,6 +835,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
       (miscellany #:desktop? desktop?
                   #:laptop? laptop?
                   #:nix? nix?
+                  #:pipewire? pipewire?
                   #:bluetooth? bluetooth?)
       (as-> $
         (let* ((persist-dir "/.persist")
@@ -919,6 +921,13 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   ;; #:use-module (gnu system keyboard)
 
 
+  ;; For pipewire (at the time of this writing)
+  #:use-module (gnu services shepherd)
+  #:use-module (rde features)
+  #:use-module ((rde features linux) #:select (feature-pipewire))
+  #:use-module (ebullient utils)
+
+
   #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
@@ -941,6 +950,25 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                              (,emacs-minimal . ,emacs-variant)
                              (,emacs-no-x . ,emacs-variant))))
 
+(define (remove-dbus-home-req services)
+  (update-services*
+   services
+   (lambda (svc)
+     (eq? (-> svc service-kind service-type-name) 'pipewire-add-shepherd-daemons))
+   (lambda (shepherd-services)
+     (update-list
+      shepherd-services
+      (lambda (svc)
+        (equal? (shepherd-service-provision svc) '(pipewire)))
+      (lambda (svc)
+        (shepherd-service
+         (inherit svc)
+         (requirement '())))))))
+
+(define pipewire-home-services
+  (remove-dbus-home-req
+   ((feature-home-services-getter (feature-pipewire)) (rde-config))))
+
 (define solitude
   (home-environment
    ;; (packages (list htop))
@@ -952,94 +980,96 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
                    (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
    (services
-    (list
-     (service home-bash-service-type
-              (home-bash-configuration
-               (environment-variables
-                `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
-                  ("EDITOR" . "$VISUAL")))
-               (bash-profile
-                `(,(local-file "bash_profile")
-                  ;; ,(file-append initialization) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
-                  ))))
-     (service home-xdg-user-directories-service-type
-              (let* ((xdg-user-subdir "/files")
-                     (xdg-dir (lambda (path)
-                                (string-append "$HOME" xdg-user-subdir path))))
-                (home-xdg-user-directories-configuration
-                 (desktop "$HOME/desktop")
-                 (documents (xdg-dir "/docs"))
-                 (download "$HOME/dl")
-                 (music (xdg-dir "/music"))
-                 (pictures (xdg-dir "/pics"))
-                 (publicshare (xdg-dir "/public"))
-                 (templates (xdg-dir "/templates"))
-                 (videos (xdg-dir "/vids")))))
-     (service home-mcron-service-type
-              (home-mcron-configuration
-               (jobs
-                (list
-                 #~(job '(next-hour)
-                        (lambda ()
-                          (call-with-output-file "/tmp/test-mcron-file"
-                            (lambda (port)
-                              (display "Output!" port))))
-                        "Test mcron output")))))
-     (service home-git-service-type
-              (home-git-configuration
-               (config
-                `((user
-                   ((name . "<<user-full-name>>")
-                    (email . "<<user-email>>")))
-                  ;; (http "https://weak.example.com"
-                  ;;   ((ssl-verify . #f)))
-                  ;; (gpg
-                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-                  ;; (sendmail
-                  ;;  ((annotate . #t)))
-                  ))))
-     ;; (service home-bash-direnv-service-type)
-     (service home-ssh-service-type
-              ;; (home-ssh-configuration
-              ;;  (extra-config
-              ;;   (list
-              ;;    (ssh-host "savannah"
-              ;;              '((compression . #f))))))
-              )
-     (simple-service 'nix-channels
-                     home-files-service-type
-                     (list `("nix-channels"
-                             ,(local-file "nix-channels"))))
-     (simple-service 'nixpkgs-config
-                     home-files-service-type
-                     (list `("config/nixpkgs/config.nix"
-                             ,(local-file "nixpkgs-config.nix"))))
-     (simple-service 'doomdir
-                     home-files-service-type
-                     (list `("config/doom"
-                             ,(local-file "doom" #:recursive? #t))))
-     ;; TODO I think this was my abortive attempt to customize the fonts service
-     ;; (simple-service 'my-fontconfig-config-file
-     ;;                 home-files-service-type
-     ;;                 (list `("config/fontconfig/fonts.conf"
-     ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
-     ;; TODO Examples from RDE I may want to make use of.
-     ;; (service home-keyboard-service-type
-     ;;          (keyboard-layout "us,ru" "dvorak,"
-     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-     ;; (service home-gnupg-service-type
-     ;;          (home-gnupg-configuration
-     ;;           (gpg-agent-config
-     ;;            (home-gpg-agent-configuration
-     ;;             (ssh-agent? #t)))))
-     ;; (service home-state-service-type
-     ;;          (append
-     ;;           (list
-     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
-     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
-     ;;            (state-git "/home/bob/tmp/talkes/"
-     ;;                       "git@git.sr.ht:~abcdw/rde"))))
-     ))))
+    (append
+     (list
+      (service home-bash-service-type
+               (home-bash-configuration
+                (environment-variables
+                 `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
+                   ("EDITOR" . "$VISUAL")))
+                (bash-profile
+                 `(,(local-file "bash_profile")
+                   ;; ,(file-append initialization) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
+                   ))))
+      (service home-xdg-user-directories-service-type
+               (let* ((xdg-user-subdir "/files")
+                      (xdg-dir (lambda (path)
+                                 (string-append "$HOME" xdg-user-subdir path))))
+                 (home-xdg-user-directories-configuration
+                  (desktop "$HOME/desktop")
+                  (documents (xdg-dir "/docs"))
+                  (download "$HOME/dl")
+                  (music (xdg-dir "/music"))
+                  (pictures (xdg-dir "/pics"))
+                  (publicshare (xdg-dir "/public"))
+                  (templates (xdg-dir "/templates"))
+                  (videos (xdg-dir "/vids")))))
+      (service home-mcron-service-type
+               (home-mcron-configuration
+                (jobs
+                 (list
+                  #~(job '(next-hour)
+                         (lambda ()
+                           (call-with-output-file "/tmp/test-mcron-file"
+                             (lambda (port)
+                               (display "Output!" port))))
+                         "Test mcron output")))))
+      (service home-git-service-type
+               (home-git-configuration
+                (config
+                 `((user
+                    ((name . "<<user-full-name>>")
+                     (email . "<<user-email>>")))
+                   ;; (http "https://weak.example.com"
+                   ;;   ((ssl-verify . #f)))
+                   ;; (gpg
+                   ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+                   ;; (sendmail
+                   ;;  ((annotate . #t)))
+                   ))))
+      ;; (service home-bash-direnv-service-type)
+      (service home-ssh-service-type
+               ;; (home-ssh-configuration
+               ;;  (extra-config
+               ;;   (list
+               ;;    (ssh-host "savannah"
+               ;;              '((compression . #f))))))
+               )
+      (simple-service 'nix-channels
+                      home-files-service-type
+                      (list `("nix-channels"
+                              ,(local-file "nix-channels"))))
+      (simple-service 'nixpkgs-config
+                      home-files-service-type
+                      (list `("config/nixpkgs/config.nix"
+                              ,(local-file "nixpkgs-config.nix"))))
+      (simple-service 'doomdir
+                      home-files-service-type
+                      (list `("config/doom"
+                              ,(local-file "doom" #:recursive? #t))))
+      ;; TODO I think this was my abortive attempt to customize the fonts service
+      ;; (simple-service 'my-fontconfig-config-file
+      ;;                 home-files-service-type
+      ;;                 (list `("config/fontconfig/fonts.conf"
+      ;;                         ,(plain-file "fonts.conf" %my-fontconfig-config-file))))
+      ;; TODO Examples from RDE I may want to make use of.
+      ;; (service home-keyboard-service-type
+      ;;          (keyboard-layout "us,ru" "dvorak,"
+      ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+      ;; (service home-gnupg-service-type
+      ;;          (home-gnupg-configuration
+      ;;           (gpg-agent-config
+      ;;            (home-gpg-agent-configuration
+      ;;             (ssh-agent? #t)))))
+      ;; (service home-state-service-type
+      ;;          (append
+      ;;           (list
+      ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
+      ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
+      ;;            (state-git "/home/bob/tmp/talkes/"
+      ;;                       "git@git.sr.ht:~abcdw/rde"))))
+      )
+     pipewire-home-services))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
@@ -2924,10 +2954,12 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 #+begin_src scheme :tangle (in-tangle-dir "utils.scm")
 (define-module (ebullient utils)
   #:use-module (guix packages)
+  #:use-module (gnu services)
   #:export (update-list
             ->
             as->
-            private-package))
+            private-package
+            update-services*))
 
 (define (update-list l pred f)
   (map (lambda (x)
@@ -2964,6 +2996,14 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
   (package
     (inherit barebones-package)
     body ...))
+
+(define (update-services* services pred update-fn)
+  (update-list
+   services
+   pred
+   (lambda (svc)
+     (service (service-kind svc)
+              (update-fn (service-value svc))))))
 #+end_src
 * Dev
 ** Git ignore
