@@ -840,11 +840,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 ~/.guix-extra-profiles
 #+end_src
 ** Solitude
-- TODO direnv
-  RDE and upstream Guix Home have incompatibly diverged for the moment, when they're back in sync:
-  + comment the direnv use-module and the `home-bash-direnv-service-type` usage lines back in
-  + remove (gnu packages shellutils #:select direnv) from the module definition and remove direnv from the package list
-  If it doesn't get resolved before I need to use direnv just copy the direnv service code, it's tiny
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (ebullient home solitude)
   #:use-module (guix gexp)
@@ -855,7 +850,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (gnu home services xdg)
   ;; #:use-module (gnu home-services gnupg)
   #:use-module (gnu home-services ssh)
-  ;; #:use-module (gnu home-services shellutils)
   #:use-module (gnu home-services version-control)
   #:use-module (gnu packages)
   ;; #:use-module (gnu packages admin)
@@ -895,6 +889,19 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                              (,emacs-minimal . ,emacs-variant)
                              (,emacs-no-x . ,emacs-variant))))
 
+(define home-bash-direnv-service-type
+  (service-type
+   (name 'home-bash-direnv)
+   (extensions
+    (list (service-extension home-profile-service-type
+                             (const (list direnv)))
+          (service-extension home-bash-service-type
+                             (const (home-bash-extension
+                                     ;; TODO Might be nice to make this a `local-file' and src block
+                                     (bashrc (list (plain-file "direnv-hook"
+                                                               "eval \"$(direnv hook bash)\""))))))))
+   (default-value #f)))
+
 (define (remove-dbus-home-req services)
   (update-services*
    services
@@ -917,13 +924,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define solitude
   (home-environment
    ;; (packages (list htop))
-   (packages (list direnv
+   (packages (list (specification->package "font-adobe-source-code-pro") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    (with-emacs-variant spartan)
                    (with-emacs-variant doom-emacs-temp)
                    ;; TODO temp emacs stuff
-                   (with-emacs-variant emacs-desktop-environment-temp) ; TODO donno where this should really go
-                   (specification->package "font-adobe-source-code-pro"))) ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
+                   (with-emacs-variant emacs-desktop-environment-temp))) ; TODO donno where this should really go
    (services
     (append
      (list
@@ -972,7 +978,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    ;; (sendmail
                    ;;  ((annotate . #t)))
                    ))))
-      ;; (service home-bash-direnv-service-type)
+      (service home-bash-direnv-service-type)
       (service home-ssh-service-type
                ;; (home-ssh-configuration
                ;;  (extra-config
