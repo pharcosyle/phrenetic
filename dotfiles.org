@@ -222,8 +222,6 @@ guix pull
             users
             gdm
             update-gdm-xorg
-            slim
-            update-slim-xorg
             xorg
             nix
             hidpi-console-font
@@ -526,59 +524,6 @@ The stateless service should come after base/desktop services (potentially other
         (xorg-update-fn (gdm-configuration-xorg config))))))
    services))
 #+end_src
-*** SLiM display manager
-#+begin_src scheme
-(define (first l)
-  (if (not (null? l))
-      (car l) #f))
-
-(define (auto-login-for-vt auto-logins vt*)
-  (first
-   (filter (lambda (al)
-             (apply (lambda* (#:key vt #:allow-other-keys)
-                      (equal? vt vt*))
-                    al))
-           auto-logins)))
-
-(define (slim-config vt display auto-logins)
-  (let ((config (slim-configuration
-                 (display (string-append ":" (number->string display)))
-                 (vt (string-append "vt" (number->string vt)))))
-        (auto-login (auto-login-for-vt auto-logins vt)))
-    (if auto-login
-        (apply (lambda* (#:key user session #:allow-other-keys)
-                 (slim-configuration
-                  (inherit config)
-                  (default-user user)
-                  (auto-login? #t)
-                  (auto-login-session session)))
-               auto-login)
-        config)))
-
-(define (slim-services vts auto-logins)
-  (map (lambda (vt display)
-         (service slim-service-type
-                  (slim-config vt display auto-logins)))
-       vts
-       (iota (length vts))))
-
-(define-system-comp (slim #:key vts (auto-logins '()))
-  (services
-   (append (slim-services vts auto-logins)
-           (operating-system-user-services os))))
-#+end_src
-**** Update Xorg fn
-#+begin_src scheme
-(define (update-slim-xorg services xorg-update-fn)
-  ((update-xorg
-    slim-service-type
-    (lambda (config)
-      (slim-configuration
-       (inherit config)
-       (xorg-configuration
-        (xorg-update-fn (slim-configuration-xorg config))))))
-   services))
-#+end_src
 *** Xorg
 - TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
 - TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
@@ -821,10 +766,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                 (as-> $
                   (let ((session-exe "<<spartan-exe>>"))
                     (-> $
-                        ;; (slim #:vts '(7 8 9)
-                        ;;       ;; #:auto-logins (if disk-encryption?
-                        ;;       ;;                   `((#:user "<<user-name>>" #:session ,session-exe #:vt 7)) '())
-                        ;;       )
                         (custom-session #:session-name "Spartan WM"
                                         #:exe session-exe
                                         #:services (list (screen-locker-service slock))))))
