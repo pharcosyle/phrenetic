@@ -762,18 +762,15 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
-                sway-wm
-                (as-> $
-                  (let ((session-exe "<<spartan-exe>>"))
-                    (-> $
-                        (custom-session #:session-name "Spartan WM"
-                                        #:exe session-exe
-                                        #:services (list (screen-locker-service slock))))))
                 (as-> $
                   (let ((update-xorg-fn update-gdm-xorg))
                     (-> $
                         (xorg #:update-xorg-fn update-xorg-fn)
                         (mtrack #:update-xorg-fn update-xorg-fn))))
+                sway-wm
+                (custom-session #:session-name "Spartan WM"
+                                #:exe "<<spartan-exe>>"
+                                #:services (list (screen-locker-service slock)))
                 hidpi-console-font)
             $))
       nonguix-substitutes
