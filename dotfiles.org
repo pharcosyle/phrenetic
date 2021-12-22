@@ -753,10 +753,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
     (if desktop?
         (list (service gnome-desktop-service-type)) '())
     (if laptop?
-        (list (simple-service 'brightnessctl-udev-rules
-                              udev-service-type
-                              (list brightnessctl)))
-        '())
+        (list (udev-rules-service 'backlight-add brightnessctl)) '())
     (if nix?
         (list (service nix-service-type)) '())
     ;; (if bluetooth?
