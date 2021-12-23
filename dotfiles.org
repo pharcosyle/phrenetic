@@ -868,6 +868,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient utils)
 
 
+  #:use-module ((rde features wm) #:select (feature-sway))
+
+
   #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
@@ -1021,7 +1024,15 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       ;;            (state-git "/home/bob/tmp/talkes/"
       ;;                       "git@git.sr.ht:~abcdw/rde"))))
       )
-     pipewire-home-services))))
+     pipewire-home-services
+     ((feature-home-services-getter
+       (feature-sway #:xwayland? #t
+                     ;; #:sway-mod 'Mod1
+                     #:extra-config
+                     ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
+                     ;; `((include ,(local-file "./config/sway/config")))
+                     `((include "/home/pharcosyle/projects/dotfiles/config"))))
+      (rde-config))))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
