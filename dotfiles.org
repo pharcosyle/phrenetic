@@ -221,8 +221,6 @@ guix pull
             btrfs
             users
             gdm
-            update-gdm-xorg
-            xorg
             nix
             hidpi-console-font
             nonguix-substitutes
@@ -232,8 +230,6 @@ guix pull
             sway-wm
             custom-session
             miscellany))
-
-(define gdm-configuration-xorg (@@ (gnu services xorg) gdm-configuration-xorg))
 #+end_src
 #+begin_src scheme
 (define-syntax-rule (system-comp os field ...)
@@ -255,13 +251,6 @@ guix pull
    (lambda (svc)
      (eq? (service-kind svc) kind))
    update-fn))
-
-(define (update-xorg dm-service-type dm-update-fn)
-  (lambda (services)
-    (update-services
-     services
-     dm-service-type
-     dm-update-fn)))
 #+end_src
 *** Barebones OS
 #+begin_src scheme
@@ -507,18 +496,6 @@ The stateless service should come after base/desktop services (potentially other
                     (default-user auto-login)
                     (wayland? #t)))
           (operating-system-user-services os))))
-#+end_src
-**** Update Xorg fn
-#+begin_src scheme
-(define (update-gdm-xorg services xorg-update-fn)
-  ((update-xorg
-    gdm-service-type
-    (lambda (config)
-      (gdm-configuration
-       (inherit config)
-       (xorg-configuration
-        (xorg-update-fn (gdm-configuration-xorg config))))))
-   services))
 #+end_src
 *** HiDPI console font
 #+begin_src scheme
