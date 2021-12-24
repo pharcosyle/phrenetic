@@ -210,7 +210,6 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
-  #:use-module (ebullient packages xf86-input-mtrack)
   #:use-module (ebullient utils)
   #:export (barebones-os
             basics
@@ -226,7 +225,6 @@ guix pull
             xorg
             nix
             hidpi-console-font
-            mtrack
             nonguix-substitutes
             macbook
             macbook-kbl
@@ -485,10 +483,7 @@ The stateless service should come after base/desktop services (potentially other
    (name name)
    (comment (or comment ""))
    (group "users")
-   ;; TODO `input' group necessary for mtrack (at present, maybe there's a way around
-   ;; this. Libinput doesn't need it, for example, but maybe it's "built in" or
-   ;; something. Also I'd ideally like the touchpad to work on the gdm login screen.)
-   (supplementary-groups (append '("netdev" "audio" "video" "input")
+   (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())
                                  (if bluetooth? '("lp") '())))
    (password (if password
@@ -563,33 +558,6 @@ EndSection
              (cons (car tty-and-font)
                    (file-append font-terminus "/share/consolefonts/ter-132n")))
            config)))))
-#+end_src
-*** Mtrack
-#+begin_src scheme
-(define-system-comp (mtrack #:key update-xorg-fn)
-  (packages (cons* xf86-input-mtrack
-                   (operating-system-packages os)))
-  (services
-   (update-xorg-fn
-    (operating-system-user-services os)
-    (lambda (config)
-      (xorg-configuration
-       (inherit config)
-       (modules (cons* xf86-input-mtrack
-                       (xorg-configuration-modules config)))
-       (extra-config (cons* (string-append
-                             (with-input-from-file "ebullient/system/xorg-touchpads.conf" read-string)
-                             "\n")
-                            (xorg-configuration-extra-config config))))))))
-#+end_src
-**** Xorg conf
-#+begin_src conf :tangle (in-tangle-dir "xorg-touchpads.conf")
-Section "InputClass"
-    Identifier "Touchpads"
-    MatchIsTouchpad "on"
-    MatchDevicePath "/dev/input/event*"
-    Driver "mtrack"
-EndSection
 #+end_src
 *** Nonguix substitutes
 At the time of this writing I've just added the new substitute server at nonguix.org. The brielmaier.net substitute server is probably obviated now but I'll keep it around becuase it doesn't hurt to have more sources for substitutes.
@@ -763,11 +731,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
-                (as-> $
-                  (let ((update-xorg-fn update-gdm-xorg))
-                    (-> $
-                        (xorg #:update-xorg-fn update-xorg-fn)
-                        (mtrack #:update-xorg-fn update-xorg-fn))))
+                (xorg #:update-xorg-fn update-gdm-xorg)
                 sway-wm
                 (custom-session #:session-name "Spartan WM"
                                 #:exe "<<spartan-exe>>"
@@ -2872,41 +2836,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
       (home-page "https://github.com/dracula/gtk")
       (synopsis "A flat and light theme with a modern look")
       (description synopsis))))
-#+end_src
-** xf86-input-mtrack
-#+begin_src scheme :tangle (in-tangle-dir "xf86-input-mtrack.scm")
-(define-module (ebullient packages xf86-input-mtrack)
-  #:use-module (guix build-system gnu)
-  #:use-module (guix git-download)
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages pkg-config) #:select (pkg-config))
-  #:use-module ((gnu packages xorg) #:select (xorg-server xorgproto xproto))
-  #:use-module ((gnu packages xdisorg) #:select (mtdev)))
-
-(define-public xf86-input-mtrack
-  (let ((commit "124b80f3913e44cc7fdc1ac36a639252f7c4bf1b")
-        (revision "0"))
-    (package
-      (name "xf86-input-mtrack")
-      (version (git-version "0.5.1" revision commit))
-      (source (origin
-                (method git-fetch)
-                (uri (git-reference
-                      (url "https://github.com/p2rkw/xf86-input-mtrack")
-                      (commit commit)))
-                (sha256
-                 (base32
-                  "0zl2mi4dsyji23dk43693mwkm5n4b335gfkpbx16009z52qgj9mi"))))
-      (build-system gnu-build-system)
-      (native-inputs
-       (list pkg-config))
-      (inputs
-       (list xorg-server xorgproto xproto mtdev))
-      (synopsis "Multitouch trackpad driver")
-      (description "An Xorg driver for multitouch trackpads. Supports any trackpad whose kernel driver uses the slotted multitouch protocol.")
-      (home-page "https://github.com/p2rkw/xf86-input-mtrack")
-      (license license:gpl2+))))
 #+end_src
 * Utils
 :PROPERTIES:
