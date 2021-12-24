@@ -520,32 +520,6 @@ The stateless service should come after base/desktop services (potentially other
         (xorg-update-fn (gdm-configuration-xorg config))))))
    services))
 #+end_src
-*** Xorg
-- TODO Note that the catchall for libinput is overriding a rule for Keyboards created by =gnu/services/xorg.scm= that sets the XKB stuff (layout, etc) set a in the guix xorg configuration. Not sure what, if anything, I need to do about this; wait until I'm doing my final pass over keyboard/trackpad/input stuff.
-- TODO tried `#~#$(local-file "xorg.conf")' but it didn't work, I don't think xorg.conf is protected from garbage collection. Also the path isn't relative to this file like local-file would be (I think) it'll only work if I run the reconfigure command from the generated files directory. Update: I forget what the problem was exactly but would rde's `slurp-file-gexp' work?
-#+begin_src scheme
-(define-system-comp (xorg #:key update-xorg-fn)
-  (services
-   (update-xorg-fn
-    (operating-system-user-services os)
-    (lambda (config)
-      (xorg-configuration
-       (inherit config)
-       (keyboard-layout (operating-system-keyboard-layout os))
-       (extra-config (cons* (string-append
-                             (with-input-from-file "ebullient/system/xorg.conf" read-string)
-                             "\n")
-                            (xorg-configuration-extra-config config))))))))
-#+end_src
-**** Conf
-#+begin_src conf :tangle (in-tangle-dir "xorg.conf")
-Section "InputClass"
-    Identifier "Keyboards"
-    MatchIsKeyboard "on"
-    MatchDevicePath "/dev/input/event*"
-    Driver "libinput"
-EndSection
-#+end_src
 *** HiDPI console font
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
@@ -731,7 +705,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
-                (xorg #:update-xorg-fn update-gdm-xorg)
                 sway-wm
                 (custom-session #:session-name "Spartan WM"
                                 #:exe "<<spartan-exe>>"
