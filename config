@@ -1,3 +1,5 @@
+# -*- mode: i3wm-config -*-
+
 # or input <identifier>
 input "type:keyboard" {
     # xkb_layout us
@@ -8,11 +10,11 @@ input "type:keyboard" {
     xkb_file ~/projects/dotfiles/ekskaybee.xkb
 
     repeat_delay 250
-    repeat_rate 70
+    repeat_rate 35
 }
 
-default_border normal
-default_floating_border normal
+# default_border normal
+# default_floating_border normal
 
 # smart_gaps on
 # gaps outer -8
@@ -32,6 +34,31 @@ gaps left 78
 #   output HDMI-A-1 resolution 1920x1080 position 1920,0
 #
 # You can get the names of your outputs by running: swaymsg -t get_outputs
+
+
+input "type:touchpad" {
+    natural_scroll enabled
+    tap enabled
+}
+
+output * bg ~/projects/dotfiles/res/alucard_bg.png fill
+
+# TODO there might be a better way to change volume since I'm using pipewire exclusively. Might be obviated by a plugin I find later. Search google for pipewire volume changing, one result I already found suggested `pamixer` over `pactl`.
+bindsym --locked XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
+bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
+bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
+bindsym --locked XF86AudioMicMute exec pactl set-source-mute @DEFAULT_SOURCE@ toggle
+
+# I think `light` can control keyboard backlight as well but maybe required users to be in the "input" group?
+bindsym --locked XF86MonBrightnessDown exec brightnessctl set 5%-
+bindsym --locked XF86MonBrightnessUp exec brightnessctl set 5%+
+
+bindsym --locked XF86AudioPlay exec playerctl play-pause
+bindsym --locked XF86AudioPrev exec playerctl previous
+bindsym --locked XF86AudioNext exec playerctl next
+# bindsym --locked XF86AudioStop exec playerctl
+
+
 
 
 
@@ -63,7 +90,7 @@ set $right l
 ### Output configuration
 #
 # Default wallpaper (more resolutions are available in /gnu/store/6d3q9f1bdfn4cchsziws33ixq2p4zjhw-sway-1.6.1/share/backgrounds/sway/)
-output * bg /gnu/store/6d3q9f1bdfn4cchsziws33ixq2p4zjhw-sway-1.6.1/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
+# output * bg /gnu/store/6d3q9f1bdfn4cchsziws33ixq2p4zjhw-sway-1.6.1/share/backgrounds/sway/Sway_Wallpaper_Blue_1920x1080.png fill
 #
 # Example configuration:
 #
@@ -143,10 +170,10 @@ output * bg /gnu/store/6d3q9f1bdfn4cchsziws33ixq2p4zjhw-sway-1.6.1/share/backgro
     bindsym $mod+Shift+$up move up
     bindsym $mod+Shift+$right move right
     # Ditto, with arrow keys
-    bindsym $mod+Shift+Left move left
-    bindsym $mod+Shift+Down move down
-    bindsym $mod+Shift+Up move up
-    bindsym $mod+Shift+Right move right
+    # bindsym $mod+Shift+Left move left
+    # bindsym $mod+Shift+Down move down
+    # bindsym $mod+Shift+Up move up
+    # bindsym $mod+Shift+Right move right
 #
 # Workspaces:
 #
