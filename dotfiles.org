@@ -784,6 +784,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient utils)
 
 
+  #:use-module ((rde features shells) #:select (feature-zsh))
   #:use-module ((rde features wm) #:select (feature-sway))
 
 
@@ -848,7 +849,17 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                 (bash-profile
                  `(,(slurp-file-gexp (local-file "bash_profile"))
                    ;; ,(file-append initialization) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
-                   ))))
+                   )))))
+     (filter service?
+             ((feature-home-services-getter (feature-zsh)) (rde-config)))
+     (list
+      (simple-service 'zsh-config
+                      home-zsh-service-type
+                      (home-zsh-extension
+                       (zshrc
+                        (list (slurp-file-gexp (local-file "zshrc"))))))
+      (service home-zsh-direnv-service-type)
+
       (service home-xdg-user-directories-service-type
                (let* ((xdg-user-subdir "/files")
                       (xdg-dir (lambda (path)
@@ -862,6 +873,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   (publicshare (xdg-dir "/public"))
                   (templates (xdg-dir "/templates"))
                   (videos (xdg-dir "/vids")))))
+
       (service home-mcron-service-type
                (home-mcron-configuration
                 (jobs
@@ -885,7 +897,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    ;; (sendmail
                    ;;  ((annotate . #t)))
                    ))))
-      (service home-bash-direnv-service-type)
       (service home-ssh-service-type
                ;; (home-ssh-configuration
                ;;  (extra-config
@@ -940,11 +951,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
 #+end_src
-** Bash profile
+** Shells
+*** Bash profile
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "bash_profile")
 :END:
-*** Use Guix extra profiles
+**** Use Guix extra profiles
 #+begin_src sh :noweb yes
 gepp="<<guix-extra-profiles-path>>"
 GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
@@ -981,13 +993,22 @@ for i in $GUIX_EXTRA_PROFILES/*; do
   unset profile
 done
 #+end_src
-*** Load Nix environment
+**** Load Nix environment
 #+begin_src sh
 . /run/current-system/profile/etc/profile.d/nix.sh
 #+end_src
-*** Make Flatpak apps visible
+**** Make Flatpak apps visible
 #+begin_src sh
 export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
+#+end_src
+*** Zshrc
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "zshrc")
+:END:
+**** History
+#+begin_src sh
+HISTSIZE=1000000
+SAVEHIST=$HISTSIZE
 #+end_src
 ** Initialization
 :PROPERTIES:
