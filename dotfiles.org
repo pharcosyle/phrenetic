@@ -755,6 +755,53 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+begin_src sh
 ~/.guix-extra-profiles
 #+end_src
+** Components
+:PROPERTIES:
+:tangle-dir+: /components
+:END:
+*** asdf
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "asdf.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home components asdf)
+  #:use-module (ebullient utils)
+  ;; #:export ()
+  )
+#+end_src
+*** Shepherd
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "shepherd.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home components shepherd)
+  #:use-module (gnu services)
+  ;; #:use-module (gnu home services)
+  #:use-module (gnu home services shepherd)
+  #:use-module ((gnu packages freedesktop) #:select (udiskie))
+  ;; #:use-module (gnu services configuration)
+  #:use-module (guix gexp)
+  ;; #:use-module (ebullient utils)
+  #:export (home-udiskie-service-type))
+#+end_src
+**** Udiskie
+#+begin_src scheme
+(define (home-udiskie-shepherd-service config)
+  (list
+   (shepherd-service
+    (provision '(udiskie))
+    (start #~(make-forkexec-constructor
+              (list #$(file-append udiskie "/bin/udiskie --tray"))))
+    (stop #~(make-kill-destructor)))))
+
+(define home-udiskie-service-type
+  (service-type (name 'home-udiskie)
+                (extensions
+                 (list (service-extension
+                        home-shepherd-service-type
+                        home-udiskie-shepherd-service)))
+                (default-value #f)))
+#+end_src
 ** Solitude
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
 (define-module (ebullient home solitude)
@@ -798,6 +845,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
   #:use-module (ebullient home doom-emacs-temp)
   #:use-module (ebullient home emacs-desktop-environment-temp)
+
+
+  ;; #:use-module (ebullient home components shepherd)
+
 
   #:export (solitude))
 
@@ -946,7 +997,11 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                      ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
                      ;; `((include ,(local-file "./config/sway/config")))
                      `((include "/home/pharcosyle/projects/dotfiles/config"))))
-      (rde-config))))))
+      (rde-config))
+
+     ;; (list
+     ;;  (service home-udiskie-service-type))
+     ))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
