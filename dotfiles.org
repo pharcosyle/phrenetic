@@ -2318,7 +2318,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
   #:export (update-list
             ->
             as->
-            private-package
             update-services*))
 
 (define (update-list l pred f)
@@ -2338,24 +2337,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
-
-(define barebones-package
-  (package
-    (name #f)
-    (version "0")
-    (source #f)
-    (build-system #f)
-    ;; (synopsis name)
-    ;; (description synopsis)
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
-
-(define-syntax-rule (private-package body ...)
-  (package
-    (inherit barebones-package)
-    body ...))
 
 (define (update-services* services pred update-fn)
   (update-list
