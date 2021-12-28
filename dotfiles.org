@@ -584,10 +584,12 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 **** Sway
 #+begin_src scheme
-(define (sway-wm os)
+(define* (sway-wm os #:key laptop?)
   (wm os
       #:package sway
-      #:services ((feature-system-services-getter (feature-sway)) (rde-config))))
+      #:services (append ((feature-system-services-getter (feature-sway)) (rde-config))
+                         (if laptop?
+                             (list (udev-rules-service 'backlight-add brightnessctl)) '()))))
 #+end_src
 **** Custom session
 #+begin_src scheme
@@ -683,7 +685,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
-                sway-wm
+                (sway-wm #:laptop? laptop?)
                 (custom-session #:session-name "Spartan WM"
                                 #:exe "<<spartan-exe>>"
                                 #:services (list (screen-locker-service slock)))
@@ -882,7 +884,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 (define solitude
   (home-environment
-   ;; (packages (list htop))
    (packages (list (specification->package "font-adobe-source-code-pro") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    (with-emacs-variant spartan)
