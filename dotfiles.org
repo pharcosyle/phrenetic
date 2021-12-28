@@ -224,7 +224,6 @@ guix pull
             macbook-kbl
             wm
             sway-wm
-            custom-session
             miscellany))
 #+end_src
 #+begin_src scheme
@@ -586,32 +585,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       #:services (append ((feature-system-services-getter (feature-sway)) (rde-config))
                          (if laptop?
                              (list (udev-rules-service 'backlight-add brightnessctl)) '()))))
-#+end_src
-**** Custom session
-#+begin_src scheme
-(define* (custom-session os #:key session-name exe services)
-  (wm os
-      #:package
-      (private-package
-       (name (-> session-name
-                 string-downcase
-                 (string-tokenize (char-set-complement char-set:whitespace))
-                 (string-join "-")))
-       (build-system trivial-build-system)
-       (arguments
-        `(#:modules ((guix build utils))
-          #:builder
-          ,#~(begin
-               (use-modules (guix build utils))
-               (let* ((xsessions (string-append #$output "/share/xsessions")))
-                 (mkdir-p xsessions)
-                 (make-desktop-entry-file
-                  (string-append xsessions "/" #$name ".desktop")
-                  #:name #$session-name
-                  #:comment #$session-name
-                  #:exec #$exe))
-               #t))))
-      #:services services))
 #+end_src
 *** Miscellany
 nss-certs, Gnome, backlight control, Nix, bluetooth
