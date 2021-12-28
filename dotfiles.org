@@ -841,6 +841,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define solitude
   (home-environment
    (packages (list (specification->package "font-adobe-source-code-pro") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
+                   (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    (with-emacs-variant doom-emacs-temp)))
    (services
