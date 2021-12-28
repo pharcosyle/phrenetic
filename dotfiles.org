@@ -26,10 +26,6 @@ Krzysztof Baranowski
 #+begin_src org
 pharcosyle@gmail.com
 #+end_src
-#+name: spartan-exe
-#+begin_src org
-spartan
-#+end_src
 * Installation
 ** Create bootable USB
 Download (or create) a Guix installation ISO
@@ -620,7 +616,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 *** Miscellany
 nss-certs, Gnome, backlight control, Nix, bluetooth
 #+begin_src scheme
-(define-system-comp (miscellany #:key desktop? laptop? nix? pipewire? bluetooth?)
+(define-system-comp (miscellany #:key desktop? nix? pipewire? bluetooth?)
   (packages
    (cons* (specification->package "nss-certs")
           (operating-system-packages os)))
@@ -628,9 +624,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
    (append
     (if desktop?
         (list (service gnome-desktop-service-type)) '())
-    (if laptop?
-        ;; TODO This should really be a service contributed by Spartan's custom session. Doesn't matter now though: after removing EXWM move this into the Sway component or use the RDE backlight feature
-        (list (udev-rules-service 'backlight-add brightnessctl)) '())
     (if pipewire?
         ((feature-system-services-getter (feature-pipewire)) (rde-config)) '())
     (if nix?
@@ -642,8 +635,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (ebullient system base-os)
-  #:use-module ((gnu services xorg) #:select (screen-locker-service))
-  #:use-module ((gnu packages suckless) #:select (slock))
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (base-os))
@@ -686,9 +677,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                  ;;                      "<<user-name>>" #f)
                  )
                 (sway-wm #:laptop? laptop?)
-                (custom-session #:session-name "Spartan WM"
-                                #:exe "<<spartan-exe>>"
-                                #:services (list (screen-locker-service slock)))
                 hidpi-console-font)
             $))
       nonguix-substitutes
@@ -696,7 +684,6 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
         (if macbook?
             (macbook $ #:bluetooth? bluetooth?) $))
       (miscellany #:desktop? desktop?
-                  #:laptop? laptop?
                   #:nix? nix?
                   #:pipewire? pipewire?
                   #:bluetooth? bluetooth?)
@@ -842,11 +829,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
 
-  ;; #:use-module (ebullient home initialization core)
-  #:use-module (ebullient home spartan core)
-
   #:use-module (ebullient home doom-emacs-temp)
-  #:use-module (ebullient home emacs-desktop-environment-temp)
 
 
   ;; #:use-module (ebullient home components shepherd)
@@ -886,10 +869,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   (home-environment
    (packages (list (specification->package "font-adobe-source-code-pro") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
-                   (with-emacs-variant spartan)
-                   (with-emacs-variant doom-emacs-temp)
-                   ;; TODO temp emacs stuff
-                   (with-emacs-variant emacs-desktop-environment-temp))) ; TODO donno where this should really go
+                   (with-emacs-variant doom-emacs-temp)))
    (services
     (append
      (list
@@ -899,9 +879,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                  `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
                    ("EDITOR" . "$VISUAL")))
                 (bash-profile
-                 `(,(slurp-file-gexp (local-file "bash_profile"))
-                   ;; ,(file-append initialization) ; This shouldn't really be in the bash profile but I can't find a good way to run a script post-login.
-                   )))))
+                 `(,(slurp-file-gexp (local-file "bash_profile")))))))
      (filter service?
              ((feature-home-services-getter (feature-zsh)) (rde-config)))
      (list
@@ -1065,80 +1043,6 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
-#+end_src
-** Initialization
-:PROPERTIES:
-:tangle-dir+: /initialization
-:END:
-#+begin_src scheme :tangle (in-tangle-dir "core.scm")
-(define-module (ebullient home initialization core)
-  #:use-module (guix gexp)
-  #:use-module ((gnu packages xorg) #:select (xinput xkbcomp xrandr)))
-
-(define-public initialization
-  (computed-file
-   "initialization.sh"
-   (with-imported-modules '((guix build utils))
-     #~(begin
-         (use-modules (guix build utils))
-         (copy-file #$(local-file "script.sh") #$output)
-         (substitute* #$output
-           (("xkbcomp") #$(file-append xkbcomp "/bin/xkbcomp"))
-           (("xkb_source=" all) (string-append all #$(local-file "current_setxkbmap_print.xkb")))
-           (("xkb_custom=" all) (string-append all #$(local-file "xkb_custom" #:recursive? #t)))
-           (("xinput") #$(file-append xinput "/bin/xinput"))
-           (("xrandr") #$(file-append xrandr "/bin/xrandr")))))))
-#+end_src
-*** Script
-#+begin_src sh :tangle (in-tangle-dir "script.sh")
-xkb_custom=
-xkb_source=
-xkbcomp -I$xkb_custom $xkb_source $DISPLAY
-
-trackpad_set ()
-{
-  xinput set-prop "bcm5974" "$@"
-}
-trackpad_set "Device Accel Profile" 2
-trackpad_set "Trackpad Sensitivity" 0.08
-trackpad_set "Trackpad Edge Sizes" 15, 15, 15, 15 # TODO make the sides smaller (like macOS). Maybe turn the top and bottom down a bit too.
-trackpad_set "Trackpad Scroll Settings" 150, 10, 0 # TODO trying this out, doesn't seem to do anything in chromium, maybe a full restart?
-trackpad_set "Trackpad Scroll Coasting" 0.05 200
-trackpad_set "Trackpad Scroll Buttons" 5, 4, 7, 6 # Invert vertical and horizontal scrolling.
-trackpad_set "Trackpad Drag Settings" 0, 350, 40, 200, 500 # First value disables, others are defaults.
-# Three-finger dragging
-trackpad_set "Trackpad Swipe Settings" 1, 0, 1000
-trackpad_set "Trackpad Swipe Buttons" 1, 1, 1, 1
-# Trying out
-trackpad_set "Trackpad Swipe Settings" 1, 0, 1500
-trackpad_set "Trackpad Palm Detection" 1, 0
-trackpad_set "Trackpad Palm Size" 30
-# trackpad_set "Trackpad Scroll Settings" 250, 10, 0
-trackpad_set "Trackpad Hold1Move1 Stationary Settings" 20, 0 # First value is the default, second value disables. # TODO I think?
-trackpad_set "Trackpad Edge Scroll Settings" 105, 20, 0, 0, 0, 0, 0 # First three values are defaults, last four disable. # TODO I think? Otherwise disable by just setting the distance really high?
-
-xrandr --fb 2724x1800 --output eDP-1 --transform 1,0,-156,0,1,0,0,0,1
-#+end_src
-*** XKB
-- TODO I'm using "C" for the xkb syntax currently, what should it be / is there a value for "no language"? Don't do this until the end.
-- TODO The base xkb_symbols is a bit different on pcoulson, it's =pc+macintosh_vndr/us+us:2+inet(evdev)=. Could this be because I generated this keymap from a boot that was older / using evdev and not libinput?
-**** current_setxkbmap_print
-#+begin_src c :tangle (in-tangle-dir "current_setxkbmap_print.xkb")
-xkb_keymap {
-	xkb_keycodes  { include "evdev+aliases(qwerty)"	};
-	xkb_types     { include "complete+numpad(mac)"	};
-	xkb_compat    { include "complete"	};
-	xkb_symbols   { include "pc+macintosh_vndr/us+inet(evdev)+ctrl(nocaps)+shift(both_capslock)+mysymbols(semicolon_to_control)"	};
-	xkb_geometry  { include "macintosh(macbook78)"	};
-};
-#+end_src
-**** Custom
-#+begin_src c :tangle (in-tangle-dir "xkb_custom/symbols/mysymbols")
-partial modifier_keys
-xkb_symbols "semicolon_to_control" {
-    key <AC10> { [ Control_R, colon ] };
-    modifier_map Control { <AC10> };
-};
 #+end_src
 ** Guix extra profiles
 :PROPERTIES:
@@ -1888,7 +1792,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;              (set-window-margins (selected-window) nil (if (cdr (window-margins))
 ;;                                                            nil 12))))
 
-;; Run this only when not on EXWM (probably not strictly necessary have this condition)
+;; I don't think I'll ever need this with Sway
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
 (map! "s-A" #'counsel-linux-app)
@@ -2010,10 +1914,6 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
            :repo "ryanprior/emacs-guix-packaging"
            :files (:defaults "snippets"))
   :pin "d843088252467db3c8a09de40ae9a62050196a0e")
-
-;; TODO these should probably be introduced by my exwm desktop environment org section or something
-(package! exwm :pin "833e5d89e7fc12e79766454ae9982cffeb7e4f5f")
-(package! desktop-environment :pin "2c3e0750c11485931f447ea82f80bc90ae07aeba")
 
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
@@ -2222,368 +2122,6 @@ Can be an integer to determine the exact padding."
 
 ;;; doom-nuclear-theme.el ends here
 #+end_src
-** Spartan :UI:
-:PROPERTIES:
-:tangle-dir+: /spartan
-:END:
-#+begin_src scheme :tangle (in-tangle-dir "core.scm") :noweb yes
-(define-module (ebullient home spartan core)
-  #:use-module (guix build-system trivial)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages bash) #:select (bash))
-  #:use-module ((gnu packages dunst) #:select (dunst))
-  #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages fonts) #:select (font-google-noto))
-  #:use-module ((gnu packages freedesktop) #:select (udiskie))
-  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  ;; #:use-module ((gnu packages gnome-xyz) #:select (papirus-icon-theme))
-  #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages pulseaudio) #:select (pasystray pavucontrol))
-  #:use-module ((gnu packages xorg) #:select (xhost xset))
-  #:use-module ((gnu packages xdisorg) #:select (redshift xss-lock xsettingsd))
-  #:use-module (ebullient home initialization core)
-  ;; #:use-module (ebullient packages dracula-theme)
-  #:use-module (ebullient utils))
-
-(define desktop-el
-  (computed-file
-   "desktop.el"
-   (with-imported-modules '((guix build utils))
-     #~(begin
-         (use-modules (guix build utils))
-         (copy-file #$(local-file "desktop.el") #$output)
-         ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
-         (substitute* #$output
-           (("(dunstctl|dunst)" all) (case (string->symbol all)
-                                       ((dunst) (string-append #$(file-append dunst "/bin/dunst")
-                                                               " -config " #$(local-file "dunstrc")))
-                                       ((dunstctl) #$(file-append dunst "/bin/dunstctl"))))
-           (("nm-applet") #$(file-append network-manager-applet "/bin/nm-applet"))
-           (("pasystray") #$(file-append pasystray "/bin/pasystray"))
-           (("redshift-gtk") (string-append #$redshift:gtk "/bin/redshift-gtk"))
-           (("udiskie") #$(file-append udiskie "/bin/udiskie")))))))
-
-(define startup-script
-  (computed-file
-   "startup-script.sh"
-   (with-imported-modules '((guix build utils))
-     #~(begin
-         (use-modules (guix build utils))
-         (copy-file #$(local-file "startup-script.sh") #$output)
-         (substitute* #$output
-           (("initialization\\.sh") #$(file-append initialization))
-           (("^xhost") #$(file-append xhost "/bin/xhost"))
-           (("^xsettingsd") (string-append #$(file-append xsettingsd "/bin/xsettingsd")
-                                           " --config=" #$(local-file "xsettingsd.conf")))
-           (("^xset") #$(file-append xset "/bin/xset"))
-           (("^xss-lock") #$(file-append xss-lock "/bin/xss-lock"))
-           (("slock") "/run/setuid-programs/slock")
-           (("dbus-launch") #$(file-append dbus "/bin/dbus-launch"))
-           ;; (("emacs") #$(file-append emacs "/bin/emacs")) ; TODO When this was a package I was going to change this with input-rewriting, will that still work?
-           (("emacs") "/home/pharcosyle/.guix-extra-profiles/bastille/bastille-6-link/bin/emacs") ; TODO hardcoded here temporarily
-           (("doom") "~/.config/emacs/bin/doom") ; TODO replace with reference to my eventual Emacs Doom package. I should be able to reverse the order of this substution and the emacs one too if the final path doesn't contain the "emacs" string.
-           (("desktop\\.el") #$desktop-el))
-         (patch-shebang #$output (list #$(file-append bash "/bin"))) ; TODO `bash-minimal' might be okay/preferable here
-         (chmod #$output #o555)))))
-
-(define-public spartan
-  (private-package
-   (name "spartan")
-   (build-system trivial-build-system)
-   ;; TODO much later, see if there's a way to make any of these not propagated.
-   (propagated-inputs
-    (list font-google-noto
-          ;; dracula-theme
-          ;; papirus-icon-theme
-          pavucontrol))
-   (arguments
-    `(#:modules ((guix build utils))
-      #:builder
-      ,#~(begin
-           (use-modules (guix build utils))
-           (let ((exe (string-append #$output "/bin/<<spartan-exe>>")))
-             (mkdir-p (dirname exe))
-             (symlink #$startup-script exe))
-           #t)))))
-#+end_src
-*** Startup script
-#+begin_src sh :tangle (in-tangle-dir "startup-script.sh")
-#!/bin/sh
-source initialization.sh
-xhost +SI:localuser:$USER
-export _JAVA_AWT_WM_NONREPARENTING=1
-xsettingsd &
-xset r rate 300 30 # TODO tweak?
-xss-lock -- slock &
-doom env
-exec dbus-launch --exit-with-session emacs -mm -l desktop.el # --debug-init
-#+end_src
-**** Xsettings :theming:
-#+begin_src conf :tangle (in-tangle-dir "xsettingsd.conf")
-# TODO these
-Net/EnableEventSounds 1
-Net/EnableInputFeedbackSounds 1
-
-Xft/Antialias 1
-Xft/Hinting 1
-Xft/HintStyle "hintfull"
-Xft/DPI 196608
-# Xft/DPI 184320 # TODO I do like the chromium interface size better at this dpi
-# Xft/DPI 225280
-
-# Xft/RGBA "rgb"
-
-# Xft/Autohint 0 # TODO donno if the casing is right or if it matters
-
-
-
-# Gtk/ToolbarIconSize "large"
-# Net/ApplicationPreferDarkTheme 1
-# Gtk/FontName "Cantarell 11"
-# Gtk/MonospaceFontName "Fira Mono 10"
-Gtk/CursorThemeName "Adwaita"
-Gtk/CursorThemeSize 48
-
-# TODO theme
-# - before doing any more wait until I've picked a browser and have installed more apps like e.g. VLC
-# - make sure my browser reads the device theme preference as dark
-# - if I don't like dracula try another theme or maybe patch it with my emacs colors (perhaps some other theme would be a better base?)
-# - look at dracula / other theme I choose in Gnome to see if it looks "right"
-# Net/ThemeName "Dracula"
-# TODO icon theme
-# Donno about these new papirus icons, daviwil and hlissner seem to like them but I'm not sure I do (the Files icons and particularly the systray ones, can I change just those?). Maybe they'll look better once Dracula is enabled? Maybe a wrong / lower-resolution version of the icons is being used and I need to set up where they're looked for?
-# Net/IconThemeName "Papirus-Dark"
-# seems like this is the default, at least for dracula
-# Gtk/DecorationLayout "menu:minimize,maximize,close"
-#+end_src
-*** Emacs config
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "desktop.el")
-:END:
-**** Header
-#+begin_src elisp
-;;; -*- lexical-binding: t; -*-
-;; TODO rename efs to biome
-;; TODO at end, make sure that all exwm mappings' functions are sharp quoted
-;; TODO ~setq!~ for exwm vars with custom setters? Can/should I do them in an ~after!~ block then?
-#+end_src
-**** Packages
-***** battery
-#+begin_src elisp
-(use-package! battery
-  :config
-  (display-battery-mode 1))
-#+end_src
-***** desktop-environment :bindings:path:
-#+begin_src elisp
-(use-package! desktop-environment
-  :after exwm
-  :config
-  (setq desktop-environment-volume-get-command "pactl list sinks | grep '^[[:space:]]Volume:' | head -n 1 | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'"
-        desktop-environment-volume-set-command "pactl set-sink-volume @DEFAULT_SINK@ %s"
-        desktop-environment-volume-toggle-command "pactl set-sink-mute @DEFAULT_SINK@ toggle" ; TODO at end: if whatever I end up doing here doesn't already display an echo aread messge then do it myself
-        desktop-environment-volume-normal-increment "+5%"
-        desktop-environment-volume-normal-decrement "-5%"
-        desktop-environment-keyboard-backlight-normal-increment 26
-        desktop-environment-keyboard-backlight-normal-decrement -26
-        desktop-environment-screenshot-directory "~/desktop") ; TODO I had this as `(or (getenv "XDG_DESKTOP_DIR") "~")' but that won't work, xdg user dirs aren't sourced. I could call the shell command `xdg-user-dir DESKTOP' or pass the value in.
-  ;; These are set into the exwm global keymap when the mode is enabled (this can be changed) perform modifications before doing so.
-  (map! :map desktop-environment-mode-map
-        "s-l" nil
-        "<XF86KbdBrightnessUp>" #'desktop-environment-keyboard-backlight-increment
-        "<XF86KbdBrightnessDown>" #'desktop-environment-keyboard-backlight-decrement
-        "<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "<print>"))
-        "S-<XF86LaunchB>" (lookup-key desktop-environment-mode-map (kbd "S-<print>")))
-  (desktop-environment-mode))
-#+end_src
-***** exwm :bindings:
-#+begin_src elisp
-(defun efs/run-in-background (command)
-  (let ((command-parts (split-string command "[ ]+")))
-    (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
-
-(defun efs/exwm-init-hook ()
-  (efs/run-in-background "dunst")
-  (efs/run-in-background "nm-applet")
-  (efs/run-in-background "pasystray")
-  (efs/run-in-background "redshift-gtk -l 47:-123")
-  (efs/run-in-background "udiskie -t"))
-
-(defun efs/exwm-update-class ()
-  (exwm-workspace-rename-buffer exwm-class-name))
-
-(defun efs/exwm-update-title ()
-  (exwm-workspace-rename-buffer
-   (pcase exwm-class-name
-     ("Chromium-browser" (format "Chromium: %s" exwm-title)) ; TODO get rid of preceding or trailing "Chromium"
-     (_ exwm-title))))
-
-(defun biome--shell-cmd (command)
-  (start-process-shell-command command nil command))
-
-(use-package! exwm
-  :config
-  ;; When window "class" updates, use it to set the buffer name
-  (add-hook 'exwm-update-class-hook #'efs/exwm-update-class)
-
-  ;; When window title updates, use it to set the buffer name
-  (add-hook 'exwm-update-title-hook #'efs/exwm-update-title)
-
-  ;; When EXWM starts up, do some extra configuration
-  (add-hook 'exwm-init-hook #'efs/exwm-init-hook)
-
-  ;; NOTE: Uncomment the following two options if you want window buffers
-  ;;       to be available on all workspaces!
-
-  ;; Automatically move EXWM buffer to current workspace when selected
-  (setq exwm-layout-show-all-buffers t)
-
-  ;; Display all EXWM buffers in every workspace buffer list
-  (setq exwm-workspace-show-all-buffers t)
-
-  ;; NOTE: Uncomment this option if you want to detach the minibuffer!
-  ;; Detach the minibuffer (show it with exwm-workspace-toggle-minibuffer)
-  ;;(setq exwm-workspace-minibuffer-position 'top)
-
-  ;; Load the system tray before exwm-init
-  (require 'exwm-systemtray)
-  (setq exwm-systemtray-height 32) ; daviwil says explicity setting a system tray height can help prevent issues with icons not showing up.
-  (setq exwm-systemtray-icon-gap 8)
-  (exwm-systemtray-enable)
-
-  ;; TODO might one or both of these fix chromium not being focused when I switch to it? What other effects might there be? Note that this doesn't seem to be problem on some other apps like gnome-terminal, perhaps there's I can set up an exwm local hook for chromium or something.
-  ;; Window focus should follow the mouse pointer
-  ;; (setq mouse-autoselect-window t
-  ;;       focus-follows-mouse t)
-
-  ;; These keys should always pass through to Emacs
-  (setq exwm-input-prefix-keys
-        '(?\C-x
-          ;; ?\C-u
-          ;; ?\C-h
-          ?\M-x
-          ?\M-`
-          ?\M-&
-          ?\M-:
-          ;; ?\C-\M-j  ;; Buffer list
-          ?\s-\ ; TODO I might want this in exwm global keys
-          ?\s-, ; TODO I might want this in exwm global keys
-          ))
-  ;; (setq exwm-input-prefix-keys nil)
-
-  ;; (setq exwm-input-simulation-keys
-  ;;         '(([?\C-b] . [left])
-  ;;           ([?\C-f] . [right])
-  ;;           ([?\C-p] . [up])
-  ;;           ([?\C-n] . [down])
-  ;;           ([?\C-a] . [home])
-  ;;           ([?\C-e] . [end])
-  ;;           ([?\M-v] . [prior])
-  ;;           ([?\C-v] . [next])
-  ;;           ([?\C-d] . [delete])
-  ;;           ([?\C-k] . [S-end delete])))
-  (setq exwm-input-simulation-keys
-        '(([?\s-c] . [C-c])))
-
-  ;; TODO might want to do some local simulation keys too
-
-  ;; TODO maybe find a way to alias localleader key to the commands in exwm-mode-map under C-c?
-  ;; TODO probably use `map!' instead of `define-key'
-  ;; (define-key exwm-mode-map [?\s-\M-q] 'exwm-input-send-next-key) ; TODO see if I can reverse the order of super and meta
-
-  ;; Set up global key bindings.  These always work, no matter the input state!
-  ;; Keep in mind that changing this list after EXWM initializes has no effect.
-  ;; TODO maybe setq! would work though?
-  (setq exwm-input-global-keys
-        `(([?\s-q] . exwm-reset)
-
-          ([?\s-Q] . exwm-input-release-keyboard)
-
-          ;; Move between windows
-          ([s-left] . windmove-left)
-          ([s-right] . windmove-right)
-          ([s-up] . windmove-up)
-          ([s-down] . windmove-down)
-
-          ([?\s-t] . evil-switch-to-windows-last-buffer)
-          ;; ([?\s-\ ] . doom-leader-map)
-
-          ;; Launch applications via shell command
-          ([?\s-&] . (lambda (command)
-                       (interactive (list (read-shell-command "$ ")))
-                       (biome--shell-cmd command)))
-
-          (,(kbd "<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close")))
-          (,(kbd "S-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl close-all")))
-          (,(kbd "C-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl history-pop")))
-          (,(kbd "M-<XF86LaunchA>") . ,(cmd! (biome--shell-cmd "dunstctl action")))))
-
-  ;; TODO why is exwm-input-set-key used like this, daviwil uses it in his dotfiles too. The docs say to only use it interactively.
-  (exwm-input-set-key (kbd "s-A") 'counsel-linux-app)
-
-
-  (add-hook 'exwm-mode-hook #'doom-mark-buffer-as-real-h)
-
-  ;; Copied from online, not super sure what it does but it makes me feel safer. "Allow persp-mode to restore window configurations involving exwm buffers by only changing names of visible buffers." https://github.com/hlissner/doom-emacs/pull/4004/files#issuecomment-703164464
-  (defun exwm--update-utf8-title-advice (oldfun id &optional force)
-    (when (get-buffer-window (exwm--id->buffer id))
-      (funcall oldfun id force)))
-  (advice-add #'exwm--update-utf8-title :around #'exwm--update-utf8-title-advice)
-
-
-  (exwm-enable))
-#+end_src
-****** Dunst :theming:
-#+begin_src conf :tangle (in-tangle-dir "dunstrc")
-[global]
-    geometry = "500x10-200+50"
-    transparency = 10
-    separator_color = frame
-    padding = 15
-    horizontal_padding = 15
-    text_icon_padding = 15
-    frame_width = 2
-    frame_color = "#89AAEB"
-    idle_threshold = 120
-    font = Cantarell 20 # TODO Depending on how I end up doing fonts, set this to a default variable-width font that picks up my system setting or change this to my preferred font
-    line_height = 2
-    markup = full
-    format = "<b>%s</b>\n%b"
-    show_age_threshold = 60
-    word_wrap = yes
-    icon_position = left
-    min_icon_size = 40
-    max_icon_size = 40
-    # icon_path = /usr/share/icons/Adwaita/96x96/status:/usr/share/icons/Adwaita/96x96/emblems # TODO should I add more paths or something?
-    # TODO browser = qutebrowser
-    corner_radius = 16
-    mouse_right_click = do_action
-
-[urgency_low]
-    background = "#1c1f26"
-    foreground = "#9ca0a4"
-    timeout = 10
-
-[urgency_normal]
-    background = "#1c1f26"
-    foreground = "#ffffff"
-    timeout = 10
-
-[urgency_critical]
-    background = "#900000"
-    foreground = "#ffffff"
-    frame_color = "#ff0000"
-    timeout = 0
-#+end_src
-***** time
-#+begin_src elisp
-(use-package! time
-  :config
-  (setq display-time-day-and-date t)
-  ;; (setq display-time-24hr-format t)
-  (display-time-mode 1))
-#+end_src
 ** WIP emacs
 *** doom-emacs-temp
 - TODO probably "export" the ~doom~ program to user profile
@@ -2631,66 +2169,6 @@ Gtk/CursorThemeSize 48
     (description synopsis)
     (home-page "https://github.com/hlissner/doom-emacs")
     (license license:expat)))
-#+end_src
-*** emacs-desktop-environment-temp
-#+begin_src scheme :tangle (in-tangle-dir "emacs-desktop-environment-temp.scm")
-;; (define-module (ebullient home emacs-desktop-environment-temp)
-;;   #:use-module (guix packages)
-;;   #:use-module ((gnu packages emacs-xyz) #:select (emacs-desktop-environment))
-;;   #:use-module ((gnu packages linux) #:select (brightnessctl))
-;;   #:use-module ((gnu packages music) #:select (playerctl))
-;;   #:use-module ((gnu packages xdisorg) #:select (scrot)))
-
-;; (define-public emacs-desktop-environment-temp
-;;   (package (inherit emacs-desktop-environment)
-;;     (inputs
-;;      `(,@(package-inputs emacs-desktop-environment) ; Just in case (there aren't any inputs at the time of this writing)
-;;        ("brightnessctl" ,brightnessctl)
-;;        ("playerctl" ,playerctl)
-;;        ("scrot" ,scrot)))
-;;     (arguments
-;;     '(#:phases
-;;       (modify-phases %standard-phases
-;;         (add-after 'unpack 'patch-executables
-;;           (lambda* (#:key inputs #:allow-other-keys)
-;;             (let ((cmd (lambda (input)
-;;                          (string-append (assoc-ref inputs input) "/bin/" input))))
-;;               (substitute* "desktop-environment.el"
-;;                 (("brightnessctl") (cmd "brightnessctl"))
-;;                 (("playerctl") (cmd "playerctl"))
-;;                 (("scrot") (cmd "scrot"))))
-;;             #t)))))))
-
-(define-module (ebullient home emacs-desktop-environment-temp)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module (guix build-system trivial)
-  #:use-module ((gnu packages linux) #:select (brightnessctl))
-  #:use-module ((gnu packages music) #:select (playerctl))
-  #:use-module ((gnu packages xdisorg) #:select (scrot)))
-
-(define-public emacs-desktop-environment-temp
-  (package
-    (name "emacs-desktop-environment-temp")
-    (version "0")
-    (source #f)
-    (propagated-inputs
-     (list brightnessctl playerctl scrot))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       ,#~(begin
-            (use-modules (guix build utils))
-            (mkdir-p (string-append #$output "/qwer"))
-            (with-output-to-file (string-append #$output "/qwer/qwer.txt")
-              (lambda _
-                (display "qwerrrrrrr")))
-            #t)))
-    (synopsis #f)
-    (description synopsis)
-    (home-page #f)
-    (license #f)))
 #+end_src
 *** COMMENT Emacs Application Framework
 #+begin_src scheme :tangle (in-tangle-dir "emacs-application-framework.scm")
