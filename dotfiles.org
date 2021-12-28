@@ -1380,7 +1380,8 @@ flatpak install --user flathub us.zoom.Zoom
       "s-v" #'yank
       "s-s" #'save-buffer
       "s-x" #'execute-extended-command
-      :v "s-x" #'kill-region
+      ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
+      ;; :v "s-x" #'kill-region
       "s-/" (cmd! (save-excursion (comment-line 1)))
       :n "s-/" #'evilnc-comment-or-uncomment-lines
       :v "s-/" #'evilnc-comment-operator
