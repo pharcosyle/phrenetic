@@ -1102,7 +1102,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
 ;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
 (specifications->manifest
- '("emacs-pgtk-native-comp"))
+ '("emacs-29-pgtk-native-comp"))
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("bastille")>>"
@@ -2309,6 +2309,25 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
       (home-page "https://github.com/dracula/gtk")
       (synopsis "A flat and light theme with a modern look")
       (description synopsis))))
+#+end_src
+** Emacs 29 with pgtk/nativecomp
+#+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
+(define-module (ebullient packages emacs)
+  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
+  #:use-module ((gnu packages gcc) #:select (gcc-11)))
+
+(define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
+(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
+
+(define-public emacs-29-pgtk-native-comp
+  (emacs-from-git
+   (emacs-with-native-comp emacs-next-pgtk gcc-11 'full-aot)
+   #:pkg-name "emacs-29-pgtk-native-comp"
+   #:pkg-version "29.0.50"
+   #:pkg-revision "0"
+   #:git-repo "https://git.savannah.gnu.org/git/emacs.git"
+   #:git-commit "b88024ad1aa0c2e75b407634038050a653fdb64b"
+   #:checksum "0scndcivdmxb7ndasqx3icmz75kxgq1gmyvy0bidcl145ry4dp0q"))
 #+end_src
 * Utils
 :PROPERTIES:
