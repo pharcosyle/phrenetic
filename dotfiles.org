@@ -732,6 +732,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (gnu services shepherd)
   #:use-module (rde features)
   #:use-module ((rde features linux) #:select (feature-pipewire))
+  #:use-module ((rde features wm) #:select (feature-sway))
   #:use-module (ebullient utils)
   #:export (pipewire-services
             gammastep-service-type
@@ -763,6 +764,18 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define pipewire-services
   (update-pipewire-shepherd-daemons
    ((feature-home-services-getter (feature-pipewire)) (rde-config))))
+#+end_src
+*** Sway
+#+begin_src scheme
+(define sway-services
+  ((feature-home-services-getter
+    (feature-sway #:xwayland? #t
+                  #:sway-mod 'Mod1
+                  #:extra-config
+                  ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
+                  ;; `((include ,(local-file "./config/sway/config")))
+                  `((include "/home/pharcosyle/projects/dotfiles/config"))))
+   (rde-config)))
 #+end_src
 *** "Apps" or "User daemons" or something
 **** Gammastep
@@ -826,7 +839,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 
   #:use-module ((rde features shells) #:select (feature-zsh))
-  #:use-module ((rde features wm) #:select (feature-sway))
 
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
@@ -957,14 +969,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       ;;                       "git@git.sr.ht:~abcdw/rde"))))
       )
      pipewire-services
-     ((feature-home-services-getter
-       (feature-sway #:xwayland? #t
-                     #:sway-mod 'Mod1
-                     #:extra-config
-                     ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
-                     ;; `((include ,(local-file "./config/sway/config")))
-                     `((include "/home/pharcosyle/projects/dotfiles/config"))))
-      (rde-config))
+     sway-services
 
      (list
       (service gammastep-service-type)
