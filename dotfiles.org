@@ -738,23 +738,29 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 *** Pipewire
 #+begin_src scheme
-(define (remove-dbus-home-req services)
+(define (update-pipewire-shepherd-daemons services)
   (update-services*
    services
    (lambda (svc)
      (eq? (-> svc service-kind service-type-name) 'pipewire-add-shepherd-daemons))
    (lambda (shepherd-services)
-     (update-list
-      shepherd-services
-      (lambda (svc)
-        (equal? (shepherd-service-provision svc) '(pipewire)))
-      (lambda (svc)
-        (shepherd-service
-         (inherit svc)
-         (requirement '())))))))
+     (as-> shepherd-services $
+       (map (lambda (svc)
+              (shepherd-service
+               (inherit svc)
+               (auto-start? #f)))
+            $)
+       (update-list
+        $
+        (lambda (svc)
+          (equal? (shepherd-service-provision svc) '(pipewire)))
+        (lambda (svc)
+          (shepherd-service
+           (inherit svc)
+           (requirement '()))))))))
 
 (define pipewire-services
-  (remove-dbus-home-req
+  (update-pipewire-shepherd-daemons
    ((feature-home-services-getter (feature-pipewire)) (rde-config))))
 #+end_src
 *** "Apps" or "User daemons" or something
@@ -766,7 +772,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
     (provision '(gammastep))
     (start #~(make-forkexec-constructor
               (list #$(file-append gammastep "/bin/gammastep-indicator"))))
-    (stop #~(make-kill-destructor)))))
+    (stop #~(make-kill-destructor))
+    (auto-start? #f))))
 
 (define gammastep-service-type
   (service-type (name 'home-gammastep)
@@ -784,7 +791,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
     (provision '(udiskie))
     (start #~(make-forkexec-constructor
               (list #$(file-append udiskie "/bin/udiskie --tray"))))
-    (stop #~(make-kill-destructor)))))
+    (stop #~(make-kill-destructor))
+    (auto-start? #f))))
 
 (define udiskie-service-type
   (service-type (name 'home-udiskie)
