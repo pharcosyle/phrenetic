@@ -727,6 +727,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   ;; #:use-module (gnu home services)
   #:use-module (gnu home services shepherd)
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep))
   #:use-module (gnu services)
   ;; #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
@@ -737,6 +738,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (pipewire-services
             gammastep-service-type
             udiskie-service-type))
+
+(define serialize-posix-env-vars (@@ (gnu home-services shells) serialize-posix-env-vars))
 #+end_src
 *** Pipewire
 #+begin_src scheme
@@ -767,15 +770,37 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 *** Sway
 #+begin_src scheme
+(define (sway-env-vars env-vars)
+  (simple-service 'set-sway-env-vars
+                  home-bash-service-type
+                  (home-bash-extension
+                   (bash-profile
+                    (list "if [[ \"$DESKTOP_SESSION\" = \"\" || \"$DESKTOP_SESSION\" = \"sway\" ]] ; then"
+                          "\n" (serialize-posix-env-vars #f env-vars) "\n"
+                          "fi")))))
+
+(define (conditionalize-sway-env-vars services)
+  (define env-vars)
+  (as-> services $
+    (update-services*
+     $
+     (lambda (svc)
+       (eq? (-> svc service-kind service-type-name) 'set-wayland-specific-env-vars))
+     (lambda (vars)
+       (set! env-vars vars)
+       '()))
+    (cons* (sway-env-vars env-vars) $)))
+
 (define sway-services
-  ((feature-home-services-getter
-    (feature-sway #:xwayland? #t
-                  #:sway-mod 'Mod1
-                  #:extra-config
-                  ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
-                  ;; `((include ,(local-file "./config/sway/config")))
-                  `((include "/home/pharcosyle/projects/dotfiles/config"))))
-   (rde-config)))
+  (conditionalize-sway-env-vars
+   ((feature-home-services-getter
+     (feature-sway #:xwayland? #t
+                   #:sway-mod 'Mod1
+                   #:extra-config
+                   ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
+                   ;; `((include ,(local-file "./config/sway/config")))
+                   `((include "/home/pharcosyle/projects/dotfiles/config"))))
+    (rde-config))))
 #+end_src
 *** "Apps" or "User daemons" or something
 **** Gammastep
