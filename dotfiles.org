@@ -1897,6 +1897,8 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
 
 (package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd")
+
+(package! code-review :disable t) ; REVIEW Breaks stuff after I updated to emacs 29 latest
 #+end_src
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
