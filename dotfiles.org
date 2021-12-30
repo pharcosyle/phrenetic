@@ -1016,7 +1016,9 @@ done
 #+end_src
 **** Load Nix environment
 #+begin_src sh
-. /run/current-system/profile/etc/profile.d/nix.sh
+if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
+  . /run/current-system/profile/etc/profile.d/nix.sh
+fi
 #+end_src
 **** Make Flatpak apps visible
 #+begin_src sh
