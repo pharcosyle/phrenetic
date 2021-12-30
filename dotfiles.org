@@ -757,9 +757,28 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   (remove-dbus-home-req
    ((feature-home-services-getter (feature-pipewire)) (rde-config))))
 #+end_src
-*** Udiskie
+*** "Apps" or "User daemons" or something
+**** Gammastep
 #+begin_src scheme
-(define (udiskie-shepherd-service config)
+(define (gammastep-shepherd-service _)
+  (list
+   (shepherd-service
+    (provision '(gammastep))
+    (start #~(make-forkexec-constructor
+              (list #$(file-append gammastep "/bin/gammastep-indicator"))))
+    (stop #~(make-kill-destructor)))))
+
+(define gammastep-service-type
+  (service-type (name 'home-gammastep)
+                (extensions
+                 (list (service-extension
+                        home-shepherd-service-type
+                        gammastep-shepherd-service)))
+                (default-value #f)))
+#+end_src
+**** Udiskie
+#+begin_src scheme
+(define (udiskie-shepherd-service _)
   (list
    (shepherd-service
     (provision '(udiskie))
