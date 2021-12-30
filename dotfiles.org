@@ -734,6 +734,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((rde features linux) #:select (feature-pipewire))
   #:use-module (ebullient utils)
   #:export (pipewire-services
+            gammastep-service-type
             udiskie-service-type))
 #+end_src
 *** Pipewire
@@ -965,9 +966,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                      `((include "/home/pharcosyle/projects/dotfiles/config"))))
       (rde-config))
 
-     ;; (list
-     ;;  (service udiskie-service-type))
-     ))))
+     (list
+      (service gammastep-service-type)
+      (service udiskie-service-type))))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
