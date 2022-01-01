@@ -4,8 +4,17 @@
 exec herd start pipewire
 exec herd start wireplumber
 exec herd start pipewire-pulse
-exec herd start gammastep
-exec herd start udiskie
+# exec herd start gammastep
+# exec herd start udiskie
+exec nm-applet --indicator
+# exec gammastep-indicator -l 44:-123
+exec udiskie --tray
+
+
+
+bindsym $mod+comma exec killall -SIGUSR1 waybar
+
+
 
 # or input <identifier>
 input "type:keyboard" {

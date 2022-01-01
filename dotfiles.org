@@ -691,8 +691,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system hosts frostfire)
-  #:use-module (ebullient system base-os)
-  #:use-module (ebullient utils))
+  #:use-module (ebullient system base-os))
 
 (define-public os
   (base-os #:host-name "frostfire"
@@ -812,7 +811,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    (shepherd-service
     (provision '(gammastep))
     (start #~(make-forkexec-constructor
-              (list #$(file-append gammastep "/bin/gammastep-indicator"))))
+              (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")))
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
