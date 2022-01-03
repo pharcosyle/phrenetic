@@ -1,11 +1,17 @@
 # -*- mode: i3wm-config -*-
 
+# TODO gexp and put this in a more generic location (but ideally make it run there like exec_always, that is, on every sway reload)
+# exec_always import-gsettings
+exec_always ~/projects/dotfiles/import-gsettings
+
 # TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
 exec herd start pipewire
 exec herd start wireplumber
 exec herd start pipewire-pulse
+
 # exec herd start gammastep
 # exec herd start udiskie
+
 exec nm-applet --indicator
 # exec gammastep-indicator -l 44:-123
 exec udiskie --tray
