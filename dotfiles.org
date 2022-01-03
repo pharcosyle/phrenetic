@@ -2329,38 +2329,6 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 :PROPERTIES:
 :tangle-dir+: /ebullient/packages
 :END:
-** Dracula Theme
-#+begin_src scheme :tangle (in-tangle-dir "dracula-theme.scm")
-(define-module (ebullient packages dracula-theme)
-  #:use-module (guix git-download)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages gnome-xyz) #:select (nordic-theme)))
-
-(define-public dracula-theme
-  (let ((commit "ceec1c102c5e16810a58d04f08dba0c4116f61dd")
-        (revision "0"))
-    (package (inherit nordic-theme)
-      (name "dracula-theme")
-      (version (git-version "2.0" revision commit))
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url "https://github.com/dracula/gtk")
-               (commit commit)))
-         (sha256
-          (base32
-           "1rbwyhipv086b58gc8fw4r0y5zg79rv2i9lx02b5pg0khgf61mf2"))))
-      ;; TODO ideally don't copypasta the `#:exclude' part from nordic-theme. Then again maybe don't bother inheriting at all (just add the `build-system' and `license' fields)
-      (arguments
-       `(#:install-plan
-         `(("." "share/themes/Dracula"
-            #:exclude ("README.md" "LICENSE" "Art/" "package.json"
-                       "package-lock.json" "Gulpfile.js")))))
-      (home-page "https://github.com/dracula/gtk")
-      (synopsis "A flat and light theme with a modern look")
-      (description synopsis))))
-#+end_src
 ** Emacs 29 with pgtk/nativecomp
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
 (define-module (ebullient packages emacs)
