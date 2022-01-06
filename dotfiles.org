@@ -1319,6 +1319,8 @@ flatpak install --user flathub us.zoom.Zoom
 **** Requires
 #+begin_src elisp
 (use-package! dash)
+(use-package! s)
+(use-package! rx)
 #+end_src
 **** Personal Info :user:
 #+begin_src elisp :noweb yes
@@ -1351,6 +1353,21 @@ flatpak install --user flathub us.zoom.Zoom
 ;; (setq-default cursor-in-non-selected-windows t)
 #+end_src
 **** Doom
+#+begin_src emacs-lisp
+(add-hook! 'doom-real-buffer-functions
+  (defun biome-new-buffer-p (buf)
+    (s-matches?
+     (rx bol "*new"
+         (* "<" (+ digit) ">")
+         "*" eol)
+     (buffer-name buf)))
+  (defun biome-org-src-edit-buffer-p (buf)
+    (s-matches?
+     (rx bol "*Org Src "
+         (+ anything)
+         "*" eol)
+     (buffer-name buf))))
+#+end_src
 ***** UI :UI:theming:
 #+begin_src elisp
 (let ((font (font-spec :family "Source Code Pro Medium" :size 12)))
