@@ -818,9 +818,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                  (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")
                  #:environment-variables
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)
-                 #:log-file
-                 "/home/pharcosyle/desktop/gammastep_log"))))
+                 (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
     (respawn? #f)
     (auto-start? #f))))
@@ -844,9 +842,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                  (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
                  #:environment-variables
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)
-                 #:log-file
-                 "/home/pharcosyle/desktop/nm_log"))))
+                 (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
     (respawn? #f)
     (auto-start? #f))))
@@ -874,9 +870,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                        )
                  #:environment-variables
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)
-                 #:log-file
-                 "/home/pharcosyle/desktop/udiskie_log"))))
+                 (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
     (respawn? #f)
     (auto-start? #f))))
