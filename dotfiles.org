@@ -1478,135 +1478,10 @@ flatpak install --user flathub us.zoom.Zoom
         "s" #'org-gcal-sync
         "p" #'org-gcal-post-at-point)))
 #+end_src
-**** Packages
-***** all-the-icons-dired
-#+begin_src elisp
-(after! all-the-icons-dired
-  (setq all-the-icons-dired-monochrome nil))
-#+end_src
-***** avy
-#+begin_src elisp
-;; REVIEW Trying out not having this so I can use avy dispatch commands.
-;; (after! avy
-;;   (setq avy-single-candidate-jump t))
-#+end_src
-***** clojure :lang:clojure:bindings:
-#+begin_src elisp
-(use-package! clojure-mode
-  :defer t
-  :init
-  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; TODO temporary binding
-  :config
-  (set-ligatures! 'clojure-mode :lambda "fn"))
-#+end_src
-***** cider :lang:clojure:persistence:
-#+begin_src elisp
-(after! cider
-  (setq cider-repl-history-size biome--very-big
-        cider-print-options '(("length" 100))))
-
-;; TODO make sure this is still working after nesting in `after!'
-(after! cider-repl
-  (add-hook! 'cider-repl-mode-hook
-             #'goto-address-prog-mode
-             #'highlight-numbers-mode
-             #'rainbow-delimiters-mode
-             #'yas-minor-mode-on
-             #'biome-sp-strict-h))
-#+end_src
-***** clj-refactor :lang:clojure:bindings:
-#+begin_src elisp
-(after! clj-refactor
-  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
-#+end_src
-***** counsel :completion:UI:
-#+begin_src elisp
-(after! counsel
-  (setq counsel-yank-pop-separator "\n--------------------------------\n"))
-#+end_src
-***** doom-modeline :UI:
-#+begin_src elisp
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-major-mode-icon t)
-  (setq doom-modeline-persp-name t))
-#+end_src
-***** doom-themes :UI:
-#+begin_src elisp
-;; TODO get rid of this if I'm not going to try it out again
-;; (after! doom-themes
-;;   (doom-themes-visual-bell-config))
-#+end_src
-***** emacs-lisp :lang:
-#+begin_src elisp
-(after! elisp-mode
-  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
-#+end_src
-***** emojify :UI:
-#+begin_src elisp
-(after! emojify
-  (setq emojify-display-style 'unicode))
-#+end_src
-***** eshell :persistence:
-#+begin_src elisp
-(after! eshell
-  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
-#+end_src
-***** evil :UI:theming:
-#+begin_src elisp
-(after! evil
-  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
-#+end_src
-***** evil-org :org:bindings:
-#+begin_src elisp
-(after! evil-org
-  (map! :map evil-org-mode-map
-        :nv "C-j" #'outline-forward-same-level
-        :nv "C-k" #'outline-backward-same-level))
-#+end_src
-***** evil-multiedit
-#+begin_src elisp
-(after! evil-multiedit
-  (setq evil-multiedit-follow-matches t))
-#+end_src
-***** expand-region :bindings:
-#+begin_src elisp
-(use-package! expand-region
-  :defer t
-  :init
-  (map! :nv "s-e" #'er/expand-region
-        :nv "s-E" #'er/contract-region)
-  :config
-  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
-  (defadvice! biome--quit-expand-region-a (&rest _)
-    "Properly abort an expand-region region."
-    :before '(evil-escape doom/escape)
-    (when (memq last-command '(er/expand-region er/contract-region))
-      (er/contract-region 0))))
-#+end_src
-***** geiser :persistence:path:guix:
-#+begin_src elisp
-(use-package! geiser
-  :defer t
-  :init
-  ;; It seems like it would be okay to not set variables in `:init' but hlissner does it this way for the Geiser package so I will too.
-  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
-  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
-#+end_src
-***** highlight-indent-guides :lang:prog_mode:UI:
-#+begin_src elisp
-(use-package! highlight-indent-guides
-  :defer t
-  :init
-  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-  (remove-hook! '(prog-mode-hook
-                  text-mode-hook
-                  conf-mode-hook)
-    #'highlight-indent-guides-mode))
-#+end_src
-***** ivy :completion:bindings:UI:
+**** Modules
+***** Completion
+****** Ivy
+******* ivy :bindings:UI:
 #+begin_src elisp
 (after! ivy
   (setq +ivy-buffer-preview t
@@ -1624,7 +1499,7 @@ flatpak install --user flathub us.zoom.Zoom
         "C-k" #'previous-line
         "s-D" #'ivy-reverse-i-search-kill)) ; TODO temporary binding
 #+end_src
-***** ivy-hydra :completion:bindings:
+******* ivy-hydra :bindings:
 #+begin_src elisp
 (after! ivy-hydra
   (defhydra+ hydra-ivy ()
@@ -1633,7 +1508,56 @@ flatpak install --user flathub us.zoom.Zoom
     ("u" ivy-unmark)
     ("t" ivy-toggle-marks)))
 #+end_src
-***** lispy :lisp:
+******* counsel :UI:hidden:
+#+begin_src elisp
+(after! counsel
+  (setq counsel-find-file-ignore-regexp nil) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed. ; TODO I just noticed this affects `counsel-file-jump' which I don't want, e.g. listing every git object (but might not matter enough to fix).
+  (setq counsel-yank-pop-separator "\n--------------------------------\n"))
+#+end_src
+***** UI
+****** Doom
+******* doom-themes
+- TODO get rid of this if I'm not going to try it out again
+#+begin_src elisp
+;; (after! doom-themes
+;;   (doom-themes-visual-bell-config))
+#+end_src
+****** Modeline
+******* doom-modeline
+#+begin_src elisp
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-persp-name t))
+#+end_src
+****** Indent Guides
+******* highlight-indent-guides :prog_mode:
+#+begin_src elisp
+(use-package! highlight-indent-guides
+  :defer t
+  :init
+  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+  (remove-hook! '(prog-mode-hook
+                  text-mode-hook
+                  conf-mode-hook)
+    #'highlight-indent-guides-mode))
+#+end_src
+***** Editor
+****** Evil
+******* evil :UI:theming:
+#+begin_src elisp
+(after! evil
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
+#+end_src
+****** Multiple Cursors
+******* evil-multiedit :evil:
+#+begin_src elisp
+(after! evil-multiedit
+  (setq evil-multiedit-follow-matches t))
+#+end_src
+****** Lisp
+******* lispy
 #+begin_src elisp
 (use-package! lispy
   :defer t
@@ -1652,7 +1576,7 @@ flatpak install --user flathub us.zoom.Zoom
     #'lispy-mode)
   (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 #+end_src
-***** lispyville :lisp:lang:prog_mode:bindings:
+******* lispyville :prog_mode:bindings:
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
@@ -1674,22 +1598,77 @@ flatpak install --user flathub us.zoom.Zoom
         (:prefix "s-C-;"
          "R" #'lispyville-raise-list)))
 #+end_src
-***** magit :UI:
+***** Emacs
+****** Dired
+******* all-the-icons-dired :UI:
+#+begin_src elisp
+(after! all-the-icons-dired
+  (setq all-the-icons-dired-monochrome nil))
+#+end_src
+******* dired-x :UI:hidden:
+#+begin_src elisp
+(use-package! dired-x
+  :defer t
+  :init
+  ;; Don't hide things by default. I can't just remove the Doom module's hook or its whole dired-x `use-package!' won't get run, so instead add another hook for `dired-omit-mode' at the end of the hooks list to toggle it off.
+  (add-hook! 'dired-mode-hook :append
+    (defun biome-disable-dired-omit-mode-h ()
+      (when dired-omit-mode
+        (dired-omit-mode -1)))))
+#+end_src
+***** Term
+****** eshell :persistence:
+#+begin_src elisp
+(after! eshell
+  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+#+end_src
+***** Tools
+****** Magit
+******* magit :UI:
 #+begin_src elisp
 (after! magit
   (setq git-commit-style-convention-checks '(non-empty-second-line))
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 #+end_src
-***** man :guix:
-#+begin_src elisp :noweb yes
-(after! man
-  (prependq! Man-header-file-path
-             (-concat (-map (lambda (p)
-                              (concat p "/include"))
-                            '(<<guix-extra-profiles>>))
-                      '("<<guix-home-profile>>/include"))))
+***** Lang
+****** Clojure
+******* clojure :bindings:
+#+begin_src elisp
+(use-package! clojure-mode
+  :defer t
+  :init
+  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; TODO temporary binding
+  :config
+  (set-ligatures! 'clojure-mode :lambda "fn"))
 #+end_src
-***** org :org:UI:path:
+******* cider :persistence:
+#+begin_src elisp
+(after! cider
+  (setq cider-repl-history-size biome--very-big
+        cider-print-options '(("length" 100))))
+
+;; TODO make sure this is still working after nesting in `after!'
+(after! cider-repl
+  (add-hook! 'cider-repl-mode-hook
+             #'goto-address-prog-mode
+             #'highlight-numbers-mode
+             #'rainbow-delimiters-mode
+             #'yas-minor-mode-on
+             #'biome-sp-strict-h))
+#+end_src
+******* clj-refactor :bindings:
+#+begin_src elisp
+(after! clj-refactor
+  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
+#+end_src
+****** Emacs Lisp
+******* emacs-lisp
+#+begin_src elisp
+(after! elisp-mode
+  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
+#+end_src
+****** Org
+******* org :UI:path:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -1704,7 +1683,43 @@ flatpak install --user flathub us.zoom.Zoom
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-***** org-gcal :user:secret:persistence:path:
+******* org-persist :persistence:path:
+#+begin_src elisp
+(use-package! org-persist
+  :defer t
+  :init
+  (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
+#+end_src
+******* ob
+#+begin_src elisp
+(after! ob
+  (setq org-babel-noweb-error-all-langs t))
+#+end_src
+******* evil-org :evil:bindings:
+#+begin_src elisp
+(after! evil-org
+  (map! :map evil-org-mode-map
+        :nv "C-j" #'outline-forward-same-level
+        :nv "C-k" #'outline-backward-same-level))
+#+end_src
+****** Scheme
+******* scheme
+#+begin_src elisp
+(after! scheme
+  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+#+end_src
+******* geiser :persistence:path:guix:
+Using ~:init~ to configure variables (as opposed to ~:config~) but hlissner does it this way for the Geiser package so I will too.
+#+begin_src elisp
+(use-package! geiser
+  :defer t
+  :init
+  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
+  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
+#+end_src
+***** App
+****** Calendar
+******* org-gcal :org:user:secret:persistence:path:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -1714,33 +1729,115 @@ flatpak install --user flathub us.zoom.Zoom
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
-***** org-persist :persistence:path:
+***** Config
+****** expand-region :bindings:
 #+begin_src elisp
-(use-package! org-persist
+(use-package! expand-region
   :defer t
   :init
-  (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
+  (map! :nv "s-e" #'er/expand-region
+        :nv "s-E" #'er/contract-region)
+  :config
+  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
+  (defadvice! biome--quit-expand-region-a (&rest _)
+    "Properly abort an expand-region region."
+    :before '(evil-escape doom/escape)
+    (when (memq last-command '(er/expand-region er/contract-region))
+      (er/contract-region 0))))
 #+end_src
-***** paren :UI:
+***** Guix
+****** Emacs integration
+******* man
+#+begin_src elisp :noweb yes
+(after! man
+  (prependq! Man-header-file-path
+             (-concat (-map (lambda (p)
+                              (concat p "/include"))
+                            '(<<guix-extra-profiles>>))
+                      '("<<guix-home-profile>>/include"))))
+#+end_src
+******* tramp :path:
+Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
+#+begin_src elisp :noweb yes
+(after! tramp
+  (prependq! tramp-remote-path
+             (-concat (-map (lambda (p)
+                              (concat p "/bin"))
+                            '(<<guix-extra-profiles>>))
+                      '("<<guix-home-profile>>/bin"
+                        "~/.config/guix/current/bin"
+                        "~/.guix-profile/bin"
+                        "~/.guix-profile/sbin"
+                        "/run/current-system/profile/bin"
+                        "/run/current-system/profile/sbin"))))
+#+end_src
+****** Guix.el
+******* guix :UI:
+#+begin_src elisp
+(after! guix
+  (set-popup-rules!
+    '(("^\\*Guix" :height 0.5))))
+#+end_src
+******* guix-devel :scheme:
+#+begin_src elisp
+(use-package! guix-devel
+  :hook (scheme-mode . guix-devel-mode))
+#+end_src
+******* guix-popup :bindings:
+#+begin_src elisp
+(use-package! guix-popup
+  :defer t
+  :init
+  (map! :leader
+        "a" #'guix))  ; TODO temporary binding?
+#+end_src
+******* guix-prettify :UI:
+#+begin_src elisp
+(use-package! guix-prettify
+  :hook (doom-first-buffer . global-guix-prettify-mode))
+#+end_src
+****** Editing
+- TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
+#+begin_src elisp
+;; (let ((guix-source-path "???/guix"))
+
+;;   (after! yasnippet
+;;     (add-to-list 'yas-snippet-dirs (concat guix-source-path "/etc/snippets")))
+
+;;   (after! skeleton
+;;     (load-file (concat guix-source-path "/etc/copyright.el")))
+
+;;   (after! copyright
+;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
+#+end_src
+***** ?
+****** avy
+#+begin_src elisp
+;; REVIEW Trying out not having this so I can use avy dispatch commands.
+;; (after! avy
+;;   (setq avy-single-candidate-jump t))
+#+end_src
+****** paren :UI:
 #+begin_src elisp
 (after! paren
   (setq! show-paren-delay 0))
 #+end_src
-***** prog-mode :lang:prog_mode:
+****** prog-mode :prog_mode:
 #+begin_src elisp
 (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 #+end_src
-***** rainbow-delimiters :UI:theming:
+****** rainbow-delimiters :UI:theming:
 #+begin_src elisp
 (after! rainbow-delimiters
   (setq rainbow-delimiters-max-face-count 8)) ; TODO make sure this is working and I didn't need to put it in an `:init'`or anything
 #+end_src
-***** recentf :persistence:
+****** recentf :persistence:
 #+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
 #+end_src
-***** smartparens :bindings:
+****** smartparens :bindings:
 #+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
@@ -1767,7 +1864,7 @@ flatpak install --user flathub us.zoom.Zoom
          "c" #'sp-convolute-sexp
          "w" #'sp-rewrap-sexp)))
 #+end_src
-****** Hook :bindings:
+******* Hook :bindings:
 #+begin_src elisp
 (defun biome-sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
@@ -1776,59 +1873,46 @@ flatpak install --user flathub us.zoom.Zoom
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
-***** tldr :persistence:path:
+****** tldr :persistence:path:
 #+begin_src elisp
 (use-package! tldr
   :defer t
   :config
   (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 #+end_src
-***** tramp :path:guix:
-Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
-#+begin_src elisp :noweb yes
-(after! tramp
-  (prependq! tramp-remote-path
-             (-concat (-map (lambda (p)
-                              (concat p "/bin"))
-                            '(<<guix-extra-profiles>>))
-                      '("<<guix-home-profile>>/bin"
-                        "~/.config/guix/current/bin"
-                        "~/.guix-profile/bin"
-                        "~/.guix-profile/sbin"
-                        "/run/current-system/profile/bin"
-                        "/run/current-system/profile/sbin"))))
-#+end_src
-***** transient :persistence:
+****** transient :persistence:
+- TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
 #+begin_src elisp
 (after! transient
   (setq transient-history-limit biome--very-big))
 #+end_src
-***** undo-fu
+****** undo-fu
 #+begin_src elisp
 (after! undo-fu
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
-***** undo-tree :UI:
-- TODO am I commenting code, doing notangle, or using the org ~COMMENT~ keyword (https://orgmode.org/manual/Comment-Lines.html)?
+****** undo-tree :UI:
 #+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 #+end_src
-**** Guix System :guix:
-- TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
+****** emojify :UI:
 #+begin_src elisp
-;; (let ((guix-source-path "???/guix"))
-
-;;   (after! yasnippet
-;;     (add-to-list 'yas-snippet-dirs (concat guix-source-path "/etc/snippets")))
-
-;;   (after! skeleton
-;;     (load-file (concat guix-source-path "/etc/copyright.el")))
-
-;;   (after! copyright
-;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
+(after! emojify
+  (setq emojify-display-style 'unicode))
 #+end_src
 **** Projects
+***** Dotfiles :path:
+#+begin_src elisp
+(load "~/projects/dotfiles/meta.el")
+
+(pushnew! safe-local-variable-values
+          '(eval . (with-eval-after-load 'geiser-guile
+                     (let ((root-dir
+                            (file-name-directory
+                             (locate-dominating-file default-directory ".dir-locals.el"))))
+                       (make-local-variable 'geiser-guile-load-path)
+                       (add-to-list 'geiser-guile-load-path root-dir)))))
 ***** Hyperdrive :path:
 #+begin_src elisp
 (pushnew! safe-local-variable-values
@@ -1864,6 +1948,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; (after! org-gcal
 ;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
 #+end_src
+#+end_src
 **** WIP
 #+begin_src elisp
 (after! org
@@ -1875,7 +1960,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;              (set-window-margins (selected-window) nil (if (cdr (window-margins))
 ;;                                                            nil 12))))
 
-;; I don't think I'll ever need this with Sway
+;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
 (map! "s-A" #'counsel-linux-app)
@@ -1897,11 +1982,8 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; TODO Maybe do this if popping to the side is too annoying
 ;; (after! geiser-repl
 ;;   (setq geiser-repl-use-other-window nil))
-
-(after! ob
-  (setq org-babel-noweb-error-all-langs t))
 #+end_src
-***** Dotfiles auto-tangle :path:
+***** dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
 ;; (setq biome--dotfiles-dir "~/projects/dotfiles")
@@ -1915,72 +1997,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;           (let ((org-confirm-babel-evaluate nil))
 ;;             (org-babel-tangle)))))))
 #+end_src
-***** scheme :lang:
+***** org-tanglesync
 #+begin_src elisp
-(after! scheme
-  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
-#+end_src
-***** guix :guix:
-****** guix :UI:
-#+begin_src elisp
-(after! guix
-  (set-popup-rules!
-    '(("^\\*Guix" :height 0.5))))
-#+end_src
-****** guix-devel :lang:
-#+begin_src elisp
-(use-package! guix-devel
-  :hook (scheme-mode . guix-devel-mode))
-#+end_src
-****** guix-popup :bindings:
-#+begin_src elisp
-(use-package! guix-popup
-  :defer t
-  :init
-  (map! :leader
-        "a" #'guix))  ; TODO temporary binding?
-#+end_src
-****** guix-prettify :UI:
-#+begin_src elisp
-(use-package! guix-prettify
-  :hook (doom-first-buffer . global-guix-prettify-mode))
-#+end_src
-***** dired-x :UI:hidden:
-#+begin_src elisp
-(use-package! dired-x
-  :defer t
-  :init
-  ;; Don't hide things by default. I can't just remove the Doom module's hook or its whole dired-x `use-package!' won't get run, so instead add another hook for `dired-omit-mode' at the end of the hooks list to toggle it off.
-  (add-hook! 'dired-mode-hook :append
-    (defun biome-disable-dired-omit-mode-h ()
-      (when dired-omit-mode
-        (dired-omit-mode -1)))))
-#+end_src
-***** counsel :UI:completion:hidden:
-#+begin_src elisp
-(after! counsel
-  (setq counsel-find-file-ignore-regexp nil)) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed. ; TODO I just noticed this affects `counsel-file-jump' which I don't want, e.g. listing every git object (but might not matter enough to fix).
-#+end_src
-***** Projects
-****** Dotfiles
-#+begin_src elisp
-(load "~/projects/dotfiles/meta.el")
-
-(pushnew! safe-local-variable-values
-          '(eval . (with-eval-after-load 'geiser-guile
-                     (let ((root-dir
-                            (file-name-directory
-                             (locate-dominating-file default-directory ".dir-locals.el"))))
-                       (make-local-variable 'geiser-guile-load-path)
-                       (add-to-list 'geiser-guile-load-path root-dir)))))
-#+end_src
-***** COMMENT org-tanglesync
-#+begin_src elisp
-(use-package! org-tanglesync
-  :hook ((org-mode . org-tanglesync-mode)
-         ((prog-mode text-mode) . org-tanglesync-watch-mode))
-  :config
-  (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
+;; (use-package! org-tanglesync
+;;   :hook ((org-mode . org-tanglesync-mode)
+;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
+;;   :config
+;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
 #+end_src
 *** Packages
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
@@ -2258,51 +2281,51 @@ Can be an integer to determine the exact padding."
     (home-page "https://github.com/hlissner/doom-emacs")
     (license license:expat)))
 #+end_src
-*** COMMENT Emacs Application Framework
+*** Emacs Application Framework
 #+begin_src scheme :tangle (in-tangle-dir "emacs-application-framework.scm")
-(use-modules (guix build-system emacs)
-             (guix git-download)
-             (guix packages)
-             ((guix licenses) #:prefix license:))
+;; (use-modules (guix build-system emacs)
+;;              (guix git-download)
+;;              (guix packages)
+;;              ((guix licenses) #:prefix license:))
 
-(let ((commit "5c99dc6962fbe2f95033678d82b6dc1414460c0a")
-      (revision "0"))
-  (package
-    (name "emacs-application-framework")
-    (version (git-version "0.5" revision commit))
-    (source (origin
-              (method git-fetch)
-              (uri (git-reference
-                    (url "https://github.com/manateelazycat/emacs-application-framework")
-                    (commit commit)))
-              (file-name (git-file-name name version))
-              (sha256
-               (base32
-                ""))))
-    (build-system emacs-build-system)
-    (native-inputs
-     (list emacs-ert-runner))
-    (arguments
-     `(#:tests? #t
-       #:test-command '("ert-runner")
-       #:modules ((guix build emacs-build-system)
-                  (guix build utils)
-                  (guix build emacs-utils)
-                  (srfi srfi-1))
-       #:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'move-themes
-           (lambda _
-             ;; Move the source files to the top level, which is in the
-             ;; EMACSLOADPATH.
-             (for-each (lambda (f)
-                         (rename-file f (basename f)))
-                       (find-files "./themes" ".*\\.el$"))
-             #t)))))
-    (synopsis "Emacs Application Framework (EAF)")
-    (description "GUI application framework for Emacs that revolutionizes its multimedia and graphical capabilities to ultimately Live in Emacs.")
-    (home-page "https://github.com/manateelazycat/emacs-application-framework")
-    (license license:gpl3+)))
+;; (let ((commit "5c99dc6962fbe2f95033678d82b6dc1414460c0a")
+;;       (revision "0"))
+;;   (package
+;;     (name "emacs-application-framework")
+;;     (version (git-version "0.5" revision commit))
+;;     (source (origin
+;;               (method git-fetch)
+;;               (uri (git-reference
+;;                     (url "https://github.com/manateelazycat/emacs-application-framework")
+;;                     (commit commit)))
+;;               (file-name (git-file-name name version))
+;;               (sha256
+;;                (base32
+;;                 ""))))
+;;     (build-system emacs-build-system)
+;;     (native-inputs
+;;      (list emacs-ert-runner))
+;;     (arguments
+;;      `(#:tests? #t
+;;        #:test-command '("ert-runner")
+;;        #:modules ((guix build emacs-build-system)
+;;                   (guix build utils)
+;;                   (guix build emacs-utils)
+;;                   (srfi srfi-1))
+;;        #:phases
+;;        (modify-phases %standard-phases
+;;          (add-after 'unpack 'move-themes
+;;            (lambda _
+;;              ;; Move the source files to the top level, which is in the
+;;              ;; EMACSLOADPATH.
+;;              (for-each (lambda (f)
+;;                          (rename-file f (basename f)))
+;;                        (find-files "./themes" ".*\\.el$"))
+;;              #t)))))
+;;     (synopsis "Emacs Application Framework (EAF)")
+;;     (description "GUI application framework for Emacs that revolutionizes its multimedia and graphical capabilities to ultimately Live in Emacs.")
+;;     (home-page "https://github.com/manateelazycat/emacs-application-framework")
+;;     (license license:gpl3+)))
 #+end_src
 * Channels
 :PROPERTIES:
