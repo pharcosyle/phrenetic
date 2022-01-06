@@ -2,7 +2,7 @@
 #+PROPERTY: header-args :mkdirp yes
 
 * Meta
-#+begin_src elisp
+#+begin_src elisp :tangle meta.el
 (setq base-tangle-dir ".")
 
 (defun get-tangle-dir ()
@@ -1963,6 +1963,8 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ***** Projects
 ****** Dotfiles
 #+begin_src elisp
+(load "~/projects/dotfiles/meta.el")
+
 (pushnew! safe-local-variable-values
           '(eval . (with-eval-after-load 'geiser-guile
                      (let ((root-dir
@@ -2448,6 +2450,8 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 * Dev
 ** Git ignore
 #+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
+/meta.el
+
 /.gitignore
 /ebullient/
 /.dir-locals.el
