@@ -1372,7 +1372,7 @@ flatpak install --user flathub us.zoom.Zoom
 ***** UI :UI:theming:
 #+begin_src elisp
 (let ((font (font-spec :family "Source Code Pro Medium" :size 12)))
-  (when (find-font font)
+  (when (doom-font-exists-p font)
     (setq doom-font font)))
 
 (setq doom-theme 'doom-nuclear)
