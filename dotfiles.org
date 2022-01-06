@@ -727,6 +727,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home-services shells)
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
+  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages xdisorg) #:select (gammastep))
   #:use-module (gnu services)
   ;; #:use-module (gnu services configuration)
@@ -738,6 +739,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (pipewire-services
             sway-services
             gammastep-service-type
+            nm-service-type
             udiskie-service-type))
 
 (define serialize-posix-env-vars (@@ (gnu home-services shells) serialize-posix-env-vars))
@@ -803,16 +805,24 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    `((include "/home/pharcosyle/projects/dotfiles/config"))))
     (rde-config))))
 #+end_src
-*** "Apps" or "User daemons" or something
+*** Applets
 **** Gammastep
+- TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
 #+begin_src scheme
 (define (gammastep-shepherd-service _)
   (list
    (shepherd-service
     (provision '(gammastep))
-    (start #~(make-forkexec-constructor
-              (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")))
+    (start #~(lambda (wayland-display . _)
+               ((make-forkexec-constructor
+                 (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")
+                 #:environment-variables
+                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
+                 (call-with-input-file "/tmp/env-for-applets" read)
+                 #:log-file
+                 "/home/pharcosyle/desktop/gammastep_log"))))
     (stop #~(make-kill-destructor))
+    (respawn? #f)
     (auto-start? #f))))
 
 (define gammastep-service-type
@@ -823,15 +833,52 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                         gammastep-shepherd-service)))
                 (default-value #f)))
 #+end_src
+**** Network Manager
+#+begin_src scheme
+(define (nm-shepherd-service _)
+  (list
+   (shepherd-service
+    (provision '(nm))
+    (start #~(lambda (wayland-display . _)
+               ((make-forkexec-constructor
+                 (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
+                 #:environment-variables
+                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
+                 (call-with-input-file "/tmp/env-for-applets" read)
+                 #:log-file
+                 "/home/pharcosyle/desktop/nm_log"))))
+    (stop #~(make-kill-destructor))
+    (respawn? #f)
+    (auto-start? #f))))
+
+(define nm-service-type
+  (service-type (name 'home-nm)
+                (extensions
+                 (list (service-extension
+                        home-shepherd-service-type
+                        nm-shepherd-service)))
+                (default-value #f)))
+#+end_src
 **** Udiskie
 #+begin_src scheme
 (define (udiskie-shepherd-service _)
   (list
    (shepherd-service
     (provision '(udiskie))
-    (start #~(make-forkexec-constructor
-              (list #$(file-append udiskie "/bin/udiskie --tray"))))
+    (start #~(lambda (wayland-display . _)
+               ((make-forkexec-constructor
+                 (list #$(file-append udiskie "/bin/udiskie")
+                       "--tray"
+                       ;; (string-append "--file-manager="
+                       ;;                #$(file-append xdg-utils "/bin/xdg-open"))
+                       )
+                 #:environment-variables
+                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
+                 (call-with-input-file "/tmp/env-for-applets" read)
+                 #:log-file
+                 "/home/pharcosyle/desktop/udiskie_log"))))
     (stop #~(make-kill-destructor))
+    (respawn? #f)
     (auto-start? #f))))
 
 (define udiskie-service-type
@@ -997,6 +1044,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
      (list
       (service gammastep-service-type)
+      (service nm-service-type)
       (service udiskie-service-type))))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
