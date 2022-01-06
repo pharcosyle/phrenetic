@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # TODO gexp. Or a script wrapper that provides the gsettings executable, though gexp substitution is more generic and works with e.g. config files so maybe just do it like that everywhere for consistency.
-gsettings_exe=/gnu/store/567jgb5q1cr7xmqsd5kairrdj66ihhy9-glib-2.70.0-bin/bin/gsettings
+gsettings_exe=gsettings
 
 config="${XDG_CONFIG_HOME:-$HOME/.config}/gtk-3.0/settings.ini"
 if [ ! -f "$config" ]; then exit 1; fi
