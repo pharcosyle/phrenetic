@@ -1230,8 +1230,8 @@ flatpak install --user flathub us.zoom.Zoom
 #+begin_src elisp :tangle (in-tangle-dir "init.el")
 ;;; -*- lexical-binding: t; -*-
 (doom! :completion
-       company
-       (ivy +icons)
+       (company +childframe)
+       (ivy +childframe +icons)
        ;; (vertico +icons)
 
        :ui
@@ -1276,7 +1276,7 @@ flatpak install --user flathub us.zoom.Zoom
        vterm
 
        :checkers
-       syntax
+       (syntax +childframe)
 
        :tools
        direnv
