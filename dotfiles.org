@@ -1187,6 +1187,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 **** bastille
 #+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
 ;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
+;; - although if I'm going to be running off of the latest emacs-29 I might want to keep emacs in a separate manifest to make rolling back easier.
 (specifications->manifest
  '("emacs-29-pgtk-native-comp"))
 #+end_src
