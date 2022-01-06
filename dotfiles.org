@@ -2009,12 +2009,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
-(package! bluetooth :pin "147d4690087049c6647b5222ee40baa5002b7586") ; TODO just maybe make this dependent on my "bluetooth feature"
 (package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
-(package! expand-region :pin "95a773bd8f557cbd43d3b2dab2fa4417ec5927ab")
+(package! expand-region :pin "7e5bbe2763c12bae3e77fe0c49bcad05ff91dbfe")
 (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-(package! trashed :pin "23e782f78d9adf6b5479a01bfac90b2cfbf729fe")
-(package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
+(package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
 
 (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
 (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
@@ -2024,10 +2022,14 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
            :files (:defaults "snippets"))
   :pin "d843088252467db3c8a09de40ae9a62050196a0e")
 
+(package! bluetooth :pin "3c7bb2c378b5d7357e0994b74d51a2d4cf7e9e68") ; TODO just maybe make this dependent on my "bluetooth feature"
+
+(package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
+
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
 
-(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
+(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
 
 (package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd")
 
