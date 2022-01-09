@@ -1475,40 +1475,6 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 **** Modules
 ***** Completion
-****** Ivy
-******* ivy :bindings:UI:
-#+begin_src elisp
-(after! ivy
-  (setq +ivy-buffer-preview t
-        ivy-extra-directories nil
-        ivy-count-format "(%d/%d) ")
-  (dolist (i '(counsel-yank-pop
-               counsel-evil-registers))
-    (add-to-list 'ivy-height-alist `(,i . 10)))
-
-  (map! :map ivy-minibuffer-map
-        "s-J" #'ivy-scroll-up-command
-        "s-K" #'ivy-scroll-down-command
-        "C-r" #'ivy-reverse-i-search ; Doom overrides this, restore it.
-        :map ivy-reverse-i-search-map
-        "C-k" #'previous-line
-        "s-D" #'ivy-reverse-i-search-kill)) ; TODO temporary binding
-#+end_src
-******* ivy-hydra :bindings:
-#+begin_src elisp
-(after! ivy-hydra
-  (defhydra+ hydra-ivy ()
-    ;; Doom overrides these imporant ivy hydra heads: ~/.config/emacs/modules/completion/ivy/autoload/hydras.el
-    ("m" ivy-mark)
-    ("u" ivy-unmark)
-    ("t" ivy-toggle-marks)))
-#+end_src
-******* counsel :UI:hidden:
-#+begin_src elisp
-(after! counsel
-  (setq counsel-find-file-ignore-regexp nil) ; I may want to instead just toggle off `ivy-use-ignore' on invoking `counsel-find-file' so I have the option of switching ignoring back as-needed. ; TODO I just noticed this affects `counsel-file-jump' which I don't want, e.g. listing every git object (but might not matter enough to fix).
-  (setq counsel-yank-pop-separator "\n--------------------------------\n"))
-#+end_src
 ***** UI
 ****** Doom
 ******* doom-themes
