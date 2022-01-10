@@ -1475,6 +1475,13 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 **** Modules
 ***** Completion
+****** Vertico
+******* vertico
+#+begin_src elisp
+(after! vertico
+  (map! :map vertico-map
+        "DEL" #'vertico-directory-delete-char))
+#+end_src
 ***** UI
 ****** Doom
 ******* doom-themes
@@ -1862,10 +1869,17 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (after! emojify
   (setq emojify-display-style 'unicode))
 #+end_src
+****** asdf :bindings:
+- TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+#+begin_src elisp
+(define-key! :keymaps +default-minibuffer-maps
+  "s-J" #'scroll-up-command
+  "s-K" #'scroll-down-command)
+#+end_src
 **** Projects
 ***** Dotfiles :path:
 #+begin_src elisp
-(load "~/projects/dotfiles/meta.el")
+(load "~/projects/dotfiles/meta.el" 'noerror 'nomessage)
 
 (pushnew! safe-local-variable-values
           '(eval . (with-eval-after-load 'geiser-guile
@@ -1924,7 +1938,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
-(map! "s-A" #'counsel-linux-app)
+(map! "s-A" #'app-launcher-run-app)
 
 (map! :leader
       "s-," (lookup-key doom-leader-map (kbd "<")))
@@ -1944,9 +1958,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; (after! geiser-repl
 ;;   (setq geiser-repl-use-other-window nil))
 
-(load "~/projects/dotfiles/doom-additional.el" 'noerror
-      ;; 'nomessage
-      )
+(load "~/projects/dotfiles/doom-additional.el" 'noerror 'nomessage)
 #+end_src
 ***** dotfiles auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
@@ -1999,6 +2011,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd")
 
 (package! code-review :disable t) ; REVIEW Breaks stuff after I updated to emacs 29 latest
+
+(package! app-launcher
+  :recipe (:host github
+           :repo "SebastienWae/app-launcher") :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
+
+(package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
