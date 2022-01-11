@@ -1574,15 +1574,16 @@ flatpak install --user flathub us.zoom.Zoom
   (setq all-the-icons-dired-monochrome nil))
 #+end_src
 ******* dired-x :UI:hidden:
+Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
+- TODO removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
 #+begin_src elisp
 (use-package! dired-x
   :defer t
   :init
-  ;; Don't hide things by default. I can't just remove the Doom module's hook or its whole dired-x `use-package!' won't get run, so instead add another hook for `dired-omit-mode' at the end of the hooks list to toggle it off.
-  (add-hook! 'dired-mode-hook :append
-    (defun biome-disable-dired-omit-mode-h ()
-      (when dired-omit-mode
-        (dired-omit-mode -1)))))
+  (remove-hook! 'dired-mode-hook #'dired-omit-mode)
+  (add-hook! 'dired-mode-hook
+    (defun require-dired-x-h ()
+      (require 'dired-x))))
 #+end_src
 ***** Term
 ****** eshell :persistence:
