@@ -1943,9 +1943,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
       "s-," (lookup-key doom-leader-map (kbd "<")))
 
 (after! company
-  (map! (:map company-active-map
-         "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-         "s-]" #'company-show-location)))
+  (map! :map company-active-map
+        "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+        "s-]" #'company-show-location))
 
 (after! evil-org
   (map! :map evil-org-mode-map
