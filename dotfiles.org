@@ -924,7 +924,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 (define solitude
   (home-environment
-   (packages (list (specification->package "font-adobe-source-code-pro") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
+   (packages (list (specification->package "font-fira-code-6") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
+                   ;; (specification->package "font-adobe-source-code-pro")
                    (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
                    (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
@@ -1369,7 +1370,7 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ***** UI :UI:theming:
 #+begin_src elisp
-(let ((font (font-spec :family "Source Code Pro Medium" :size 12)))
+(let ((font (font-spec :family "Fira Code" :size 12)))
   (when (find-font font)
     (setq doom-font font)))
 
@@ -2442,6 +2443,28 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
    #:git-repo "https://git.savannah.gnu.org/git/emacs.git"
    #:git-commit "552d58d5b96eaad1c036800d8b4af10cb6f2f823"
    #:checksum "1xph27x953pgigb09dkjgfcb10ldlclbxwa0hmmawmxyyx3865bn"))
+#+end_src
+** Fira Code
+#+begin_src scheme :tangle (in-tangle-dir "fonts.scm")
+(define-module (ebullient packages fonts)
+  #:use-module (guix packages)
+  #:use-module (guix download)
+  #:use-module ((gnu packages fonts) #:select (font-fira-code)))
+
+(define-public font-fira-code-6
+  (package
+    (inherit font-fira-code)
+    (name "font-fira-code-6")
+    (version "6.2")
+    (source
+     (origin
+       ;; TODO Ideally inherit everything in `origin' but the SHA
+       (method url-fetch/zipbomb)
+       (uri (string-append "https://github.com/tonsky/FiraCode/releases/"
+                           "download/" version
+                           "/Fira_Code_v" version ".zip"))
+       (sha256
+        (base32 "0y9y7snyrr30z75kxz2zgh6q6hizcbzsf41xv6gxh97bm1dr2j89"))))))
 #+end_src
 * Utils
 :PROPERTIES:
