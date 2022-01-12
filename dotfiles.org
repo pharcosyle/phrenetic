@@ -948,6 +948,15 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                        (zshrc
                         (list (slurp-file-gexp (local-file "zshrc"))))))
       (service home-zsh-direnv-service-type)
+      ;; TODO probably gate this and figure out how not to hardcode the path to my Guix source
+      ;; TODO not sure why this isn't working nor why andrew tropin would use the "source" form instead of the (currently commented out) more direct form. He might just not have thought this through or tested yet
+      (simple-service 'emacs-vterm-zsh-configuration
+                      home-zsh-service-type
+                      (home-zsh-extension
+                       (zshrc
+                        ;; (list (slurp-file-gexp (local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/vterm")))
+                        (list #~(format #f "source ~a"
+                                        #$(local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/vterm" "setup-vterm"))))))
 
       (service home-xdg-user-directories-service-type
                (let* ((xdg-user-subdir "/files")
