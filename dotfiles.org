@@ -2000,7 +2000,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
            :files (:defaults "snippets"))
   :pin "d843088252467db3c8a09de40ae9a62050196a0e")
 
-(package! bluetooth :pin "3c7bb2c378b5d7357e0994b74d51a2d4cf7e9e68") ; TODO just maybe make this dependent on my "bluetooth feature"
+(package! bluetooth :pin "a1ea361f17c6b4e5353160539cd3df6754007a9d") ; TODO just maybe make this dependent on my "bluetooth feature"
 
 (package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
 
@@ -2018,6 +2018,33 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
            :repo "SebastienWae/app-launcher") :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
+
+
+
+;; TODO remove when Doom bumps the vertico module
+;; ------ begin vertico bumps
+(package! vertico
+  :recipe (:host github :repo "minad/vertico"
+           :files ("*.el" "extensions/*.el"))
+  :pin "716b618791268d14a53a4aa13f56bba6ff3fb346")
+
+(package! orderless :pin "92008e762b30cb445a2227e458cbb9a5e1b1d4e8")
+
+(package! consult :pin "b33cb2ef098b0f212d035e2677afdd7f04340765")
+(package! consult-dir :pin "08f543ae6acbfc1ffe579ba1d00a5414012d5c0b")
+(when (featurep! :checkers syntax)
+  (package! consult-flycheck :pin "0ad7e8ff15683a4d64b79c29b3fcf847edfe244b"))
+
+(package! embark :pin "1842d6b182c4fe7b6aa4d06f4957fbeabaa96de3")
+(package! embark-consult :pin "1842d6b182c4fe7b6aa4d06f4957fbeabaa96de3")
+
+(package! marginalia :pin "f352bb76df3dc4c6c28c12cfd9f71003a491760b")
+
+(package! wgrep :pin "f9687c28bbc2e84f87a479b6ce04407bb97cfb23")
+
+(when (featurep! +icons)
+  (package! all-the-icons-completion :pin "9e7d456b0934ecb568b6f05a8445e3f4ce32261f"))
+;; ------ end vertico bumps
 #+end_src
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
