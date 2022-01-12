@@ -1012,10 +1012,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                       home-files-service-type
                       (list `("config/nixpkgs/config.nix"
                               ,(local-file "nixpkgs-config.nix"))))
-      (simple-service 'doomdir
-                      home-files-service-type
-                      (list `("config/doom"
-                              ,(local-file "doom" #:recursive? #t))))
+      ;; (simple-service 'doomdir
+      ;;                 home-files-service-type
+      ;;                 (list `("config/doom"
+      ;;                         ,(local-file "doom" #:recursive? #t))))
       ;; TODO Examples from RDE I may want to make use of.
       ;; (service home-keyboard-service-type
       ;;          (keyboard-layout "us,ru" "dvorak,"
