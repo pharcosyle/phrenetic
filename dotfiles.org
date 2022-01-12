@@ -1555,13 +1555,13 @@ flatpak install --user flathub us.zoom.Zoom
      c-u
      commentary))
   (map! :map lispyville-mode-map
-        "s-C-j" #'lispyville-beginning-of-next-defun
-        "s-C-k" #'lispyville-beginning-of-defun
-        "s-C-," #'lispyville-end-of-defun
-        "s-C-a" #'lispyville-drag-backward
-        "s-C-g" #'lispyville-drag-forward
-        "s-C-p" #'lispyville-prettify
-        (:prefix "s-C-;"
+        "C-s-j" #'lispyville-beginning-of-next-defun
+        "C-s-k" #'lispyville-beginning-of-defun
+        "C-s-," #'lispyville-end-of-defun
+        "C-s-a" #'lispyville-drag-backward
+        "C-s-g" #'lispyville-drag-forward
+        "C-s-p" #'lispyville-prettify
+        (:prefix "C-s-;"
          "R" #'lispyville-raise-list)))
 #+end_src
 ***** Emacs
@@ -1808,20 +1808,20 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
-        "s-C-h" #'sp-backward-sexp
-        "s-C-l" #'sp-forward-sexp
-        "s-C-u" #'sp-backward-up-sexp
-        "s-C-o" #'sp-up-sexp
-        :gn "s-C-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
-        "s-C-." #'sp-down-sexp
-        "s-C-c" #'sp-splice-sexp
-        "s-C-s" #'sp-splice-sexp-killing-backward
-        "s-C-f" #'sp-splice-sexp-killing-forward
-        "s-C-x" #'sp-backward-slurp-sexp
-        "s-C-v" #'sp-forward-slurp-sexp
-        "s-C-w" #'sp-backward-barf-sexp
-        "s-C-r" #'sp-forward-barf-sexp
-        (:prefix "s-C-;"
+        "C-s-h" #'sp-backward-sexp
+        "C-s-l" #'sp-forward-sexp
+        "C-s-u" #'sp-backward-up-sexp
+        "C-s-o" #'sp-up-sexp
+        :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
+        "C-s-." #'sp-down-sexp
+        "C-s-c" #'sp-splice-sexp
+        "C-s-s" #'sp-splice-sexp-killing-backward
+        "C-s-f" #'sp-splice-sexp-killing-forward
+        "C-s-x" #'sp-backward-slurp-sexp
+        "C-s-v" #'sp-forward-slurp-sexp
+        "C-s-w" #'sp-backward-barf-sexp
+        "C-s-r" #'sp-forward-barf-sexp
+        (:prefix "C-s-;"
          "(" #'sp-wrap-round
          "[" #'sp-wrap-square
          "{" #'sp-wrap-curly
