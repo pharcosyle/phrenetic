@@ -506,7 +506,6 @@ The stateless service should come after base/desktop services (potentially other
            config)))))
 #+end_src
 *** Nonguix substitutes
-At the time of this writing I've just added the new substitute server at nonguix.org. The brielmaier.net substitute server is probably obviated now but I'll keep it around becuase it doesn't hurt to have more sources for substitutes.
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
@@ -518,27 +517,17 @@ At the time of this writing I've just added the new substitute server at nonguix
        (inherit config)
        (substitute-urls
         (append (guix-configuration-substitute-urls config)
-                (list "https://substitutes.nonguix.org"
-                      "https://mirror.brielmaier.net")))
+                (list "https://substitutes.nonguix.org")))
        (authorized-keys
         (append (guix-configuration-authorized-keys config)
-                (list (local-file "substitutes.nonguix.org.pub")
-                      (local-file "mirror.brielmaier.net.pub")))))))))
+                (list (local-file "substitutes.nonguix.org.pub")))))))))
 #+end_src
-**** Signing keys
-***** substitutes.nonguix.org
+**** Signing key
 #+begin_src scheme :tangle (in-tangle-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
-#+end_src
-***** mirror.brielmaier.net
-#+begin_src scheme :tangle (in-tangle-dir "mirror.brielmaier.net.pub")
-(public-key
- (ecc
-  (curve Ed25519)
-  (q #7514F8D729DB1935470A581CE3851ED9FD6F1F9BAFE1D8BEC77A931ADB7A4337#)))
 #+end_src
 *** Macbook
 I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
