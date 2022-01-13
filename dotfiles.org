@@ -1574,7 +1574,11 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ******* dired-x :UI:hidden:
 Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
-- TODO removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
+- TODO dired buffers always marked modified
+  *wait to do this until I do my dired project*
+  Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
+  - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
+    Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
 #+begin_src elisp
 (use-package! dired-x
   :defer t
