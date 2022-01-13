@@ -104,6 +104,7 @@
 (map! "s-B" (cmd!
              ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
              ;; Why is the above not working? Doing this for now:
+             ;; - Update: because `delq!' tests for equality with `eq'
              (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
 
 
