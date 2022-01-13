@@ -88,3 +88,20 @@
         "C-S-o" #'evil-jump-forward))
 
 ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+
+
+
+
+
+
+;; Temporary copypasta from bloodhound, for convenience
+(setq my-dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/home-state.git")))
+;; (setq my-dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+(map! "s-b" (cmd!
+             (pushnew! magit-git-global-arguments my-dotfiles-git-dir)
+             (magit-status "~")))
+(map! "s-B" (cmd!
+             ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
+             ;; Why is the above not working? Doing this for now:
+             (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
