@@ -24,6 +24,37 @@
 
 
 
+
+(setq +ligatures-all-modes-list
+      '("www")
+      +ligatures-prog-mode-list
+      '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
+        "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+        ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+        "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+        "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+        "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+        "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+        "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+        "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+        "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+        "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
+        ;; Doom defaults (the ones not already present in Fira Code)
+        "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
+        "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
+        ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
+        "*)" "://"))
+
+;; Probably move these to `after!' blocks
+(set-ligatures! '(html-mode nxml-mode web-mode)
+  :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
+                    "://"))
+
+
+
+
+
+
 ;;;; Keybinding ideas
 
 ;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
@@ -48,3 +79,5 @@
   (map! :map evil-motion-state-map
         ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
         "C-S-o" #'evil-jump-forward))
+
+;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
