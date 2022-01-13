@@ -105,3 +105,13 @@
              ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
              ;; Why is the above not working? Doing this for now:
              (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
+
+
+
+
+;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
+;; TODO should this go in the Guix or Nix config section?
+(use-package! nix-drv-mode
+  :defer t
+  :init
+  (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
