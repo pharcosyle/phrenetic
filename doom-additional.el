@@ -44,6 +44,13 @@
         "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
         ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
         "*)" "://"))
+;; These have to go into a use-package-hook. For now just set the ligatures again here.
+(ligature-set-ligatures 'prog-mode +ligatures-prog-mode-list)
+(ligature-set-ligatures 't +ligatures-all-modes-list)
+;; (use-package-hook! doom-themes
+;;   :pre-config
+;;   ;; ...set vars here
+;;   t)
 
 ;; Probably move these to `after!' blocks
 (set-ligatures! '(html-mode nxml-mode web-mode)
