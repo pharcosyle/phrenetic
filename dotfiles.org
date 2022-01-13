@@ -2049,22 +2049,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 *** Theme :UI:theming:
 - TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
 #+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
-;;; doom-nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
-;;
-;; Copyright (C) 2016-2021 Henrik Lissner
-;;
-;; Author: Henrik Lissner <https://github.com/hlissner>
-;; Created: December 6, 2020
-;; Version: 2.0.0
-;; Keywords: custom themes, faces
-;; Homepage: https://github.com/hlissner/emacs-doom-themes
-;; Package-Requires: ((emacs "25.1") (cl-lib "0.5") (doom-themes "2.2.1"))
-;;
-;;; Commentary:
-;;
-;; Inspired by Atom's One Dark color scheme.
-;;
-;;; Code:
+;;; -*- lexical-binding: t; no-byte-compile: t; -*-
 
 (require 'doom-themes)
 
@@ -2243,8 +2228,6 @@ Can be an integer to determine the exact padding."
 
   ;;;; Base theme variable overrides-
   ())
-
-;;; doom-nuclear-theme.el ends here
 #+end_src
 ** WIP emacs
 *** doom-emacs-temp
