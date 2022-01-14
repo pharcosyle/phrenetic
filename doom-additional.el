@@ -73,7 +73,7 @@
 (define-key key-translation-map (kbd "s-I") nil)
 
 ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
-(biome--trans "C-S-i" "S-TAB")
+(biome--trans "C-S-i" "<backtab>")
 ;; Also messes with my sexp-movement bindings
 ;; (map! "C-s-j" #'evil-scroll-down
 ;;       "C-s-k" #'evil-scroll-up)
