@@ -1683,7 +1683,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
 #+end_src
 ******* geiser :persistence:path:guix:
-Using ~:init~ to configure variables (as opposed to ~:config~) but hlissner does it this way for the Geiser package so I will too.
+Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
 #+begin_src elisp
 (use-package! geiser
   :defer t

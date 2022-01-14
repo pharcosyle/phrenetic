@@ -9,10 +9,7 @@
        "A" #'embark-dwim)
       ;; Trying out cycling (temp)
       "C-:" #'embark-act
-      "s-q" #'embark-cycle
-      ;; Override my guix binding (temp)
-      (:leader
-       :desc "Actions" "a" #'embark-act))
+      "s-q" #'embark-cycle)
 
 ;; `forward-char' in original definition is messing things up, do this for now
 ;; (defun +eshell/search-history ()
@@ -88,6 +85,7 @@
         "C-S-o" #'evil-jump-forward))
 
 ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
 ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
 
 
