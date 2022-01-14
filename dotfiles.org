@@ -2459,6 +2459,12 @@ sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfi
 	logallrefupdates = true
 #+end_src
 ** Emacs directory-local variables
+- TODO Causes gesier to fail to load outside of this directory
+  *don't do this until I figure out how I'm doing per-project Emcas config* I might not end up doing Geiser setup this way at all
+  Since the ~with-eval-after-load~ body will get called wherever geiser-guile is first loaded, if the geiser library isn't loaded yet and I e.g. visit a file in this directory, then leave, then try to =M-x guix p e= while I'm viewing a file elsewhere it'll fail to run since it loads geiser internally and can't find a dominating .dir-locals.
+  - an alternative approach to setting up geiser for a project: [[https://github.com/guix-mirror/guix/blob/master/.dir-locals.el#L21][guix/.dir-locals.el at master · guix-mirror/guix · GitHub]]
+    Maybe try that or something like it.
+    - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
 #+begin_src elisp :tangle (in-tangle-dir ".dir-locals.el")
 ((nil
   (eval . (with-eval-after-load 'geiser-guile
