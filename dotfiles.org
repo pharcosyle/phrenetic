@@ -1357,6 +1357,7 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 **** Doom
 #+begin_src elisp
+;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
 (add-hook! 'doom-real-buffer-functions
   (defun biome-new-buffer-p (buf)
     (s-matches?
@@ -1364,6 +1365,7 @@ flatpak install --user flathub us.zoom.Zoom
          (* "<" (+ digit) ">")
          eol)
      (buffer-name buf)))
+  ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
   (defun biome-org-src-edit-buffer-p (buf)
     (s-matches?
      (rx bol "*Org Src " (+ anything) "*"
@@ -1371,7 +1373,7 @@ flatpak install --user flathub us.zoom.Zoom
          eol)
      (buffer-name buf))))
 #+end_src
-***** UI :UI:theming:
+***** UI :theming:
 #+begin_src elisp
 (let ((font (font-spec :family "Fira Code" :size 12)))
   (when (find-font font)
@@ -1514,7 +1516,7 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ***** Editor
 ****** Evil
-******* evil :UI:theming:
+******* evil :theming:
 #+begin_src elisp
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
@@ -1612,7 +1614,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
 (use-package! clojure-mode
   :defer t
   :init
-  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; TODO temporary binding
+  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
   :config
   (set-ligatures! 'clojure-mode :lambda "fn"))
 #+end_src
@@ -1622,7 +1624,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (setq cider-repl-history-size biome--very-big
         cider-print-options '(("length" 100))))
 
-;; TODO make sure this is still working after nesting in `after!'
+;; REVIEW make sure this is still working after nesting in `after!'
 (after! cider-repl
   (add-hook! 'cider-repl-mode-hook
              #'goto-address-prog-mode
@@ -1634,7 +1636,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
 ******* clj-refactor :bindings:
 #+begin_src elisp
 (after! clj-refactor
-  (cljr-add-keybindings-with-prefix "s-M R")) ; TODO temporary binding
+  (cljr-add-keybindings-with-prefix "s-M R")) ; REVIEW temporary binding
 #+end_src
 ****** Emacs Lisp
 ******* emacs-lisp
@@ -1765,7 +1767,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   :defer t
   :init
   (map! :leader
-        "l" #'guix))  ; TODO temporary binding?
+        "l" #'guix))  ; REVIEW temporary binding?
 #+end_src
 ******* guix-prettify :UI:
 #+begin_src elisp
@@ -1802,10 +1804,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+begin_src elisp
 (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 #+end_src
-****** rainbow-delimiters :UI:theming:
+****** rainbow-delimiters :theming:
 #+begin_src elisp
 (after! rainbow-delimiters
-  (setq rainbow-delimiters-max-face-count 8)) ; TODO make sure this is working and I didn't need to put it in an `:init'`or anything
+  (setq rainbow-delimiters-max-face-count 8))
 #+end_src
 ****** recentf :persistence:
 #+begin_src elisp
@@ -1898,7 +1900,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+end_src
 ***** Nyxt
 - TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages.
-#+begin_src emacs-lisp :tangle yes
+#+begin_src elisp
 (pushnew! safe-local-variable-values
           '(eval . (cl-flet ((enhance-imenu-lisp
                               (&rest keywords)
@@ -2043,9 +2045,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 ;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
 
-(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
+(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
 
-(package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd")
+(package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
 
 (package! code-review :disable t) ; REVIEW Breaks stuff after I updated to emacs 29 latest
 
@@ -2057,9 +2059,6 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
 *** Theme :UI:theming:
-- TODO make the elisp sections subheadings? Pros: more org-mode-y. Cons: Further distances the code from doom-one, there will be a trailing closing paren in a source block all by itself at the end since some of the sections are in an outer sexp.
-- TODO parameterize colors
-  With gexps or noweb? Might be overkill but if I end up wanting the color values shared with other system components (like my window manager) it could make sense. I wouldn't have to manually check for =doom-one= updates either.
 #+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
 ;;; -*- lexical-binding: t; no-byte-compile: t; -*-
 
