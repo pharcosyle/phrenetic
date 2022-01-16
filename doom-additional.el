@@ -87,6 +87,7 @@
 ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
 ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
 ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
 
 
 
@@ -114,3 +115,9 @@
   :defer t
   :init
   (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
+
+
+
+(after! vertico
+  (setq vertico-count 20  ; Trying out, maybe too big.
+        vertico-scroll-margin 7))
