@@ -1896,6 +1896,36 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                        (make-local-variable 'geiser-guile-load-path)
                        (add-to-list 'geiser-guile-load-path root-dir)))))
 #+end_src
+***** Nyxt
+- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages.
+#+begin_src emacs-lisp :tangle yes
+(pushnew! safe-local-variable-values
+          '(eval . (cl-flet ((enhance-imenu-lisp
+                              (&rest keywords)
+                              (dolist (keyword keywords)
+                                (add-to-list
+                                 'lisp-imenu-generic-expression
+                                 (list (purecopy (concat (capitalize keyword)
+                                                         (if (string= (substring-no-properties keyword -1) "s")
+                                                             "es"
+                                                           "s")))
+                                       (purecopy (concat "^\\s-*("
+                                                         (regexp-opt
+                                                          (list (concat "define-" keyword))
+                                                          t)
+                                                         "\\s-+\\(" lisp-mode-symbol-regexp "\\)"))
+                                       2)))))
+                     ;; This adds the argument to the list of imenu known keywords.
+                     (enhance-imenu-lisp
+                      "bookmarklet-command"
+                      "class"
+                      "command"
+                      "ffi-method"
+                      "function"
+                      "mode"
+                      "parenscript"
+                      "user-class"))))
+#+end_src
 ***** Hyperdrive :path:
 #+begin_src elisp
 (pushnew! safe-local-variable-values
