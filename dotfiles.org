@@ -1381,7 +1381,7 @@ flatpak install --user flathub us.zoom.Zoom
 ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
 #+end_src
-**** Doom
+***** Doom
 #+begin_src elisp
 ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
 (add-hook! 'doom-real-buffer-functions
@@ -1398,24 +1398,6 @@ flatpak install --user flathub us.zoom.Zoom
          (* "<" (+ digit) ">")
          eol)
      (buffer-name buf))))
-#+end_src
-***** UI :theming:
-#+begin_src elisp
-(let ((font (font-spec :family "Fira Code" :size 12)))
-  (when (find-font font)
-    (setq doom-font font)))
-
-(setq doom-theme biome--theme)
-
-(custom-theme-set-faces! biome--theme
-  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
-  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
-#+end_src
-***** Leader/localleader :bindings:
-#+begin_src elisp
-(setq doom-leader-alt-key "s-SPC"
-      doom-localleader-key "s-m"
-      doom-localleader-alt-key "s-m")
 #+end_src
 **** Keybindings :bindings:
 #+begin_src elisp
@@ -1438,6 +1420,12 @@ flatpak install --user flathub us.zoom.Zoom
               "s-j" "<down>"
               "s-k" "<up>"
               "s-l" "<right>")
+#+end_src
+***** Leader/localleader
+#+begin_src elisp
+(setq doom-leader-alt-key "s-SPC"
+      doom-localleader-key "s-m"
+      doom-localleader-alt-key "s-m")
 #+end_src
 ***** General
 #+begin_src elisp
@@ -1927,6 +1915,96 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   "s-J" #'scroll-up-command
   "s-K" #'scroll-down-command)
 #+end_src
+**** Theming :theming:
+#+begin_src elisp
+(setq doom-theme biome--theme)
+
+(custom-theme-set-faces! biome--theme
+  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
+  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
+#+end_src
+***** Nuclear Theme
+#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el") :noweb yes
+<<gen-doom-theme()>>
+#+end_src
+****** Generator
+#+name: gen-doom-theme
+#+begin_src elisp :var palette=palette
+(defun dt--color (color)
+  (let ((k (-> color symbol-name (substring 1))))
+    (cadr (assoc k palette))))
+
+(defmacro dt--buffer->string (&rest body)
+  `(with-temp-buffer
+     ,@body
+     (buffer-string)))
+
+(defun dt--slurp (f)
+  (dt--buffer->string
+   (insert-file-contents f)))
+
+(defun dt--replace (s match replacement)
+  (replace-regexp-in-string match replacement s 'fixedcase 'literal))
+
+(defun dt--replace-sexp (s match replacement)
+  (dt--buffer->string
+   (insert s)
+   (goto-char (point-min))
+   (re-search-forward match)
+   ;; Calling `forward-sexp' and `backward-sexp' here to preserve whitespace.
+   (forward-sexp)
+   (backward-sexp)
+   (kill-sexp)
+   (insert (format "%S" replacement))))
+
+(defun dt--gen-doom-theme (f)
+  (-as->
+   (dt--slurp f) $
+   (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
+   (dt--replace $ "doom-one" "nuclear")
+   (-reduce-from
+    (-lambda (s (match replacement))
+      (dt--replace-sexp s match replacement))
+    $
+    (-partition
+     2
+     (let ((match-base-color (lambda (form)
+                               (rx-to-string `(seq "(" ,form (+ whitespace) "'("))))
+           (match-face (lambda (&rest forms)
+                         (rx-to-string `(seq "(" ,@forms)))))
+       (list
+        (funcall match-base-color "fg") (dt--color :fg)
+        (funcall match-base-color "red") (dt--color :red)
+        (funcall match-base-color "orange") (dt--color :orange)
+        (funcall match-base-color "green") (dt--color :green)
+        (funcall match-base-color "yellow") (dt--color :yellow)
+        (funcall match-base-color "blue") (dt--color :blue)
+        (funcall match-base-color "dark-blue") (dt--color :dark-blue)
+        (funcall match-base-color "magenta") (dt--color :magenta)
+        (funcall match-base-color "violet") (dt--color :violet)
+        (funcall match-base-color "cyan") (dt--color :cyan)
+        (funcall match-face "highlight") (dt--color :highlight)
+        (funcall match-face "builtin") 'blue
+        (funcall match-face "comments") (dt--color :comments)
+        (funcall match-face "constants") 'yellow
+        (funcall match-face "functions") 'blue
+        (funcall match-face "keywords") 'magenta
+        (funcall match-face "methods") 'violet
+        (funcall match-face "operators") 'cyan
+        (funcall match-face "type") 'orange
+        (funcall match-face "variables") 'red
+        (funcall match-face "numbers") 'violet
+        (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))))
+
+;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary.
+(dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
+#+end_src
+***** Font
+#+begin_src elisp
+(let ((font (font-spec :family "Fira Code" :size 12)))
+  (when (find-font font)
+    (setq doom-font font)))
+#+end_src
 **** Projects
 ***** Dotfiles :path:
 #+begin_src elisp
@@ -2099,82 +2177,6 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
-#+end_src
-*** Theme :theming:
-#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el") :noweb yes
-<<gen-doom-theme()>>
-#+end_src
-**** Generator
-#+name: gen-doom-theme
-#+begin_src elisp :var palette=palette
-(defun dt--color (color)
-  (let ((k (-> color symbol-name (substring 1))))
-    (cadr (assoc k palette))))
-
-(defmacro dt--buffer->string (&rest body)
-  `(with-temp-buffer
-     ,@body
-     (buffer-string)))
-
-(defun dt--slurp (f)
-  (dt--buffer->string
-   (insert-file-contents f)))
-
-(defun dt--replace (s match replacement)
-  (replace-regexp-in-string match replacement s 'fixedcase 'literal))
-
-(defun dt--replace-sexp (s match replacement)
-  (dt--buffer->string
-   (insert s)
-   (goto-char (point-min))
-   (re-search-forward match)
-   ;; Calling `forward-sexp' and `backward-sexp' here to preserve whitespace.
-   (forward-sexp)
-   (backward-sexp)
-   (kill-sexp)
-   (insert (format "%S" replacement))))
-
-(defun dt--gen-doom-theme (f)
-  (-as->
-   (dt--slurp f) $
-   (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
-   (dt--replace $ "doom-one" "nuclear")
-   (-reduce-from
-    (-lambda (s (match replacement))
-      (dt--replace-sexp s match replacement))
-    $
-    (-partition
-     2
-     (let ((match-base-color (lambda (form)
-                               (rx-to-string `(seq "(" ,form (+ whitespace) "'("))))
-           (match-face (lambda (&rest forms)
-                         (rx-to-string `(seq "(" ,@forms)))))
-       (list
-        (funcall match-base-color "fg") (dt--color :fg)
-        (funcall match-base-color "red") (dt--color :red)
-        (funcall match-base-color "orange") (dt--color :orange)
-        (funcall match-base-color "green") (dt--color :green)
-        (funcall match-base-color "yellow") (dt--color :yellow)
-        (funcall match-base-color "blue") (dt--color :blue)
-        (funcall match-base-color "dark-blue") (dt--color :dark-blue)
-        (funcall match-base-color "magenta") (dt--color :magenta)
-        (funcall match-base-color "violet") (dt--color :violet)
-        (funcall match-base-color "cyan") (dt--color :cyan)
-        (funcall match-face "highlight") (dt--color :highlight)
-        (funcall match-face "builtin") 'blue
-        (funcall match-face "comments") (dt--color :comments)
-        (funcall match-face "constants") 'yellow
-        (funcall match-face "functions") 'blue
-        (funcall match-face "keywords") 'magenta
-        (funcall match-face "methods") 'violet
-        (funcall match-face "operators") 'cyan
-        (funcall match-face "type") 'orange
-        (funcall match-face "variables") 'red
-        (funcall match-face "numbers") 'violet
-        (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))))
-
-;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary.
-(dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
 #+end_src
 ** WIP emacs
 *** doom-emacs-temp
