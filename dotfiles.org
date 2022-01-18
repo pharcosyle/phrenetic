@@ -3,12 +3,14 @@
 
 * Meta
 #+begin_src elisp :tangle meta.el
+(require 'dash)
+
 (setq base-tangle-dir ".")
 
 (defun get-tangle-dir ()
   (concat base-tangle-dir
           (when-let ((dirs (org-entry-get (point) "tangle-dir" 'inherit)))
-            (thread-first dirs (split-string " /") (string-join "/")))))
+            (-> dirs (split-string " /") (string-join "/")))))
 
 (defun in-tangle-dir (sub-path)
   (concat (get-tangle-dir) "/" sub-path))
