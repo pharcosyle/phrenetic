@@ -1413,9 +1413,6 @@ flatpak install --user flathub us.zoom.Zoom
 (biome--trans "C-h" "DEL"
               "C-?" "C-h"
 
-              "s-i" "<tab>"
-              "s-I" "<backtab>"
-
               "s-h" "<left>"
               "s-j" "<down>"
               "s-k" "<up>"
@@ -1534,11 +1531,12 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ***** Editor
 ****** Evil
-******* evil :theming:
+******* evil :bindings:theming:
 #+begin_src elisp
 (after! evil
   (setq evil-default-cursor (lambda () (evil-set-cursor-color (biome--color :gold)))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color (biome--color :pink)))))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color (biome--color :pink))))
+  (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
 #+end_src
 ****** Multiple Cursors
 ******* evil-multiedit :evil:

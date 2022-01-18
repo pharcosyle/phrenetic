@@ -68,17 +68,12 @@
 ;; Get rid of binding for =s-r=?
 (map! "s-r" nil)
 
-;; Get rid of stuff in dotfiles without changing dotfiles for the moment
-(define-key key-translation-map (kbd "s-i") nil)
-(define-key key-translation-map (kbd "s-I") nil)
-
 ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
 (biome--trans "C-S-i" "<backtab>")
 ;; Also messes with my sexp-movement bindings
 ;; (map! "C-s-j" #'evil-scroll-down
 ;;       "C-s-k" #'evil-scroll-up)
 
-(map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
 (after! evil
   (map! :map evil-motion-state-map
         ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
