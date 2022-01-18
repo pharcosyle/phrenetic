@@ -1561,8 +1561,15 @@ flatpak install --user flathub us.zoom.Zoom
 ******* evil :bindings:theming:
 #+begin_src elisp
 (after! evil
-  (setq evil-default-cursor (lambda () (evil-set-cursor-color (biome--color :gold)))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color (biome--color :pink))))
+  (defun biome--set-theme-cursor-color-symbols ()
+    (put 'cursor 'evil-normal-color (biome--color :gold))
+    (put 'cursor 'evil-emacs-color  (biome--color :pink)))
+
+  (defadvice! biome-update-cursor-color-a (&rest _)
+    :after #'+evil-update-cursor-color-h
+    (when (memq biome--theme custom-enabled-themes)
+      (biome--set-theme-cursor-color-symbols)))
+
   (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
 #+end_src
 ****** Multiple Cursors
@@ -1852,7 +1859,15 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ****** rainbow-delimiters :theming:
 #+begin_src elisp
 (after! rainbow-delimiters
-  (setq rainbow-delimiters-max-face-count 8)
+  (let ((default-max rainbow-delimiters-max-face-count))
+    (defun biome-set-rainbow-delimiters-max-face-count ()
+      (setq rainbow-delimiters-max-face-count
+            (if (memq biome--theme custom-enabled-themes)
+                8 default-max))))
+
+  (biome-set-rainbow-delimiters-max-face-count)
+  (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
+
   (custom-theme-set-faces! biome--theme
     `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
     `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
