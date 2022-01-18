@@ -1529,6 +1529,32 @@ flatpak install --user flathub us.zoom.Zoom
                   conf-mode-hook)
     #'highlight-indent-guides-mode))
 #+end_src
+****** Ligatures
+******* ligature
+#+begin_src elisp :tangle (in-tangle-dir "init.el")
+(use-package-hook! ligature
+  :pre-config
+  (setq +ligatures-all-modes-list
+        '("www")
+        +ligatures-prog-mode-list
+        '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
+          "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+          ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+          "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+          "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+          "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+          "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+          "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+          "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+          "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+          "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
+          ;; Doom defaults (just the ones not already present in Fira Code)
+          "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
+          "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
+          ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
+          "*)" "://"))
+  t)
+#+end_src
 ***** Editor
 ****** Evil
 ******* evil :bindings:theming:

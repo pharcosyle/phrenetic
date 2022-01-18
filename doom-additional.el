@@ -22,39 +22,10 @@
 
 
 
-(setq +ligatures-all-modes-list
-      '("www")
-      +ligatures-prog-mode-list
-      '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
-        "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-        ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-        "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-        "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-        "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-        "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-        "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-        "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-        "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-        "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
-        ;; Doom defaults (just the ones not already present in Fira Code)
-        "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
-        "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
-        ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
-        "*)" "://"))
-;; These have to go into a use-package-hook. For now just set the ligatures again here.
-(ligature-set-ligatures 'prog-mode +ligatures-prog-mode-list)
-(ligature-set-ligatures 't +ligatures-all-modes-list)
-;; (use-package-hook! doom-themes
-;;   :pre-config
-;;   ;; ...set vars here
-;;   t)
-
 ;; Probably move these to `after!' blocks
 (set-ligatures! '(html-mode nxml-mode web-mode)
   :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
                     "://"))
-
-
 
 
 
