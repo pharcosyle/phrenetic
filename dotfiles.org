@@ -26,6 +26,23 @@ Krzysztof Baranowski
 #+begin_src org
 pharcosyle@gmail.com
 #+end_src
+#+name: palette
+| Name              | Value   |
+|-------------------+---------|
+| fg                | #DEE2F8 |
+| highlight         | #8496FF |
+| comments          | #63677F |
+| comment-delimiter | #939abd |
+| red               | #FB8578 |
+| orange            | #FDCE5F |
+| green             | #9FED9C |
+| yellow            | #EDDC91 |
+| blue              | #7DB9FE |
+| dark-blue         | #5F68DE |
+| magenta           | #E29BF7 |
+| violet            | #AEB9F3 |
+| cyan              | #75E0F9 |
+
 * Installation
 ** Create bootable USB
 Download (or create) a Guix installation ISO
@@ -2058,24 +2075,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
-*** Theme WIP
-**** Color palette
-#+name: palette
-| Name              | Value   |
-|-------------------+---------|
-| fg                | #DEE2F8 |
-| highlight         | #8496FF |
-| comments          | #63677F |
-| comment-delimiter | #939abd |
-| red               | #FB8578 |
-| orange            | #FDCE5F |
-| green             | #9FED9C |
-| yellow            | #EDDC91 |
-| blue              | #7DB9FE |
-| dark-blue         | #5F68DE |
-| magenta           | #E29BF7 |
-| violet            | #AEB9F3 |
-| cyan              | #75E0F9 |
+*** Theme :theming:
+#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el") :noweb yes
+<<gen-doom-theme()>>
+#+end_src
 **** Generator
 #+name: gen-doom-theme
 #+begin_src elisp :var palette=palette
@@ -2110,7 +2113,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
    (kill-sexp)
    (insert (format "%S" replacement))))
 
-(defun dt--synthesize-theme (f)
+(defun dt--gen-doom-theme (f)
   (-as->
    (dt--slurp f) $
    (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
@@ -2119,226 +2122,38 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
     (-lambda (s (match replacement))
       (dt--replace-sexp s match replacement))
     $
-    (-concat
-     (-map (-lambda ((var color))
-             (list (rx "(" (literal var) (+ whitespace) "'(")
-                   (dt--color color)))
-           (-partition 2 (list "fg" :fg
-                               "red" :red
-                               "orange" :orange
-                               "green" :green
-                               "yellow" :yelow
-                               "blue" :blue
-                               "dark-blue" :dark-blue
-                               "magenta" :magenta
-                               "violet" :violet
-                               "cyan" :cyan)))
-     (-map (-lambda ((var replacement))
-             (list (rx "(" (literal var))
-                   replacement))
-           (-partition 2 (list "highlight" (dt--color :highlight)
-                               "builtin" 'blue
-                               "comments" (dt--color :comments)
-                               "constants" 'yellow
-                               "functions" 'blue
-                               "keywords" 'magenta
-                               "methods" 'violet
-                               "operators" 'cyan
-                               "type" 'orange
-                               "variables" 'red
-                               "numbers" 'violet)))
-     (list
-      `(,(rx "line-number-current-line" (+ anything) ":foreground")
-        (dt--color :violet)))))))
+    (-partition
+     2
+     (let ((match-base-color (lambda (form)
+                               (rx-to-string `(seq "(" ,form (+ whitespace) "'("))))
+           (match-face (lambda (&rest forms)
+                         (rx-to-string `(seq "(" ,@forms)))))
+       (list
+        (funcall match-base-color "fg") (dt--color :fg)
+        (funcall match-base-color "red") (dt--color :red)
+        (funcall match-base-color "orange") (dt--color :orange)
+        (funcall match-base-color "green") (dt--color :green)
+        (funcall match-base-color "yellow") (dt--color :yellow)
+        (funcall match-base-color "blue") (dt--color :blue)
+        (funcall match-base-color "dark-blue") (dt--color :dark-blue)
+        (funcall match-base-color "magenta") (dt--color :magenta)
+        (funcall match-base-color "violet") (dt--color :violet)
+        (funcall match-base-color "cyan") (dt--color :cyan)
+        (funcall match-face "highlight") (dt--color :highlight)
+        (funcall match-face "builtin") 'blue
+        (funcall match-face "comments") (dt--color :comments)
+        (funcall match-face "constants") 'yellow
+        (funcall match-face "functions") 'blue
+        (funcall match-face "keywords") 'magenta
+        (funcall match-face "methods") 'violet
+        (funcall match-face "operators") 'cyan
+        (funcall match-face "type") 'orange
+        (funcall match-face "variables") 'red
+        (funcall match-face "numbers") 'violet
+        (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))))
 
 ;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary.
-(dt--synthesize-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
-#+end_src
-**** File
-#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el") :noweb yes
-<<gen-doom-theme()>>
-#+end_src
-*** Theme :UI:theming:
-#+begin_src elisp
-;;; -*- lexical-binding: t; no-byte-compile: t; -*-
-
-(require 'doom-themes)
-
-
-;;
-;;; Variables
-
-(defgroup nuclear-theme nil
-  "Options for the `doom-nuclear' theme."
-  :group 'doom-themes)
-
-(defcustom nuclear-brighter-modeline nil
-  "If non-nil, more vivid colors will be used to style the mode-line."
-  :group 'nuclear-theme
-  :type 'boolean)
-
-(defcustom nuclear-brighter-comments nil
-  "If non-nil, comments will be highlighted in more vivid colors."
-  :group 'nuclear-theme
-  :type 'boolean)
-
-(defcustom nuclear-padded-modeline doom-themes-padded-modeline
-  "If non-nil, adds a 4px padding to the mode-line.
-Can be an integer to determine the exact padding."
-  :group 'nuclear-theme
-  :type '(choice integer boolean))
-
-
-;;
-;;; Theme definition
-
-(def-doom-theme doom-nuclear
-  "A dark theme inspired by Atom One Dark."
-
-  ;; name        default   256           16
-  ((bg         '("#282c34" "black"       "black" ))
-   (fg         '("#DEE2F8" "#bfbfbf"     "brightwhite"  ))
-
-   ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
-   ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
-   ;; or region), especially when paired with the `doom-darken', `doom-lighten',
-   ;; and `doom-blend' helper functions.
-   (bg-alt     '("#21242b" "black"       "black"        ))
-   (fg-alt     '("#5B6268" "#2d2d2d"     "white"        ))
-
-   ;; These should represent a spectrum from bg to fg, where base0 is a starker
-   ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
-   ;; dark grey, base0 should be white and base8 should be black.
-   (base0      '("#1B2229" "black"       "black"        ))
-   (base1      '("#1c1f24" "#1e1e1e"     "brightblack"  ))
-   (base2      '("#202328" "#2e2e2e"     "brightblack"  ))
-   (base3      '("#23272e" "#262626"     "brightblack"  ))
-   (base4      '("#3f444a" "#3f3f3f"     "brightblack"  ))
-   (base5      '("#5B6268" "#525252"     "brightblack"  ))
-   (base6      '("#73797e" "#6b6b6b"     "brightblack"  ))
-   (base7      '("#9ca0a4" "#979797"     "brightblack"  ))
-   (base8      '("#DFDFDF" "#dfdfdf"     "white"        ))
-
-   (grey       base4)
-   (red        '("#FB8578" "#ff6655" "red"          ))
-   (orange     '("#FDCE5F" "#dd8844" "brightred"    ))
-   (green      '("#9FED9C" "#99bb66" "green"        ))
-   (teal       '("#4db5bd" "#44b9b1" "brightgreen"  ))
-   (yellow     '("#EDDC91" "#ECBE7B" "yellow"       ))
-   (blue       '("#7DB9FE" "#51afef" "brightblue"   ))
-   (dark-blue  '("#5F68DE" "#2257A0" "blue"         ))
-   (magenta    '("#E29BF7" "#c678dd" "brightmagenta"))
-   (violet     '("#AEB9F3" "#a9a1e1" "magenta"      ))
-   (cyan       '("#75E0F9" "#46D9FF" "brightcyan"   ))
-   (dark-cyan  '("#5699AF" "#5699AF" "cyan"         ))
-
-   ;; These are the "universal syntax classes" that doom-themes establishes.
-   ;; These *must* be included in every doom themes, or your theme will throw an
-   ;; error, as they are used in the base theme defined in doom-themes-base.
-   (highlight      "#8496FF")
-   (vertical-bar   (doom-darken base1 0.1))
-   (selection      dark-blue)
-   (builtin        blue)
-   (comments       (if nuclear-brighter-comments dark-cyan "#63677F"))
-   (doc-comments   (doom-lighten (if nuclear-brighter-comments dark-cyan base5) 0.25))
-   (constants      yellow)
-   (functions      blue)
-   (keywords       magenta)
-   (methods        violet)
-   (operators      cyan)
-   (type           orange)
-   (strings        green)
-   (variables      red)
-   (numbers        violet)
-   (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
-   (error          red)
-   (warning        yellow)
-   (success        green)
-   (vc-modified    orange)
-   (vc-added       green)
-   (vc-deleted     red)
-
-   ;; These are extra color variables used only in this theme; i.e. they aren't
-   ;; mandatory for derived themes.
-   (modeline-fg              fg)
-   (modeline-fg-alt          base5)
-   (modeline-bg              (if nuclear-brighter-modeline
-                                 (doom-darken blue 0.45)
-                               (doom-darken bg-alt 0.1)))
-   (modeline-bg-alt          (if nuclear-brighter-modeline
-                                 (doom-darken blue 0.475)
-                               `(,(doom-darken (car bg-alt) 0.15) ,@(cdr bg))))
-   (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
-   (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg)))
-
-   (-modeline-pad
-    (when nuclear-padded-modeline
-      (if (integerp nuclear-padded-modeline) nuclear-padded-modeline 4))))
-
-
-  ;;;; Base theme face overrides
-  (((line-number &override) :foreground base4)
-   ((line-number-current-line &override) :foreground violet)
-   ((font-lock-comment-face &override)
-    :background (if nuclear-brighter-comments (doom-lighten bg 0.05)))
-   (font-lock-comment-delimiter-face :foreground "#939abd")
-   (font-lock-doc-face
-    :inherit 'font-lock-comment-face
-    :foreground cyan)
-   (mode-line
-    :background modeline-bg :foreground modeline-fg
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
-   (mode-line-inactive
-    :background modeline-bg-inactive :foreground modeline-fg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
-   (mode-line-emphasis :foreground (if nuclear-brighter-modeline base8 highlight))
-
-   ;;;; clojure-mode
-   (clojure-interop-method-face :foreground cyan)
-   (clojure-character-face :foreground violet :weight 'bold)
-   ;;;; css-mode <built-in> / scss-mode
-   (css-proprietary-property :foreground orange)
-   (css-property             :foreground green)
-   (css-selector             :foreground blue)
-   ;;;; doom-modeline
-   (doom-modeline-bar :background (if nuclear-brighter-modeline modeline-bg highlight))
-   (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
-   (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
-   (doom-modeline-buffer-project-root :foreground green :weight 'bold)
-   ;;;; elscreen
-   (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
-   ;;;; ivy
-   (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
-   ;;;; LaTeX-mode
-   (font-latex-math-face :foreground green)
-   ;;;; markdown-mode
-   (markdown-markup-face :foreground base5)
-   (markdown-header-face :inherit 'bold :foreground red)
-   ((markdown-code-face &override) :background (doom-lighten base3 0.05))
-   ;;;; rainbow-delimiters
-   (rainbow-delimiters-depth-1-face :foreground fg)
-   (rainbow-delimiters-depth-2-face :foreground magenta)
-   (rainbow-delimiters-depth-3-face :foreground blue)
-   (rainbow-delimiters-depth-4-face :foreground cyan)
-   (rainbow-delimiters-depth-5-face :foreground green)
-   (rainbow-delimiters-depth-6-face :foreground yellow)
-   (rainbow-delimiters-depth-7-face :foreground orange)
-   (rainbow-delimiters-depth-8-face :foreground red)
-   ;;;; rjsx-mode
-   (rjsx-tag :foreground red)
-   (rjsx-attr :foreground orange)
-   ;;;; solaire-mode
-   (solaire-mode-line-face
-    :inherit 'mode-line
-    :background modeline-bg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-alt)))
-   (solaire-mode-line-inactive-face
-    :inherit 'mode-line-inactive
-    :background modeline-bg-inactive-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive-alt))))
-
-  ;;;; Base theme variable overrides-
-  ())
+(dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
 #+end_src
 ** WIP emacs
 *** doom-emacs-temp
