@@ -42,6 +42,8 @@ pharcosyle@gmail.com
 | magenta           | #e29bf7 |
 | violet            | #aeb9f3 |
 | cyan              | #75e0f9 |
+| gold              | #fdd94a |
+| pink              | #ff9999 |
 
 * Installation
 ** Create bootable USB
@@ -1353,6 +1355,13 @@ flatpak install --user flathub us.zoom.Zoom
 (defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
 
 (defconst biome--very-big 1000000)
+
+(defconst biome--theme 'doom-nuclear)
+#+end_src
+#+begin_src elisp :var palette=palette
+(defun biome--color (color)
+  (let ((k (-> color symbol-name (substring 1))))
+    (cadr (assoc k palette))))
 #+end_src
 **** General :UI:path:
 #+begin_src elisp
@@ -1396,9 +1405,13 @@ flatpak install --user flathub us.zoom.Zoom
   (when (find-font font)
     (setq doom-font font)))
 
-(setq doom-theme 'doom-nuclear)
+(setq doom-theme biome--theme)
+
+(custom-theme-set-faces! biome--theme
+  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
+  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 #+end_src
-***** Leader/Localleader :bindings:
+***** Leader/localleader :bindings:
 #+begin_src elisp
 (setq doom-leader-alt-key "s-SPC"
       doom-localleader-key "s-m"
@@ -1536,8 +1549,8 @@ flatpak install --user flathub us.zoom.Zoom
 ******* evil :theming:
 #+begin_src elisp
 (after! evil
-  (setq evil-default-cursor (lambda () (evil-set-cursor-color "#fdd94a"))
-        evil-emacs-state-cursor (lambda () (evil-set-cursor-color "#ff9999"))))
+  (setq evil-default-cursor (lambda () (evil-set-cursor-color (biome--color :gold)))
+        evil-emacs-state-cursor (lambda () (evil-set-cursor-color (biome--color :pink)))))
 #+end_src
 ****** Multiple Cursors
 ******* evil-multiedit :evil:
@@ -1626,14 +1639,17 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
 #+end_src
 ***** Lang
 ****** Clojure
-******* clojure :bindings:
+******* clojure :bindings:theming:
 #+begin_src elisp
 (use-package! clojure-mode
   :defer t
   :init
   (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
   :config
-  (set-ligatures! 'clojure-mode :lambda "fn"))
+  (set-ligatures! 'clojure-mode :lambda "fn")
+  (custom-theme-set-faces! biome--theme
+    `(clojure-interop-method-face :foreground ,(doom-color 'cyan))
+    `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
 #+end_src
 ******* cider :persistence:
 #+begin_src elisp
@@ -1824,7 +1840,16 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ****** rainbow-delimiters :theming:
 #+begin_src elisp
 (after! rainbow-delimiters
-  (setq rainbow-delimiters-max-face-count 8))
+  (setq rainbow-delimiters-max-face-count 8)
+  (custom-theme-set-faces! biome--theme
+    `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
+    `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
+    `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
+    `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
+    `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
+    `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
+    `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
+    `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))))
 #+end_src
 ****** recentf :persistence:
 #+begin_src elisp
@@ -2082,13 +2107,9 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 **** Generator
 #+name: gen-doom-theme
 #+begin_src elisp :var palette=palette
-(setq dt--palette
-      (-mapcat (-lambda ((name v))
-                 (list (intern (concat ":" name)) v))
-               palette))
-
-(defun dt--color (c)
-  (plist-get dt--palette c))
+(defun dt--color (color)
+  (let ((k (-> color symbol-name (substring 1))))
+    (cadr (assoc k palette))))
 
 (defmacro dt--buffer->string (&rest body)
   `(with-temp-buffer
