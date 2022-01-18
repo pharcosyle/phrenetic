@@ -2058,8 +2058,108 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
+*** Theme WIP
+**** Color palette
+#+name: palette
+| Name              | Value   |
+|-------------------+---------|
+| fg                | #DEE2F8 |
+| highlight         | #8496FF |
+| comments          | #63677F |
+| comment-delimiter | #939abd |
+| red               | #FB8578 |
+| orange            | #FDCE5F |
+| green             | #9FED9C |
+| yellow            | #EDDC91 |
+| blue              | #7DB9FE |
+| dark-blue         | #5F68DE |
+| magenta           | #E29BF7 |
+| violet            | #AEB9F3 |
+| cyan              | #75E0F9 |
+**** Generator
+#+name: gen-doom-theme
+#+begin_src elisp :var palette=palette
+(setq dt--palette
+      (-mapcat (-lambda ((name v))
+                 (list (intern (concat ":" name)) v))
+               palette))
+
+(defun dt--color (c)
+  (plist-get dt--palette c))
+
+(defmacro dt--buffer->string (&rest body)
+  `(with-temp-buffer
+     ,@body
+     (buffer-string)))
+
+(defun dt--slurp (f)
+  (dt--buffer->string
+   (insert-file-contents f)))
+
+(defun dt--replace (s match replacement)
+  (replace-regexp-in-string match replacement s 'fixedcase 'literal))
+
+(defun dt--replace-sexp (s match replacement)
+  (dt--buffer->string
+   (insert s)
+   (goto-char (point-min))
+   (re-search-forward match)
+   ;; Calling `forward-sexp' and `backward-sexp' here to preserve whitespace.
+   (forward-sexp)
+   (backward-sexp)
+   (kill-sexp)
+   (insert (format "%S" replacement))))
+
+(defun dt--synthesize-theme (f)
+  (-as->
+   (dt--slurp f) $
+   (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
+   (dt--replace $ "doom-one" "nuclear")
+   (-reduce-from
+    (-lambda (s (match replacement))
+      (dt--replace-sexp s match replacement))
+    $
+    (-concat
+     (-map (-lambda ((var color))
+             (list (rx "(" (literal var) (+ whitespace) "'(")
+                   (dt--color color)))
+           (-partition 2 (list "fg" :fg
+                               "red" :red
+                               "orange" :orange
+                               "green" :green
+                               "yellow" :yelow
+                               "blue" :blue
+                               "dark-blue" :dark-blue
+                               "magenta" :magenta
+                               "violet" :violet
+                               "cyan" :cyan)))
+     (-map (-lambda ((var replacement))
+             (list (rx "(" (literal var))
+                   replacement))
+           (-partition 2 (list "highlight" (dt--color :highlight)
+                               "builtin" 'blue
+                               "comments" (dt--color :comments)
+                               "constants" 'yellow
+                               "functions" 'blue
+                               "keywords" 'magenta
+                               "methods" 'violet
+                               "operators" 'cyan
+                               "type" 'orange
+                               "variables" 'red
+                               "numbers" 'violet)))
+     (list
+      `(,(rx "line-number-current-line" (+ anything) ":foreground")
+        (dt--color :violet)))))))
+
+;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary.
+(dt--synthesize-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
+#+end_src
+**** File
+#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el") :noweb yes
+<<gen-doom-theme()>>
+#+end_src
 *** Theme :UI:theming:
-#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
+#+begin_src elisp
 ;;; -*- lexical-binding: t; no-byte-compile: t; -*-
 
 (require 'doom-themes)
