@@ -1386,12 +1386,12 @@ flatpak install --user flathub us.zoom.Zoom
 #+begin_src elisp
 ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
 (add-hook! 'doom-real-buffer-functions
-  (defun biome-new-buffer-p (buf)
-    (s-matches?
-     (rx bol "*new*"
-         (* "<" (+ digit) ">")
-         eol)
-     (buffer-name buf)))
+  ;; (defun biome-new-buffer-p (buf)
+  ;;   (s-matches?
+  ;;    (rx bol "*new*"
+  ;;        (* "<" (+ digit) ">")
+  ;;        eol)
+  ;;    (buffer-name buf)))
   ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
   (defun biome-org-src-edit-buffer-p (buf)
     (s-matches?
