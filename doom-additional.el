@@ -87,3 +87,9 @@
 (after! vertico
   (setq vertico-count 20  ; Trying out, maybe too big.
         vertico-scroll-margin 7))
+
+
+
+(map! "s-&" (lambda (command)
+              (interactive (list (read-shell-command "$ ")))
+              (call-process-shell-command command nil 0 nil)))

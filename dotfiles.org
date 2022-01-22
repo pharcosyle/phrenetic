@@ -2208,7 +2208,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 
 (package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
 
-(package! code-review :disable t) ; REVIEW Breaks stuff after I updated to emacs 29 latest
+;; REVIEW Breaks stuff after I updated to emacs 29 latest:
+;; Compiling EmacSQL SQLite binary ...
+;; Code Review initialization: (error "No EmacSQL SQLite binary available, aborting")
+(package! code-review :disable t)
 
 (package! app-launcher
   :recipe (:host github
