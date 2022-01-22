@@ -593,13 +593,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 (define* (sway-wm os #:key laptop?)
   (wm os
       #:package sway
-      #:services (append ((feature-system-services-getter (feature-sway)) (rde-config
-                                                                           (features
-                                                                            (list
-                                                                             (feature
-                                                                              (name 'dummy-provide-old-alacritty)
-                                                                              ;; (values `((default-terminal . ,(file-append package "/bin/alacritty"))))
-                                                                              (values '((default-terminal . "/gnu/store/whb3c3brk214w9y1zj038jxsscdgf4qw-alacritty-0.9.0/bin/alacritty"))))))))
+      #:services (append ((feature-system-services-getter (feature-sway)) (rde-config))
                          (if laptop?
                              (list (udev-rules-service 'backlight-add brightnessctl)) '()))))
 #+end_src
