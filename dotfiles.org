@@ -1228,11 +1228,6 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+begin_src nix :tangle (in-tangle-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
-*** WIP Nix
-Ran this manually but it ought to be done either programmatically by Guix Home (either imperatively or add a home-files-service to a symlink, if that's possible)
-#+begin_src sh
-ln -s "/nix/var/nix/profiles/per-user/$USER/profile" ~/.nix-profile
-#+end_src
 ** WIP Flatpak
 Ran these manually
 #+begin_src sh
