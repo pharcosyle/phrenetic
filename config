@@ -70,7 +70,7 @@ input "type:touchpad" {
 
 output * bg ~/projects/dotfiles/res/alucard_bg.png fill
 
-# TODO there might be a better way to change volume since I'm using pipewire exclusively. Might be obviated by a plugin I find later. Search google for pipewire volume changing, one result I already found suggested `pamixer` over `pactl`.
+# TODO Andrew Tropin added this to RDE recently, maybe use his version: https://github.com/abcdw/rde/commit/6b8acfc27514beff53db235352074c8eeb4054d5
 bindsym --locked XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
 bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
