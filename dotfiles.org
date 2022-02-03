@@ -1634,11 +1634,6 @@ flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ***** Emacs
 ****** Dired
-******* all-the-icons-dired :UI:
-#+begin_src elisp
-(after! all-the-icons-dired
-  (setq all-the-icons-dired-monochrome nil))
-#+end_src
 ******* dired-x :UI:hidden:
 Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
 - TODO dired buffers always marked modified
