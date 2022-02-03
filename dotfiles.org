@@ -780,7 +780,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 (define pipewire-services
   (update-pipewire-shepherd-daemons
-   ((feature-home-services-getter (feature-pipewire)) (rde-config))))
+   (filter service?
+           ((feature-home-services-getter (feature-pipewire)) (rde-config)))))
 #+end_src
 *** Sway
 #+begin_src scheme
