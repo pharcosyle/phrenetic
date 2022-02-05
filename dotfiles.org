@@ -30,7 +30,7 @@ Krzysztof Baranowski
 pharcosyle@gmail.com
 #+end_src
 #+name: palette
-| Name              | Value   |
+| Name              | Color   |
 |-------------------+---------|
 | fg                | #dee2f8 |
 | highlight         | #8496ff |
@@ -65,7 +65,7 @@ Boot from the installation medium, select your language and country, and select 
 This messed up the keyboard when I tried it on mac, not doing ~loadkeys~ at all was fine.
 #+begin_src sh
 # keysfile=mac-us
-# loadkeys mac-us
+# loadkeys $keysfile
 #+end_src
 *** Networking
 #+begin_src sh
@@ -657,6 +657,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
         (if desktop?
             (-> $
                 (gdm
+                 ;; TODO
                  ;; #:auto-login (if disk-encryption?
                  ;;                      "<<user-name>>" #f)
                  )
@@ -1253,8 +1254,8 @@ Ran these manually
 #+begin_src sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-flatpak install --user flathub com.spotify.Client
-flatpak install --user flathub us.zoom.Zoom
+# flatpak install --user flathub com.spotify.Client
+# flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ** Doom
 :PROPERTIES:
@@ -2349,12 +2350,12 @@ profilePath="$GUIX_EXTRA/$profileName"
 mkdir -p $profilePath
 guix pull --load-path=. --channels=frostfire-channels.scm --profile="$profilePath/$profileName"
 
-guix="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
-$guix describe --format=channels > frostfire-channels-lock.scm
+guix_exe="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
+$guix_exe describe --format=channels > frostfire-channels-lock.scm
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-$guix="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
-sudo $guix system --load-path=. --expression='(@ (ebullient system hosts frostfire) frostfire)' reconfigure
+$guix_exe="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
+sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts frostfire) frostfire)' reconfigure
 #+end_src
 * Packages
 :PROPERTIES:
