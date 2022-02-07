@@ -207,8 +207,8 @@ guix pull
   #:use-module ((gnu packages) #:select (specification->package))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
-  #:use-module ((gnu packages linux) #:select (brightnessctl))
-  #:use-module ((gnu packages wm) #:select (sway))
+  #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
+  #:use-module ((gnu packages wm) #:select (sway swaylock))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -222,9 +222,6 @@ guix pull
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module (rde features)
-  #:use-module ((rde features linux) #:select (feature-pipewire))
-  #:use-module ((rde features wm) #:select (feature-sway))
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
@@ -593,7 +590,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 (define* (sway-wm os #:key laptop?)
   (wm os
       #:package sway
-      #:services (append ((feature-system-services-getter (feature-sway)) (rde-config))
+      #:services (append (list (screen-locker-service swaylock))
                          (if laptop?
                              (list (udev-rules-service 'backlight-add brightnessctl)) '()))))
 #+end_src
@@ -609,7 +606,7 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
     (if desktop?
         (list (service gnome-desktop-service-type)) '())
     (if pipewire?
-        ((feature-system-services-getter (feature-pipewire)) (rde-config)) '())
+        (list (udev-rules-service 'pipewire-add-udev-rules pipewire-0.3)) '())
     (if nix?
         (list (service nix-service-type)) '())
     ;; (if bluetooth?
@@ -2346,7 +2343,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 * WIP channels
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-channels.scm")
 (use-modules (ebullient channels))
-(get-channels nonguix rde)
+(get-channels nonguix)
 #+end_src
 #+begin_src scheme :tangle (in-tangle-dir "solitude-channels.scm")
 (use-modules (ebullient channels))
