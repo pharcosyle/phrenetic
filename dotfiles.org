@@ -1011,8 +1011,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (service home-zsh-service-type
               (home-zsh-configuration
                (zshrc
-                ;; TODO trying out Andrew Tropin's zsh configuration. I probably won't keep it verbatim like this but if I do don't hardcode the path
-                (list (local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/zshrc")
+                ;; TODO trying out Andrew Tropin's zsh configuration verbatim, eventually I'll merge these two files
+                (list (local-file "../../zsh/zshrc")
                       (local-file "zshrc")))))
       (service zsh-direnv-service-type)
       ;; TODO probably gate this
@@ -1020,8 +1020,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                       home-zsh-service-type
                       (home-zsh-extension
                        (zshrc
-                        ;; TODO don't hardcode path
-                        (list (local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/vterm")))))
+                        (list (local-file "../../zsh/vterm")))))
 
       (service home-xdg-user-directories-service-type
                (let* ((xdg-user-subdir "/files")
