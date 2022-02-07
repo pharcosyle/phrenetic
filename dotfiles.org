@@ -802,16 +802,16 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                       ,(mixed-text-file
                         "asoundrc"
                         #~(string-append
-                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">\n"
-                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">\n"
+                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
+                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
                            "\n"
-                           "pcm_type.pipewire {\n"
+                           "pcm_type.pipewire {" "\n"
                            "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-                           "}\n"
+                           "}" "\n"
                            "\n"
-                           "ctl_type.pipewire {\n"
+                           "ctl_type.pipewire {" "\n"
                            "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-                           "}\n")))))))
+                           "}" "\n")))))))
 #+end_src
 *** Sway
 #+begin_src scheme
@@ -975,7 +975,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient home components)
 
 
-  #:export (solitude))
+  #:export (he))
 
 ;; (define emacs-variant emacs-native-comp)
 (define emacs-variant emacs)
@@ -986,7 +986,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                              (,emacs-minimal . ,emacs-variant)
                              (,emacs-no-x . ,emacs-variant))))
 
-(define solitude
+(define he
   (home-environment
    (packages (list (specification->package "font-fira-code") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
                    ;; (specification->package "font-adobe-source-code-pro")
@@ -1104,7 +1104,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       (service udiskie-service-type))))))
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-guix home --load-path=. --expression='(@ (ebullient home solitude) solitude)' reconfigure
+guix home --load-path=. --expression='(@ (ebullient home solitude) he)' reconfigure
 #+end_src
 ** Shells
 *** Bash profile
@@ -1754,7 +1754,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
 #+end_src
 ****** Org
-******* org :UI:path:
+******* org :UI:path:theming:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -2404,7 +2404,7 @@ $guix_exe describe --format=channels > frostfire-channels-lock.scm
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
 $guix_exe="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
-sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts frostfire) frostfire)' reconfigure
+sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts frostfire) os)' reconfigure
 #+end_src
 * Packages
 :PROPERTIES:
