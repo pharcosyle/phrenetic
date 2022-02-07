@@ -914,11 +914,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   ;; #:use-module (gnu packages admin)
   ;; #:use-module (gnu packages gnupg)
   ;; #:use-module (gnu packages linux)
+  #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module (gnu services)
   ;; #:use-module (gnu system keyboard)
-
-
-  #:use-module ((rde features shells) #:select (feature-zsh))
 
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
@@ -930,9 +928,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 
   #:use-module (ebullient home components)
-
-
-  #:use-module (rde features)
 
 
   #:export (solitude))
@@ -957,22 +952,24 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    (services
     (append
      (list
+      ;; TODO presumably only necessary if different from the login shell, maybe capture this when I modularize
+      (simple-service 'set-default-shell-to-zsh
+                      home-environment-variables-service-type
+                      `(("SHELL" . ,(file-append zsh "/bin/zsh"))))
       (service home-bash-service-type
                (home-bash-configuration
                 (environment-variables
                  `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
                    ("EDITOR" . "$VISUAL")))
                 (bash-profile
-                 (list (local-file "bash_profile"))))))
-     (filter service?
-             ((feature-home-services-getter (feature-zsh)) (rde-config)))
-     (list
-      (simple-service 'zsh-config
-                      home-zsh-service-type
-                      (home-zsh-extension
-                       (zshrc
-                        (list (local-file "zshrc")))))
-      (service home-zsh-direnv-service-type)
+                 (list (local-file "bash_profile")))))
+     (service home-zsh-service-type
+              (home-zsh-configuration
+               (zshrc
+                ;; TODO trying out Andrew Tropin's zsh configuration. I probably won't keep it verbatim like this but if I do don't hardcode the path
+                (list (local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/zshrc")
+                      (local-file "zshrc")))))
+      ;; (service home-zsh-direnv-service-type)
       ;; TODO probably gate this
       (simple-service 'emacs-vterm-zsh-configuration
                       home-zsh-service-type
