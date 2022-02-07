@@ -736,10 +736,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define-module (ebullient home components)
   #:use-module (guix gexp)
   ;; #:use-module (gnu home services)
+  #:use-module ((gnu home services) #:select (home-profile-service-type))
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
+  #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages xdisorg) #:select (gammastep))
   #:use-module (gnu services)
   ;; #:use-module (gnu services configuration)
@@ -750,6 +752,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient utils)
   #:export (pipewire-services
             sway-services
+            zsh-direnv-service-type
             gammastep-service-type
             nm-service-type
             udiskie-service-type))
@@ -819,6 +822,22 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    ;; `((include ,(local-file "./config/sway/config")))
                    `((include "/home/pharcosyle/projects/dotfiles/config"))))
     (rde-config))))
+#+end_src
+*** Direnv (Zsh)
+#+begin_src scheme
+(define zsh-direnv-service-type
+  (service-type (name 'home-zsh-direnv)
+                (extensions
+                 (list
+                  (service-extension home-profile-service-type
+                                     (const (list direnv)))
+                  (service-extension home-zsh-service-type
+                                     (const (home-zsh-extension
+                                             ;; TODO Might be nice to make this `local-file' and src block
+                                             (zshrc
+                                              (list (plain-file "direnv-hook"
+                                                                "eval \"$(direnv hook zsh)\""))))))))
+                (default-value #f)))
 #+end_src
 *** Applets
 **** Gammastep
@@ -969,7 +988,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                 ;; TODO trying out Andrew Tropin's zsh configuration. I probably won't keep it verbatim like this but if I do don't hardcode the path
                 (list (local-file "/home/pharcosyle/.config/guix/current/share/guile/site/3.0/rde/features/zsh/zshrc")
                       (local-file "zshrc")))))
-      ;; (service home-zsh-direnv-service-type)
+      (service zsh-direnv-service-type)
       ;; TODO probably gate this
       (simple-service 'emacs-vterm-zsh-configuration
                       home-zsh-service-type
