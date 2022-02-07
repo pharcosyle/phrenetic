@@ -732,19 +732,19 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+begin_src scheme
 (define-module (ebullient home components)
   #:use-module (guix gexp)
-  ;; #:use-module (gnu home services)
+  #:use-module (gnu home services)
   #:use-module ((gnu home services) #:select (home-profile-service-type))
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
+  #:use-module ((gnu packages linux) #:select (pipewire-0.3 wireplumber))
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages xdisorg) #:select (gammastep))
   #:use-module (gnu services)
   ;; #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
   #:use-module (rde features)
-  #:use-module ((rde features linux) #:select (feature-pipewire))
   #:use-module ((rde features wm) #:select (feature-sway))
   #:use-module (ebullient utils)
   #:export (pipewire-services
@@ -757,32 +757,61 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define serialize-posix-env-vars (@@ (gnu home services shells) serialize-posix-env-vars))
 #+end_src
 *** Pipewire
+- TODO Once I figure out how I'm componentizing home config, decide if this should remain a list of services, I should turn it into a ~service-type~, etc
 #+begin_src scheme
-(define (update-pipewire-shepherd-daemons services)
-  (update-services*
-   services
-   (lambda (svc)
-     (eq? (-> svc service-kind service-type-name) 'pipewire-add-shepherd-daemons))
-   (lambda (shepherd-services)
-     (as-> shepherd-services $
-       (map (lambda (svc)
-              (shepherd-service
-               (inherit svc)
-               (auto-start? #f)))
-            $)
-       (update-list
-        $
-        (lambda (svc)
-          (equal? (shepherd-service-provision svc) '(pipewire)))
-        (lambda (svc)
-          (shepherd-service
-           (inherit svc)
-           (requirement '()))))))))
-
 (define pipewire-services
-  (update-pipewire-shepherd-daemons
-   (filter service?
-           ((feature-home-services-getter (feature-pipewire)) (rde-config)))))
+  (list
+   (simple-service 'pipewire-add-packages
+                   home-profile-service-type
+                   (list pipewire-0.3 wireplumber))
+   (simple-service 'pipewire-add-shepherd-daemons
+                   home-shepherd-service-type
+                   (list
+                    (shepherd-service
+                     (provision '(pipewire))
+                     (stop  #~(make-kill-destructor))
+                     (start #~(make-forkexec-constructor
+                               (list #$(file-append pipewire-0.3 "/bin/pipewire"))
+                               #:environment-variables
+                               (append (list "DISABLE_RTKIT=1")
+                                       (default-environment-variables))))
+                     (auto-start? #f))
+                    (shepherd-service
+                     (requirement '(pipewire))
+                     (provision '(wireplumber))
+                     (stop  #~(make-kill-destructor))
+                     (start #~(make-forkexec-constructor
+                               (list #$(file-append wireplumber "/bin/wireplumber"))
+                               #:environment-variables
+                               (append (list "DISABLE_RTKIT=1")
+                                       (default-environment-variables))))
+                     (auto-start? #f))
+                    (shepherd-service
+                     (requirement '(pipewire))
+                     (provision '(pipewire-pulse))
+                     (stop  #~(make-kill-destructor))
+                     (start #~(make-forkexec-constructor
+                               (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
+                               #:environment-variables
+                               (append (list "DISABLE_RTKIT=1")
+                                       (default-environment-variables))))
+                     (auto-start? #f))))
+   (simple-service 'pipewire-add-asoundrc
+                   home-files-service-type
+                   `(("config/alsa/asoundrc"
+                      ,(mixed-text-file
+                        "asoundrc"
+                        #~(string-append
+                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">\n"
+                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">\n"
+                           "\n"
+                           "pcm_type.pipewire {\n"
+                           "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
+                           "}\n"
+                           "\n"
+                           "ctl_type.pipewire {\n"
+                           "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
+                           "}\n")))))))
 #+end_src
 *** Sway
 #+begin_src scheme
