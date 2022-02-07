@@ -592,7 +592,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       #:package sway
       #:services (append (list (screen-locker-service swaylock))
                          (if laptop?
-                             (list (udev-rules-service 'backlight-add brightnessctl)) '()))))
+                             (list (udev-rules-service 'backlight-add-udev-rules brightnessctl)) '()))))
 #+end_src
 *** Miscellany
 nss-certs, Gnome, backlight control, Nix, bluetooth
