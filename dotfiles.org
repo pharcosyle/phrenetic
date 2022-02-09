@@ -204,7 +204,7 @@ guix pull
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
-  #:use-module ((gnu packages) #:select (specification->package))
+  #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
@@ -227,23 +227,25 @@ guix pull
   #:use-module ((srfi srfi-1) #:select (any remove iota))
   #:use-module (ebullient utils)
   #:export (barebones-os
-            basics
-            boot
-            initial-services
+            host-info
+            grub-efi
+            base-services+packages
             linux-nonfree
             disk-encryption
             stateless
             btrfs
             users
-            gdm
-            nix
-            hidpi-console-font
             nonguix-substitutes
-            macbook
-            macbook-kbl
+            nix
+            console-keyboard-layouts
+            hidpi-console-font
+            desktop-services
+            gdm
+            gnome-desktop
             wm
             sway-wm
-            miscellany))
+            macbook-wireless
+            macbook-kbl))
 #+end_src
 #+begin_src scheme
 (define-syntax-rule (system-comp os field ...)
@@ -276,23 +278,21 @@ guix pull
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-*** Basics
-Other components may inherit ~keyboard-value~ so use this component early. At the time of this writing, nothing depends on the values of hostname, etc but I could see them being useful base values to have present early.
+*** Host info
 #+begin_src scheme
-(define-system-comp (basics #:key host-name timezone locale keyboard-layout)
+(define-system-comp (host-info #:key host-name timezone locale)
   (host-name host-name)
   (timezone timezone)
-  (locale locale)
-  (keyboard-layout keyboard-layout))
+  (locale locale))
 #+end_src
-*** EFI Boot
+*** Boot
+**** Grub EFI
 #+begin_src scheme
-(define-system-comp (boot #:key label target)
+(define-system-comp (grub-efi #:key label target)
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
                (targets (list target))
-               (timeout 1)
-               (keyboard-layout (operating-system-keyboard-layout os))))
+               (timeout 1)))
   (file-systems
    (cons* (file-system
             (device (file-system-label label))
@@ -300,25 +300,14 @@ Other components may inherit ~keyboard-value~ so use this component early. At th
             (type "vfat"))
           (operating-system-file-systems os))))
 #+end_src
-*** Initial services
-Other components may wish to modify the list of operating system services so use this in the component chain early.
+*** Base services and packages
 #+begin_src scheme
-(define (selective-desktop-services pipewire?)
-  (remove (lambda (service)
-            (member (service-kind service)
-                    (append (list gdm-service-type
-                                  screen-locker-service-type)
-                            (if pipewire?
-                                (list pulseaudio-service-type
-                                      alsa-service-type)
-                                '()))))
-          %desktop-services))
-
-(define-system-comp (initial-services #:key desktop? pipewire?)
+(define-system-comp (base-services+packages)
+  (packages
+   (cons* nss-certs
+          (operating-system-packages os)))
   (services
-   (append (if desktop?
-               (selective-desktop-services pipewire?)
-               %base-services)
+   (append %base-services
            (operating-system-user-services os))))
 #+end_src
 *** Linux nonfree
@@ -362,7 +351,9 @@ The stateless service should come after base/desktop services (potentially other
   (file-systems
    (map (lambda (fs)
           (if (member (file-system-mount-point fs)
-                      `("/var/guix" "/var/log" ,persist-dir))
+                      `("/var/guix"
+                        "/var/log"
+                        ,persist-dir))
               (file-system
                 (inherit fs)
                 (needed-for-boot? #t))
@@ -464,7 +455,8 @@ The stateless service should come after base/desktop services (potentially other
                        (service-extension activation-service-type
                                           activate-state-gexp)))))
 #+end_src
-*** Btrfs file systems
+*** File systems
+**** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key label subvols)
   (file-systems
@@ -500,30 +492,6 @@ The stateless service should come after base/desktop services (potentially other
                 who)
            (operating-system-users os))))
 #+end_src
-*** GDM display manager
-#+begin_src scheme
-(define-system-comp (gdm #:key auto-login)
-  (services
-   (cons* (service gdm-service-type
-                   (gdm-configuration
-                    (auto-login? (if auto-login #t #f))
-                    (default-user auto-login)
-                    (wayland? #t)))
-          (operating-system-user-services os))))
-#+end_src
-*** HiDPI console font
-#+begin_src scheme
-(define-system-comp (hidpi-console-font)
-  (services
-   (update-services
-    (operating-system-user-services os)
-    console-font-service-type
-    (lambda (config)
-      (map (lambda (tty-and-font)
-             (cons (car tty-and-font)
-                   (file-append font-terminus "/share/consolefonts/ter-132n")))
-           config)))))
-#+end_src
 *** Nonguix substitutes
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
@@ -548,34 +516,90 @@ The stateless service should come after base/desktop services (potentially other
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-*** Macbook
-I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel (i.e., not linux-libre)
+*** Nix
 #+begin_src scheme
-(define (with-blacklist kernel-args new)
-
-  (define (blacklist? ka)
-    (string-prefix? "modprobe.blacklist" ka))
-
-  (if (any blacklist? kernel-args)
-      (update-list kernel-args blacklist? (lambda (blacklist)
-                                            (string-append blacklist "," new)))
-      (cons* (string-append "modprobe.blacklist=" new) kernel-args)))
-
-(define-system-comp (macbook #:key bluetooth?)
-  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
-                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-  (kernel-loadable-modules (cons* broadcom-sta
-                                  (operating-system-kernel-loadable-modules os)))
-  (firmware (append
-             (if bluetooth? (list broadcom-bt-firmware) '())
-             (operating-system-firmware os))))
+(define-system-comp (nix)
+  (services
+   (cons* (service nix-service-type)
+          (operating-system-user-services os))))
 #+end_src
-**** Keyboard layout
+*** Console
+**** Console keyboard layouts
 #+begin_src scheme
-(define macbook-kbl
-  (keyboard-layout "us" #:model "macbook78"))
+(define-system-comp (console-keyboard-layouts #:key keyboard-layout)
+  (keyboard-layout keyboard-layout)
+  (bootloader (bootloader-configuration
+               (inherit (operating-system-bootloader os))
+               (keyboard-layout keyboard-layout))))
 #+end_src
-*** Window manager
+**** HiDPI console font
+#+begin_src scheme
+(define-system-comp (hidpi-console-font)
+  (services
+   (update-services
+    (operating-system-user-services os)
+    console-font-service-type
+    (lambda (config)
+      (map (lambda (tty-and-font)
+             (cons (car tty-and-font)
+                   (file-append font-terminus "/share/consolefonts/ter-132n")))
+           config)))))
+#+end_src
+*** Desktop
+**** Desktop services
+#+begin_src scheme
+(define-system-comp (desktop-services #:key pipewire? bluetooth?)
+  (services
+   (as-> (operating-system-user-services os) $
+     (append selective-desktop-services $)
+     (if pipewire?
+         (with-pipewire $) $)
+     ;; (if bluetooth?
+     ;;     (cons* (bluetooth-service #:auto-enable? #t) $))
+     )))
+
+(define (remove-services services kinds)
+  (remove (lambda (s)
+            (member (service-kind s) kinds))
+          services))
+
+(define selective-desktop-services
+  (remove-services %desktop-services
+                   (append (map service-kind %base-services)
+                           (list gdm-service-type
+                                 screen-locker-service-type))))
+#+end_src
+***** Pipewire
+#+begin_src scheme
+(define (with-pipewire services)
+  (as-> services $
+    (remove-services $ (list pulseaudio-service-type
+                             alsa-service-type))
+    (cons* (udev-rules-service 'pipewire-add-udev-rules
+                               pipewire-0.3)
+           $)))
+#+end_src
+**** Display managers
+***** GDM
+#+begin_src scheme
+(define-system-comp (gdm #:key wayland? auto-login)
+  (services
+   (cons* (service gdm-service-type
+                   (gdm-configuration
+                    (auto-login? (if auto-login #t #f))
+                    (default-user auto-login)
+                    (wayland? wayland?)))
+          (operating-system-user-services os))))
+#+end_src
+**** Desktop environments
+***** Gnome
+#+begin_src scheme
+(define-system-comp (gnome-desktop)
+  (services
+   (cons* (service gnome-desktop-service-type)
+          (operating-system-user-services os))))
+#+end_src
+**** Window managers
 #+begin_src scheme
 (define-system-comp (wm #:key package services)
   (packages
@@ -585,33 +609,55 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
    (append services
            (operating-system-user-services os))))
 #+end_src
-**** Sway
+***** Sway
 #+begin_src scheme
 (define* (sway-wm os #:key laptop?)
   (wm os
       #:package sway
-      #:services (append (list (screen-locker-service swaylock))
-                         (if laptop?
-                             (list (udev-rules-service 'backlight-add-udev-rules brightnessctl)) '()))))
+      #:services (cons* swaylock-service
+                        (if laptop?
+                            (list brightnessctl-udev-rules) '()))))
 #+end_src
-*** Miscellany
-nss-certs, Gnome, backlight control, Nix, bluetooth
+**** Screen lockers
+***** Swaylock
 #+begin_src scheme
-(define-system-comp (miscellany #:key desktop? nix? pipewire? bluetooth?)
-  (packages
-   (cons* (specification->package "nss-certs")
-          (operating-system-packages os)))
-  (services
-   (append
-    (if desktop?
-        (list (service gnome-desktop-service-type)) '())
-    (if pipewire?
-        (list (udev-rules-service 'pipewire-add-udev-rules pipewire-0.3)) '())
-    (if nix?
-        (list (service nix-service-type)) '())
-    ;; (if bluetooth?
-    ;;     (list (bluetooth-service #:auto-enable? #t)) '())
-    (operating-system-user-services os))))
+(define swaylock-service
+  (screen-locker-service swaylock))
+#+end_src
+**** Backlight
+***** Brightnessctl
+#+begin_src scheme
+(define brightnessctl-udev-rules
+  (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
+#+end_src
+*** Macbook
+**** Wireless
+I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel.
+#+begin_src scheme
+(define-system-comp (macbook-wireless #:key bluetooth?)
+  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
+                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+  (kernel-loadable-modules (cons* broadcom-sta
+                                  (operating-system-kernel-loadable-modules os)))
+  (firmware (append
+             (if bluetooth? (list broadcom-bt-firmware) '())
+             (operating-system-firmware os))))
+
+(define (with-blacklist kernel-args new)
+
+  (define blacklist-param "modprobe.blacklist")
+  (define (blacklist? ka)
+    (string-prefix? blacklist-param ka))
+
+  (if (any blacklist? kernel-args)
+      (update-list kernel-args blacklist? (lambda (blacklist)
+                                            (string-append blacklist "," new)))
+      (cons* (string-append blacklist-param "=" new) kernel-args)))
+#+end_src
+**** Keyboard layout
+#+begin_src scheme
+(define macbook-kbl
+  (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ** Base OS
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
@@ -622,26 +668,26 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
 
 (define* (base-os #:key
                   host-name
-                  (desktop? #t)
-                  (laptop? #t)
-                  macbook?
                   (disk-encryption? #t)
                   luks-uuid
                   (nix? #t)
+                  (console? #t)
+                  (desktop? #t)
                   (pipewire? desktop?)
                   (bluetooth? desktop?)
+                  (laptop? #t)
+                  macbook?
                   (aux-admin? #t)
-                  (guest? laptop?))
+                  (guest? laptop?)
+                  (kbl (if macbook?
+                           macbook-kbl #f)))
   (-> barebones-os
-      (basics #:host-name host-name
-              #:timezone "America/Los_Angeles"
-              #:locale "en_US.utf8"
-              #:keyboard-layout (if macbook?
-                                    macbook-kbl #f))
-      (boot #:label "genesis"
-            #:target "/boot/efi")
-      (initial-services #:desktop? desktop?
-                        #:pipewire? pipewire?)
+      (host-info #:host-name host-name
+                 #:timezone "America/Los_Angeles"
+                 #:locale "en_US.utf8")
+      (grub-efi #:label "genesis"
+                #:target "/boot/efi")
+      base-services+packages
       linux-nonfree
       (users #:who (append
                     '((#:name "<<user-name>>" #:comment "<<user-full-name>>" #:admin? #t))
@@ -650,26 +696,29 @@ nss-certs, Gnome, backlight control, Nix, bluetooth
                     (if guest?
                         '((#:name "gandalf" #:comment "Speak Friend and Enter" #:password "mellon" #:salt "toosimple")) '()))
              #:bluetooth? bluetooth?)
-      (as-> $
-        (if desktop?
-            (-> $
-                (gdm
-                 ;; TODO
-                 ;; #:auto-login (if disk-encryption?
-                 ;;                      "<<user-name>>" #f)
-                 )
-                (sway-wm #:laptop? laptop?)
-                hidpi-console-font)
-            $))
       nonguix-substitutes
       (as-> $
+        (if nix?
+            (nix $) $)
+        (if console?
+            (-> $
+                (console-keyboard-layouts #:keyboard-layout kbl)
+                hidpi-console-font)
+            $)
+        (if desktop?
+            (-> $
+                (desktop-services #:pipewire? pipewire?
+                                  #:bluetooth? bluetooth?)
+                (gdm #:wayland? #t
+                     ;; TODO
+                     ;; #:auto-login (if disk-encryption?
+                     ;;                  "<<user-name>>" #f)
+                     )
+                gnome-desktop
+                (sway-wm #:laptop? laptop?))
+            $)
         (if macbook?
-            (macbook $ #:bluetooth? bluetooth?) $))
-      (miscellany #:desktop? desktop?
-                  #:nix? nix?
-                  #:pipewire? pipewire?
-                  #:bluetooth? bluetooth?)
-      (as-> $
+            (macbook-wireless $ #:bluetooth? bluetooth?) $)
         (let* ((persist-dir "/.persist")
                (subvols
                 (append
