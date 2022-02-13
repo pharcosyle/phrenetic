@@ -2068,6 +2068,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 #+end_src
 ***** Nuclear Theme
+:PROPERTIES:
+:header-args: :tangle no
+:END:
+
 #+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (in-tangle-dir \"themes/doom-nuclear-theme.el\")"
 
 #+RESULTS:
@@ -2262,7 +2266,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 ****** Generator
 #+name: gen-doom-theme
-#+begin_src elisp :var palette=palette :tangle no
+#+begin_src elisp :var palette=palette
 (defun dt--color (color)
   (let ((k (-> color symbol-name (substring 1))))
     (cadr (assoc k palette))))
