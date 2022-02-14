@@ -2585,9 +2585,9 @@ Can be an integer to determine the exact padding."
 (define* (get-channels #:rest cs)
   (append
    cs
-   (remove (let ((names (map (lambda (c) (channel-name c)) cs)))
-             (lambda (c)
-               (member (channel-name c) names)))
+   (remove (lambda (c)
+             (member (channel-name c)
+                     (map channel-name cs)))
            %default-channels)))
 
 (define guix %default-guix-channel)
