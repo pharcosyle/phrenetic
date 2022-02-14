@@ -2067,6 +2067,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
   `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 #+end_src
+***** Font
+#+begin_src elisp
+(let ((font (font-spec :family "Fira Code Retina" :size 12)))
+  (when (find-font font)
+    (setq doom-font font)))
+#+end_src
 ***** Nuclear Theme
 :PROPERTIES:
 :header-args: :tangle no
@@ -2337,12 +2343,6 @@ Can be an integer to determine the exact padding."
 
 ;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary. Perhaps it would be best to have the doom-themes repo be an explicit dependency in some way and manage like I do other Guix or Doom/straight dependencies.
 (dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
-#+end_src
-***** Font
-#+begin_src elisp
-(let ((font (font-spec :family "Fira Code Retina" :size 12)))
-  (when (find-font font)
-    (setq doom-font font)))
 #+end_src
 **** Projects
 ***** Dotfiles :path:
