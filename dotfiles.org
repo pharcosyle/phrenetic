@@ -2632,23 +2632,16 @@ Can be an integer to determine the exact padding."
 (get-channels nonguix rde flat)
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-guix pull --load-path=. --channels=solitude-channels.scm
-guix describe --format=channels > solitude-channels-lock.scm
+guix time-machine --load-path=. --channels=solitude-channels.scm -- describe --format=channels > solitude-channels-lock.scm
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-GUIX_EXTRA=$HOME/.guix-extra
-mkdir -p $GUIX_EXTRA
-profileName=frostfire
-profilePath="$GUIX_EXTRA/$profileName"
-mkdir -p $profilePath
-guix pull --load-path=. --channels=frostfire-channels.scm --profile="$profilePath/$profileName"
-
-guix_exe="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
-$guix_exe describe --format=channels > frostfire-channels-lock.scm
+guix pull --channels=solitude-channels-lock.scm
 #+end_src
 #+begin_src sh :results output silent :dir base-tangle-dir :async
-$guix_exe="$GUIX_EXTRA/$profileName/$profileName"/bin/guix
-sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts frostfire) os)' reconfigure
+guix time-machine --load-path=. --channels=frostfire-channels.scm -- describe --format=channels > frostfire-channels-lock.scm
+#+end_src
+#+begin_src sh :results output silent :dir base-tangle-dir :async
+sudo guix time-machine --channels=solitude-channels-lock.scm -- system --load-path=. --expression='(@ (ebullient system hosts frostfire) os)' reconfigure
 #+end_src
 * Packages
 :PROPERTIES:
