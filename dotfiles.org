@@ -903,6 +903,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module ((gnu packages freedesktop) #:select (udiskie))
+  #:use-module ((gnu packages fonts) #:select (font-fira-code))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages linux) #:select (pipewire-0.3 wireplumber))
   #:use-module ((gnu packages shellutils) #:select (direnv))
@@ -912,10 +913,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (gnu services shepherd)
   #:use-module (rde features)
   #:use-module ((rde features wm) #:select (feature-sway))
+  #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
   #:export (pipewire-services
             sway-services
             zsh-direnv-service-type
+            doom-service-type
             gammastep-service-type
             nm-service-type
             udiskie-service-type))
@@ -1031,6 +1034,80 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                                                                 "eval \"$(direnv hook zsh)\""))))))))
                 (default-value #f)))
 #+end_src
+*** Doom
+#+begin_src scheme
+(define doom-service-type
+  (service-type (name 'home-doom)
+                (extensions
+                 (list
+                  (service-extension home-profile-service-type
+                                     (const (list doom-emacs
+                                                  font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically
+                  ;; (service-extension home-files-service-type
+                  ;;                    (const (list `("config/doom"
+                  ;;                                   ,(local-file "doom" #:recursive? #t)))))
+                  ))
+                (default-value #f)))
+#+end_src
+**** Doom Emacs package :package:version:
+- TODO make the ~doom~ program (probably the entire =bin= directory) part of outputs
+#+begin_src scheme :tangle (in-tangle-dir "doom-emacs.scm")
+(define-module (ebullient home doom-emacs)
+  #:use-module (guix gexp)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module (guix build-system trivial)
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((gnu packages base) #:select (coreutils))
+  ;; #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages llvm) #:select (clang))
+  #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
+  #:use-module ((gnu packages version-control) #:select (git)))
+
+(define-public doom-emacs
+  (let ((commit "fc868105cefc6ce0091fc61f0fc4d8ccb653a048")
+        (revision "0"))
+    (package
+      (name "doom-emacs")
+      (version (git-version "21.12.0-alpha" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/hlissner/doom-emacs")
+               (commit commit)))
+         (sha256
+          (base32
+           "1lm5mgvjhpxqfw5gcv99h4mwbq728b6f2hj5vjh1j67kdwy7ws8k"))
+         (file-name (git-file-name name version))))
+      ;; TODO Ideally these wouldn't be propagated inputs. Instead of tracking down usages of these and doing `substitute' everywhere maybe `wrap-prgram' is an option? However maybe there are other things in these inputs than just binaries Doom depends on or it has parts outside of emacs that recquire them?
+      (propagated-inputs
+       (list
+        ;; Required
+        ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
+        git
+        ripgrep
+        ;; Optional
+        coreutils ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
+        fd
+        clang ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
+        ))
+      (build-system trivial-build-system)
+      (arguments
+       `(#:modules ((guix build utils))
+         #:builder
+         ,#~(begin
+              (use-modules (guix build utils))
+              (mkdir-p (string-append #$output "/asdf"))
+              (with-output-to-file (string-append #$output "/asdf/asdf.txt")
+                (lambda _
+                  (display "asdffffffffffff")))
+              #t)))
+      (synopsis "An Emacs framework for the stubborn martian hacker")
+      (description synopsis)
+      (home-page "https://github.com/hlissner/doom-emacs")
+      (license license:expat))))
+#+end_src
 *** Applets
 **** Gammastep
 - TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
@@ -1145,9 +1222,6 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
   #:use-module ((flat packages emacs) #:select (emacs-native-comp))
 
 
-  #:use-module (ebullient home doom-emacs-temp)
-
-
   #:use-module (ebullient home components)
 
 
@@ -1164,12 +1238,11 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
 
 (define he
   (home-environment
-   (packages (list (specification->package "font-fira-code") ; TODO (propagated) dependency of Doom config, move it somewhere when I figure out how I'm doing Emacs/Doom guix configuration.
-                   ;; (specification->package "font-adobe-source-code-pro")
+   (packages (list ;; (specification->package "font-adobe-source-code-pro")
                    (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
                    (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
                    ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
-                   (with-emacs-variant doom-emacs-temp)))
+                   ))
    (services
     (append
      (list
@@ -1180,6 +1253,7 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
       (service home-bash-service-type
                (home-bash-configuration
                 (environment-variables
+                 ;; TODO make these contributed by the eventual Emacs module
                  `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
                    ("EDITOR" . "$VISUAL")))
                 (bash-profile
@@ -1250,10 +1324,8 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
                       home-files-service-type
                       (list `("config/nixpkgs/config.nix"
                               ,(local-file "nixpkgs-config.nix"))))
-      ;; (simple-service 'doomdir
-      ;;                 home-files-service-type
-      ;;                 (list `("config/doom"
-      ;;                         ,(local-file "doom" #:recursive? #t))))
+
+
       ;; TODO Examples from RDE I may want to make use of.
       ;; (service home-keyboard-service-type
       ;;          (keyboard-layout "us,ru" "dvorak,"
@@ -1275,6 +1347,7 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
      sway-services
 
      (list
+      (service doom-service-type)
       (service gammastep-service-type)
       (service nm-service-type)
       (service udiskie-service-type))))))
@@ -2697,54 +2770,6 @@ Can be an integer to determine the exact padding."
   :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
-#+end_src
-** WIP emacs
-*** doom-emacs-temp
-- TODO probably "export" the ~doom~ program to user profile
-#+begin_src scheme :tangle (in-tangle-dir "doom-emacs-temp.scm")
-(define-module (ebullient home doom-emacs-temp)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module (guix build-system trivial)
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module ((gnu packages base) #:select (coreutils))
-  ;; #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages llvm) #:select (clang))
-  #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
-  #:use-module ((gnu packages version-control) #:select (git)))
-
-(define-public doom-emacs-temp
-  (package
-    (name "doom-emacs-temp")
-    (version "0")
-    (source #f)
-    ;; TODO Ideally these wouldn't be propagated inputs. Instead of tracking down usages of these and doing `substitute' everywhere maybe `wrap-prgram' is an option? However maybe there are other things in these inputs than just binaries Doom depends on or it has parts outside of emacs that recquire them?
-    (propagated-inputs
-     (list
-      ;; Required
-      ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
-      git
-      ripgrep
-      ;; Optional
-      coreutils ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
-      fd
-      clang ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
-      ))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:modules ((guix build utils))
-       #:builder
-       ,#~(begin
-            (use-modules (guix build utils))
-            (mkdir-p (string-append #$output "/asdf"))
-            (with-output-to-file (string-append #$output "/asdf/asdf.txt")
-              (lambda _
-                (display "asdffffffffffff")))
-            #t)))
-    (synopsis "An Emacs framework for the stubborn martian hacker")
-    (description synopsis)
-    (home-page "https://github.com/hlissner/doom-emacs")
-    (license license:expat)))
 #+end_src
 * Channels
 :PROPERTIES:
