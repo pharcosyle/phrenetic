@@ -2797,9 +2797,13 @@ Can be an integer to determine the exact padding."
 (define-module (ebullient utils)
   #:use-module (guix packages)
   #:use-module (gnu services)
+  #:use-module ((srfi srfi-1) #:select (take drop))
   #:export (update-list
+            partial
             ->
+            ->>
             as->
+            kvm
             update-services*))
 
 (define (update-list l pred f)
@@ -2807,11 +2811,24 @@ Can be an integer to determine the exact padding."
          (if (pred x) (f x) x))
        l))
 
+(define (partial f . args)
+  (lambda (. rest)
+    (apply f (append args rest))))
+
 (define-syntax ->
   (syntax-rules ()
     ((_ value) value)
-    ((_ value (f1 . body) next ...) (-> (f1 value . body) next ...))
-    ((_ value f1 next ...) (-> (f1 value) next ...))))
+    ((_ value (f . body) next ...) (-> (f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
+
+(define (thread-last-helper f value . body)
+  (apply f (append body (list value))))
+
+(define-syntax ->>
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
 
 (define-syntax as->
   (syntax-rules ()
@@ -2819,6 +2836,17 @@ Can be an integer to determine the exact padding."
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
+
+(define* (kvm #:rest keyvals)
+  (let loop ((m '())
+             (more keyvals))
+    (if (null? more)
+        m
+        (loop (cons (as-> more $
+                          (take $ 2)
+                          (apply cons $))
+                    m)
+              (drop more 2)))))
 
 (define (update-services* services pred update-fn)
   (update-list
