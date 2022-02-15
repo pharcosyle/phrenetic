@@ -1305,7 +1305,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 ;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
 ;; - although if I'm going to be running off of the latest emacs-29 I might want to keep emacs in a separate manifest to make rolling back easier.
 (specifications->manifest
- '("emacs-29-pgtk-native-comp"))
+ '("emacs-29-pgtk+native-comp"))
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("bastille")>>"
@@ -2654,7 +2654,7 @@ sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts fro
 :PROPERTIES:
 :tangle-dir+: /ebullient/packages
 :END:
-** Emacs 29 with pgtk/nativecomp
+** Emacs 29 with pgtk + native comp
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
 (define-module (ebullient packages emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
@@ -2663,10 +2663,10 @@ sudo $guix_exe system --load-path=. --expression='(@ (ebullient system hosts fro
 (define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 
-(define-public emacs-29-pgtk-native-comp
+(define-public emacs-29-pgtk+native-comp
   (emacs-from-git
    (emacs-with-native-comp emacs-next-pgtk gcc-11 'full-aot)
-   #:pkg-name "emacs-29-pgtk-native-comp"
+   #:pkg-name "emacs-29-pgtk+native-comp"
    #:pkg-version "29.0.50"
    #:pkg-revision "0"
    #:git-repo "https://git.savannah.gnu.org/git/emacs.git"
