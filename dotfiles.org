@@ -17,6 +17,9 @@
   (concat (get-tangle-dir) "/" sub-path))
 #+end_src
 * Common
+:PROPERTIES:
+:tangle-dir+: /ebullient/common
+:END:
 #+name: user-name
 #+begin_src org
 pharcosyle
@@ -28,6 +31,28 @@ Krzysztof Baranowski
 #+name: user-email
 #+begin_src org
 pharcosyle@gmail.com
+#+end_src
+#+begin_src sh :var name="" dir=""
+guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
+#+end_src
+** Channels
+#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+(define-module (ebullient common channels)
+  #:use-module (guix channels)
+  #:export (guix
+            nonguix))
+
+(define guix %default-guix-channel)
+
+(define nonguix
+  (channel
+   (name 'nonguix)
+   (url "https://gitlab.com/nonguix/nonguix")
+   (introduction
+    (make-channel-introduction
+     "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+     (openpgp-fingerprint
+      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
 * Installation
 ** Create bootable USB
@@ -173,6 +198,13 @@ guix pull
 :PROPERTIES:
 :tangle-dir+: /ebullient/system
 :END:
+** Channels
+#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+(define-module (ebullient system channels)
+  #:use-module (ebullient common channels)
+  #:re-export (guix
+               nonguix))
+#+end_src
 ** Components
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "components.scm")
@@ -727,18 +759,51 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 :PROPERTIES:
 :tangle-dir+: /hosts
 :END:
+#+begin_src sh :var host_name="" hosts_dir=(get-tangle-dir)
+sudo guix time-machine --channels="$hosts_dir"/$host_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system hosts $host_name) host)" reconfigure
+#+end_src
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system hosts frostfire)
   #:use-module (ebullient system base-os))
 
-(define-public os
+(define-public host
   (base-os #:host-name "frostfire"
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:macbook? #t))
 #+end_src
+**** Channel reqs
+#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels")
+(use-modules (ebullient channels))
+(use-modules (ebullient system channels))
+(get-channels nonguix)
+#+end_src
+**** Channels lock :version:
+#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels-lock")
+(list (channel
+        (name 'guix)
+        (url "https://git.savannah.gnu.org/git/guix.git")
+        (branch "master")
+        (commit
+          "85f026f36ae93ac3ce3fa50150848eab9b31b69f")
+        (introduction
+          (make-channel-introduction
+            "9edb3f66fd807b096b48283debdcddccfea34bad"
+            (openpgp-fingerprint
+              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+      (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (commit
+          "35533c763a81365e14d0b58ad262e8f88c82872c")
+        (introduction
+          (make-channel-introduction
+            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+            (openpgp-fingerprint
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+#+end_src
 **** LUKS UUID :external_state:
-- REVIEW ~source-uuid~ is a kind of generated state (it gets created on install), perhaps I should treat it specially, like e.g. a channels lockfile. Currently I'm just putting it in this special org block, review once I've figured out how I'm doing generated state (putting it in files, redirecting it into the org file itself...)
 #+name: frostfire-luks-uuid
 #+begin_src org
 bdda56af-6ca0-4953-bc13-d5af8715e0e5
@@ -772,6 +837,59 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+name: guix-extra-profiles-path
 #+begin_src sh
 ~/.guix-extra-profiles
+#+end_src
+** Channels
+#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+(define-module (ebullient home channels)
+  #:use-module (guix channels)
+  #:use-module (ebullient common channels)
+  #:export (rde
+            flat)
+  #:re-export (guix
+               nonguix))
+
+(define rde
+  (channel
+   (name 'rde)
+   (url "https://git.sr.ht/~abcdw/rde")
+   (introduction
+    (make-channel-introduction
+     "257cebd587b66e4d865b3537a9a88cccd7107c95"
+     (openpgp-fingerprint
+      "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0")))))
+
+(define flat
+  (channel
+   (name 'flat)
+   (url "https://github.com/flatwhatson/guix-channel.git")
+   (introduction
+    (make-channel-introduction
+     "33f86a4b48205c0dc19d7c036c85393f0766f806"
+     (openpgp-fingerprint
+      "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
+#+end_src
+** Packages
+:PROPERTIES:
+:tangle-dir+: /packages
+:END:
+*** Emacs 29 with pgtk + native comp :version:
+#+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
+(define-module (ebullient home packages emacs)
+  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
+  #:use-module ((gnu packages gcc) #:select (gcc-11)))
+
+(define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
+(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
+
+(define-public emacs-29-pgtk+native-comp
+  (emacs-from-git
+   (emacs-with-native-comp emacs-next-pgtk gcc-11 'full-aot)
+   #:pkg-name "emacs-29-pgtk+native-comp"
+   #:pkg-version "29.0.50"
+   #:pkg-revision "0"
+   #:git-repo "https://git.savannah.gnu.org/git/emacs.git"
+   #:git-commit "dcc97fec29785051d7d11a66beb5f44fbaae6289"
+   #:checksum "1xph27x953pgigb09dkjgfcb10ldlclbxwa0hmmawmxyyx3865bn"))
 #+end_src
 ** Components
 :PROPERTIES:
@@ -991,9 +1109,19 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                         udiskie-shepherd-service)))
                 (default-value #f)))
 #+end_src
-** Solitude
+** Home environments
+#+begin_src sh :var he_name="" he_dir=(get-tangle-dir)
+guix pull --channels="$he_dir"/$he_name-channels-lock
+#+end_src
+#+begin_src sh :var he_name=""
+guix home --load-path=. --expression="(@ (ebullient home home-environments $he_name) he)" reconfigure
+#+end_src
+*** Solitude
+:PROPERTIES:
+:tangle-dir+: /home-environments
+:END:
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
-(define-module (ebullient home solitude)
+(define-module (ebullient home home-environments solitude)
   #:use-module (guix gexp)
   #:use-module (gnu home)
   #:use-module (gnu home services)
@@ -1151,8 +1279,58 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       (service nm-service-type)
       (service udiskie-service-type))))))
 #+end_src
-#+begin_src sh :results output silent :dir base-tangle-dir :async
-guix home --load-path=. --expression='(@ (ebullient home solitude) he)' reconfigure
+**** Channel reqs
+#+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
+(use-modules (ebullient channels))
+(use-modules (ebullient system channels))
+(get-channels nonguix rde flat)
+#+end_src
+**** Channels lock
+#+begin_src scheme :tangle (in-tangle-dir "solitude-channels-lock")
+(list (channel
+        (name 'guix)
+        (url "https://git.savannah.gnu.org/git/guix.git")
+        (branch "master")
+        (commit
+          "04ac1a248c188e4e49e6372e8336c31d32d1c96e")
+        (introduction
+          (make-channel-introduction
+            "9edb3f66fd807b096b48283debdcddccfea34bad"
+            (openpgp-fingerprint
+              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+      (channel
+        (name 'flat)
+        (url "https://github.com/flatwhatson/guix-channel.git")
+        (branch "master")
+        (commit
+          "ece373bcd1e00ef746fb7b104e56ab610cc4af2a")
+        (introduction
+          (make-channel-introduction
+            "33f86a4b48205c0dc19d7c036c85393f0766f806"
+            (openpgp-fingerprint
+              "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
+      (channel
+        (name 'rde)
+        (url "https://git.sr.ht/~abcdw/rde")
+        (branch "master")
+        (commit
+          "520e1429593c2daf4a296a9ea55c4aa32848b491")
+        (introduction
+          (make-channel-introduction
+            "257cebd587b66e4d865b3537a9a88cccd7107c95"
+            (openpgp-fingerprint
+              "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+      (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (commit
+          "35533c763a81365e14d0b58ad262e8f88c82872c")
+        (introduction
+          (make-channel-introduction
+            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+            (openpgp-fingerprint
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
 ** Shells
 *** Bash profile
@@ -2480,7 +2658,7 @@ Can be an integer to determine the exact padding."
 ;;   :config
 ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
 #+end_src
-*** Packages
+*** Packages :version:
 #+begin_src elisp :tangle (in-tangle-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
@@ -2576,11 +2754,7 @@ Can be an integer to determine the exact padding."
 (define-module (ebullient channels)
   #:use-module (guix channels)
   #:use-module ((srfi srfi-1) #:select (remove))
-  #:export (get-channels
-            guix
-            nonguix
-            rde
-            flat))
+  #:export (get-channels))
 
 (define* (get-channels #:rest cs)
   (append
@@ -2589,152 +2763,6 @@ Can be an integer to determine the exact padding."
              (member (channel-name c)
                      (map channel-name cs)))
            %default-channels)))
-
-(define guix %default-guix-channel)
-
-(define nonguix
-  (channel
-   (name 'nonguix)
-   (url "https://gitlab.com/nonguix/nonguix")
-   (introduction
-    (make-channel-introduction
-     "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-     (openpgp-fingerprint
-      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-
-(define rde
-  (channel
-   (name 'rde)
-   (url "https://git.sr.ht/~abcdw/rde")
-   (introduction
-    (make-channel-introduction
-     "257cebd587b66e4d865b3537a9a88cccd7107c95"
-     (openpgp-fingerprint
-      "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0")))))
-
-(define flat
-  (channel
-   (name 'flat)
-   (url "https://github.com/flatwhatson/guix-channel.git")
-   (introduction
-    (make-channel-introduction
-     "33f86a4b48205c0dc19d7c036c85393f0766f806"
-     (openpgp-fingerprint
-      "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
-#+end_src
-* WIP channels
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels.scm")
-(use-modules (ebullient channels))
-(get-channels nonguix)
-#+end_src
-#+begin_src scheme :tangle (in-tangle-dir "solitude-channels.scm")
-(use-modules (ebullient channels))
-(get-channels nonguix rde flat)
-#+end_src
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels-lock.scm")
-(list (channel
-        (name 'guix)
-        (url "https://git.savannah.gnu.org/git/guix.git")
-        (branch "master")
-        (commit
-          "85f026f36ae93ac3ce3fa50150848eab9b31b69f")
-        (introduction
-          (make-channel-introduction
-            "9edb3f66fd807b096b48283debdcddccfea34bad"
-            (openpgp-fingerprint
-              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
-      (channel
-        (name 'nonguix)
-        (url "https://gitlab.com/nonguix/nonguix")
-        (branch "master")
-        (commit
-          "35533c763a81365e14d0b58ad262e8f88c82872c")
-        (introduction
-          (make-channel-introduction
-            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-            (openpgp-fingerprint
-              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-#+end_src
-#+begin_src scheme :tangle (in-tangle-dir "solitude-channels-lock.scm")
-(list (channel
-        (name 'guix)
-        (url "https://git.savannah.gnu.org/git/guix.git")
-        (branch "master")
-        (commit
-          "04ac1a248c188e4e49e6372e8336c31d32d1c96e")
-        (introduction
-          (make-channel-introduction
-            "9edb3f66fd807b096b48283debdcddccfea34bad"
-            (openpgp-fingerprint
-              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
-      (channel
-        (name 'flat)
-        (url "https://github.com/flatwhatson/guix-channel.git")
-        (branch "master")
-        (commit
-          "ece373bcd1e00ef746fb7b104e56ab610cc4af2a")
-        (introduction
-          (make-channel-introduction
-            "33f86a4b48205c0dc19d7c036c85393f0766f806"
-            (openpgp-fingerprint
-              "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
-      (channel
-        (name 'rde)
-        (url "https://git.sr.ht/~abcdw/rde")
-        (branch "master")
-        (commit
-          "520e1429593c2daf4a296a9ea55c4aa32848b491")
-        (introduction
-          (make-channel-introduction
-            "257cebd587b66e4d865b3537a9a88cccd7107c95"
-            (openpgp-fingerprint
-              "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
-      (channel
-        (name 'nonguix)
-        (url "https://gitlab.com/nonguix/nonguix")
-        (branch "master")
-        (commit
-          "35533c763a81365e14d0b58ad262e8f88c82872c")
-        (introduction
-          (make-channel-introduction
-            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-            (openpgp-fingerprint
-              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-#+end_src
-#+begin_src sh :results output silent :dir base-tangle-dir :async
-guix time-machine --load-path=. --channels=solitude-channels.scm -- describe --format=channels > solitude-channels-lock.scm
-#+end_src
-#+begin_src sh :results output silent :dir base-tangle-dir :async
-guix pull --channels=solitude-channels-lock.scm
-#+end_src
-#+begin_src sh :results output silent :dir base-tangle-dir :async
-guix time-machine --load-path=. --channels=frostfire-channels.scm -- describe --format=channels > frostfire-channels-lock.scm
-#+end_src
-#+begin_src sh :results output silent :dir base-tangle-dir :async
-sudo guix time-machine --channels=solitude-channels-lock.scm -- system --load-path=. --expression='(@ (ebullient system hosts frostfire) os)' reconfigure
-#+end_src
-* Packages
-:PROPERTIES:
-:tangle-dir+: /ebullient/packages
-:END:
-** Emacs 29 with pgtk + native comp
-#+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
-(define-module (ebullient packages emacs)
-  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (gcc-11)))
-
-(define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
-(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
-
-(define-public emacs-29-pgtk+native-comp
-  (emacs-from-git
-   (emacs-with-native-comp emacs-next-pgtk gcc-11 'full-aot)
-   #:pkg-name "emacs-29-pgtk+native-comp"
-   #:pkg-version "29.0.50"
-   #:pkg-revision "0"
-   #:git-repo "https://git.savannah.gnu.org/git/emacs.git"
-   #:git-commit "dcc97fec29785051d7d11a66beb5f44fbaae6289"
-   #:checksum "1xph27x953pgigb09dkjgfcb10ldlclbxwa0hmmawmxyyx3865bn"))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -2783,10 +2811,6 @@ sudo guix time-machine --channels=solitude-channels-lock.scm -- system --load-pa
 /.gitignore
 /ebullient/
 /.dir-locals.el
-
-# WIP
-/frostfire-channels.scm
-/solitude-channels.scm
 #+end_src
 ** Github
 *** Git config
