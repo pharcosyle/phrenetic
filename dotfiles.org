@@ -792,8 +792,9 @@ sudo guix time-machine --channels="$hosts_dir"/$host_name-channels-lock -- syste
 #+end_src
 **** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-channels")
-(use-modules (ebullient channels))
-(use-modules (ebullient system channels))
+(use-modules (ebullient channels)
+             (ebullient system channels))
+
 (get-channels nonguix)
 #+end_src
 **** Channels lock :version:
@@ -1167,7 +1168,10 @@ nix-env --upgrade
      (service-extension
       home-profile-service-type
       (lambda (config)
-        (list (assoc-ref config #:emacs))))
+        ;; TODO Not ideal that emacs-service-type has to know that it might be being passed a path string (from a manifest) instead of a package
+        (let ((emacs-package (assoc-ref config #:emacs)))
+          (if (package? emacs-package)
+              (list emacs-package) '()))))
      (service-extension
       home-environment-variables-service-type
       (lambda (config)
@@ -1199,6 +1203,10 @@ nix-env --upgrade
 #+begin_src scheme :tangle (in-tangle-dir "emacs-variant")
 (specifications->manifest
  '("emacs-29-pgtk+native-comp"))
+
+
+;; (use-modules ((guix profiles)
+;;               ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))))
 
 ;; (packages->manifest
 ;;  '(emacs-29-pgtk+native-comp))
@@ -2001,8 +2009,9 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
 #+end_src
 **** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
-(use-modules (ebullient channels))
-(use-modules (ebullient system channels))
+(use-modules (ebullient channels)
+             (ebullient system channels))
+
 (get-channels nonguix rde flat)
 #+end_src
 **** Channels lock
@@ -2106,7 +2115,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 
    ;; General
    "xdg-utils"
-   "gtk+:bin"
+   "gtk+:bin" ; TODO Gate this with `desktop?`
    "curl"
    "zip"
    "unzip"
