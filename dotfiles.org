@@ -1890,6 +1890,10 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
   #:use-module (ebullient home components)
   #:export (he))
 
+(define extra-profiles-path "/home/pharcosyle/.guix-extra-profiles") ; TODO donno if full path will ultimately be necessary (maybe ~ could work)
+(define (extra-profile-path p)
+  (string-append extra-profiles-path "/" p "/" p))
+
 (define he
   (home-environment
    (packages (list ;; (specification->package "font-adobe-source-code-pro")
@@ -1964,7 +1968,8 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
               )
 
      (service nix-service-type)
-     (service emacs-service-type)
+     (service emacs-service-type
+              (kvm #:emacs-service/emacs (extra-profile-path "emacs-variant")))
      (service doom-service-type)
      (service pipewire-service-type)
      (service flatpak-service-type)
