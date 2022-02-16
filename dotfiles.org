@@ -217,10 +217,12 @@ guix pull
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
+  ;; #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
+  ;; #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (sway swaylock))
   #:use-module (gnu services)
   #:use-module (gnu services base)
@@ -487,7 +489,7 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** Users
 #+begin_src scheme
-(define* (account #:key name comment admin? password salt bluetooth?)
+(define* (account #:key name comment shell admin? password salt bluetooth?)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -495,6 +497,11 @@ The stateless service should come after base/desktop services (potentially other
    (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())
                                  (if bluetooth? '("lp") '())))
+   (shell (case shell
+            ((#:default) (default-shell))
+            ;; ((#:bash) (file-append bash "/bin/bash"))
+            ;; ((#:zsh) (file-append zsh "/bin/zsh"))
+            ))
    (password (if password
                  (crypt password salt)
                  #f))))
@@ -704,11 +711,21 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       base-services+packages
       linux-nonfree
       (users #:who (append
-                    '((#:name "<<user-name>>" #:comment "<<user-full-name>>" #:admin? #t))
+                    '((#:name "<<user-name>>"
+                       #:comment "<<user-full-name>>"
+                       #:shell #:default
+                       #:admin? #t))
                     (if aux-admin?
-                        '((#:name "pcoulson" #:comment "Phil Coulson" #:admin? #t)) '())
+                        '((#:name "pcoulson"
+                           #:comment "Phil Coulson"
+                           #:shell #:default
+                           #:admin? #t)) '())
                     (if guest?
-                        '((#:name "gandalf" #:comment "Speak Friend and Enter" #:password "mellon" #:salt "toosimple")) '()))
+                        '((#:name "gandalf"
+                           #:comment "Speak Friend and Enter"
+                           #:shell #:default
+                           #:password "mellon"
+                           #:salt "toosimple")) '()))
              #:bluetooth? bluetooth?)
       nonguix-substitutes
       (as-> $
