@@ -1169,16 +1169,16 @@ nix-env --upgrade
       home-profile-service-type
       (lambda (config)
         ;; TODO Not ideal that emacs-service-type has to know that it might be being passed a path string (from a manifest) instead of a package
-        (let ((emacs-package (assoc-ref config #:emacs)))
+        (let ((emacs-package (assoc-ref config #:emacs-service/emacs)))
           (if (package? emacs-package)
               (list emacs-package) '()))))
      (service-extension
       home-environment-variables-service-type
       (lambda (config)
-        `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
+        `(("VISUAL" . ,(file-append (assoc-ref config #:emacs-service/emacs) "/bin/emacsclient"))
           ("EDITOR" . "$VISUAL"))))))
    (default-value
-     (kvm #:emacs emacs-29-pgtk+native-comp))))
+     (kvm #:emacs-service/emacs emacs-29-pgtk+native-comp))))
 #+end_src
 **** Emacs 29 with pgtk + native comp package :package:version:
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
