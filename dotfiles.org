@@ -1184,9 +1184,31 @@ nix-env --upgrade
         (home-zsh-extension
          (zshrc
           (if (assoc-ref config #:zsh?)
-              (list (local-file "../../zsh/vterm")) '())))))))
+              (list (local-file "zsh-vterm")) '())))))))
    (default-value
      (kvm #:emacs-service/emacs emacs-29-pgtk+native-comp))))
+#+end_src
+**** Configure zsh for vterm
+#+begin_src sh :tangle (in-tangle-dir "zsh-vterm")
+vterm_printf(){
+    if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
+        # Tell tmux to pass the escape sequences through
+        printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+    elif [ "${TERM%%-*}" = "screen" ]; then
+        # GNU screen (screen, screen-256color, screen-256color-bce)
+        printf "\eP\e]%s\007\e\\" "$1"
+    elif ([ "${TERM%%-*}" = "eterm" ] || [ "${TERM%%-*}" = "dumb" ]); then
+        # Do nothing for Emacs' term and ansi-term, and other dumb terminals.
+    else
+        printf "\e]%s\e\\" "$1"
+    fi
+}
+
+vterm_prompt_end() {
+    vterm_printf "51;A$(whoami)@$(hostname):$(pwd)";
+}
+setopt PROMPT_SUBST
+PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
 **** Emacs 29 with pgtk + native comp package :package:version:
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
