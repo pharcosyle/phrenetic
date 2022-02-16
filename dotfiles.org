@@ -908,7 +908,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   ;; #:use-module (gnu services configuration)
   #:use-module (gnu services shepherd)
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
-  #:use-module ((ebullient home emacs) #:select (emacs))
+  #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
   #:use-module (ebullient utils)
   #:export (zsh-direnv-service-type
             nix-service-type
@@ -1178,7 +1178,7 @@ nix-env --upgrade
 #+end_src
 **** Emacs 29 with pgtk + native comp package :package:version:
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
-(define-module (ebullient home packages emacs)
+(define-module (ebullient home emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
 
