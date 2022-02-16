@@ -772,7 +772,7 @@ sudo guix time-machine --channels="$hosts_dir"/$host_name-channels-lock -- syste
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:macbook? #t))
 #+end_src
-**** Channel reqs
+**** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-channels")
 (use-modules (ebullient channels))
 (use-modules (ebullient system channels))
@@ -1965,7 +1965,7 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
      ;;                       "git@git.sr.ht:~abcdw/rde"))))
      ))))
 #+end_src
-**** Channel reqs
+**** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
 (use-modules (ebullient channels))
 (use-modules (ebullient system channels))
