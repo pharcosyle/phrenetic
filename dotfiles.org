@@ -1199,21 +1199,6 @@ nix-env --upgrade
    #:git-commit "dcc97fec29785051d7d11a66beb5f44fbaae6289"
    #:checksum "1xph27x953pgigb09dkjgfcb10ldlclbxwa0hmmawmxyyx3865bn"))
 #+end_src
-**** Emacs variant manifest :manifest:
-#+begin_src scheme :tangle (in-tangle-dir "emacs-variant")
-(specifications->manifest
- '("emacs-29-pgtk+native-comp"))
-
-
-;; (use-modules ((guix profiles)
-;;               ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))))
-
-;; (packages->manifest
-;;  '(emacs-29-pgtk+native-comp))
-#+end_src
-#+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
-"<<guix-extra-profile-path("emacs-variant")>>"
-#+end_src
 **** Doom
 #+begin_src scheme
 (define doom-service-type
@@ -2140,6 +2125,21 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("multiverse")>>"
+#+end_src
+**** Emacs variant manifest :manifest:
+#+begin_src scheme :tangle (in-tangle-dir "emacs-variant")
+(specifications->manifest
+ '("emacs-29-pgtk+native-comp"))
+
+
+;; (use-modules ((guix profiles)
+;;               ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))))
+
+;; (packages->manifest
+;;  '(emacs-29-pgtk+native-comp))
+#+end_src
+#+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
+"<<guix-extra-profile-path("emacs-variant")>>"
 #+end_src
 **** clojure manifest WIP :manifest:
 - TODO =clojure-tools= has, at the time of this writing, just been upstreamed from nonguix to guix. However the guix package depends on the guix =clojure= package (presumably instead of just using the one included in the downloaded clojure-tools) which is currently on version 1.10.0 (I'll definitely want a newer version) and has a dependency on icedtea (which is jdk version 8 even though now I'll want openjdk version 11 to match datomic or version 17 because it's the newest one supported by clojure). Rewrite the =clojure= package =jre= dependency to use a newer version and bump clojure somehow? What does the =clojure= package being old mean for me, if anything, since projects definte their own clojure versions (perhaps just that version of clojure will be used when invoking tools outside a project, and even then I could just specify a higher clojure version in my home directory =deps.edn=, no?) Just resurrect the nonguix clojure-tools packge in my own dotfiles? If I keep using the guix clojure-tools package that depends on =clojure= does it having its own non-propagated java dependency mean I don't have to install one in my profile any more?
