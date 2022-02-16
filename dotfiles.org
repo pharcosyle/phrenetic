@@ -775,17 +775,17 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 ** Hosts
 :PROPERTIES:
-:tangle-dir+: /hosts
+:tangle-dir+: /os
 :END:
-#+begin_src sh :var host_name="" hosts_dir=(get-tangle-dir)
-sudo guix time-machine --channels="$hosts_dir"/$host_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system hosts $host_name) host)" reconfigure
+#+begin_src sh :var os_name="" os_dir=(get-tangle-dir)
+sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
 #+end_src
 *** Frostfire
 #+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
-(define-module (ebullient system hosts frostfire)
+(define-module (ebullient system os frostfire)
   #:use-module (ebullient system base-os))
 
-(define-public host
+(define-public os
   (base-os #:host-name "frostfire"
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:macbook? #t))
@@ -1893,14 +1893,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 guix pull --channels="$he_dir"/$he_name-channels-lock
 #+end_src
 #+begin_src sh :var he_name=""
-guix home --load-path=. --expression="(@ (ebullient home home-environments $he_name) he)" reconfigure
+guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" reconfigure
 #+end_src
 *** Solitude
 :PROPERTIES:
-:tangle-dir+: /home-environments
+:tangle-dir+: /he
 :END:
 #+begin_src scheme :tangle (in-tangle-dir "solitude.scm") :noweb yes
-(define-module (ebullient home home-environments solitude)
+(define-module (ebullient home he solitude)
   #:use-module (guix gexp)
   #:use-module (gnu home)
   #:use-module (gnu home services)
