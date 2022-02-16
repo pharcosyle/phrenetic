@@ -1176,7 +1176,15 @@ nix-env --upgrade
       home-environment-variables-service-type
       (lambda (config)
         `(("VISUAL" . ,(file-append (assoc-ref config #:emacs-service/emacs) "/bin/emacsclient"))
-          ("EDITOR" . "$VISUAL"))))))
+          ("EDITOR" . "$VISUAL"))))
+     ;; TODO Does extending `home-zsh-service-type' introduce it if not present? If so I might need to create a wrapper around service-types so I can be selective about what service-extensions to even have for a home component.
+     (service-extension
+      home-zsh-service-type
+      (lambda (config)
+        (home-zsh-extension
+         (zshrc
+          (if (assoc-ref config #:zsh?)
+              (list (local-file "../../zsh/vterm")) '())))))))
    (default-value
      (kvm #:emacs-service/emacs emacs-29-pgtk+native-comp))))
 #+end_src
@@ -1915,12 +1923,6 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
                (zshrc
                 (list (local-file "zshrc")))))
      (service zsh-direnv-service-type)
-     ;; TODO probably gate this
-     (simple-service 'emacs-vterm-zsh-configuration
-                     home-zsh-service-type
-                     (home-zsh-extension
-                      (zshrc
-                       (list (local-file "../../zsh/vterm")))))
 
      (service home-xdg-user-directories-service-type
               (let* ((xdg-user-subdir "/files")
