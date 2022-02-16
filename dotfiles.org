@@ -868,11 +868,289 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (openpgp-fingerprint
       "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
 #+end_src
-** Packages
+** Components
 :PROPERTIES:
-:tangle-dir+: /packages
+:header-args+: :tangle (in-tangle-dir "components.scm")
 :END:
-*** Emacs 29 with pgtk + native comp :version:
+#+begin_src scheme
+(define-module (ebullient home components)
+  #:use-module (guix gexp)
+  #:use-module (gnu home services)
+  #:use-module ((gnu home services) #:select (home-profile-service-type))
+  #:use-module (gnu home services shells)
+  #:use-module (gnu home services shepherd)
+  #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages fonts) #:select (font-fira-code))
+  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
+  #:use-module ((gnu packages linux) #:select (pipewire-0.3 wireplumber))
+  #:use-module ((gnu packages package-management) #:select (flatpak))
+  #:use-module ((gnu packages shellutils) #:select (direnv))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep))
+  #:use-module (gnu services)
+  ;; #:use-module (gnu services configuration)
+  #:use-module (gnu services shepherd)
+  #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
+  #:use-module ((ebullient home emacs) #:select (emacs))
+  #:use-module (ebullient utils)
+  #:export (zsh-direnv-service-type
+            nix-service-type
+            emacs-service-type
+            doom-service-type
+            pipewire-service-type
+            flatpak-service-type
+            sway-service-type
+            gammastep-service-type
+            network-manager-service-type
+            udiskie-service-type))
+#+end_src
+*** Shells
+**** login shell profile wip
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "profile")
+:END:
+***** Use Guix extra profiles
+#+begin_src sh :noweb yes
+gepp="<<guix-extra-profiles-path>>"
+GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
+
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+
+  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
+  case $XDG_DATA_DIRS in
+    ,*"$profile"/share*) ;;
+    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
+  esac
+  case $MANPATH in
+    ,*"$profile"/share/man*) ;;
+    ,*) export MANPATH="$profile"/share/man:$MANPATH
+  esac
+  case $INFOPATH in
+    ,*"$profile"/share/info*) ;;
+    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
+  esac
+  case $XDG_CONFIG_DIRS in
+    ,*"$profile"/etc/xdg*) ;;
+    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
+  esac
+  case $XCURSOR_PATH in
+    ,*"$profile"/share/icons*) ;;
+    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
+  esac
+
+  unset profile
+done
+#+end_src
+***** Load Nix environment
+#+begin_src sh
+if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
+  . /run/current-system/profile/etc/profile.d/nix.sh
+fi
+#+end_src
+***** Make Flatpak apps visible
+#+begin_src sh
+export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
+#+end_src
+**** Zsh
+***** Zshrc
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "zshrc")
+:END:
+****** Andrew Tropin's zshrc
+- TODO trying out Andrew Tropin's zsh configuration verbatim for now
+#+begin_src sh
+# Prevent freezing output on ^s, needed for various isearches
+hash stty 2> /dev/null && stty -ixon
+
+# Completions and other stuff
+autoload -U compinit
+compinit -d ${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump
+
+# Enable bash completion, requires to source them from somewhere
+# autoload -U bashcompinit && bashcompinit
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' insert-tab false
+
+# Automatically update cache of binaries avaliable in $PATH
+zstyle ':completion:*' rehash true # Can have a performance penalty
+
+# Approximate completion
+# zstyle ':completion:::::' completer _complete _approximate
+# zstyle ':completion:*:approximate:*' max-errors 2
+
+# Fuzzy completion
+# https://superuser.com/questions/415650/does-a-fuzzy-matching-mode-exist-for-the-zsh-shell
+zstyle ':completion:*' matcher-list '' \
+  'm:{a-z\-}={A-Z\_}' \
+  'r:[^[:alpha:]]||[[:alpha:]]=** r:|=* m:{a-z\-}={A-Z\_}' \
+  'r:|?=** m:{a-z\-}={A-Z\_}'
+
+# Make kill completion smart
+zstyle ':completion:*:*:*:*:processes' command "ps -u $USER -o pid,user,args -w -w"
+
+# Colored completion for files and dirs according to LS_COLORS
+
+hash dircolors 2> /dev/null && eval $(dircolors --sh) && \
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# Prompt theme setup
+clear_fn() {
+#  zle reset-prompt
+  zle kill-buffer
+}
+
+prompt_rde_precmd() {
+  # Prevent killing prompt on ^C
+  trap 'clear_fn' SIGINT
+}
+
+prompt_rde_setup() {
+  if [[ $UID -eq 0 ]]; then
+    user_part='%F{red}>%f'
+  else
+    user_part='%F{green}>%f'
+  fi
+  if [ -n "$GUIX_ENVIRONMENT" ]; then
+    genv_part='%F{blue}>%f'
+  fi
+  # exit_code_part='%(?..[%?])'
+
+  PS1="$user_part$genv_part "
+  # RPS1="$exit_code_part"
+
+  # Fish-like C-c behavior
+  # add-zsh-hook precmd prompt_rde_precmd
+}
+
+# Load promptinit and set rde theme
+autoload -Uz promptinit && promptinit
+prompt_themes+=( rde )
+prompt rde
+
+setopt printexitvalue # Instead of using RPS1 for status code
+
+echo -en "\033[6 q" # Make a cursor to be a vertical bar
+
+# Remove slashes and dashes from wordchars to make M-b, M-f work
+# correctly
+WORDCHARS=""
+
+# Configure history
+# HISTSIZE=5000
+# SAVEHIST=$HISTSIZE
+HISTFILE=${XDG_CACHE_HOME:-$HOME/.cache}/.zhistory
+
+#setopt incappendhistory # Save history to shared file, but not read
+setopt sharehistory     # Share history across shell sessions
+setopt histignorespace  # Ignore commands that start with space
+
+# Configuring help (M-h to call it on current command/function)
+autoload -Uz run-help
+(( ${+aliases[run-help]} )) && unalias run-help
+autoload -Uz run-help-git
+
+# Delete, home, end buttons
+bindkey  "^[[3~"  delete-char
+bindkey  "^[[H"   beginning-of-line
+bindkey  "^[[F"   end-of-line
+
+# Launch $VISUAL or $EDITOR, for emacsclient if there is no server
+# avaliable $ALTERNATE_EDITOR will be used.
+autoload -z edit-command-line
+zle -N edit-command-line
+bindkey "^X^E" edit-command-line
+
+alias help=run-help
+alias try='guix shell man-db coreutils'
+alias ls='ls -p --color=auto'
+alias ll='ls -l'
+alias grep='grep --color=auto'
+#+end_src
+****** History
+#+begin_src sh
+HISTSIZE=1000000
+SAVEHIST=$HISTSIZE
+#+end_src
+***** Direnv
+#+begin_src scheme
+(define zsh-direnv-service-type
+  (service-type (name 'home-zsh-direnv)
+                (extensions
+                 (list
+                  (service-extension home-profile-service-type
+                                     (const (list direnv)))
+                  (service-extension home-zsh-service-type
+                                     (const (home-zsh-extension
+                                             (zshrc
+                                              (list (mixed-text-file
+                                                     "direnv-hook"
+                                                     "eval \"$(" direnv "hook zsh)\""))))))))
+                (default-value #f)))
+#+end_src
+*** Nix
+#+begin_src scheme
+(define nix-service-type
+  (service-type (name 'home-nix)
+                (extensions
+                 (list
+                  (service-extension home-files-service-type
+                                     (const
+                                      `(("nix-channels"
+                                         ,(local-file "nix-channels"))
+                                        ("config/nixpkgs/config.nix"
+                                         ,(local-file "nixpkgs-config.nix")))))))
+                (default-value #f)))
+#+end_src
+**** Nix channels
+#+begin_src conf :tangle (in-tangle-dir "nix-channels")
+https://nixos.org/channels/nixpkgs-unstable nixpkgs
+#+end_src
+**** Nixpkgs config
+#+begin_src nix :tangle (in-tangle-dir "nixpkgs-config.nix")
+{ allowUnfree = true; }
+#+end_src
+**** Nix WIP
+Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
+***** Update channels
+#+begin_src sh :results output silent :async
+nix-channel --update
+#+end_src
+***** "Manifest"
+- TODO might want to / see if I can make this a simple bulleted list I pass with :var to source block(s)
+#+name: nix-packages
+#+begin_src org
+google-chrome zoom-us
+#+end_src
+***** Install packages
+#+begin_src sh :results output silent :async :noweb yes
+nix-env --install <<nix-packages>>
+#+end_src
+***** Upgrade packages
+#+begin_src sh :results output silent :async
+nix-env --upgrade
+#+end_src
+*** Emacs
+#+begin_src scheme
+(define emacs-service-type
+  (service-type (name 'home-emacs)
+                (extensions
+                 (list
+                  (service-extension home-profile-service-type
+                                     (lambda (config)
+                                       (list (assoc-ref config #:emacs))))
+                  (service-extension home-environment-variables-service-type
+                                     (lambda (config)
+                                       `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
+                                         ("EDITOR" . "$VISUAL"))))))
+                (default-value
+                  (kvm #:emacs emacs-29-pgtk+native-comp))))
+#+end_src
+**** Emacs 29 with pgtk + native comp package :package:version:
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
 (define-module (ebullient home packages emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
@@ -891,148 +1169,18 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    #:git-commit "dcc97fec29785051d7d11a66beb5f44fbaae6289"
    #:checksum "1xph27x953pgigb09dkjgfcb10ldlclbxwa0hmmawmxyyx3865bn"))
 #+end_src
-** Components
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "components.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient home components)
-  #:use-module (guix gexp)
-  #:use-module (gnu home services)
-  #:use-module ((gnu home services) #:select (home-profile-service-type))
-  #:use-module (gnu home services shells)
-  #:use-module (gnu home services shepherd)
-  #:use-module ((gnu packages freedesktop) #:select (udiskie))
-  #:use-module ((gnu packages fonts) #:select (font-fira-code))
-  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  #:use-module ((gnu packages linux) #:select (pipewire-0.3 wireplumber))
-  #:use-module ((gnu packages shellutils) #:select (direnv))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep))
-  #:use-module (gnu services)
-  ;; #:use-module (gnu services configuration)
-  #:use-module (gnu services shepherd)
-  #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
-  #:use-module (ebullient utils)
-  #:export (pipewire-services
-            sway-services
-            zsh-direnv-service-type
-            doom-service-type
-            gammastep-service-type
-            nm-service-type
-            udiskie-service-type))
+**** Emacs variant manifest :manifest:
+#+begin_src scheme :tangle (in-tangle-dir "emacs-variant")
+(specifications->manifest
+ '("emacs-29-pgtk+native-comp"))
 
-(define serialize-posix-env-vars (@@ (gnu home services shells) serialize-posix-env-vars))
+;; (packages->manifest
+;;  '(emacs-29-pgtk+native-comp))
 #+end_src
-*** Pipewire
-- TODO Once I figure out how I'm componentizing home config, decide if this should remain a list of services, I should turn it into a ~service-type~, etc
-#+begin_src scheme
-(define pipewire-services
-  (list
-   (simple-service 'pipewire-add-packages
-                   home-profile-service-type
-                   (list pipewire-0.3 wireplumber))
-   (simple-service 'pipewire-add-shepherd-daemons
-                   home-shepherd-service-type
-                   (list
-                    (shepherd-service
-                     (provision '(pipewire))
-                     (stop  #~(make-kill-destructor))
-                     (start #~(make-forkexec-constructor
-                               (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                               #:environment-variables
-                               (append (list "DISABLE_RTKIT=1")
-                                       (default-environment-variables))))
-                     (auto-start? #f))
-                    (shepherd-service
-                     (requirement '(pipewire))
-                     (provision '(wireplumber))
-                     (stop  #~(make-kill-destructor))
-                     (start #~(make-forkexec-constructor
-                               (list #$(file-append wireplumber "/bin/wireplumber"))
-                               #:environment-variables
-                               (append (list "DISABLE_RTKIT=1")
-                                       (default-environment-variables))))
-                     (auto-start? #f))
-                    (shepherd-service
-                     (requirement '(pipewire))
-                     (provision '(pipewire-pulse))
-                     (stop  #~(make-kill-destructor))
-                     (start #~(make-forkexec-constructor
-                               (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                               #:environment-variables
-                               (append (list "DISABLE_RTKIT=1")
-                                       (default-environment-variables))))
-                     (auto-start? #f))))
-   (simple-service 'pipewire-add-asoundrc
-                   home-files-service-type
-                   `(("config/alsa/asoundrc"
-                      ,(mixed-text-file
-                        "asoundrc"
-                        #~(string-append
-                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-                           "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
-                           "\n"
-                           "pcm_type.pipewire {" "\n"
-                           "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-                           "}" "\n"
-                           "\n"
-                           "ctl_type.pipewire {" "\n"
-                           "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-                           "}" "\n")))))))
+#+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
+"<<guix-extra-profile-path("emacs-variant")>>"
 #+end_src
-*** Sway
-#+begin_src scheme
-(define (sway-env-vars env-vars)
-  (simple-service 'set-sway-env-vars
-                  home-bash-service-type
-                  (home-bash-extension
-                   (bash-profile
-                    (list (mixed-text-file
-                           "sway-env-vars"
-                           "if [[ \"$DESKTOP_SESSION\" = \"\" || \"$DESKTOP_SESSION\" = \"sway\" ]] ; then\n"
-                           (serialize-posix-env-vars #f env-vars)
-                           "fi"))))))
-
-(define (conditionalize-sway-env-vars services)
-  (define env-vars)
-  (as-> services $
-    (update-services*
-     $
-     (lambda (svc)
-       (eq? (-> svc service-kind service-type-name) 'set-wayland-specific-env-vars))
-     (lambda (vars)
-       (set! env-vars vars)
-       '()))
-    (cons* (sway-env-vars env-vars) $)))
-
-(define sway-services
-  (conditionalize-sway-env-vars
-   ((feature-home-services-getter
-     (feature-sway #:xwayland? #t
-                   #:sway-mod 'Mod1
-                   #:extra-config
-                   ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
-                   ;; `((include ,(local-file "./config/sway/config")))
-                   `((include "/home/pharcosyle/projects/dotfiles/config"))))
-    (rde-config))))
-#+end_src
-*** Direnv (Zsh)
-#+begin_src scheme
-(define zsh-direnv-service-type
-  (service-type (name 'home-zsh-direnv)
-                (extensions
-                 (list
-                  (service-extension home-profile-service-type
-                                     (const (list direnv)))
-                  (service-extension home-zsh-service-type
-                                     (const (home-zsh-extension
-                                             ;; TODO Might be nice to make this `local-file' and src block
-                                             (zshrc
-                                              (list (plain-file "direnv-hook"
-                                                                "eval \"$(direnv hook zsh)\""))))))))
-                (default-value #f)))
-#+end_src
-*** Doom
+**** Doom
 #+begin_src scheme
 (define doom-service-type
   (service-type (name 'home-doom)
@@ -1047,7 +1195,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   ))
                 (default-value #f)))
 #+end_src
-**** Doom Emacs package :package:version:
+***** Doom Emacs package :package:version:
 - TODO make the ~doom~ program (probably the entire =bin= directory) part of outputs
 #+begin_src scheme :tangle (in-tangle-dir "doom-emacs.scm")
 (define-module (ebullient home doom-emacs)
@@ -1631,9 +1779,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         gammastep-shepherd-service)))
                 (default-value #f)))
 #+end_src
-**** Network Manager
+***** Network Manager
 #+begin_src scheme
-(define (nm-shepherd-service _)
+(define (network-manager-shepherd-service _)
   (list
    (shepherd-service
     (provision '(nm))
@@ -1647,15 +1795,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (respawn? #f)
     (auto-start? #f))))
 
-(define nm-service-type
+(define network-manager-service-type
   (service-type (name 'home-nm)
                 (extensions
                  (list (service-extension
                         home-shepherd-service-type
-                        nm-shepherd-service)))
+                        network-manager-shepherd-service)))
                 (default-value #f)))
 #+end_src
-**** Udiskie
+***** Udiskie
 #+begin_src scheme
 (define (udiskie-shepherd-service _)
   (list
@@ -1712,142 +1860,110 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module (gnu services)
   ;; #:use-module (gnu system keyboard)
-
-
-  #:use-module ((guix packages) #:select (package-input-rewriting))
-  #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x))
-  #:use-module ((flat packages emacs) #:select (emacs-native-comp))
-
-
   #:use-module (ebullient home components)
-
-
   #:export (he))
-
-;; (define emacs-variant emacs-native-comp)
-(define emacs-variant emacs)
-
-;; TODO Guix Home has an emacs service with a parameter `rebuild-elisp-packages?` that accomplishes I think the same thing as this but it's based on `substitute-keyword-arguments` instead of `package-input-rewriting`. How doe these approaches compare? Update: actually my approach won't do transitive dependencies (and maybe emacs argument like e.g. exwm has?) so it's pretty flawed. Doesn't matter though, I'm not going to be using the guix emacs packages, right?
-(define with-emacs-variant
-  (package-input-rewriting `((,emacs . ,emacs-variant)
-                             (,emacs-minimal . ,emacs-variant)
-                             (,emacs-no-x . ,emacs-variant))))
 
 (define he
   (home-environment
    (packages (list ;; (specification->package "font-adobe-source-code-pro")
                    (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
                    (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
-                   ;; emacs-variant ; TODO add this back when I can do so without eating up all my inodes (update: or do I want it in a manifest instead? Or better yet, since [if I recall] the only thing I needed the "direct" access to the emacs program for was running `doom upgrade` just make it a non-propagated input to my eventual Doom guix package. That is, if I even end up running `doom upgrade` after packaging Doom). Also delete bastille manifest
                    ))
    (services
-    (append
-     (list
-      ;; TODO presumably only necessary if different from the login shell, maybe capture this when I modularize
-      (simple-service 'set-default-shell-to-zsh
-                      home-environment-variables-service-type
-                      `(("SHELL" . ,(file-append zsh "/bin/zsh"))))
-      (service home-bash-service-type
-               (home-bash-configuration
-                (environment-variables
-                 ;; TODO make these contributed by the eventual Emacs module
-                 `(("VISUAL" . ,(file-append emacs-variant "/bin/emacsclient"))
-                   ("EDITOR" . "$VISUAL")))
-                (bash-profile
-                 (list (local-file "bash_profile")))))
+    (list
+     ;; TODO presumably only necessary if different from the login shell, maybe capture this when I modularize
+     (simple-service 'set-default-shell-to-zsh
+                     home-environment-variables-service-type
+                     `(("SHELL" . ,(file-append zsh "/bin/zsh"))))
+     (service home-bash-service-type
+              (home-bash-configuration
+               (bash-profile
+                (list (local-file "bash_profile")))))
      (service home-zsh-service-type
               (home-zsh-configuration
                (zshrc
-                ;; TODO trying out Andrew Tropin's zsh configuration verbatim, eventually I'll merge these two files
-                (list (local-file "../../zsh/zshrc")
-                      (local-file "zshrc")))))
-      (service zsh-direnv-service-type)
-      ;; TODO probably gate this
-      (simple-service 'emacs-vterm-zsh-configuration
-                      home-zsh-service-type
-                      (home-zsh-extension
-                       (zshrc
-                        (list (local-file "../../zsh/vterm")))))
+                (list (local-file "zshrc")))))
+     (service zsh-direnv-service-type)
+     ;; TODO probably gate this
+     (simple-service 'emacs-vterm-zsh-configuration
+                     home-zsh-service-type
+                     (home-zsh-extension
+                      (zshrc
+                       (list (local-file "../../zsh/vterm")))))
 
-      (service home-xdg-user-directories-service-type
-               (let* ((xdg-user-subdir "/files")
-                      (xdg-dir (lambda (path)
-                                 (string-append "$HOME" xdg-user-subdir path))))
-                 (home-xdg-user-directories-configuration
-                  (desktop "$HOME/desktop")
-                  (documents (xdg-dir "/docs"))
-                  (download "$HOME/dl")
-                  (music (xdg-dir "/music"))
-                  (pictures (xdg-dir "/pics"))
-                  (publicshare (xdg-dir "/public"))
-                  (templates (xdg-dir "/templates"))
-                  (videos (xdg-dir "/vids")))))
+     (service home-xdg-user-directories-service-type
+              (let* ((xdg-user-subdir "/files")
+                     (xdg-dir (lambda (path)
+                                (string-append "$HOME" xdg-user-subdir path))))
+                (home-xdg-user-directories-configuration
+                 (desktop "$HOME/desktop")
+                 (documents (xdg-dir "/docs"))
+                 (download "$HOME/dl")
+                 (music (xdg-dir "/music"))
+                 (pictures (xdg-dir "/pics"))
+                 (publicshare (xdg-dir "/public"))
+                 (templates (xdg-dir "/templates"))
+                 (videos (xdg-dir "/vids")))))
 
-      (service home-mcron-service-type
-               (home-mcron-configuration
-                (jobs
-                 (list
-                  #~(job '(next-hour)
-                         (lambda ()
-                           (call-with-output-file "/tmp/test-mcron-file"
-                             (lambda (port)
-                               (display "Output!" port))))
-                         "Test mcron output")))))
-      (service home-git-service-type
-               (home-git-configuration
-                (config
-                 `((user
-                    ((name . "<<user-full-name>>")
-                     (email . "<<user-email>>")))
-                   ;; (http "https://weak.example.com"
-                   ;;   ((ssl-verify . #f)))
-                   ;; (gpg
-                   ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-                   ;; (sendmail
-                   ;;  ((annotate . #t)))
-                   ))))
-      (service home-ssh-service-type
-               ;; (home-ssh-configuration
-               ;;  (extra-config
-               ;;   (list
-               ;;    (ssh-host "savannah"
-               ;;              '((compression . #f))))))
-               )
-      (simple-service 'nix-channels
-                      home-files-service-type
-                      (list `("nix-channels"
-                              ,(local-file "nix-channels"))))
-      (simple-service 'nixpkgs-config
-                      home-files-service-type
-                      (list `("config/nixpkgs/config.nix"
-                              ,(local-file "nixpkgs-config.nix"))))
+     (service home-mcron-service-type
+              (home-mcron-configuration
+               (jobs
+                (list
+                 #~(job '(next-hour)
+                        (lambda ()
+                          (call-with-output-file "/tmp/test-mcron-file"
+                            (lambda (port)
+                              (display "Output!" port))))
+                        "Test mcron output")))))
+     (service home-git-service-type
+              (home-git-configuration
+               (config
+                `((user
+                   ((name . "<<user-full-name>>")
+                    (email . "<<user-email>>")))
+                  ;; (http "https://weak.example.com"
+                  ;;   ((ssl-verify . #f)))
+                  ;; (gpg
+                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+                  ;; (sendmail
+                  ;;  ((annotate . #t)))
+                  ))))
+     (service home-ssh-service-type
+              ;; (home-ssh-configuration
+              ;;  (extra-config
+              ;;   (list
+              ;;    (ssh-host "savannah"
+              ;;              '((compression . #f))))))
+              )
+
+     (service nix-service-type)
+     (service emacs-service-type)
+     (service doom-service-type)
+     (service pipewire-service-type)
+     (service flatpak-service-type)
+     (service sway-service-type)
+     (service gammastep-service-type)
+     (service network-manager-service-type)
+     (service udiskie-service-type)
 
 
-      ;; TODO Examples from RDE I may want to make use of.
-      ;; (service home-keyboard-service-type
-      ;;          (keyboard-layout "us,ru" "dvorak,"
-      ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-      ;; (service home-gnupg-service-type
-      ;;          (home-gnupg-configuration
-      ;;           (gpg-agent-config
-      ;;            (home-gpg-agent-configuration
-      ;;             (ssh-agent? #t)))))
-      ;; (service home-state-service-type
-      ;;          (append
-      ;;           (list
-      ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
-      ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
-      ;;            (state-git "/home/bob/tmp/talkes/"
-      ;;                       "git@git.sr.ht:~abcdw/rde"))))
-      )
-     pipewire-services
-     sway-services
-
-     (list
-      (service doom-service-type)
-      (service gammastep-service-type)
-      (service nm-service-type)
-      (service udiskie-service-type))))))
+     ;; TODO Examples from RDE I may want to make use of.
+     ;; (service home-keyboard-service-type
+     ;;          (keyboard-layout "us,ru" "dvorak,"
+     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+     ;; (service home-gnupg-service-type
+     ;;          (home-gnupg-configuration
+     ;;           (gpg-agent-config
+     ;;            (home-gpg-agent-configuration
+     ;;             (ssh-agent? #t)))))
+     ;; (service home-state-service-type
+     ;;          (append
+     ;;           (list
+     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
+     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
+     ;;            (state-git "/home/bob/tmp/talkes/"
+     ;;                       "git@git.sr.ht:~abcdw/rde"))))
+     ))))
 #+end_src
 **** Channel reqs
 #+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
@@ -1902,67 +2018,6 @@ guix home --load-path=. --expression="(@ (ebullient home home-environments $he_n
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
-** Shells
-*** Bash profile
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "bash_profile")
-:END:
-**** Use Guix extra profiles
-#+begin_src sh :noweb yes
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-
-  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
-  case $XDG_DATA_DIRS in
-    ,*"$profile"/share*) ;;
-    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
-  esac
-  case $MANPATH in
-    ,*"$profile"/share/man*) ;;
-    ,*) export MANPATH="$profile"/share/man:$MANPATH
-  esac
-  case $INFOPATH in
-    ,*"$profile"/share/info*) ;;
-    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
-  esac
-  case $XDG_CONFIG_DIRS in
-    ,*"$profile"/etc/xdg*) ;;
-    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
-  esac
-  case $XCURSOR_PATH in
-    ,*"$profile"/share/icons*) ;;
-    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
-  esac
-
-  unset profile
-done
-#+end_src
-**** Load Nix environment
-#+begin_src sh
-if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
-  . /run/current-system/profile/etc/profile.d/nix.sh
-fi
-#+end_src
-**** Make Flatpak apps visible
-#+begin_src sh
-export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
-#+end_src
-*** Zshrc
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "zshrc")
-:END:
-**** History
-#+begin_src sh
-HISTSIZE=1000000
-SAVEHIST=$HISTSIZE
-#+end_src
 ** Guix extra profiles
 :PROPERTIES:
 :tangle-dir+: /manifests
@@ -1981,7 +2036,7 @@ for profile in $profiles; do
   profileName=$(basename $profile .scm)
   profilePath="$GUIX_EXTRA_PROFILES/$profileName"
   mkdir -p $profilePath
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName.scm"
+  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
 done
 #+end_src
 #+call: install-profiles[:cmdline ...]()
@@ -1999,7 +2054,7 @@ fi
 for profile in $profiles; do
   profileName=$(basename $profile)
   profilePath="$GUIX_EXTRA_PROFILES/$profileName"
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName.scm"
+  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
@@ -2008,17 +2063,12 @@ done
 #+begin_src sh :var profileName="" :noweb yes
 echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
-**** multiverse
-#+begin_src scheme :tangle (in-tangle-dir "multiverse.scm")
+**** multiverse :manifest:
+#+begin_src scheme :tangle (in-tangle-dir "multiverse")
 (specifications->manifest
  '("btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
 
    ;; "protonvpn-cli" ; REVIEW Appears to be broken after the big Guix frozen-updates upgrade.
-
-   ;; Flatpak
-   "flatpak"
-   "xdg-desktop-portal"
-   "xdg-desktop-portal-wlr"
 
    ;; General
    "xdg-utils"
@@ -2048,60 +2098,13 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("multiverse")>>"
 #+end_src
-**** bastille
-#+begin_src scheme :tangle (in-tangle-dir "bastille.scm")
-;; TODO Getting rid of this (either putting it in "multiverse" manifest or in solitude). Make it a reference to emacs-variant.
-;; - although if I'm going to be running off of the latest emacs-29 I might want to keep emacs in a separate manifest to make rolling back easier.
-(specifications->manifest
- '("emacs-29-pgtk+native-comp"))
-#+end_src
-#+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
-"<<guix-extra-profile-path("bastille")>>"
-#+end_src
-**** clojure manifest WIP
+**** clojure manifest WIP :manifest:
 - TODO =clojure-tools= has, at the time of this writing, just been upstreamed from nonguix to guix. However the guix package depends on the guix =clojure= package (presumably instead of just using the one included in the downloaded clojure-tools) which is currently on version 1.10.0 (I'll definitely want a newer version) and has a dependency on icedtea (which is jdk version 8 even though now I'll want openjdk version 11 to match datomic or version 17 because it's the newest one supported by clojure). Rewrite the =clojure= package =jre= dependency to use a newer version and bump clojure somehow? What does the =clojure= package being old mean for me, if anything, since projects definte their own clojure versions (perhaps just that version of clojure will be used when invoking tools outside a project, and even then I could just specify a higher clojure version in my home directory =deps.edn=, no?) Just resurrect the nonguix clojure-tools packge in my own dotfiles? If I keep using the guix clojure-tools package that depends on =clojure= does it having its own non-propagated java dependency mean I don't have to install one in my profile any more?
 #+begin_src scheme
 (specifications->manifest
  '("clojure-tools" ; TODO comes from nonguix channel, I might be making that explicit later
    "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
    "clj-kondo")) ; TODO comes from nonguix channel, I might be making that explicit later
-#+end_src
-** Nix
-*** Nix channels
-#+begin_src conf :tangle (in-tangle-dir "nix-channels")
-https://nixos.org/channels/nixpkgs-unstable nixpkgs
-#+end_src
-*** Nixpkgs config
-#+begin_src nix :tangle (in-tangle-dir "nixpkgs-config.nix")
-{ allowUnfree = true; }
-#+end_src
-*** Nix WIP
-Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
-**** Update channels
-#+begin_src sh :results output silent :async
-nix-channel --update
-#+end_src
-**** "Manifest"
-- TODO might want to / see if I can make this a simple bulleted list I pass with :var to source block(s)
-#+name: nix-packages
-#+begin_src org
-google-chrome zoom-us
-#+end_src
-**** Install packages
-#+begin_src sh :results output silent :async :noweb yes
-nix-env --install <<nix-packages>>
-#+end_src
-**** Upgrade packages
-#+begin_src sh :results output silent :async
-nix-env --upgrade
-#+end_src
-** WIP Flatpak
-Ran these manually
-#+begin_src sh
-flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-# flatpak install --user flathub com.spotify.Client
-# flatpak install --user flathub us.zoom.Zoom
 #+end_src
 ** Doom
 :PROPERTIES:
