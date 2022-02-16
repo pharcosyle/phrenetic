@@ -461,12 +461,13 @@ The stateless service should come after base/desktop services (potentially other
       (apply activate-state '#$config)))
 
 (define stateless-service-type
-  (service-type (name 'stateless)
-                (extensions
-                 (list (service-extension boot-service-type
-                                          populate-gexp)
-                       (service-extension activation-service-type
-                                          activate-state-gexp)))))
+  (service-type
+   (name 'stateless)
+   (extensions
+    (list (service-extension boot-service-type
+                             populate-gexp)
+          (service-extension activation-service-type
+                             activate-state-gexp)))))
 #+end_src
 *** File systems
 **** Btrfs
@@ -1079,32 +1080,37 @@ SAVEHIST=$HISTSIZE
 ***** Direnv
 #+begin_src scheme
 (define zsh-direnv-service-type
-  (service-type (name 'home-zsh-direnv)
-                (extensions
-                 (list
-                  (service-extension home-profile-service-type
-                                     (const (list direnv)))
-                  (service-extension home-zsh-service-type
-                                     (const (home-zsh-extension
-                                             (zshrc
-                                              (list (mixed-text-file
-                                                     "direnv-hook"
-                                                     "eval \"$(" direnv "hook zsh)\""))))))))
-                (default-value #f)))
+  (service-type
+   (name 'home-zsh-direnv)
+   (extensions
+    (list
+     (service-extension
+      home-profile-service-type
+      (const (list direnv)))
+     (service-extension
+      home-zsh-service-type
+      (const (home-zsh-extension
+              (zshrc
+               (list (mixed-text-file
+                      "direnv-hook"
+                      "eval \"$(" direnv "hook zsh)\""))))))))
+   (default-value #f)))
 #+end_src
 *** Nix
 #+begin_src scheme
 (define nix-service-type
-  (service-type (name 'home-nix)
-                (extensions
-                 (list
-                  (service-extension home-files-service-type
-                                     (const
-                                      `(("nix-channels"
-                                         ,(local-file "nix-channels"))
-                                        ("config/nixpkgs/config.nix"
-                                         ,(local-file "nixpkgs-config.nix")))))))
-                (default-value #f)))
+  (service-type
+   (name 'home-nix)
+   (extensions
+    (list
+     (service-extension
+      home-files-service-type
+      (const
+       `(("nix-channels"
+          ,(local-file "nix-channels"))
+         ("config/nixpkgs/config.nix"
+          ,(local-file "nixpkgs-config.nix")))))))
+   (default-value #f)))
 #+end_src
 **** Nix channels
 #+begin_src conf :tangle (in-tangle-dir "nix-channels")
@@ -1137,18 +1143,21 @@ nix-env --upgrade
 *** Emacs
 #+begin_src scheme
 (define emacs-service-type
-  (service-type (name 'home-emacs)
-                (extensions
-                 (list
-                  (service-extension home-profile-service-type
-                                     (lambda (config)
-                                       (list (assoc-ref config #:emacs))))
-                  (service-extension home-environment-variables-service-type
-                                     (lambda (config)
-                                       `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
-                                         ("EDITOR" . "$VISUAL"))))))
-                (default-value
-                  (kvm #:emacs emacs-29-pgtk+native-comp))))
+  (service-type
+   (name 'home-emacs)
+   (extensions
+    (list
+     (service-extension
+      home-profile-service-type
+      (lambda (config)
+        (list (assoc-ref config #:emacs))))
+     (service-extension
+      home-environment-variables-service-type
+      (lambda (config)
+        `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
+          ("EDITOR" . "$VISUAL"))))))
+   (default-value
+     (kvm #:emacs emacs-29-pgtk+native-comp))))
 #+end_src
 **** Emacs 29 with pgtk + native comp package :package:version:
 #+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
@@ -1183,17 +1192,20 @@ nix-env --upgrade
 **** Doom
 #+begin_src scheme
 (define doom-service-type
-  (service-type (name 'home-doom)
-                (extensions
-                 (list
-                  (service-extension home-profile-service-type
-                                     (const (list doom-emacs
-                                                  font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically
-                  ;; (service-extension home-files-service-type
-                  ;;                    (const (list `("config/doom"
-                  ;;                                   ,(local-file "doom" #:recursive? #t)))))
-                  ))
-                (default-value #f)))
+  (service-type
+   (name 'home-doom)
+   (extensions
+    (list
+     (service-extension
+      home-profile-service-type
+      (const (list doom-emacs
+                   font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically
+     ;; (service-extension
+     ;;  home-files-service-type
+     ;;  (const (list `("config/doom"
+     ;;                 ,(local-file "doom" #:recursive? #t)))))
+     ))
+   (default-value #f)))
 #+end_src
 ***** Doom Emacs package :package:version:
 - TODO make the ~doom~ program (probably the entire =bin= directory) part of outputs
@@ -1262,70 +1274,75 @@ nix-env --upgrade
    (name 'home-pipewire)
    (extensions
     (list
-     (service-extension home-profile-service-type
-                        (const (list pipewire-0.3
-                                     wireplumber)))
-     (service-extension home-shepherd-service-type
-                        (const
-                         (list
-                          (shepherd-service
-                           (provision '(pipewire))
-                           (stop  #~(make-kill-destructor))
-                           (start #~(make-forkexec-constructor
-                                     (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                                     #:environment-variables
-                                     (append (list "DISABLE_RTKIT=1")
-                                             (default-environment-variables))))
-                           (auto-start? #f))
-                          (shepherd-service
-                           (requirement '(pipewire))
-                           (provision '(wireplumber))
-                           (stop  #~(make-kill-destructor))
-                           (start #~(make-forkexec-constructor
-                                     (list #$(file-append wireplumber "/bin/wireplumber"))
-                                     #:environment-variables
-                                     (append (list "DISABLE_RTKIT=1")
-                                             (default-environment-variables))))
-                           (auto-start? #f))
-                          (shepherd-service
-                           (requirement '(pipewire))
-                           (provision '(pipewire-pulse))
-                           (stop  #~(make-kill-destructor))
-                           (start #~(make-forkexec-constructor
-                                     (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                                     #:environment-variables
-                                     (append (list "DISABLE_RTKIT=1")
-                                             (default-environment-variables))))
-                           (auto-start? #f)))))
-     (service-extension home-files-service-type
-                        (const
-                         `(("config/alsa/asoundrc"
-                            ,(mixed-text-file
-                              "asoundrc"
-                              #~(string-append
-                                 "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-                                 "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
-                                 "\n"
-                                 "pcm_type.pipewire {" "\n"
-                                 "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-                                 "}" "\n"
-                                 "\n"
-                                 "ctl_type.pipewire {" "\n"
-                                 "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-                                 "}" "\n"))))))))
+     (service-extension
+      home-profile-service-type
+      (const (list pipewire-0.3
+                   wireplumber)))
+     (service-extension
+      home-shepherd-service-type
+      (const
+       (list
+        (shepherd-service
+         (provision '(pipewire))
+         (stop  #~(make-kill-destructor))
+         (start #~(make-forkexec-constructor
+                   (list #$(file-append pipewire-0.3 "/bin/pipewire"))
+                   #:environment-variables
+                   (append (list "DISABLE_RTKIT=1")
+                           (default-environment-variables))))
+         (auto-start? #f))
+        (shepherd-service
+         (requirement '(pipewire))
+         (provision '(wireplumber))
+         (stop  #~(make-kill-destructor))
+         (start #~(make-forkexec-constructor
+                   (list #$(file-append wireplumber "/bin/wireplumber"))
+                   #:environment-variables
+                   (append (list "DISABLE_RTKIT=1")
+                           (default-environment-variables))))
+         (auto-start? #f))
+        (shepherd-service
+         (requirement '(pipewire))
+         (provision '(pipewire-pulse))
+         (stop  #~(make-kill-destructor))
+         (start #~(make-forkexec-constructor
+                   (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
+                   #:environment-variables
+                   (append (list "DISABLE_RTKIT=1")
+                           (default-environment-variables))))
+         (auto-start? #f)))))
+     (service-extension
+      home-files-service-type
+      (const
+       `(("config/alsa/asoundrc"
+          ,(mixed-text-file
+            "asoundrc"
+            #~(string-append
+               "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
+               "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
+               "\n"
+               "pcm_type.pipewire {" "\n"
+               "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
+               "}" "\n"
+               "\n"
+               "ctl_type.pipewire {" "\n"
+               "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
+               "}" "\n"))))))))
    (default-value #f)))
 #+end_src
 **** Flatpak
 #+begin_src scheme
 (define flatpak-service-type
-  (service-type (name 'home-flatpak)
-                (extensions
-                 (list
-                  (service-extension home-profile-service-type
-                                     (const (list flatpak
-                                                  xdg-desktop-portal
-                                                  xdg-desktop-portal-wlr)))))
-                (default-value #f)))
+  (service-type
+   (name 'home-flatpak)
+   (extensions
+    (list
+     (service-extension
+      home-profile-service-type
+      (const (list flatpak
+                   xdg-desktop-portal
+                   xdg-desktop-portal-wlr)))))
+   (default-value #f)))
 #+end_src
 ***** WIP Flatpak
 Ran these manually
