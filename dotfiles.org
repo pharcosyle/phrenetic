@@ -1999,8 +1999,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (string-append extra-profiles-path "/" p "/" p))
 
 (define (base-he #:key
+                 (developer? #t)
                  (login-shell default-login-shell)
-                 (interactive-shell #:shell/zsh)
+                 (interactive-shell (if developer?
+                                        #:shell/zsh login-shell))
                  (nix? #t)
                  (desktop? #t)
                  (pipewire? desktop?))
@@ -2008,14 +2010,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (services
     (-> '()
         (he-shells #:login-shell login-shell
-                   #:interactive-shell interactive-shell
-                   #:direnv? #t)
-        (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
-                  #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
-        he-doom
+                   #:interactive-shell interactive-shell)
         (as-> $
           (if nix?
               (he-nix $) $)
+          (if developer?
+              (-> $
+                  (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
+                            #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
+                  he-doom
+                  (he-direnv #:interactive-shell interactive-shell)))
           (if desktop?
               (-> $
                   (as->$
