@@ -977,20 +977,19 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        )
      identity))
    (compose identity)
-   (extend (partial login-shell-extensions shell))
+   (extend
+    (lambda (initial extensions)
+      (let* ((config (cons* initial extensions))
+             (profile (append-map (rpartial #:profile) config)))
+        (case shell
+          ((#:shell/bash)
+           (home-bash-extension
+            (bash-profile profile)))
+          ;; ((#:shell/zsh)
+          ;;  (home-zsh-extension
+          ;;   (zprofile profile)))
+          ))))
    (default-value (kvm))))
-
-(define (login-shell-extensions shell initial extensions)
-  (let* ((config (cons* initial extensions))
-         (profile (append-map (rpartial #:profile) config)))
-    (case shell
-      ((#:shell/bash)
-       (home-bash-extension
-        (bash-profile profile)))
-      ;; ((#:shell/zsh)
-      ;;  (home-zsh-extension
-      ;;   (zprofile profile)))
-      )))
 #+end_src
 **** Bash
 ***** Bashrc
