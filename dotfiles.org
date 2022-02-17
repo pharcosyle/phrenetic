@@ -921,6 +921,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
   #:use-module (ebullient utils)
   #:export (he-shells
+            he-extra-profiles
             he-nix
             he-emacs
             he-emacs-service-type
@@ -963,57 +964,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
            ;; ((#:bash) (service he-bash-direnv-service-type))
            ((#:zsh) (service he-zsh-direnv-service-type)))))))
    svcs))
-#+end_src
-**** login shell profile wip
-:PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "profile")
-:END:
-***** Use Guix extra profiles
-#+begin_src sh :noweb yes
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-
-  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
-  case $XDG_DATA_DIRS in
-    ,*"$profile"/share*) ;;
-    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
-  esac
-  case $MANPATH in
-    ,*"$profile"/share/man*) ;;
-    ,*) export MANPATH="$profile"/share/man:$MANPATH
-  esac
-  case $INFOPATH in
-    ,*"$profile"/share/info*) ;;
-    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
-  esac
-  case $XDG_CONFIG_DIRS in
-    ,*"$profile"/etc/xdg*) ;;
-    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
-  esac
-  case $XCURSOR_PATH in
-    ,*"$profile"/share/icons*) ;;
-    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
-  esac
-
-  unset profile
-done
-#+end_src
-***** Load Nix environment
-#+begin_src sh
-if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
-  . /run/current-system/profile/etc/profile.d/nix.sh
-fi
-#+end_src
-***** Make Flatpak apps visible
-#+begin_src sh
-export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
 **** Zsh
 ***** Zshrc
@@ -1157,6 +1107,58 @@ SAVEHIST=$HISTSIZE
                       "direnv-hook"
                       "eval \"$(" direnv "hook zsh)\""))))))))
    (default-value #f)))
+#+end_src
+*** Extra profiles
+**** login shell profile wip
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "profile")
+:END:
+***** Use Guix extra profiles
+#+begin_src sh :noweb yes
+gepp="<<guix-extra-profiles-path>>"
+GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
+
+for i in $GUIX_EXTRA_PROFILES/*; do
+  profile=$i/$(basename "$i")
+  if [ -f "$profile"/etc/profile ]; then
+    GUIX_PROFILE="$profile"
+    . "$GUIX_PROFILE"/etc/profile
+  fi
+
+  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
+  case $XDG_DATA_DIRS in
+    ,*"$profile"/share*) ;;
+    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
+  esac
+  case $MANPATH in
+    ,*"$profile"/share/man*) ;;
+    ,*) export MANPATH="$profile"/share/man:$MANPATH
+  esac
+  case $INFOPATH in
+    ,*"$profile"/share/info*) ;;
+    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
+  esac
+  case $XDG_CONFIG_DIRS in
+    ,*"$profile"/etc/xdg*) ;;
+    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
+  esac
+  case $XCURSOR_PATH in
+    ,*"$profile"/share/icons*) ;;
+    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
+  esac
+
+  unset profile
+done
+#+end_src
+***** Load Nix environment
+#+begin_src sh
+if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
+  . /run/current-system/profile/etc/profile.d/nix.sh
+fi
+#+end_src
+***** Make Flatpak apps visible
+#+begin_src sh
+export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
 *** Nix
 #+begin_src scheme
