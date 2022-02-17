@@ -1119,28 +1119,6 @@ alias grep='grep --color=auto'
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
 #+end_src
-**** Direnv
-***** Bash
-...
-***** Zsh
-#+begin_src scheme
-(define he-zsh-direnv-service-type
-  (service-type
-   (name 'he-zsh-direnv)
-   (extensions
-    (list
-     (service-extension
-      home-profile-service-type
-      (const (list direnv)))
-     (service-extension
-      home-zsh-service-type
-      (const (home-zsh-extension
-              (zshrc
-               (list (mixed-text-file
-                      "direnv-hook"
-                      "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))
-   (default-value #f)))
-#+end_src
 *** Extra profiles
 **** login shell profile wip
 :PROPERTIES:
@@ -1392,6 +1370,30 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (description synopsis)
       (home-page "https://github.com/hlissner/doom-emacs")
       (license license:expat))))
+#+end_src
+*** Direnv
+#+begin_src scheme
+(define he-zsh-direnv-service-type
+  (service-type
+   (name 'he-zsh-direnv)
+   (extensions
+    (list
+     (service-extension
+      home-profile-service-type
+      (const (list direnv)))
+     (service-extension
+      home-zsh-service-type
+      (const (home-zsh-extension
+              (zshrc
+               (list (mixed-text-file
+                      "direnv-hook"
+                      "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))
+   (default-value #f)))
+
+(when direnv?
+  (case interactive-shell
+    ;; ((#:shell/bash) (service he-bash-direnv-service-type))
+    ((#:shell/zsh) (service he-zsh-direnv-service-type))))
 #+end_src
 *** Desktop
 **** Pipewire
