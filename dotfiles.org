@@ -3460,6 +3460,10 @@ Can be an integer to determine the exact padding."
   (lambda (. rest)
     (apply f (append args rest))))
 
+(define (rpartial f . args)
+  (lambda (. rest)
+    (apply f (append rest args))))
+
 (define-syntax ->
   (syntax-rules ()
     ((_ value) value)
