@@ -38,7 +38,7 @@ guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --f
 #+begin_src scheme :tangle (in-tangle-dir "../common.scm")
 (define-module (ebullient common))
 
-(define-public default-login-shell #:bash)
+(define-public default-login-shell #:shell/bash)
 #+end_src
 ** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
@@ -503,8 +503,8 @@ The stateless service should come after base/desktop services (potentially other
    (shell (if (eq? shell default-login-shell)
               (default-shell)
               ;; (case shell
-              ;;   ((#:bash) (file-append bash "/bin/bash"))
-              ;;   ((#:zsh) (file-append zsh "/bin/zsh")))
+              ;;   ((#:shell/bash) (file-append bash "/bin/bash"))
+              ;;   ((#:shell/zsh) (file-append zsh "/bin/zsh")))
               ))
    (password (if password
                  (crypt password salt)
@@ -944,13 +944,13 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (let ((setup-shell? (lambda (shell)
                           (memq shell (list login-shell interactive shell)))))
        (list
-        (when (setup-shell? #:bash)
+        (when (setup-shell? #:shell/bash)
           (service home-bash-service-type
                    ;; (home-bash-configuration
                    ;;  (bash-profile
                    ;;   (list (local-file "bashrc"))))
                    ))
-        (when (setup-shell? #:zsh)
+        (when (setup-shell? #:shell/zsh)
           (service home-zsh-service-type
                    (home-zsh-configuration
                     (zshrc
@@ -959,12 +959,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
           (simple-service 'set-shell
                           home-environment-variables-service-type
                           `(("SHELL" . ,(case interactive-shell
-                                          ;; ((#:bash) (file-append bash "/bin/bash"))
-                                          ((#:zsh) (file-append zsh "/bin/zsh")))))))
+                                          ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                                          ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))
         (when direnv?
           (case interactive-shell
-            ;; ((#:bash) (service he-bash-direnv-service-type))
-            ((#:zsh) (service he-zsh-direnv-service-type))))))))
+            ;; ((#:shell/bash) (service he-bash-direnv-service-type))
+            ((#:shell/zsh) (service he-zsh-direnv-service-type))))))))
    svcs))
 #+end_src
 **** Login shell service
@@ -975,8 +975,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    (extensions
     (service-extension
      (case shell
-       ((#:bash) home-bash-service-type)
-       ;; ((#:zsh) home-zsh-service-type)
+       ((#:shell/bash) home-bash-service-type)
+       ;; ((#:shell/zsh) home-zsh-service-type)
        )
      identity))
    (compose identity)
@@ -987,10 +987,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   (let* ((config (cons* initial extensions))
          (profile (append-map (rpartial #:profile) config)))
     (case shell
-      ((#:bash)
+      ((#:shell/bash)
        (home-bash-extension
         (bash-profile profile)))
-      ;; ((#:zsh)
+      ;; ((#:shell/zsh)
       ;;  (home-zsh-extension
       ;;   (zprofile profile)))
       )))
@@ -2000,7 +2000,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define (base-he #:key
                  (login-shell default-login-shell)
-                 (interactive-shell #:zsh)
+                 (interactive-shell #:shell/zsh)
                  (nix? #t)
                  (desktop? #t)
                  (pipewire? desktop?))
@@ -2010,7 +2010,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (he-shells #:login-shell login-shell
                    #:interactive-shell interactive-shell
                    #:direnv? #t)
-        (he-emacs #:zsh-vterm? (eq? interactive-shell #:zsh)
+        (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
                   #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
         he-doom
         (as-> $
