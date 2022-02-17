@@ -1214,7 +1214,7 @@ nix-env --upgrade
    (service (he-emacs-service-type zsh-vterm? config))
    svcs))
 
-(define* (he-emacs-service-type zsh-vterm? config)
+(define (he-emacs-service-type zsh-vterm? config)
   (service-type
    (name 'he-emacs)
    (extensions
