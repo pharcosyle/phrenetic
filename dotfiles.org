@@ -35,6 +35,11 @@ pharcosyle@gmail.com
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
+#+begin_src scheme :tangle (in-tangle-dir "../common.scm")
+(define-module (ebullient common))
+
+(define-public default-login-shell #:bash)
+#+end_src
 ** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (define-module (ebullient common channels)
@@ -240,6 +245,7 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
+  #:use-module (ebullient common)
   #:use-module (ebullient utils)
   #:export (barebones-os
             host-info
@@ -490,11 +496,12 @@ The stateless service should come after base/desktop services (potentially other
    (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())
                                  (if bluetooth? '("lp") '())))
-   (shell (case shell
-            ((#:default) (default-shell))
-            ;; ((#:bash) (file-append bash "/bin/bash"))
-            ;; ((#:zsh) (file-append zsh "/bin/zsh"))
-            ))
+   (shell (if (eq? shell default-login-shell)
+              (default-shell)
+              ;; (case shell
+              ;;   ((#:bash) (file-append bash "/bin/bash"))
+              ;;   ((#:zsh) (file-append zsh "/bin/zsh")))
+              ))
    (password (if password
                  (crypt password salt)
                  #f))))
@@ -677,6 +684,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (ebullient system base-os)
   #:use-module (ebullient system components)
+  #:use-module (ebullient common)
   #:use-module (ebullient utils)
   #:export (base-os))
 
@@ -1911,6 +1919,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module (ebullient home components)
+  #:use-module (ebullient common)
   #:use-module (ebullient utils)
   #:export (base-he))
 
@@ -1919,7 +1928,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (string-append extra-profiles-path "/" p "/" p))
 
 (define (base-he #:key
-                 (login-shell #:bash)
+                 (login-shell default-login-shell)
                  (interactive-shell #:zsh)
                  (nix? #t)
                  (desktop? #t)
