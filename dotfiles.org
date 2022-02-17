@@ -300,6 +300,8 @@ guix pull
   (locale locale))
 #+end_src
 *** Boot
+**** Grub
+...
 **** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key label target)
@@ -471,6 +473,8 @@ The stateless service should come after base/desktop services (potentially other
                              activate-state-gexp)))))
 #+end_src
 *** File systems
+**** Ext4
+...
 **** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key label subvols)
