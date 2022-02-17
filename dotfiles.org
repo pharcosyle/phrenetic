@@ -917,10 +917,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((gnu packages xdisorg) #:select (gammastep))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
+  #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
   #:use-module (ebullient utils)
   #:export (he-shells
+            he-login-shell-service-type
             he-extra-profiles
             he-nix
             he-emacs
@@ -937,33 +939,63 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+begin_src scheme
 (define* (he-shells svcs #:key login-shell interactive-shell direnv?)
   (append
-   (filter
-    service?
-    (let ((want-shell? (lambda (shell)
-                         (memq shell (list login-shell interactive shell)))))
-      (list
-       (when (want-shell? #:bash)
-         (service home-bash-service-type
-                  ;; (home-bash-configuration
-                  ;;  (bash-profile
-                  ;;   (list (local-file "bashrc"))))
-                  ))
-       (when (want-shell? #:zsh)
-         (service home-zsh-service-type
-                  (home-zsh-configuration
-                   (zshrc
-                    (list (local-file "zshrc"))))))
-       (when (not (eq login-shell interactive-shell))
-         (simple-service 'set-shell-env-var
-                         home-environment-variables-service-type
-                         `(("SHELL" . ,(case interactive-shell
-                                         ;; ((#:bash) (file-append bash "/bin/bash"))
-                                         ((#:zsh) (file-append zsh "/bin/zsh")))))))
-       (when direnv?
-         (case interactive-shell
-           ;; ((#:bash) (service he-bash-direnv-service-type))
-           ((#:zsh) (service he-zsh-direnv-service-type)))))))
+   (cons*
+    (service (login-shell-service-type login-shell))
+    (filter
+     service?
+     (let ((want-shell? (lambda (shell)
+                          (memq shell (list login-shell interactive shell)))))
+       (list
+        (when (want-shell? #:bash)
+          (service home-bash-service-type
+                   ;; (home-bash-configuration
+                   ;;  (bash-profile
+                   ;;   (list (local-file "bashrc"))))
+                   ))
+        (when (want-shell? #:zsh)
+          (service home-zsh-service-type
+                   (home-zsh-configuration
+                    (zshrc
+                     (list (local-file "zshrc"))))))
+        (when (not (eq login-shell interactive-shell))
+          (simple-service 'set-shell
+                          home-environment-variables-service-type
+                          `(("SHELL" . ,(case interactive-shell
+                                          ;; ((#:bash) (file-append bash "/bin/bash"))
+                                          ((#:zsh) (file-append zsh "/bin/zsh")))))))
+        (when direnv?
+          (case interactive-shell
+            ;; ((#:bash) (service he-bash-direnv-service-type))
+            ((#:zsh) (service he-zsh-direnv-service-type))))))))
    svcs))
+#+end_src
+**** Login shell service
+#+begin_src scheme
+(define (he-login-shell-service-type shell)
+  (service-type
+   (name 'he-login-shell)
+   (extensions
+    (service-extension
+     (case shell
+       ((#:bash) home-bash-service-type)
+       ;; ((#:zsh) home-zsh-service-type)
+       )
+     identity))
+   (compose identity)
+   (extend (partial login-shell-extensions shell))
+   (default-value (kvm))))
+
+(define (login-shell-extensions shell initial extensions)
+  (let* ((config (cons* initial extensions))
+         (profile (append-map (rpartial #:profile) config)))
+    (case shell
+      ((#:bash)
+       (home-bash-extension
+        (bash-profile profile)))
+      ;; ((#:zsh)
+      ;;  (home-zsh-extension
+      ;;   (zprofile profile)))
+      )))
 #+end_src
 **** Zsh
 ***** Zshrc
