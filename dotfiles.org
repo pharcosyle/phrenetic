@@ -1183,16 +1183,6 @@ for i in $GUIX_EXTRA_PROFILES/*; do
   unset profile
 done
 #+end_src
-***** Load Nix environment
-#+begin_src sh
-if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
-  . /run/current-system/profile/etc/profile.d/nix.sh
-fi
-#+end_src
-***** Make Flatpak apps visible
-#+begin_src sh
-export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
-#+end_src
 *** Nix
 #+begin_src scheme
 (define (he-nix svcs)
@@ -1211,6 +1201,12 @@ export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
             ,(local-file "nixpkgs-config.nix")))))))
      (default-value #f)))
    svcs))
+#+end_src
+**** Load Nix environment
+#+begin_src sh
+if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
+  . /run/current-system/profile/etc/profile.d/nix.sh
+fi
 #+end_src
 **** Nix channels
 #+begin_src conf :tangle (in-tangle-dir "nix-channels")
@@ -1480,6 +1476,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                      xdg-desktop-portal-wlr)))))
      (default-value #f)))
    svcs))
+#+end_src
+***** Make Flatpak apps visible
+#+begin_src sh
+export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
 ***** WIP Flatpak
 Ran these manually
