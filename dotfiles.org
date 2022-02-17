@@ -943,7 +943,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
     (filter
      service?
      (let ((setup-shell? (lambda (shell)
-                          (memq shell (list login-shell interactive shell)))))
+                           (memq shell (list login-shell interactive shell)))))
        (list
         (when (setup-shell? #:shell/bash)
           (service home-bash-service-type
@@ -957,11 +957,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                     (zshrc
                      (list (local-file "zshrc"))))))
         (when (not (eq login-shell interactive-shell))
-          (simple-service 'set-shell
-                          home-environment-variables-service-type
-                          `(("SHELL" . ,(case interactive-shell
-                                          ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                                          ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
+          (simple-service
+           'set-shell
+           home-environment-variables-service-type
+           `(("SHELL" . ,(case interactive-shell
+                           ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                           ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
    svcs))
 #+end_src
 **** Login shell service
