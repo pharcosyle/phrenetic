@@ -1231,14 +1231,12 @@ nix-env --upgrade
        (lambda (config)
          `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
            ("EDITOR" . "$VISUAL"))))
-      ;; TODO Does extending `home-zsh-service-type' introduce it if not present? If so I might need to create a wrapper around service-types so I can be selective about what service-extensions to even have for a home component.
-      (service-extension
-       home-zsh-service-type
-       (lambda (config)
-         (home-zsh-extension
-          (zshrc
-           (if (assoc-ref config #:zsh-vterm?)
-               (list (local-file "zsh-vterm")) '()))))))))
+      (when zsh-vterm?
+        (service-extension
+         home-zsh-service-type
+         (const (home-zsh-extension
+                 (zshrc
+                  (local-file "zsh-vterm")))))))))
    (default-value
      (or config
          (kvm #:emacs emacs-29-pgtk+native-comp)))))
