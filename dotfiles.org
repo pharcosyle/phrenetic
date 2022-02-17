@@ -1138,7 +1138,7 @@ SAVEHIST=$HISTSIZE
               (zshrc
                (list (mixed-text-file
                       "direnv-hook"
-                      "eval \"$(" direnv "hook zsh)\""))))))))
+                      "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))
    (default-value #f)))
 #+end_src
 *** Extra profiles
