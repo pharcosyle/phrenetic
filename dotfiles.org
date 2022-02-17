@@ -980,14 +980,17 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    (extend
     (lambda (initial extensions)
       (let* ((config (cons* initial extensions))
-             (profile (append-map (rpartial #:profile) config)))
+             (field (lambda (k)
+                      (append-map (rpartial k) config))))
         (case shell
           ((#:shell/bash)
            (home-bash-extension
-            (bash-profile profile)))
+            (environment-variables (field #:environment-variables))
+            (bash-profile (field #:profile))))
           ;; ((#:shell/zsh)
           ;;  (home-zsh-extension
-          ;;   (zprofile profile)))
+          ;;   (environment-variables (field #:environment-variables))
+          ;;   (zprofile (field #:profile))))
           ))))
    (default-value (kvm))))
 #+end_src
