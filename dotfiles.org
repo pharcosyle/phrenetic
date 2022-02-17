@@ -2022,6 +2022,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (-> '()
         (he-shells #:login-shell login-shell
                    #:interactive-shell interactive-shell)
+        he-extra-profiles
         (as-> $
           (if nix?
               (he-nix $) $)
