@@ -920,7 +920,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
   #:use-module (ebullient utils)
-  #:export (zsh-direnv-service-type
+  #:export (he-shells
             he-nix
             he-emacs
             he-emacs-service-type
@@ -933,6 +933,37 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
             udiskie-service-type))
 #+end_src
 *** Shells
+#+begin_src scheme
+(define* (he-shells svcs #:key login-shell interactive-shell direnv?)
+  (append
+   (filter
+    service?
+    (let ((want-shell? (lambda (shell)
+                         (memq shell (list login-shell interactive shell)))))
+      (list
+       (when (want-shell? #:bash)
+         (service home-bash-service-type
+                  ;; (home-bash-configuration
+                  ;;  (bash-profile
+                  ;;   (list (local-file "bashrc"))))
+                  ))
+       (when (want-shell? #:zsh)
+         (service home-zsh-service-type
+                  (home-zsh-configuration
+                   (zshrc
+                    (list (local-file "zshrc"))))))
+       (when (not (eq login-shell interactive-shell))
+         (simple-service 'set-shell-env-var
+                         home-environment-variables-service-type
+                         `(("SHELL" . ,(case interactive-shell
+                                         ;; ((#:bash) (file-append bash "/bin/bash"))
+                                         ((#:zsh) (file-append zsh "/bin/zsh")))))))
+       (when direnv?
+         (case interactive-shell
+           ;; ((#:bash) (service he-bash-direnv-service-type))
+           ((#:zsh) (service he-zsh-direnv-service-type)))))))
+   svcs))
+#+end_src
 **** login shell profile wip
 :PROPERTIES:
 :header-args+: :tangle (in-tangle-dir "profile")
@@ -1105,9 +1136,12 @@ alias grep='grep --color=auto'
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
 #+end_src
-***** Direnv
+**** Direnv
+***** Bash
+...
+***** Zsh
 #+begin_src scheme
-(define zsh-direnv-service-type
+(define he-zsh-direnv-service-type
   (service-type
    (name 'he-zsh-direnv)
    (extensions
@@ -1940,6 +1974,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (home-environment
    (services
     (-> '()
+        (he-shells #:login-shell login-shell
+                   #:interactive-shell interactive-shell
+                   #:direnv? #t)
         (he-emacs #:zsh-vterm? (eq? interactive-shell #:zsh)
                   #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
         he-doom
@@ -1991,20 +2028,6 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
      (service gammastep-service-type)
      (service network-manager-service-type)
      (service udiskie-service-type)
-
-     ;; TODO presumably only necessary if different from the login shell, maybe capture this when I modularize
-     (simple-service 'set-default-shell-to-zsh
-                     home-environment-variables-service-type
-                     `(("SHELL" . ,(file-append zsh "/bin/zsh"))))
-     (service home-bash-service-type
-              (home-bash-configuration
-               (bash-profile
-                (list (local-file "bash_profile")))))
-     (service home-zsh-service-type
-              (home-zsh-configuration
-               (zshrc
-                (list (local-file "zshrc")))))
-     (service zsh-direnv-service-type)
 
      (service home-xdg-user-directories-service-type
               (let* ((xdg-user-subdir "/files")
