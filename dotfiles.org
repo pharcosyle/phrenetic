@@ -1236,10 +1236,11 @@ nix-env --upgrade
            (if (package? emacs-package)
                (list emacs-package) '()))))
       (service-extension
-       home-environment-variables-service-type
+       he-login-shell-service-type
        (lambda (config)
-         `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
-           ("EDITOR" . "$VISUAL"))))
+         (kvm #:environment-variables
+              `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
+                ("EDITOR" . "$VISUAL")))))
       (when zsh-vterm?
         (service-extension
          home-zsh-service-type
