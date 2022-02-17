@@ -926,6 +926,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
             he-nix
             he-emacs
             he-doom
+            he-direnv
             he-pipewire
             he-flatpak
             he-sway
@@ -935,7 +936,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 *** Shells
 #+begin_src scheme
-(define* (he-shells svcs #:key login-shell interactive-shell direnv?)
+(define* (he-shells svcs #:key login-shell interactive-shell)
   (append
    (cons*
     (service (login-shell-service-type login-shell))
@@ -960,11 +961,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                           home-environment-variables-service-type
                           `(("SHELL" . ,(case interactive-shell
                                           ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                                          ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))
-        (when direnv?
-          (case interactive-shell
-            ;; ((#:shell/bash) (service he-bash-direnv-service-type))
-            ((#:shell/zsh) (service he-zsh-direnv-service-type))))))))
+                                          ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
    svcs))
 #+end_src
 **** Login shell service
@@ -1373,27 +1370,35 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
 *** Direnv
 #+begin_src scheme
-(define he-zsh-direnv-service-type
-  (service-type
-   (name 'he-zsh-direnv)
-   (extensions
-    (list
-     (service-extension
-      home-profile-service-type
-      (const (list direnv)))
-     (service-extension
-      home-zsh-service-type
-      (const (home-zsh-extension
-              (zshrc
-               (list (mixed-text-file
-                      "direnv-hook"
-                      "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))
-   (default-value #f)))
-
-(when direnv?
-  (case interactive-shell
-    ;; ((#:shell/bash) (service he-bash-direnv-service-type))
-    ((#:shell/zsh) (service he-zsh-direnv-service-type))))
+(define* (he-direnv svcs #:key shell)
+  (cons*
+   (service
+    (service-type
+     (name 'he-zsh-direnv)
+     (extensions
+      (list
+       (service-extension
+        home-profile-service-type
+        (const (list direnv)))
+       (case shell
+         ;; ((#:shell/bash)
+         ;;  (service-extension
+         ;;   home-bash-service-type
+         ;;   (const (home-bash-extension
+         ;;           (bashrc
+         ;;            (list (mixed-text-file
+         ;;                   "direnv-hook"
+         ;;                   "eval \"$(" (file-append direnv "/bin/direnv") "hook bash)\"")))))))
+         ((#:shell/zsh)
+          (service-extension
+           home-zsh-service-type
+           (const (home-zsh-extension
+                   (zshrc
+                    (list (mixed-text-file
+                           "direnv-hook"
+                           "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))))
+     (default-value #f)))
+   svcs))
 #+end_src
 *** Desktop
 **** Pipewire
@@ -2021,7 +2026,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
                             #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
                   he-doom
-                  (he-direnv #:interactive-shell interactive-shell)))
+                  (he-direnv #:shell interactive-shell)))
           (if desktop?
               (-> $
                   (as->$
