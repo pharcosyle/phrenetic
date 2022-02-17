@@ -718,17 +718,17 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
       (users #:who (append
                     '((#:name "<<user-name>>"
                        #:comment "<<user-full-name>>"
-                       #:shell #:default
+                       #:shell default-login-shell
                        #:admin? #t))
                     (if aux-admin?
                         '((#:name "pcoulson"
                            #:comment "Phil Coulson"
-                           #:shell #:default
+                           #:shell default-login-shell
                            #:admin? #t)) '())
                     (if guest?
                         '((#:name "gandalf"
                            #:comment "Speak Friend and Enter"
-                           #:shell #:default
+                           #:shell default-login-shell
                            #:password "mellon"
                            #:salt "toosimple")) '()))
              #:bluetooth? bluetooth?)
