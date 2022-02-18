@@ -6,7 +6,7 @@
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "meta.el")
 :END:
-#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
 #+end_src
 
@@ -36,8 +36,8 @@
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
-#+begin_src gitignore :noweb-ref gitignore-file :tangle no
-/ebullient/
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
 #+end_src
 
 #+name: db/users-common
@@ -3745,10 +3745,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Dev
 ** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore") :noweb yes
-<<gitignore-file>>
-#+end_src
-#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
 #+end_src
 ** Github
@@ -3788,6 +3785,6 @@ Can be an integer to determine the exact padding."
               (add-to-list 'geiser-guile-load-path root-dir))))))
 #+end_src
 
-#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.dir-locals.el
 #+end_src
