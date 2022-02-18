@@ -32,21 +32,17 @@
 :PROPERTIES:
 :tangle-dir+: /ebullient
 :END:
-#+name: user-name
-#+begin_src org
-pharcosyle
-#+end_src
-#+name: user-full-name
-#+begin_src org
-Krzysztof Baranowski
-#+end_src
-#+name: user-email
-#+begin_src org
-pharcosyle@gmail.com
-#+end_src
+#+name: db/users-common
+| =:db/id=         | =:user/full-name=      |
+|------------------+------------------------|
+| :id.user/primary | Krzysztof Baranowski   |
+| :id.user/aux     | Phil Coulson           |
+| :id.user/guest   | Speak Friend and Enter |
+
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
+
 #+begin_src scheme :tangle (in-tangle-dir "common.scm")
 (define-module (ebullient common))
 
@@ -708,6 +704,12 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ** Base OS
+| =:db/id=         | =:user/username= |
+|------------------+------------------|
+| :id.user/primary | pharcosyle       |
+| :id.user/aux     | pcoulson         |
+| :id.user/guest   | gandalf          |
+
 #+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
 (define-module (ebullient system base-os)
   #:use-module (ebullient system components)
@@ -858,24 +860,32 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 :PROPERTIES:
 :tangle-dir+: /ebullient/home
 :END:
-#+name: palette
-| Name              | Color   |
-|-------------------+---------|
-| fg                | #dee2f8 |
-| highlight         | #8496ff |
-| comments          | #63677f |
-| comment-delimiter | #939abd |
-| red               | #fb8578 |
-| orange            | #fdce5f |
-| green             | #9fed9c |
-| yellow            | #eddc91 |
-| blue              | #7db9fe |
-| dark-blue         | #5f68de |
-| magenta           | #e29bf7 |
-| violet            | #aeb9f3 |
-| cyan              | #75e0f9 |
-| gold              | #fdd94a |
-| pink              | #ff9999 |
+#+name: db/users-home
+| =:db/id=         | =:user/email=            |
+|------------------+--------------------------|
+| :id.user/primary | pharcosyle@gmail.com     |
+| :id.user/aux     | pharcosyle+aux@gmail.com |
+| :id.user/guest   |                          |
+
+#+name: db/palette
+| =:db/id=                    | =:color/hex= |
+|-----------------------------+--------------|
+| :id.color/fg                | #dee2f8      |
+| :id.color/highlight         | #8496ff      |
+| :id.color/comments          | #63677f      |
+| :id.color/comment-delimiter | #939abd      |
+| :id.color/red               | #fb8578      |
+| :id.color/orange            | #fdce5f      |
+| :id.color/green             | #9fed9c      |
+| :id.color/yellow            | #eddc91      |
+| :id.color/blue              | #7db9fe      |
+| :id.color/dark-blue         | #5f68de      |
+| :id.color/magenta           | #e29bf7      |
+| :id.color/violet            | #aeb9f3      |
+| :id.color/cyan              | #75e0f9      |
+| :id.color/gold              | #fdd94a      |
+| :id.color/pink              | #ff9999      |
+
 #+name: guix-home-profile
 #+begin_src sh
 ~/.guix-home/profile
