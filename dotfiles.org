@@ -3,7 +3,10 @@
 #+PROPERTY: header-args:elisp :lexical t
 
 * Meta
-#+begin_src elisp :tangle meta.el
+:PROPERTIES:
+:header-args+: :tangle (in-tangle-dir "meta.el")
+:END:
+#+begin_src elisp
 (require 'dash)
 
 (setq base-tangle-dir ".")
