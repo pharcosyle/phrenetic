@@ -3051,13 +3051,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+end_src
 ***** Nuclear Theme
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
+:header-args+: :tangle no
 :END:
 
-#+call: gen-doom-theme() :results code :post unescape(*this*)
+#+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (in-tangle-dir \"themes/doom-nuclear-theme.el\")"
 
 #+RESULTS:
-#+begin_src elisp
+#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
 ;;; nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;;
@@ -3239,7 +3239,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 
 #+name: unescape
-#+begin_src elisp :var s="" :tangle no
+#+begin_src elisp :var s=""
 (-as-> s $
        (substring s 1 -1) ; Remove outer quotes.
        (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
@@ -3248,7 +3248,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 ****** Generator
 #+name: gen-doom-theme
-#+begin_src elisp :var palette=palette :tangle no
+#+begin_src elisp :var palette=palette
 (defun dt--color (color)
   (let ((k (-> color symbol-name (substring 1))))
     (cadr (assoc k palette))))
