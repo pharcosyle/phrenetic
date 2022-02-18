@@ -4,22 +4,22 @@
 
 * Meta
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "meta.el")
+:header-args+: :tangle (meta-in-dir "meta.el")
 :END:
 #+begin_src elisp
 (require 'dash)
 
 (setq meta--base-dir ".")
 #+end_src
-** Tangle
+** Path hierarchy
 #+begin_src elisp
-(defun get-tangle-dir ()
+(defun meta-get-dir ()
   (concat meta--base-dir
-          (when-let ((dirs (org-entry-get (point) "tangle-dir" 'inherit)))
+          (when-let ((dirs (org-entry-get (point) "meta-dir" 'inherit)))
             (-> dirs (split-string " /") (string-join "/")))))
 
-(defun in-tangle-dir (sub-path)
-  (concat (get-tangle-dir) "/" sub-path))
+(defun meta-in-dir (sub-path)
+  (concat (meta-get-dir) "/" sub-path))
 #+end_src
 ** DB
 #+begin_src elisp
@@ -30,7 +30,7 @@
 #+end_src
 * Common
 :PROPERTIES:
-:tangle-dir+: /ebullient
+:meta-dir+: /ebullient
 :END:
 #+name: db/users-common
 | =:db/id=         | =:user/full-name=      |
@@ -43,13 +43,13 @@
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 
-#+begin_src scheme :tangle (in-tangle-dir "common.scm")
+#+begin_src scheme :tangle (meta-in-dir "common.scm")
 (define-module (ebullient common))
 
 (define-public default-login-shell #:shell/bash)
 #+end_src
 ** Channels
-#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+#+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient channels)
   #:use-module (guix channels)
   #:use-module ((srfi srfi-1) #:select (remove))
@@ -219,10 +219,10 @@ guix pull
 #+end_src
 * System
 :PROPERTIES:
-:tangle-dir+: /ebullient/system
+:meta-dir+: /ebullient/system
 :END:
 ** Channels
-#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+#+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient system channels)
   #:use-module (ebullient channels)
   #:re-export (get-channels
@@ -231,7 +231,7 @@ guix pull
 #+end_src
 ** Components
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "components.scm")
+:header-args+: :tangle (meta-in-dir "components.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient system components)
@@ -554,7 +554,7 @@ The stateless service should come after base/desktop services (potentially other
                 (list (local-file "substitutes.nonguix.org.pub")))))))))
 #+end_src
 **** Signing key
-#+begin_src scheme :tangle (in-tangle-dir "substitutes.nonguix.org.pub")
+#+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
@@ -710,7 +710,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 | :id.user/aux     | pcoulson         |
 | :id.user/guest   | gandalf          |
 
-#+begin_src scheme :tangle (in-tangle-dir "base-os.scm") :noweb yes
+#+begin_src scheme :tangle (meta-in-dir "base-os.scm") :noweb yes
 (define-module (ebullient system base-os)
   #:use-module (ebullient system components)
   #:use-module (ebullient common)
@@ -805,13 +805,13 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 ** Hosts
 :PROPERTIES:
-:tangle-dir+: /os
+:meta-dir+: /os
 :END:
-#+begin_src sh :var os_name="" os_dir=(get-tangle-dir)
+#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
 sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
 #+end_src
 *** Frostfire
-#+begin_src scheme :tangle (in-tangle-dir "frostfire.scm") :noweb yes
+#+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system os frostfire)
   #:use-module (ebullient system base-os))
 
@@ -821,13 +821,13 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
            #:macbook? #t))
 #+end_src
 **** Channel deps
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (use-modules (ebullient system channels))
 
 (get-channels nonguix)
 #+end_src
 **** Channels lock :version:
-#+begin_src scheme :tangle (in-tangle-dir "frostfire-channels-lock")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
         (name 'guix)
         (url "https://git.savannah.gnu.org/git/guix.git")
@@ -858,7 +858,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 * Home
 :PROPERTIES:
-:tangle-dir+: /ebullient/home
+:meta-dir+: /ebullient/home
 :END:
 #+name: db/users-home
 | =:db/id=         | =:user/email=            |
@@ -895,7 +895,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 ~/.guix-extra-profiles
 #+end_src
 ** Channels
-#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
+#+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient home channels)
   #:use-module (guix channels)
   #:use-module (ebullient channels)
@@ -927,7 +927,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 ** Components
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "components.scm")
+:header-args+: :tangle (meta-in-dir "components.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient home components)
@@ -1034,7 +1034,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 **** Zsh
 ***** Zshrc
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "zshrc")
+:header-args+: :tangle (meta-in-dir "zshrc")
 :END:
 ****** Andrew Tropin's zshrc
 - TODO trying out Andrew Tropin's zsh configuration verbatim for now
@@ -1155,7 +1155,7 @@ SAVEHIST=$HISTSIZE
 *** Extra profiles
 **** login shell profile wip
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "profile")
+:header-args+: :tangle (meta-in-dir "profile")
 :END:
 ***** Use Guix extra profiles
 #+begin_src sh :noweb yes
@@ -1220,11 +1220,11 @@ if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
 fi
 #+end_src
 **** Nix channels
-#+begin_src conf :tangle (in-tangle-dir "nix-channels")
+#+begin_src conf :tangle (meta-in-dir "nix-channels")
 https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+end_src
 **** Nixpkgs config
-#+begin_src nix :tangle (in-tangle-dir "nixpkgs-config.nix")
+#+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
 **** Nix WIP
@@ -1285,7 +1285,7 @@ nix-env --upgrade
          (kvm #:emacs emacs-29-pgtk+native-comp)))))
 #+end_src
 **** Configure zsh for vterm
-#+begin_src sh :tangle (in-tangle-dir "zsh-vterm")
+#+begin_src sh :tangle (meta-in-dir "zsh-vterm")
 vterm_printf(){
     if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
         # Tell tmux to pass the escape sequences through
@@ -1307,7 +1307,7 @@ setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
 **** Emacs 29 with pgtk + native comp package :package:version:
-#+begin_src scheme :tangle (in-tangle-dir "emacs.scm")
+#+begin_src scheme :tangle (meta-in-dir "emacs.scm")
 (define-module (ebullient home emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
@@ -1348,7 +1348,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
 ***** Doom Emacs package :package:version:
 - TODO make the ~doom~ program (probably the entire =bin= directory) part of outputs
-#+begin_src scheme :tangle (in-tangle-dir "doom-emacs.scm")
+#+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
 (define-module (ebullient home doom-emacs)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -2030,7 +2030,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 (default-value #f)))
 #+end_src
 ** Base HE
-#+begin_src scheme :tangle (in-tangle-dir "base-he.scm")
+#+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module (ebullient home components)
@@ -2076,16 +2076,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 ** Home environments
 :PROPERTIES:
-:tangle-dir+: /he
+:meta-dir+: /he
 :END:
-#+begin_src sh :var he_name="" he_dir=(get-tangle-dir)
+#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
 guix pull --channels="$he_dir"/$he_name-channels-lock
 #+end_src
 #+begin_src sh :var he_name=""
 guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" reconfigure
 #+end_src
 *** Solitude
-#+begin_src scheme :tangle (in-tangle-dir "solitude.scm")
+#+begin_src scheme :tangle (meta-in-dir "solitude.scm")
 (define-module (ebullient home he solitude)
   #:use-module (ebullient home base-he)
   #:export (he))
@@ -2094,7 +2094,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
   (base-he))
 #+end_src
 **** Solitude old WIP
-#+begin_src scheme :tangle (in-tangle-dir "solitude-old-wip.scm") :noweb yes
+#+begin_src scheme :tangle (meta-in-dir "solitude-old-wip.scm") :noweb yes
 (define-module (ebullient home he solitude)
   #:use-module (ebullient home base-he)
   #:export (he))
@@ -2176,13 +2176,13 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
      ))))
 #+end_src
 **** Channel deps
-#+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
+#+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
 (get-channels nonguix rde flat)
 #+end_src
 **** Channels lock
-#+begin_src scheme :tangle (in-tangle-dir "solitude-channels-lock")
+#+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
 (list (channel
         (name 'guix)
         (url "https://git.savannah.gnu.org/git/guix.git")
@@ -2230,10 +2230,10 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 #+end_src
 ** Guix extra profiles
 :PROPERTIES:
-:tangle-dir+: /manifests
+:meta-dir+: /manifests
 :END:
 #+name: install-profiles
-#+begin_src sh :results output silent :dir (get-tangle-dir) :noweb yes :async
+#+begin_src sh :results output silent :dir (meta-get-dir) :noweb yes :async
 gepp="<<guix-extra-profiles-path>>"
 GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
 
@@ -2274,7 +2274,7 @@ done
 echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 **** Multiverse :manifest:
-#+begin_src scheme :tangle (in-tangle-dir "multiverse")
+#+begin_src scheme :tangle (meta-in-dir "multiverse")
 (specifications->manifest
  '("btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
 
@@ -2309,7 +2309,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 "<<guix-extra-profile-path("multiverse")>>"
 #+end_src
 **** Emacs variant manifest :manifest:
-#+begin_src scheme :tangle (in-tangle-dir "emacs-variant")
+#+begin_src scheme :tangle (meta-in-dir "emacs-variant")
 (specifications->manifest
  '("emacs-29-pgtk+native-comp"))
 
@@ -2333,10 +2333,10 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ** Doom
 :PROPERTIES:
-:tangle-dir+: /doom
+:meta-dir+: /doom
 :END:
 *** Init
-#+begin_src elisp :tangle (in-tangle-dir "init.el")
+#+begin_src elisp :tangle (meta-in-dir "init.el")
 ;;; -*- lexical-binding: t; -*-
 (doom! :completion
        (company +childframe)
@@ -2421,7 +2421,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 *** Config
 :PROPERTIES:
-:header-args+: :tangle (in-tangle-dir "config.el")
+:header-args+: :tangle (meta-in-dir "config.el")
 :END:
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
@@ -2618,7 +2618,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
 ****** Ligatures
 ******* ligature
-#+begin_src elisp :tangle (in-tangle-dir "init.el")
+#+begin_src elisp :tangle (meta-in-dir "init.el")
 (use-package-hook! ligature
   :pre-config
   (setq +ligatures-all-modes-list
@@ -3051,10 +3051,10 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 #+end_src
 ***** Nuclear Theme
 
-#+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (in-tangle-dir \"themes/doom-nuclear-theme.el\")"
+#+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (meta-in-dir \"themes/doom-nuclear-theme.el\")"
 
 #+RESULTS:
-#+begin_src elisp :tangle (in-tangle-dir "themes/doom-nuclear-theme.el")
+#+begin_src elisp :tangle (meta-in-dir "themes/doom-nuclear-theme.el")
 ;;; nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
 ;;
 ;;
@@ -3457,7 +3457,7 @@ Can be an integer to determine the exact padding."
 ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
 #+end_src
 *** Packages :version:
-#+begin_src elisp :tangle (in-tangle-dir "packages.el")
+#+begin_src elisp :tangle (meta-in-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
 (package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
@@ -3498,9 +3498,9 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Utils
 :PROPERTIES:
-:tangle-dir+: /ebullient
+:meta-dir+: /ebullient
 :END:
-#+begin_src scheme :tangle (in-tangle-dir "utils.scm")
+#+begin_src scheme :tangle (meta-in-dir "utils.scm")
 (define-module (ebullient utils)
   #:use-module (guix packages)
   #:use-module (gnu services)
@@ -3714,7 +3714,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Dev
 ** Git ignore
-#+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
 
 /.gitignore
@@ -3723,7 +3723,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 ** Github
 *** Git config
-#+begin_src gitconfig :tangle (in-tangle-dir ".git/config")
+#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
 [remote "origin"]
 	url = https://github.com/pharcosyle/dotfiles.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
@@ -3734,7 +3734,7 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Dev local
 ** Git config
-#+begin_src gitconfig :tangle (in-tangle-dir ".git/config")
+#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
 [core]
 	repositoryformatversion = 0
 	filemode = true
@@ -3748,7 +3748,7 @@ Can be an integer to determine the exact padding."
   - an alternative approach to setting up geiser for a project: [[https://github.com/guix-mirror/guix/blob/master/.dir-locals.el#L21][guix/.dir-locals.el at master · guix-mirror/guix · GitHub]]
     Maybe try that or something like it.
     - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
-#+begin_src elisp :tangle (in-tangle-dir ".dir-locals.el")
+#+begin_src elisp :tangle (meta-in-dir ".dir-locals.el")
 ((nil
   (eval . (with-eval-after-load 'geiser-guile
             (let ((root-dir
