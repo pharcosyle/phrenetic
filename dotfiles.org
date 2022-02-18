@@ -6,6 +6,10 @@
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "meta.el")
 :END:
+#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+/meta.el
+#+end_src
+
 #+begin_src elisp
 (require 'dash)
 
@@ -32,6 +36,10 @@
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
+#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+/ebullient/
+#+end_src
+
 #+name: db/users-common
 | =:db/id=         | =:user/full-name=      |
 |------------------+------------------------|
@@ -3596,6 +3604,9 @@ Can be an integer to determine the exact padding."
    update-fn))
 #+end_src
 * DB
+:PROPERTIES:
+:tangle-dir+: /db
+:END:
 #+begin_src elisp
 (setq db--table-refs
       '("db/schema"
@@ -3734,12 +3745,11 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Dev
 ** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/meta.el
-
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore") :noweb yes
+<<gitignore-file>>
+#+end_src
+#+begin_src gitignore :noweb-ref gitignore-file :tangle no
 /.gitignore
-/ebullient/
-/.dir-locals.el
 #+end_src
 ** Github
 *** Git config
@@ -3776,4 +3786,8 @@ Can be an integer to determine the exact padding."
                     (locate-dominating-file default-directory ".dir-locals.el"))))
               (make-local-variable 'geiser-guile-load-path)
               (add-to-list 'geiser-guile-load-path root-dir))))))
+#+end_src
+
+#+begin_src gitignore :noweb-ref gitignore-file :tangle no
+/.dir-locals.el
 #+end_src
