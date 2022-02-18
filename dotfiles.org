@@ -18,7 +18,7 @@
 #+end_src
 * Common
 :PROPERTIES:
-:tangle-dir+: /ebullient/common
+:tangle-dir+: /ebullient
 :END:
 #+name: user-name
 #+begin_src org
@@ -35,7 +35,7 @@ pharcosyle@gmail.com
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
-#+begin_src scheme :tangle (in-tangle-dir "../common.scm")
+#+begin_src scheme :tangle (in-tangle-dir "common.scm")
 (define-module (ebullient common))
 
 (define-public default-login-shell #:shell/bash)
