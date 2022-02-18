@@ -3556,6 +3556,143 @@ Can be an integer to determine the exact padding."
      (eq? (service-kind svc) kind))
    update-fn))
 #+end_src
+* DB
+#+begin_src elisp
+(setq db--table-refs
+      '("db/schema"
+        "db/users-common"
+        "db/users-system"
+        "db/users-home"
+        "db/palette"))
+
+(setq db--database
+      (db--load db--table-refs))
+#+end_src
+
+#+name: db/schema
+| =:db/id=        | =:db/valueType= |
+|-----------------+-----------------|
+| :user/full-name | :db.type/string |
+| :user/username  | :db.type/string |
+| :user/email     | :db.type/string |
+| :color/hex      | :db.type/string |
+
+** Core
+#+begin_src elisp
+(defun kvm (&rest keyvals)
+  (->> keyvals
+       (-partition 2)
+       (-map (-lambda ((a b))
+               (cons a b)))))
+
+(setq db--base-schema
+      (list
+       (kvm
+        :db/id :db/id
+        :db/valueType :db.type/keyword)
+       (kvm
+        :db/id :db/valueType
+        :db/valueType :db.type/keyword)))
+
+(defun db--datom (e a v)
+  (kvm
+   :datom/e e
+   :datom/a a
+   :datom/v v))
+
+(defalias 'db--dget #'map-elt)
+
+(defun db--datom-match-e+a (datom e a)
+  (and (equal (db--dget datom :datom/e) e)
+       (equal (db--dget datom :datom/a) a)))
+
+(defun db--val (db e a)
+  (-as-> db $
+         (-first (lambda (datom)
+                   (db--datom-match-e+a datom e a))
+                 $)
+         (db--dget $ :datom/v)))
+
+(defun db--entity->datoms (entity)
+  (->> entity
+       map-pairs
+       (-map (-lambda ((a . v))
+               (db--datom (map-elt entity :db/id) a v)))))
+
+(defun db--add (db datom)
+  (->> db
+       (-remove (-rpartial #'db--datom-match-e+a
+                           (db--dget datom :datom/e)
+                           (db--dget datom :datom/a)))
+       (cons datom)))
+#+end_src
+** Parsing
+*** Data
+#+begin_src elisp
+(setq db--parsers
+      (kvm
+       :db.type/keyword #'intern
+       :db.type/string #'identity
+       ;; :db.type/boolean (lambda (s)
+       ;;                    (pcase s
+       ;;                      ("true" t)
+       ;;                      ("false" nil)))
+       ))
+
+(defun db--parse-string (db a raw-v)
+  (let ((type (db--val db a :db/valueType)))
+    (funcall (map-elt db--parsers type) raw-v)))
+
+(defun db--parse-entity (db raw-entity)
+  (map-apply (lambda (raw-a raw-v)
+               (let ((a (db--parse-string db :db/id raw-a)))
+                 (cons a
+                       (db--parse-string db a raw-v))))
+             raw-entity))
+#+end_src
+*** Org tables
+#+begin_src elisp
+(defun db--normalize-org-table (table)
+  (-remove (-partial #'equal 'hline) table))
+
+(defun db--strip-org-emphasis (s)
+  (if (and (< 2 (length s))
+           (let ((first (substring s 0 1))
+                 (last (substring s -1)))
+             (and (equal first last)
+                  (member first (map-keys org-emphasis-alist)))))
+      (substring s 1 -1)
+    s))
+
+(defun db--parse-org-table (table)
+  (let* ((table (db--normalize-org-table table))
+         (attrs (-map #'db--strip-org-emphasis (car table)))
+         (rows (cdr table)))
+    (-map (lambda (row)
+            (->> row
+                 (-zip-pair attrs)
+                 (map-remove (lambda (_ v)
+                               (equal v "")))))
+          rows)))
+#+end_src
+** Injest
+#+begin_src elisp
+(defun db--raw-entity-into-db (db raw-entity)
+  (->> raw-entity
+       (db--parse-entity db)
+       db--entity->datoms
+       (-reduce-from #'db--add db)))
+
+(defun db--tables-into-db (db tables)
+  (->> tables
+       (-mapcat #'db--parse-org-table)
+       (-reduce-from #'db--raw-entity-into-db db)))
+
+(defun db--load (table-refs)
+  (db--tables-into-db
+   (-mapcat #'db--entity->datoms db--base-schema)
+   (-map #'org-babel-ref-resolve table-refs)))
+#+end_src
 * Dev
 ** Git ignore
 #+begin_src gitignore :tangle (in-tangle-dir ".gitignore")
