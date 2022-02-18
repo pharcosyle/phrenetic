@@ -42,10 +42,20 @@ guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --f
 #+end_src
 ** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
-(define-module (ebullient common channels)
+(define-module (ebullient channels)
   #:use-module (guix channels)
-  #:export (guix
+  #:use-module ((srfi srfi-1) #:select (remove))
+  #:export (get-channels
+            guix
             nonguix))
+
+(define* (get-channels #:rest cs)
+  (append
+   cs
+   (remove (lambda (c)
+             (member (channel-name c)
+                     (map channel-name cs)))
+           %default-channels)))
 
 (define guix %default-guix-channel)
 
@@ -206,8 +216,9 @@ guix pull
 ** Channels
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (define-module (ebullient system channels)
-  #:use-module (ebullient common channels)
-  #:re-export (guix
+  #:use-module (ebullient channels)
+  #:re-export (get-channels
+               guix
                nonguix))
 #+end_src
 ** Components
@@ -797,8 +808,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+end_src
 **** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "frostfire-channels")
-(use-modules (ebullient channels)
-             (ebullient system channels))
+(use-modules (ebullient system channels))
 
 (get-channels nonguix)
 #+end_src
@@ -866,11 +876,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+begin_src scheme :tangle (in-tangle-dir "channels.scm")
 (define-module (ebullient home channels)
   #:use-module (guix channels)
-  #:use-module (ebullient common channels)
+  #:use-module (ebullient channels)
+  #:re-export (get-channels
+               guix
+               nonguix)
   #:export (rde
-            flat)
-  #:re-export (guix
-               nonguix))
+            flat))
 
 (define rde
   (channel
@@ -2144,8 +2155,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 #+end_src
 **** Channel deps
 #+begin_src scheme :tangle (in-tangle-dir "solitude-channels")
-(use-modules (ebullient channels)
-             (ebullient system channels))
+(use-modules (ebullient home channels))
 
 (get-channels nonguix rde flat)
 #+end_src
@@ -3463,24 +3473,6 @@ Can be an integer to determine the exact padding."
   :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
-#+end_src
-* Channels
-:PROPERTIES:
-:tangle-dir+: /ebullient
-:END:
-#+begin_src scheme :tangle (in-tangle-dir "channels.scm")
-(define-module (ebullient channels)
-  #:use-module (guix channels)
-  #:use-module ((srfi srfi-1) #:select (remove))
-  #:export (get-channels))
-
-(define* (get-channels #:rest cs)
-  (append
-   cs
-   (remove (lambda (c)
-             (member (channel-name c)
-                     (map channel-name cs)))
-           %default-channels)))
 #+end_src
 * Utils
 :PROPERTIES:
