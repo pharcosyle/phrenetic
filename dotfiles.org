@@ -9,15 +9,24 @@
 #+begin_src elisp
 (require 'dash)
 
-(setq base-tangle-dir ".")
-
+(setq meta--base-dir ".")
+#+end_src
+** Tangle
+#+begin_src elisp
 (defun get-tangle-dir ()
-  (concat base-tangle-dir
+  (concat meta--base-dir
           (when-let ((dirs (org-entry-get (point) "tangle-dir" 'inherit)))
             (-> dirs (split-string " /") (string-join "/")))))
 
 (defun in-tangle-dir (sub-path)
   (concat (get-tangle-dir) "/" sub-path))
+#+end_src
+** DB
+#+begin_src elisp
+(setq meta--db-library
+      (expand-file-name "db/org-api.el" meta--base-dir))
+
+(load (file-name-directory (buffer-file-name)) nil 'nomessage)
 #+end_src
 * Common
 :PROPERTIES:
