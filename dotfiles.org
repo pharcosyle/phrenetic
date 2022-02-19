@@ -3648,12 +3648,14 @@ Can be an integer to determine the exact padding."
         :db/valueType :db.type/keyword)))
 
 (defun db--datom (e a v)
-  (kvm
-   :datom/e e
-   :datom/a a
-   :datom/v v))
+  (list e a v))
 
-(defalias 'db--dget #'map-elt)
+(defun db--dget (datom component)
+  ((pcase
+     (:datom/e #'-first-item)
+     (:datom/a #'-second-item)
+     (:datom/v #'-third-item))
+   datom))
 
 (defun db--datom-match-e+a (datom e a)
   (and (equal (db--dget datom :datom/e) e)
