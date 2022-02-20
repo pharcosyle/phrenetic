@@ -33,6 +33,8 @@
 #+begin_src elisp
 (setq meta--table-refs
       '("db/schema"
+        "db/systems-common"
+        "db/systems-frostfire"
         "db/users-common"
         "db/users-system"
         "db/users-home"
@@ -44,14 +46,15 @@
 #+end_src
 
 #+name: db/schema
-| =:db/id=        | =:db/valueType=  | =:db/cardinality=    |
-|-----------------+------------------+----------------------|
-| :user/full-name | :db.type/string  | :db.cardinality/one  |
-| :user/sessions  | :db.type/keyword | :db.cardinality/many |
-| :user/admin?    | :db.type/boolean | :db.cardinality/one  |
-| :user/username  | :db.type/string  | :db.cardinality/one  |
-| :user/email     | :db.type/string  | :db.cardinality/one  |
-| :color/hex      | :db.type/string  | :db.cardinality/one  |
+| =:db/id=         | =:db/valueType=  | =:db/cardinality=    |
+|------------------+------------------+----------------------|
+| :system/features | :db.type/keyword | :db.cardinality/many |
+| :user/full-name  | :db.type/string  | :db.cardinality/one  |
+| :user/sessions   | :db.type/keyword | :db.cardinality/many |
+| :user/admin?     | :db.type/boolean | :db.cardinality/one  |
+| :user/username   | :db.type/string  | :db.cardinality/one  |
+| :user/email      | :db.type/string  | :db.cardinality/one  |
+| :color/hex       | :db.type/string  | :db.cardinality/one  |
 
 * Common
 :PROPERTIES:
@@ -60,6 +63,11 @@
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
+
+#+name: db/systems-common
+| =:db/id=             | =:system/features=                              |
+|----------------------+-------------------------------------------------|
+| :id.system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
 | =:db/id=         | =:user/full-name=      | =:user/sessions=             |
@@ -751,20 +759,35 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
   #:export (base-os))
 
 (define* (base-os #:key
+                  system
                   host-name
                   accounts
-                  (disk-encryption? #t)
                   luks-uuid
-                  (nix? #t)
-                  (console? #t)
-                  (desktop? #t)
-                  (pipewire? desktop?)
-                  (bluetooth? desktop?)
-                  (laptop? #t)
-                  macbook?
-                  (kbl (if macbook?
-                           macbook-kbl #f)))
-  (let* ((who
+                  console?
+                  laptop?
+                  bluetooth?
+                  kbl)
+  (let* ((feature?
+          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
+            (lambda (feat)
+              (member feat features))))
+         (disk-encryption? (feature? :feature/disk-encryption))
+         (stateless? (feature? :feature/stateless))
+         (nix? (feature? :feature/nix))
+         (desktop? (and console?
+                        (feature? :feature/desktop)))
+         (laptop? (and desktop?
+                       laptop?))
+         (macbook? (and laptop?
+                        (feature? :feature/macbook)))
+         (pipewire? (and desktop?
+                         (feature? :feature/pipewire)))
+         (bluetooth? (and desktop?
+                          bluetooth?))
+         (kbl (or kbl
+                  (if macbook?
+                      macbook-kbl #f)))
+         (who
           (->> accounts
                (d:pull-many '(#:user/username
                               #:user/full-name
@@ -781,13 +804,15 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                 #:password "mellon"
                                 #:salt "toosimple")
                                (kvm)))))))
-         (provide-session?
+         (session?
           (let ((sessions
                  (->> accounts
                       (map (rpartial get #:user/sessions) (d:pull-many '(#:user/sessions)))
                       (apply append))))
             (lambda (s)
-              (member s sessions)))))
+              (member s sessions))))
+         gnome? (session? #:session/gnome)
+         sway? (session? #:session/sway))
     (-> barebones-os
         (host-info #:host-name host-name
                    #:timezone "America/Los_Angeles"
@@ -817,9 +842,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                        ;;                  "<<user-name>>" #f)
                        )
                   (as-> $
-                    (if (provide-session? #:session/gnome)
+                    (if gnome?
                         (gnome-desktop $) $)
-                    (if (provide-session? #:session/sway)
+                    (if sway?
                         (sway-wm $ #:laptop? laptop?) $)))
               $)
           (if macbook?
@@ -844,8 +869,11 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                                        #:target "ciphered"
                                        #:encrypted-mount-points (map cadr subvols))
                       $))
-                (stateless #:persist-dir persist-dir
-                           #:bluetooth? bluetooth?)))))))
+                (as-> $
+                  (if stateless?
+                      (stateless #:persist-dir persist-dir
+                                 #:bluetooth? bluetooth?)
+                      $))))))))
 #+end_src
 ** Hosts
 :PROPERTIES:
@@ -855,17 +883,25 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
 #+end_src
 *** Frostfire
+#+name: db/systems-frostfire
+| =:db/id=             | =:system/features=                                           |
+|----------------------+--------------------------------------------------------------|
+| :id.system/frostfire | :feature/disk-encryption :feature/stateless :feature/macbook |
+
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system os frostfire)
   #:use-module (ebullient system base-os))
 
 (define-public os
-  (base-os #:host-name "frostfire"
+  (base-os #:system :id.system/frostfire
+           #:host-name "frostfire"
            #:accounts '(#:id.user/primary
                         #:id.user/aux
                         #:id.user/guest)
            #:luks-uuid "<<frostfire-luks-uuid>>"
-           #:macbook? #t))
+           #:console? #t
+           #:laptop? #t
+           #:bluetooth? #t))
 #+end_src
 **** Channel deps
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
