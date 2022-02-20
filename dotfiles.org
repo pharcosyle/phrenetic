@@ -3800,6 +3800,46 @@ Can be an integer to determine the exact padding."
   (db--tables-into-db
    (-map #'org-babel-ref-resolve table-refs)))
 #+end_src
+*** Serialize
+#+begin_src elisp
+(setq db--serialize-keyword #'identity)
+
+(setq db--serializers
+      (kvm
+       :db.type/keyword db--serialize-keyword
+       :db.type/string #'identity
+       ;; :db.type/boolean (lambda (expr)
+       ;;                    (pcase expr
+       ;;                      (t 'true)
+       ;;                      (nil 'false)))
+       ))
+
+(setq db--serialize-attr db--serialize-keyword)
+
+(defun db--serialize-value (db a v)
+  (let ((type (db--attr-value-type db a)))
+    (funcall (map-elt db--serializers type) v)))
+
+(defun db--serialize-datom (db datom)
+  (let ((e (db--dget datom :datom/e))
+        (a (db--dget datom :datom/a))
+        (v (db--dget datom :datom/v)))
+    (list
+     (db--serialize-value db :db/id e)
+     (db--serialize-attr a)
+     (db--serialize-value db a v))))
+
+(defun db--serialize (file datoms)
+  (with-temp-file file
+    (->> datoms
+         (-map #'serialize-datom)
+         (-map (lambda (datom)
+                 (-map #'prin1)))
+         (-each (lambda (datom)
+                  (-each (lambda (component)
+                           (insert component "\n")))
+                  (insert "\n"))))))
+#+end_src
 *** Lib provide
 #+begin_src elisp
 (provide 'donnager-org)
