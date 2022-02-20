@@ -14,6 +14,7 @@
 ;;; -*- lexical-binding: t; -*-
 
 (require 'dash)
+(require 'donnager-org)
 
 (setq meta--base-dir ".")
 #+end_src
@@ -28,13 +29,6 @@
   (concat (meta-get-dir) "/" sub-path))
 #+end_src
 ** DB
-#+begin_src elisp
-(setq meta--db-library
-      (expand-file-name "db/org-api.el" meta--base-dir))
-
-(load meta--db-library nil 'nomessage)
-#+end_src
-
 #+begin_src elisp
 (setq meta--table-refs
       '("db/schema"
@@ -3547,6 +3541,12 @@ Can be an integer to determine the exact padding."
   :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
+
+;; TODO do hardcoded path better?
+(package! donnager
+  :recipe (:local-repo "~/projects/dotfiles/donnager"
+           ;; Avoid having to run `doom sync' every time the package is changed.
+           :build (:not compile)))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -3635,7 +3635,14 @@ Can be an integer to determine the exact padding."
 *
 #+end_src
 ** Core
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "donnager-core.el")
+:END:
 #+begin_src elisp
+;;; -*- lexical-binding: t; -*-
+
+(require 'dash)
+
 (defun kvm (&rest keyvals)
   (->> keyvals
        (-partition 2)
@@ -3684,6 +3691,20 @@ Can be an integer to determine the exact padding."
                            (db--dget datom :datom/e)
                            (db--dget datom :datom/a)))
        (cons datom)))
+
+(provide 'donnager-core)
+#+end_src
+** Client API
+*** Elisp
+*** Scheme
+** Org API
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "donnager-org.el")
+:END:
+#+begin_src elisp
+;;; -*- lexical-binding: t; -*-
+
+(require 'donnager-core)
 #+end_src
 ** Parsing
 *** Data
@@ -3751,6 +3772,10 @@ Can be an integer to determine the exact padding."
   (db--tables-into-db
    (-mapcat #'db--entity->datoms db--base-schema)
    (-map #'org-babel-ref-resolve table-refs)))
+#+end_src
+*** Lib provide
+#+begin_src elisp
+(provide 'donnager-org)
 #+end_src
 * Dev
 ** Git ignore
