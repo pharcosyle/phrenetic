@@ -42,12 +42,14 @@
 #+end_src
 
 #+name: db/schema
-| =:db/id=        | =:db/valueType= |
-|-----------------+-----------------|
-| :user/full-name | :db.type/string |
-| :user/username  | :db.type/string |
-| :user/email     | :db.type/string |
-| :color/hex      | :db.type/string |
+| =:db/id=        | =:db/valueType=  | =:db/cardinality=    |
+|-----------------+------------------+----------------------|
+| :user/full-name | :db.type/string  | :db.cardinality/one  |
+| :user/sessions  | :db.type/keyword | :db.cardinality/many |
+| :user/admin?    | :db.type/boolean | :db.cardinality/one  |
+| :user/username  | :db.type/string  | :db.cardinality/one  |
+| :user/email     | :db.type/string  | :db.cardinality/one  |
+| :color/hex      | :db.type/string  | :db.cardinality/one  |
 
 * Common
 :PROPERTIES:
@@ -3860,8 +3862,15 @@ Can be an integer to determine the exact padding."
 (defalias 'db--parse-attr #'db--parse-keyword)
 
 (defun db--parse-value (db a raw-v)
-  (let ((type (db--val db a :db/valueType)))
-    (funcall (map-elt db--parsers type) raw-v)))
+  (let* ((type (db--val db a :db/valueType))
+         (parser (map-elt db--parsers type))
+         (cardinality (db--val db a :db/cardinality)))
+    (if (equal cardinality :db.cardinality/many)
+        (-as-> raw-v $
+               (split-string $ (rx (+ whitespace)))
+               (-map (lambda (raw-item)
+                       (funcall parser raw-item))))
+      (funcall parser raw-v))))
 
 (defun db--parse-entity (db raw-entity)
   (map-apply (lambda (raw-a raw-v)
@@ -3927,8 +3936,13 @@ Can be an integer to determine the exact padding."
 (defalias 'db--tokenize-attr #'db--tokenize-keyword)
 
 (defun db--tokenize-value (db a v)
-  (let ((type (db--val db a :db/valueType)))
-    (funcall (map-elt db--tokenizers type) v)))
+  (let* ((type (db--val db a :db/valueType))
+         (tokenizer (map-elt db--tokenizers type))
+         (cardinality (db--val db a :db/cardinality)))
+    (if (equal cardinality :db.cardinality/many)
+        (-map (lambda (item)
+                (funcall tokenizer item)))
+      (funcall tokenizer raw-v))))
 
 (defun db--tokenize-datom (db datom)
   (let ((e (db--dget datom :datom/e))
