@@ -34,6 +34,7 @@
 (setq meta--table-refs
       '("db/schema"
         "db/systems-common"
+        "db/feature-linux-nonfree"
         "db/systems-frostfire"
         "db/users-common"
         "db/users-system"
@@ -46,15 +47,16 @@
 #+end_src
 
 #+name: db/schema
-| =:db/id=         | =:db/valueType=  | =:db/cardinality=    |
-|------------------+------------------+----------------------|
-| :system/features | :db.type/keyword | :db.cardinality/many |
-| :user/full-name  | :db.type/string  | :db.cardinality/one  |
-| :user/sessions   | :db.type/keyword | :db.cardinality/many |
-| :user/admin?     | :db.type/boolean | :db.cardinality/one  |
-| :user/username   | :db.type/string  | :db.cardinality/one  |
-| :user/email      | :db.type/string  | :db.cardinality/one  |
-| :color/hex       | :db.type/string  | :db.cardinality/one  |
+| =:db/id=              | =:db/valueType=  | =:db/cardinality=    |
+|-----------------------+------------------+----------------------|
+| :system/features      | :db.type/keyword | :db.cardinality/many |
+| :feature/channel-deps | :db.type/symbol  | :db.cardinality/many |
+| :user/full-name       | :db.type/string  | :db.cardinality/one  |
+| :user/sessions        | :db.type/keyword | :db.cardinality/many |
+| :user/admin?          | :db.type/boolean | :db.cardinality/one  |
+| :user/username        | :db.type/string  | :db.cardinality/one  |
+| :user/email           | :db.type/string  | :db.cardinality/one  |
+| :color/hex            | :db.type/string  | :db.cardinality/one  |
 
 * Common
 :PROPERTIES:
@@ -383,6 +385,11 @@ guix pull
            (operating-system-user-services os))))
 #+end_src
 *** Linux nonfree
+#+name: db/feature-linux-nonfree
+| =:db/id=               | =:feature/channel-deps= |
+|------------------------+-------------------------|
+| :feature/linux-nonfree | 'nonguix                |
+
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
   (kernel linux)
@@ -772,6 +779,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
           (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
             (lambda (feat)
               (member feat features))))
+         (linux-nonfree? (feature? :feature/linux-nonfree))
          (disk-encryption? (feature? :feature/disk-encryption))
          (stateless? (feature? :feature/stateless))
          (nix? (feature? :feature/nix))
@@ -823,7 +831,9 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
         (grub-efi #:label "genesis"
                   #:target "/boot/efi")
         base-services+packages
-        linux-nonfree
+        (as-> $
+          (if linux-nonfree?
+              (linux-nonfree $) $))
         (users #:who who
                #:bluetooth? bluetooth?)
         nonguix-substitutes
@@ -884,9 +894,9 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+end_src
 *** Frostfire
 #+name: db/systems-frostfire
-| =:db/id=             | =:system/features=                                           |
-|----------------------+--------------------------------------------------------------|
-| :id.system/frostfire | :feature/disk-encryption :feature/stateless :feature/macbook |
+| =:db/id=             | =:system/features=                                                                  |
+|----------------------+-------------------------------------------------------------------------------------|
+| :id.system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
 
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system os frostfire)
