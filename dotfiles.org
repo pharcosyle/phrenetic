@@ -1311,14 +1311,14 @@ nix-env --upgrade
        home-profile-service-type
        (lambda (config)
          ;; TODO Not ideal that this has to know that it might be being passed a path string (from a manifest) instead of a package.
-         (let ((emacs-package (assoc-ref config #:emacs)))
+         (let ((emacs-package (get config #:emacs)))
            (if (package? emacs-package)
                (list emacs-package) '()))))
       (service-extension
        he-login-shell-service-type
        (lambda (config)
          (kvm #:environment-variables
-              `(("VISUAL" . ,(file-append (assoc-ref config #:emacs) "/bin/emacsclient"))
+              `(("VISUAL" . ,(file-append (get config #:emacs) "/bin/emacsclient"))
                 ("EDITOR" . "$VISUAL")))))
       (when zsh-vterm?
         (service-extension
