@@ -763,6 +763,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   host-name
                   accounts
                   luks-uuid
+                  auto-login-account
                   kbl
                   console?
                   laptop?
@@ -787,6 +788,8 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
          (kbl (or kbl
                   (if macbook?
                       macbook-kbl #f)))
+         (auto-login (if disk-encryption?
+                         (get (d:pull '(#:user/username) auto-login-account) #:user/username) #f))
          (who
           (->> accounts
                (d:pull-many '(#:user/username
@@ -837,10 +840,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   (desktop-services #:pipewire? pipewire?
                                     #:bluetooth? bluetooth?)
                   (gdm #:wayland? #t
-                       ;; TODO
-                       ;; #:auto-login (if disk-encryption?
-                       ;;                  "<<user-name>>" #f)
-                       )
+                       #:auto-login auto-login)
                   (as-> $
                     (if gnome?
                         (gnome-desktop $) $)
@@ -899,6 +899,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
                         #:id.user/aux
                         #:id.user/guest)
            #:luks-uuid "<<frostfire-luks-uuid>>"
+           ;; #:auto-login-account #:id.user/primary ; REVIEW Enable this later.
            #:console? #t
            #:laptop? #t
            #:bluetooth? #t))
