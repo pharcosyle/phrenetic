@@ -88,7 +88,10 @@ guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --f
 (define-public default-login-shell #:shell/bash)
 #+end_src
 ** Channels
-#+begin_src scheme :tangle (meta-in-dir "channels.scm")
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "channels.scm")
+:END:
+#+begin_src scheme
 (define-module (ebullient channels)
   #:use-module (guix channels)
   #:use-module ((srfi srfi-1) #:select (remove))
@@ -103,7 +106,9 @@ guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --f
              (member (channel-name c)
                      (map channel-name cs)))
            %default-channels)))
-
+#+end_src
+*** Definitions
+#+begin_src scheme
 (define guix %default-guix-channel)
 
 (define nonguix
@@ -1013,7 +1018,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 ~/.guix-extra-profiles
 #+end_src
 ** Channels
-#+begin_src scheme :tangle (meta-in-dir "channels.scm")
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "channels.scm")
+:END:
+#+begin_src scheme
 (define-module (ebullient home channels)
   #:use-module (guix channels)
   #:use-module (ebullient channels)
@@ -1022,7 +1030,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                nonguix)
   #:export (rde
             flat))
-
+#+end_src
+*** Definitions
+#+begin_src scheme
 (define rde
   (channel
    (name 'rde)
