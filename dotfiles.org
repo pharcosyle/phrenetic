@@ -729,6 +729,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ** Base OS
+#+name: db/users-system
 | =:db/id=         | =:user/username= |
 |------------------+------------------|
 | :id.user/primary | pharcosyle       |
@@ -3639,7 +3640,7 @@ Can be an integer to determine the exact padding."
 :header-args+: :tangle (meta-in-dir "donnager-core.el")
 :END:
 
-#+begin_src emacs-lisp :tangle yes
+#+begin_src elisp
 ;; TEMP FIXME remove
 (defun kvm (&rest keyvals)
   (->> keyvals
@@ -3658,8 +3659,8 @@ Can be an integer to determine the exact padding."
 (setq db--base-schema
       (->> base-schema
            (apply #'-concat)
-           (-map #'-intern)
-           (apply kvm)))
+           (-map #'intern)
+           (apply #'kvm)))
 #+end_src
 
 
@@ -3675,7 +3676,7 @@ Can be an integer to determine the exact padding."
   (list e a v))
 
 (defun db--dget (datom component)
-  ((pcase
+  ((pcase component
      (:datom/e #'-first-item)
      (:datom/a #'-second-item)
      (:datom/v #'-third-item))
@@ -3752,7 +3753,7 @@ Can be an integer to determine the exact padding."
        ;;                      ("false" nil)))
        ))
 
-(setq db--parse-attr db--parse-keyword)
+(defalias 'db--parse-attr db--parse-keyword)
 
 (defun db--parse-value (db a raw-v)
   (let ((type (db--attr-value-type db a)))
@@ -3822,7 +3823,7 @@ Can be an integer to determine the exact padding."
        ;;                      (nil 'false)))
        ))
 
-(setq db--serialize-attr db--serialize-keyword)
+(defalias 'db--serialize-attr db--serialize-keyword)
 
 (defun db--serialize-value (db a v)
   (let ((type (db--attr-value-type db a)))
