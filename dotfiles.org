@@ -2100,6 +2100,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
+  #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient home components)
   #:use-module (ebullient common)
   #:use-module (ebullient utils)
@@ -2110,6 +2111,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (string-append extra-profiles-path "/" p "/" p))
 
 (define (base-he #:key
+                 account
                  (developer? #t)
                  (login-shell default-login-shell)
                  (interactive-shell (if developer?
@@ -2117,29 +2119,34 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  (nix? #t)
                  (desktop? #t)
                  (pipewire? desktop?))
-  (home-environment
-   (services
-    (-> '()
-        (he-shells #:login-shell login-shell
-                   #:interactive-shell interactive-shell)
-        he-extra-profiles
-        (as-> $
-          (if nix?
-              (he-nix $) $)
-          (if developer?
-              (-> $
-                  (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
-                            #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
-                  he-doom
-                  (he-direnv #:shell interactive-shell)))
-          (if desktop?
-              (-> $
-                  (as->$
-                    (if pipewire?
-                        (he-pipewire $) $))
-                  he-flatpak
-                  he-sway)
-              $))))))
+  (let ((setup-session?
+         (lambda (s)
+           (member s (get (d:pull '(#:user/sessions) account) #:user/sessions)))))
+    (home-environment
+     (services
+      (-> '()
+          (he-shells #:login-shell login-shell
+                     #:interactive-shell interactive-shell)
+          he-extra-profiles
+          (as-> $
+            (if nix?
+                (he-nix $) $)
+            (if developer?
+                (-> $
+                    (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
+                              #:config (kvm #:emacs (extra-profile-path "emacs-variant")))
+                    he-doom
+                    (he-direnv #:shell interactive-shell)))
+            (if desktop?
+                (-> $
+                    (as->$
+                      (if pipewire?
+                          (he-pipewire $) $))
+                    he-flatpak
+                    (as->$
+                      (if (setup-session? :session/sway)
+                          (he-sway $) $)))
+                $)))))))
 #+end_src
 ** Home environments
 :PROPERTIES:
@@ -2158,7 +2165,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
   #:export (he))
 
 (define-public he
-  (base-he))
+  (base-he #:account #:id.user/primary))
 #+end_src
 **** Solitude old WIP
 #+begin_src scheme :tangle (meta-in-dir "solitude-old-wip.scm") :noweb yes
