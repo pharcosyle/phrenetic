@@ -903,7 +903,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
   #:use-module (ebullient system base-os))
 
 (define-public os
-  (base-os #:system :id.system/frostfire
+  (base-os #:system #:id.system/frostfire
            #:host-name "frostfire"
            #:accounts '(#:id.user/primary
                         #:id.user/aux
