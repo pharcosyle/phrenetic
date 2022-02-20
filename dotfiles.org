@@ -1035,7 +1035,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                    (home-zsh-configuration
                     (zshrc
                      (list (local-file "zshrc"))))))
-        (when (not (eq login-shell interactive-shell))
+        (when-not (eq login-shell interactive-shell)
           (simple-service
            'set-shell
            home-environment-variables-service-type
