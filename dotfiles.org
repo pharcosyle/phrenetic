@@ -267,6 +267,13 @@ guix pull
 :PROPERTIES:
 :meta-dir+: /ebullient/system
 :END:
+#+name: db/users-system
+| =:db/id=         | =:user/username= | =:user/admin?= | =:user/password= |
+|------------------+------------------+----------------+------------------|
+| :id.user/primary | pharcosyle       | true           |                  |
+| :id.user/aux     | pcoulson         | true           |                  |
+| :id.user/guest   | gandalf          |                | mellon           |
+
 ** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient system channels)
@@ -761,13 +768,6 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ** Base OS
-#+name: db/users-system
-| =:db/id=         | =:user/username= | =:user/admin?= | =:user/password= |
-|------------------+------------------+----------------+------------------|
-| :id.user/primary | pharcosyle       | true           |                  |
-| :id.user/aux     | pcoulson         | true           |                  |
-| :id.user/guest   | gandalf          |                | mellon           |
-
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
   #:use-module ((donnager client) #:prefix d:)
