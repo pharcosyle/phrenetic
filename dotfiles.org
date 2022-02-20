@@ -3929,7 +3929,7 @@ Can be an integer to determine the exact padding."
     (->> datoms
          (-map #'tokenize-datom)
          (-map (lambda (datom)
-                 (-map #'prin1)))
+                 (-map (-partial #'format "%S"))))
          (-each (lambda (datom)
                   (-each (lambda (component)
                            (insert component "\n")))
