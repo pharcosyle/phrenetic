@@ -3768,6 +3768,7 @@ Can be an integer to determine the exact padding."
        (-reduce-from #'db--raw-entity-into-db db)))
 
 (defun db--load (table-refs)
+  (require 'ob-ref)
   (db--tables-into-db
    (-mapcat #'db--entity->datoms db--base-schema)
    (-map #'org-babel-ref-resolve table-refs)))
