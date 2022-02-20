@@ -2148,6 +2148,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (string-append extra-profiles-path "/" p "/" p))
 
 (define (base-he #:key
+                 system
                  account
                  (developer? #t)
                  (login-shell default-login-shell)
@@ -2156,7 +2157,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  (nix? #t)
                  (desktop? #t)
                  (pipewire? desktop?))
-  (let ((session?
+  (let ((feature?
+         (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
+           (lambda (feat)
+             (member feat features))))
+        (nix? (feature? :feature/nix))
+        (desktop? (feature? :feature/desktop))
+        (pipewire? (feature? :feature/pipewire))
+        (session?
          (lambda (s)
            (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
         (sway? (session? :session/sway)))
@@ -2203,7 +2211,8 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
   #:export (he))
 
 (define-public he
-  (base-he #:account #:id.user/primary))
+  (base-he #:system #:id.system/frostfire
+           #:account #:id.user/primary))
 #+end_src
 **** Solitude old WIP
 #+begin_src scheme :tangle (meta-in-dir "solitude-old-wip.scm")
