@@ -3924,12 +3924,14 @@ Can be an integer to determine the exact padding."
      (db--tokenize-attr a)
      (db--tokenize-value db a v))))
 
+(defalias 'db--serialize-fn (-partial #'format "%S"))
+
 (defun db--serialize (file datoms)
   (with-temp-file file
     (->> datoms
          (-map #'tokenize-datom)
          (-map (lambda (datom)
-                 (-map (-partial #'format "%S"))))
+                 (-map #'db--serialize-fn)))
          (-each (lambda (datom)
                   (-each (lambda (component)
                            (insert component "\n")))
