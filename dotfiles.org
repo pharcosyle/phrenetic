@@ -3898,36 +3898,36 @@ Can be an integer to determine the exact padding."
 #+end_src
 *** Serialize
 #+begin_src elisp
-(setq db--serialize-keyword #'identity)
+(setq db--tokenize-keyword #'identity)
 
-(setq db--serializers
+(setq db--tokenizers
       (kvm
-       :db.type/keyword db--serialize-keyword
+       :db.type/keyword db--tokenize-keyword
        :db.type/string #'identity
        :db.type/boolean (lambda (v)
                           (pcase v
                             (t 'true)
                             (nil 'false)))))
 
-(defalias 'db--serialize-attr db--serialize-keyword)
+(defalias 'db--tokenize-attr db--tokenize-keyword)
 
-(defun db--serialize-value (db a v)
+(defun db--tokenize-value (db a v)
   (let ((type (db--attr-value-type db a)))
-    (funcall (map-elt db--serializers type) v)))
+    (funcall (map-elt db--tokenizers type) v)))
 
-(defun db--serialize-datom (db datom)
+(defun db--tokenize-datom (db datom)
   (let ((e (db--dget datom :datom/e))
         (a (db--dget datom :datom/a))
         (v (db--dget datom :datom/v)))
     (list
-     (db--serialize-value db :db/id e)
-     (db--serialize-attr a)
-     (db--serialize-value db a v))))
+     (db--tokenize-value db :db/id e)
+     (db--tokenize-attr a)
+     (db--tokenize-value db a v))))
 
 (defun db--serialize (file datoms)
   (with-temp-file file
     (->> datoms
-         (-map #'serialize-datom)
+         (-map #'tokenize-datom)
          (-map (lambda (datom)
                  (-map #'prin1)))
          (-each (lambda (datom)
