@@ -3558,7 +3558,11 @@ Can be an integer to determine the exact padding."
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module ((srfi srfi-1) #:select (take drop))
-  #:export (update-list
+  #:export (when-let
+            if-let
+            when-not
+            if-not
+            update-list
             partial
             ->
             ->>
@@ -3567,6 +3571,31 @@ Can be an integer to determine the exact padding."
             get
             update-services*
             update-services))
+#+end_src
+** Conditionals
+#+begin_src scheme
+(define-syntax when-let
+  (syntax-rules ()
+    ((_ ((var expr)) body ...)
+     (let ((var expr))
+       (when var body ...)))))
+
+(define-syntax if-let
+  (syntax-rules ()
+    ((_ ((var expr)) then else)
+     (let ((var expr))
+       (if var then else)))))
+
+(define-syntax when-not
+  (syntax-rules ()
+    ((_ test body ...)
+     (when (not test) body ...))))
+
+(define-syntax if-not
+  (syntax-rules ()
+    ((_ test then else)
+     (if (not test) then else))))
+
 #+end_src
 ** Lists
 #+begin_src scheme
