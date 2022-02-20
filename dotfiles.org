@@ -3742,7 +3742,7 @@ Can be an integer to determine the exact padding."
        ;; FIXME what was `map-pairs' for?
        map-pairs
        (map-remove (lambda (k _)
-                     (eq k :db/id)))
+                     (equal k :db/id)))
        (-map (-lambda ((a . v))
                (db--datom (map-elt entity :db/id) a v)))))
 #+end_src
@@ -3852,10 +3852,10 @@ Can be an integer to determine the exact padding."
       (kvm
        :db.type/keyword db--parse-keyword
        :db.type/string #'identity
-       :db.type/boolean (lambda (token)
-                          (pcase token
-                            ('true t)
-                            ('false nil)))))
+       :db.type/boolean (lambda (s)
+                          (pcase s
+                            ("true" t)
+                            ("false" nil)))))
 
 (defalias 'db--parse-attr #'db--parse-keyword)
 
