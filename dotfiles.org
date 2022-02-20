@@ -3955,14 +3955,40 @@ Can be an integer to determine the exact padding."
 
 (defalias 'db--serialize-fn (-partial #'format "%S"))
 
+(defun db--spit (f content)
+  (with-temp-file f
+    (insert content)))
+
 (defun db--serialize (file datoms)
   (with-temp-file file
-    (-as-> datoms $
-           (-map #'tokenize-datom $)
-           (-map #'db--serialize-fn $)
-           (string-join $ "\n")
-           (concat "(" $ ")")
-           (insert $))))
+    (->> datoms
+         (-map #'tokenize-datom)
+         db--serialize-fn
+         ;; db--pretty-print-db
+         db--spit)))
+
+;; TODO pretty-printing
+;; https://emacs.stackexchange.com/questions/10382/perform-function-until-it-returns-user-error
+
+;; (defmacro db--buffer->string (&rest body)
+;;   `(with-temp-buffer
+;;      ,@body
+;;      (buffer-string)))
+
+;; (defun db--pretty-print-db (s)
+;;   (let ((delim "\n "))
+;;     (dt--buffer->string
+;;      (insert s)
+;;      (goto-char (point-min))
+;;      (forward-char)
+;;      (condition-case _
+;;          (while t
+;;            (forward-sexp)
+;;            (insert delim))
+;;        (scan-error nil))
+;;      (dotimes (_ (length delim))
+;;        (backward-delete-char)))))
+#+end_src
 #+end_src
 *** Lib provide
 #+begin_src elisp
