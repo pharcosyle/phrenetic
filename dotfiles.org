@@ -3557,7 +3557,8 @@ Can be an integer to determine the exact padding."
 (define-module (ebullient utils)
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module ((srfi srfi-1) #:select (take drop))
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold))
   #:export (when-let
             if-let
             when-not
@@ -3569,6 +3570,9 @@ Can be an integer to determine the exact padding."
             as->
             kvm
             get
+            keys
+            massoc
+            merge
             update-services*
             update-services))
 #+end_src
@@ -3648,6 +3652,27 @@ Can be an integer to determine the exact padding."
               (drop more 2)))))
 
 (define get assoc-ref)
+
+(define (keys m)
+  (map car m))
+
+(define (massoc m k v)
+  (->> m
+       (remove (match-lambda
+                 ((k1 . _)
+                  (equal? k k1))))
+       (cons '(k . v))))
+
+(define* (merge #:rest maps)
+  (fold
+   (lambda (m1 m2)
+     (fold
+      (match-lambda
+        (((k . v) res)
+         (massoc res k v)))
+      m1 m2))
+   (kvm)
+   maps))
 #+end_src
 ** Guix
 #+begin_src scheme :tangle (meta-in-dir "utils.scm")
