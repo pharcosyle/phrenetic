@@ -3573,6 +3573,7 @@ Can be an integer to determine the exact padding."
             keys
             massoc
             merge
+            keyvals
             update-services*
             update-services))
 #+end_src
@@ -3673,6 +3674,13 @@ Can be an integer to determine the exact padding."
       m1 m2))
    (kvm)
    maps))
+
+(define (keyvals m)
+  (->> m
+       (map (match-lambda
+              ((k . v)
+               (list k v))))
+       (apply append)))
 #+end_src
 ** Guix
 #+begin_src scheme :tangle (meta-in-dir "utils.scm")
