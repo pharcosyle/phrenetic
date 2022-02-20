@@ -52,6 +52,7 @@
 | :system/features      | :db.type/keyword | :db.cardinality/many |
 | :feature/channel-deps | :db.type/symbol  | :db.cardinality/many |
 | :user/full-name       | :db.type/string  | :db.cardinality/one  |
+| :user/login-shell     | :db.type/keyword | :db.cardinality/one  |
 | :user/sessions        | :db.type/keyword | :db.cardinality/many |
 | :user/admin?          | :db.type/boolean | :db.cardinality/one  |
 | :user/username        | :db.type/string  | :db.cardinality/one  |
@@ -72,11 +73,11 @@
 | :id.system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
-| =:db/id=         | =:user/full-name=      | =:user/sessions=             |
-|------------------+------------------------+------------------------------|
-| :id.user/primary | Krzysztof Baranowski   | :session/gnome :session/sway |
-| :id.user/aux     | Phil Coulson           | :session/gnome :session/sway |
-| :id.user/guest   | Speak Friend and Enter | :session/gnome               |
+| =:db/id=         | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|------------------+------------------------+---------------------+------------------------------|
+| :id.user/primary | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :id.user/aux     | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :id.user/guest   | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
@@ -811,13 +812,16 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
           (->> accounts
                (d:pull-many '(#:user/username
                               #:user/full-name
+                              #:user/login-shell
                               #:user/admin?))
                (map (lambda (user)
                       (merge
                        (kvm
                         #:name (get user #:user/username)
                         #:comment (get user #:user/full-name)
-                        #:shell default-login-shell
+                        #:shell (let ((shell (get user #:user/login-shell)))
+                                  (if (equal shell #:shell/default)
+                                      default-login-shell shell))
                         #:admin? (get user #:admin?))
                        (if-not (get user #:admin?)
                                (kvm
@@ -2176,21 +2180,24 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (base-he #:key
                  system
                  account
-                 developer?
-                 (login-shell default-login-shell)
-                 (interactive-shell (if developer?
-                                        #:shell/zsh login-shell)))
-  (let ((feature?
-         (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
-           (lambda (feat)
-             (member feat features))))
-        (nix? (feature? #:feature/nix))
-        (desktop? (feature? #:feature/desktop))
-        (pipewire? (feature? #:feature/pipewire))
-        (session?
-         (lambda (s)
-           (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
-        (sway? (session? :session/sway)))
+                 developer?)
+  (let* ((login-shell
+          (let ((shell (get (d:pull '(#:user/login-shell) user) #:user/login-shell)))
+            (if (equal shell #:shell/default)
+                default-login-shell shell)))
+         (interactive-shell (if developer?
+                                #:shell/zsh login-shell))
+         (feature?
+          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
+            (lambda (feat)
+              (member feat features))))
+         (nix? (feature? #:feature/nix))
+         (desktop? (feature? #:feature/desktop))
+         (pipewire? (feature? #:feature/pipewire))
+         (session?
+          (lambda (s)
+            (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
+         (sway? (session? :session/sway)))
     (home-environment
      (services
       (-> '()
