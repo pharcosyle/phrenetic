@@ -3639,6 +3639,14 @@ Can be an integer to determine the exact padding."
 :header-args+: :tangle (meta-in-dir "donnager-core.el")
 :END:
 
+#+begin_src emacs-lisp :tangle yes
+;; TEMP FIXME remove
+(defun kvm (&rest keyvals)
+  (->> keyvals
+       (-partition 2)
+       (-map (-lambda ((a b))
+               (cons a b)))))
+#+end_src
 
 
 #+name: base-schema
