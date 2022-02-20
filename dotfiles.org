@@ -55,6 +55,7 @@
 | :user/login-shell     | :db.type/keyword | :db.cardinality/one  |
 | :user/sessions        | :db.type/keyword | :db.cardinality/many |
 | :user/admin?          | :db.type/boolean | :db.cardinality/one  |
+| :user/password        | :db.type/string  | :db.cardinality/one  |
 | :user/username        | :db.type/string  | :db.cardinality/one  |
 | :user/email           | :db.type/string  | :db.cardinality/one  |
 | :color/hex            | :db.type/string  | :db.cardinality/one  |
@@ -761,11 +762,11 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 ** Base OS
 #+name: db/users-system
-| =:db/id=         | =:user/username= | =:user/admin?= |
-|------------------+------------------+----------------|
-| :id.user/primary | pharcosyle       | true           |
-| :id.user/aux     | pcoulson         | true           |
-| :id.user/guest   | gandalf          |                |
+| =:db/id=         | =:user/username= | =:user/admin?= | =:user/password= |
+|------------------+------------------+----------------+------------------|
+| :id.user/primary | pharcosyle       | true           |                  |
+| :id.user/aux     | pcoulson         | true           |                  |
+| :id.user/guest   | gandalf          |                | mellon           |
 
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
@@ -819,12 +820,14 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                         #:shell (let ((shell (get user #:user/login-shell)))
                                   (if (equal shell #:shell/default)
                                       default-login-shell shell))
-                        #:admin? (get user #:admin?))
-                       (if-not (get user #:admin?)
-                               (kvm
-                                #:password "mellon"
-                                #:salt "toosimple")
-                               (kvm)))))))
+                        #:admin? (get user #:user/admin?))
+                       (let ((admin? (get user #:user/admin?))
+                             (password (get user #:user/password)))
+                         (if (and password (not admin?))
+                             (kvm
+                              #:password password
+                              #:salt "toosimple")
+                             (kvm))))))))
          (session?
           (let ((sessions
                  (->> accounts
