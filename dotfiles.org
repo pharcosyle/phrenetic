@@ -3918,7 +3918,9 @@ Can be an integer to determine the exact padding."
        :db.type/boolean (lambda (s)
                           (pcase s
                             ("true" t)
-                            ("false" nil)))))
+                            ("false" nil)))
+       :db.type/symbol (lambda (s)
+                         (intern (substring s 1)))))
 
 (defalias 'db--parse-attr #'db--parse-keyword)
 
@@ -3992,7 +3994,8 @@ Can be an integer to determine the exact padding."
        :db.type/keyword db--tokenize-keyword
        :db.type/string #'identity
        :db.type/boolean (lambda (v)
-                          (if v 'true 'false))))
+                          (if v 'true 'false))
+       :db.type/symbol #'identity))
 
 (defalias 'db--tokenize-attr #'db--tokenize-keyword)
 
@@ -4061,7 +4064,8 @@ Can be an integer to determine the exact padding."
        :db.type/boolean (lambda (token)
                           (pcase s
                             ('true t)
-                            ('false nil)))))
+                            ('false nil)))
+       :db.type/symbol #'identity))
 
 (defalias 'db--marshall-attr #'db--marshall-keyword)
 
