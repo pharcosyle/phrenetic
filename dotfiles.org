@@ -1025,11 +1025,13 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (define-module (ebullient home channels)
   #:use-module (guix channels)
   #:use-module (ebullient channels)
-  #:re-export (get-channels
-               guix
+  #:re-export (guix
                nonguix)
-  #:export (rde
+  #:export (get-home-channels
             flat))
+
+(define (get-home-channels #:rest cs)
+  (apply get-channels (cons* rde cs)))
 #+end_src
 *** Definitions
 #+begin_src scheme
@@ -2322,7 +2324,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
-(get-channels nonguix rde flat)
+(get-channels nonguix flat)
 #+end_src
 **** Channels lock
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
