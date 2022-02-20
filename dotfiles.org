@@ -263,10 +263,14 @@ guix pull
 ** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient system channels)
+  #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:re-export (get-channels
-               guix
-               nonguix))
+  #:export (system-channels))
+
+(define (get-system-channels system)
+  (as-> system $
+        (d:q $ '(#:system/features #:feature/channel-deps))
+        (apply get-channels $)))
 #+end_src
 ** Components
 :PROPERTIES:
@@ -918,7 +922,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (use-modules (ebullient system channels))
 
-(get-channels nonguix)
+(get-system-channels #:id.system/frostfire)
 #+end_src
 **** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
