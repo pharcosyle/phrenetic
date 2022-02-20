@@ -2174,7 +2174,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (base-he #:key
                  system
                  account
-                 (developer? #t)
+                 developer?
                  (login-shell default-login-shell)
                  (interactive-shell (if developer?
                                         #:shell/zsh login-shell)))
@@ -2233,7 +2233,8 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 
 (define-public he
   (base-he #:system #:id.system/frostfire
-           #:account #:id.user/primary))
+           #:account #:id.user/primary
+           #:developer? #t))
 #+end_src
 **** Solitude old WIP
 #+begin_src scheme :tangle (meta-in-dir "solitude-old-wip.scm")
