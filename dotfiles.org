@@ -3727,37 +3727,74 @@ Can be an integer to determine the exact padding."
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "donnager-core.el")
 :END:
-
-#+begin_src elisp
-;; TEMP FIXME remove
-(defun kvm (&rest keyvals)
-  (->> keyvals
-       (-partition 2)
-       (-map (-lambda ((a b))
-               (cons a b)))))
-#+end_src
-
-
-#+name: base-schema
-| :db/id          | :db.type/keyword |
-| :db/valueType   | :db.type/keyword |
-| :db/cardinality | :db.type/keyword |
-
-#+begin_src elisp :var base-schema=base-schema
-(setq db--base-schema
-      (->> base-schema
-           (apply #'-concat)
-           (-map #'intern)
-           (apply #'kvm)))
-#+end_src
-
-
-
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 
 (require 'dash)
 #+end_src
+
+
+
+
+#+begin_src elisp
+(defun db--entity->datoms (entity)
+  (->> entity
+       ;; FIXME what was `map-pairs' for?
+       map-pairs
+       (map-remove (lambda (k _)
+                     (eq k :db/id)))
+       (-map (-lambda ((a . v))
+               (db--datom (map-elt entity :db/id) a v)))))
+#+end_src
+
+#+name: base-schema
+| =:db/id=        | =:db/valueType=  | =:db/cardinality=   |
+|-----------------+------------------+---------------------|
+| :db/id          | :db.type/keyword | :db.cardinality/one |
+| :db/valueType   | :db.type/keyword | :db.cardinality/one |
+| :db/cardinality | :db.type/keyword | :db.cardinality/one |
+
+#+begin_src elisp
+(defun db--parse-schema-entity (entity)
+  (map-apply (lambda (a b)
+               (cons (intern a) (intern b)))
+             entity))
+#+end_src
+
+#+begin_src elisp :var base-schema-table=base-schema
+(defun db--parse-base-schema ()
+  (->> base-schema-table
+       db--parse-org-table
+       (-map #'db--parse-schema-entity)
+       (-mapcat #'db--entity->datoms)))
+#+end_src
+#+begin_src elisp
+(setq db--base-schema-memo nil)
+
+(defun db--base-schema ()
+  (if db--base-schema-memo
+      db--base-schema-memo
+    (setq db--base-schema-memo db--parse-base-schema)))
+
+
+(defun db--with-base-schema (db)
+  (-concat (db--base-schema) db))
+#+end_src
+
+
+
+#+begin_src elisp
+(defun db--val (db e a)
+  (-as-> db $
+         (db--with-base-schema $)
+         (-first (lambda (datom)
+                   (db--datom-match-e+a datom e a))
+                 $)
+         (db--dget $ :datom/v)))
+#+end_src
+
+
+
 
 #+begin_src elisp
 (defun db--datom (e a v)
@@ -3773,22 +3810,6 @@ Can be an integer to determine the exact padding."
 (defun db--datom-match-e+a (datom e a)
   (and (equal (db--dget datom :datom/e) e)
        (equal (db--dget datom :datom/a) a)))
-
-(defun db--val (db e a)
-  (-as-> db $
-         (-first (lambda (datom)
-                   (db--datom-match-e+a datom e a))
-                 $)
-         (db--dget $ :datom/v)))
-
-(defun db--entity->datoms (entity)
-  (->> entity
-       ;; FIXME what was `map-pairs' for?
-       map-pairs
-       (map-remove (lambda (k _)
-                     (eq k :db/id)))
-       (-map (-lambda ((a . v))
-               (db--datom (map-elt entity :db/id) a v)))))
 
 (defun db--add (db datom)
   (->> db
@@ -3822,10 +3843,6 @@ Can be an integer to determine the exact padding."
 (require 'donnager-core)
 
 (setq db--empty-db '())
-
-(defun db--attr-value-type (db a)
-  (or (map-elt db--base-schema)
-      (db--val db a :db/valueType)))
 #+end_src
 *** Data
 #+begin_src elisp
@@ -3843,7 +3860,7 @@ Can be an integer to determine the exact padding."
 (defalias 'db--parse-attr db--parse-keyword)
 
 (defun db--parse-value (db a raw-v)
-  (let ((type (db--attr-value-type db a)))
+  (let ((type (db--val db a :db/valueType)))
     (funcall (map-elt db--parsers type) raw-v)))
 
 (defun db--parse-entity (db raw-entity)
@@ -3910,7 +3927,7 @@ Can be an integer to determine the exact padding."
 (defalias 'db--tokenize-attr db--tokenize-keyword)
 
 (defun db--tokenize-value (db a v)
-  (let ((type (db--attr-value-type db a)))
+  (let ((type (db--val db a :db/valueType)))
     (funcall (map-elt db--tokenizers type) v)))
 
 (defun db--tokenize-datom (db datom)
