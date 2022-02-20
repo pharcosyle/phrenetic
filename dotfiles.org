@@ -788,18 +788,18 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
           (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
             (lambda (feat)
               (member feat features))))
-         (linux-nonfree? (feature? :feature/linux-nonfree))
-         (disk-encryption? (feature? :feature/disk-encryption))
-         (stateless? (feature? :feature/stateless))
-         (nix? (feature? :feature/nix))
+         (linux-nonfree? (feature? #:feature/linux-nonfree))
+         (disk-encryption? (feature? #:feature/disk-encryption))
+         (stateless? (feature? #:feature/stateless))
+         (nix? (feature? #:feature/nix))
          (desktop? (and console?
-                        (feature? :feature/desktop)))
+                        (feature? #:feature/desktop)))
          (laptop? (and desktop?
                        laptop?))
          (macbook? (and laptop?
-                        (feature? :feature/macbook)))
+                        (feature? #:feature/macbook)))
          (pipewire? (and desktop?
-                         (feature? :feature/pipewire)))
+                         (feature? #:feature/pipewire)))
          (bluetooth? (and desktop?
                           bluetooth?))
          (kbl (or kbl
@@ -2185,9 +2185,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
            (lambda (feat)
              (member feat features))))
-        (nix? (feature? :feature/nix))
-        (desktop? (feature? :feature/desktop))
-        (pipewire? (feature? :feature/pipewire))
+        (nix? (feature? #:feature/nix))
+        (desktop? (feature? #:feature/desktop))
+        (pipewire? (feature? #:feature/pipewire))
         (session?
          (lambda (s)
            (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
