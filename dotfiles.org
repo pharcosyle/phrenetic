@@ -3706,7 +3706,6 @@ Can be an integer to determine the exact padding."
 
 (require 'donnager-core)
 #+end_src
-** Parsing
 *** Data
 #+begin_src elisp
 (setq db--parsers
@@ -3730,7 +3729,7 @@ Can be an integer to determine the exact padding."
                        (db--parse-string db a raw-v))))
              raw-entity))
 #+end_src
-*** Org tables
+*** Tables
 #+begin_src elisp
 (defun db--normalize-org-table (table)
   (-remove (-partial #'equal 'hline) table))
@@ -3755,7 +3754,7 @@ Can be an integer to determine the exact padding."
                                (equal v "")))))
           rows)))
 #+end_src
-** Injest
+*** Injest
 #+begin_src elisp
 (defun db--raw-entity-into-db (db raw-entity)
   (->> raw-entity
