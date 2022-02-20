@@ -3821,11 +3821,18 @@ Can be an integer to determine the exact padding."
        (equal (db--dget datom :datom/a) a)))
 
 (defun db--add (db datom)
-  (->> db
-       (-remove (-rpartial #'db--datom-match-e+a
-                           (db--dget datom :datom/e)
-                           (db--dget datom :datom/a)))
-       (cons datom)))
+  (if-let ((index (-find-index (-rpartial #'db--datom-match-e+a
+                                          (db--dget datom :datom/e)
+                                          (db--dget datom :datom/a))
+                               db)))
+      (if (equal :db.cardinality/many (db--val db (db--dget datom :datom/a) :db/cardinality))
+          (-update-at index
+                      (-partial #'-concat (db--dget datom :datom/v))
+                      db)
+        (->> db
+             (-remove-at index)
+             (cons datom)))
+    (cons datom)))
 #+end_src
 *** Utils
 #+begin_src elisp
