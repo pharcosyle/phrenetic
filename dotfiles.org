@@ -3835,10 +3835,10 @@ Can be an integer to determine the exact padding."
       (kvm
        :db.type/keyword db--parse-keyword
        :db.type/string #'identity
-       :db.type/boolean (lambda (s)
-                          (pcase s
-                            ("true" t)
-                            ("false" nil)))))
+       :db.type/boolean (lambda (token)
+                          (pcase token
+                            ('true t)
+                            ('false nil)))))
 
 (defalias 'db--parse-attr db--parse-keyword)
 
