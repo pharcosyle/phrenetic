@@ -3962,7 +3962,7 @@ Can be an integer to determine the exact padding."
 (defun db--serialize (file datoms)
   (with-temp-file file
     (->> datoms
-         (-map #'tokenize-datom)
+         (-map (-partial #'tokenize-datom datoms))
          db--serialize-fn
          ;; db--pretty-print-db
          db--spit)))
