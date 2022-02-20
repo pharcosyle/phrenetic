@@ -3638,21 +3638,31 @@ Can be an integer to determine the exact padding."
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "donnager-core.el")
 :END:
+
+
+
+#+name: base-schema
+| :db/id          | :db.type/keyword |
+| :db/valueType   | :db.type/keyword |
+| :db/cardinality | :db.type/keyword |
+
+#+begin_src elisp :var base-schema=base-schema
+(setq db--base-schema
+      (->> base-schema
+           (apply #'-concat)
+           (-map #'-intern)
+           (apply kvm)))
+#+end_src
+
+
+
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 
 (require 'dash)
+#+end_src
 
-
-(setq db--base-schema
-      (list
-       (kvm
-        :db/id :db/id
-        :db/valueType :db.type/keyword)
-       (kvm
-        :db/id :db/valueType
-        :db/valueType :db.type/keyword)))
-
+#+begin_src elisp
 (defun db--datom (e a v)
   (list e a v))
 
@@ -3676,6 +3686,7 @@ Can be an integer to determine the exact padding."
 
 (defun db--entity->datoms (entity)
   (->> entity
+       ;; FIXME what was `map-pairs' for?
        map-pairs
        (map-remove (lambda (k _)
                      (eq k :db/id)))
@@ -3712,12 +3723,20 @@ Can be an integer to determine the exact padding."
 ;;; -*- lexical-binding: t; -*-
 
 (require 'donnager-core)
+
+(setq db--empty-db '())
+
+(defun db--attr-value-type (db a)
+  (or (map-elt db--base-schema)
+      (db--val db a :db/valueType)))
 #+end_src
 *** Data
 #+begin_src elisp
+(setq db--parse-keyword #'intern)
+
 (setq db--parsers
       (kvm
-       :db.type/keyword #'intern
+       :db.type/keyword db--parse-keyword
        :db.type/string #'identity
        ;; :db.type/boolean (lambda (s)
        ;;                    (pcase s
@@ -3725,15 +3744,17 @@ Can be an integer to determine the exact padding."
        ;;                      ("false" nil)))
        ))
 
-(defun db--parse-string (db a raw-v)
-  (let ((type (db--val db a :db/valueType)))
+(setq db--parse-attr db--parse-keyword)
+
+(defun db--parse-value (db a raw-v)
+  (let ((type (db--attr-value-type db a)))
     (funcall (map-elt db--parsers type) raw-v)))
 
 (defun db--parse-entity (db raw-entity)
   (map-apply (lambda (raw-a raw-v)
-               (let ((a (db--parse-string db :db/id raw-a)))
+               (let ((a (db--parse-attr raw-a)))
                  (cons a
-                       (db--parse-string db a raw-v))))
+                       (db--parse-value db a raw-v))))
              raw-entity))
 #+end_src
 *** Tables
@@ -3769,15 +3790,14 @@ Can be an integer to determine the exact padding."
        db--entity->datoms
        (-reduce-from #'db--add db)))
 
-(defun db--tables-into-db (db tables)
+(defun db--tables-into-db (tables)
   (->> tables
        (-mapcat #'db--parse-org-table)
-       (-reduce-from #'db--raw-entity-into-db db)))
+       (-reduce-from #'db--raw-entity-into-db db--empty-db)))
 
 (defun db--load (table-refs)
   (require 'ob-ref)
   (db--tables-into-db
-   (-mapcat #'db--entity->datoms db--base-schema)
    (-map #'org-babel-ref-resolve table-refs)))
 #+end_src
 *** Lib provide
