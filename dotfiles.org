@@ -3551,9 +3551,9 @@ Can be an integer to determine the exact padding."
 #+end_src
 * Utils
 :PROPERTIES:
-:meta-dir+: /ebullient
+:header-args+: :tangle (meta-in-dir "ebullient/utils.el")
 :END:
-#+begin_src scheme :tangle (meta-in-dir "utils.scm")
+#+begin_src scheme
 (define-module (ebullient utils)
   #:use-module (guix packages)
   #:use-module (gnu services)
@@ -3564,9 +3564,12 @@ Can be an integer to determine the exact padding."
             ->>
             as->
             kvm
+            get
             update-services*
             update-services))
-
+#+end_src
+** Lists
+#+begin_src scheme
 (define (update-list l pred f)
   (map (lambda (x)
          (if (pred x) (f x) x))
@@ -3601,7 +3604,9 @@ Can be an integer to determine the exact padding."
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
-
+#+end_src
+** Maps
+#+begin_src scheme
 (define* (kvm #:rest keyvals)
   (let loop ((m '())
              (more keyvals))
@@ -3613,6 +3618,10 @@ Can be an integer to determine the exact padding."
                     m)
               (drop more 2)))))
 
+(define get assoc-ref)
+#+end_src
+** Guix
+#+begin_src scheme :tangle (meta-in-dir "utils.scm")
 (define (update-services* services pred update-fn)
   (update-list
    services
