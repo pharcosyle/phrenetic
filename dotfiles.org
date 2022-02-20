@@ -3643,11 +3643,6 @@ Can be an integer to determine the exact padding."
 
 (require 'dash)
 
-(defun kvm (&rest keyvals)
-  (->> keyvals
-       (-partition 2)
-       (-map (-lambda ((a b))
-               (cons a b)))))
 
 (setq db--base-schema
       (list
@@ -3693,7 +3688,17 @@ Can be an integer to determine the exact padding."
                            (db--dget datom :datom/e)
                            (db--dget datom :datom/a)))
        (cons datom)))
-
+#+end_src
+*** Utils
+#+begin_src elisp
+(defun kvm (&rest keyvals)
+  (->> keyvals
+       (-partition 2)
+       (-map (-lambda ((a b))
+               (cons a b)))))
+#+end_src
+*** Lib provide
+#+begin_src elisp
 (provide 'donnager-core)
 #+end_src
 ** Client API
