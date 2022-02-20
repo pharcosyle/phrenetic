@@ -3857,7 +3857,7 @@ Can be an integer to determine the exact padding."
                             ('true t)
                             ('false nil)))))
 
-(defalias 'db--parse-attr db--parse-keyword)
+(defalias 'db--parse-attr #'db--parse-keyword)
 
 (defun db--parse-value (db a raw-v)
   (let ((type (db--val db a :db/valueType)))
@@ -3924,7 +3924,7 @@ Can be an integer to determine the exact padding."
        :db.type/boolean (lambda (v)
                           (if v 'true 'false))))
 
-(defalias 'db--tokenize-attr db--tokenize-keyword)
+(defalias 'db--tokenize-attr #'db--tokenize-keyword)
 
 (defun db--tokenize-value (db a v)
   (let ((type (db--val db a :db/valueType)))
