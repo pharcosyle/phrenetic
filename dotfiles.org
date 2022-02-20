@@ -784,7 +784,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
          (provide-session?
           (let ((sessions
                  (->> accounts
-                      (d:pull-many '(#:user/sessions))
+                      (map (rpartial get #:user/sessions) (d:pull-many '(#:user/sessions)))
                       (apply append))))
             (lambda (s)
               (member s sessions)))))
