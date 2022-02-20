@@ -2156,9 +2156,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  (nix? #t)
                  (desktop? #t)
                  (pipewire? desktop?))
-  (let ((setup-session?
+  (let ((session?
          (lambda (s)
-           (member s (get (d:pull '(#:user/sessions) account) #:user/sessions)))))
+           (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
+        (sway? (session? :session/sway)))
     (home-environment
      (services
       (-> '()
@@ -2181,7 +2182,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                           (he-pipewire $) $))
                     he-flatpak
                     (as->$
-                      (if (setup-session? :session/sway)
+                      (if sway?
                           (he-sway $) $)))
                 $)))))))
 #+end_src
