@@ -58,11 +58,11 @@
 #+end_src
 
 #+name: db/users-common
-| =:db/id=         | =:user/full-name=      |
-|------------------+------------------------|
-| :id.user/primary | Krzysztof Baranowski   |
-| :id.user/aux     | Phil Coulson           |
-| :id.user/guest   | Speak Friend and Enter |
+| =:db/id=         | =:user/full-name=      | =:user/sessions=             |
+|------------------+------------------------+------------------------------|
+| :id.user/primary | Krzysztof Baranowski   | :session/sway :session/gnome |
+| :id.user/aux     | Phil Coulson           | :session/sway :session/gnome |
+| :id.user/guest   | Speak Friend and Enter | :session/gnome               |
 
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
@@ -557,7 +557,9 @@ The stateless service should come after base/desktop services (potentially other
 (define-system-comp (users #:key who bluetooth?)
   (users
    (append (map (lambda (user)
-                  (apply account (append user `(#:bluetooth? ,bluetooth?))))
+                  (apply account (-> user
+                                     (massoc user #:bluetooth? bluetooth?)
+                                     keyvals)))
                 who)
            (operating-system-users os))))
 #+end_src
@@ -730,14 +732,15 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 #+end_src
 ** Base OS
 #+name: db/users-system
-| =:db/id=         | =:user/username= |
-|------------------+------------------|
-| :id.user/primary | pharcosyle       |
-| :id.user/aux     | pcoulson         |
-| :id.user/guest   | gandalf          |
+| =:db/id=         | =:user/username= | =:user/admin?= |
+|------------------+------------------+----------------|
+| :id.user/primary | pharcosyle       | true           |
+| :id.user/aux     | pcoulson         | true           |
+| :id.user/guest   | gandalf          |                |
 
-#+begin_src scheme :tangle (meta-in-dir "base-os.scm") :noweb yes
+#+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
+  #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient system components)
   #:use-module (ebullient common)
   #:use-module (ebullient utils)
@@ -745,6 +748,7 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
 
 (define* (base-os #:key
                   host-name
+                  accounts
                   (disk-encryption? #t)
                   luks-uuid
                   (nix? #t)
@@ -754,80 +758,90 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   (bluetooth? desktop?)
                   (laptop? #t)
                   macbook?
-                  (aux-admin? #t)
-                  (guest? laptop?)
                   (kbl (if macbook?
                            macbook-kbl #f)))
-  (-> barebones-os
-      (host-info #:host-name host-name
-                 #:timezone "America/Los_Angeles"
-                 #:locale "en_US.utf8")
-      (grub-efi #:label "genesis"
-                #:target "/boot/efi")
-      base-services+packages
-      linux-nonfree
-      (users #:who (append
-                    '((#:name "<<user-name>>"
-                       #:comment "<<user-full-name>>"
-                       #:shell default-login-shell
-                       #:admin? #t))
-                    (if aux-admin?
-                        '((#:name "pcoulson"
-                           #:comment "Phil Coulson"
-                           #:shell default-login-shell
-                           #:admin? #t)) '())
-                    (if guest?
-                        '((#:name "gandalf"
-                           #:comment "Speak Friend and Enter"
-                           #:shell default-login-shell
-                           #:password "mellon"
-                           #:salt "toosimple")) '()))
-             #:bluetooth? bluetooth?)
-      nonguix-substitutes
-      (as-> $
-        (if nix?
-            (nix $) $)
-        (if console?
+  (let* ((who
+          (->> accounts
+               (d:pull-many '(#:user/username
+                              #:user/full-name
+                              #:user/admin?))
+               (map (lambda (user)
+                      (merge
+                       (kvm
+                        #:name (get user #:user/username)
+                        #:comment (get user #:user/full-name)
+                        #:shell default-login-shell
+                        #:admin? (get user #:admin?))
+                       (if-not (get user #:admin?)
+                               (kvm
+                                #:password "mellon"
+                                #:salt "toosimple")
+                               (kvm)))))))
+         (provide-session?
+          (let ((sessions
+                 (->> accounts
+                      (d:pull-many '(#:user/sessions))
+                      (apply append))))
+            (lambda (s)
+              (member s sessions)))))
+    (-> barebones-os
+        (host-info #:host-name host-name
+                   #:timezone "America/Los_Angeles"
+                   #:locale "en_US.utf8")
+        (grub-efi #:label "genesis"
+                  #:target "/boot/efi")
+        base-services+packages
+        linux-nonfree
+        (users #:who who
+               #:bluetooth? bluetooth?)
+        nonguix-substitutes
+        (as-> $
+          (if nix?
+              (nix $) $)
+          (if console?
+              (-> $
+                  (console-keyboard-layouts #:keyboard-layout kbl)
+                  hidpi-console-font)
+              $)
+          (if desktop?
+              (-> $
+                  (desktop-services #:pipewire? pipewire?
+                                    #:bluetooth? bluetooth?)
+                  (gdm #:wayland? #t
+                       ;; TODO
+                       ;; #:auto-login (if disk-encryption?
+                       ;;                  "<<user-name>>" #f)
+                       )
+                  (as-> $
+                    (if (provide-session? #:session/gnome)
+                        (gnome-desktop $) $)
+                    (if (provide-session? #:session/sway)
+                        (sway-wm $ #:laptop? laptop?) $)))
+              $)
+          (if macbook?
+              (macbook-wireless $ #:bluetooth? bluetooth?) $)
+          (let* ((persist-dir "/.persist")
+                 (subvols
+                  (append
+                   `(("root-blank" "/")
+                     ("boot" "/boot")
+                     ("guix-store" "/gnu/store")
+                     ("guix-var" "/var/guix")
+                     ("log" "/var/log")
+                     ("home" "/home")
+                     ("persist" ,persist-dir))
+                   (if nix? '(("nix" "/nix")) '()))))
             (-> $
-                (console-keyboard-layouts #:keyboard-layout kbl)
-                hidpi-console-font)
-            $)
-        (if desktop?
-            (-> $
-                (desktop-services #:pipewire? pipewire?
-                                  #:bluetooth? bluetooth?)
-                (gdm #:wayland? #t
-                     ;; TODO
-                     ;; #:auto-login (if disk-encryption?
-                     ;;                  "<<user-name>>" #f)
-                     )
-                gnome-desktop
-                (sway-wm #:laptop? laptop?))
-            $)
-        (if macbook?
-            (macbook-wireless $ #:bluetooth? bluetooth?) $)
-        (let* ((persist-dir "/.persist")
-               (subvols
-                (append
-                 `(("root-blank" "/")
-                   ("boot" "/boot")
-                   ("guix-store" "/gnu/store")
-                   ("guix-var" "/var/guix")
-                   ("log" "/var/log")
-                   ("home" "/home")
-                   ("persist" ,persist-dir))
-                 (if nix? '(("nix" "/nix")) '()))))
-          (-> $
-              (btrfs #:label "firmament"
-                     #:subvols subvols)
-              (as-> $
-                (if disk-encryption?
-                    (disk-encryption $ #:source-uuid luks-uuid
-                                     #:target "ciphered"
-                                     #:encrypted-mount-points (map cadr subvols))
-                    $))
-              (stateless #:persist-dir persist-dir
-                         #:bluetooth? bluetooth?))))))
+                (btrfs #:label "firmament"
+                       #:subvols subvols)
+                (as-> $
+                  (if disk-encryption?
+                      (disk-encryption $ #:source-uuid luks-uuid
+                                       #:target "ciphered"
+                                       #:encrypted-mount-points (map cadr subvols))
+                      $))
+                (stateless #:persist-dir persist-dir
+                           #:bluetooth? bluetooth?)))))))
 #+end_src
 ** Hosts
 :PROPERTIES:
@@ -843,6 +857,9 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 
 (define-public os
   (base-os #:host-name "frostfire"
+           #:accounts '(#:id.user/primary
+                        #:id.user/aux
+                        #:id.user/guest)
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:macbook? #t))
 #+end_src
