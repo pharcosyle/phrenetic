@@ -763,10 +763,10 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
                   host-name
                   accounts
                   luks-uuid
+                  kbl
                   console?
                   laptop?
-                  bluetooth?
-                  kbl)
+                  bluetooth?)
   (let* ((feature?
           (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
             (lambda (feat)
