@@ -3905,9 +3905,7 @@ Can be an integer to determine the exact padding."
        :db.type/keyword db--tokenize-keyword
        :db.type/string #'identity
        :db.type/boolean (lambda (v)
-                          (pcase v
-                            (t 'true)
-                            (nil 'false)))))
+                          (if v 'true 'false))))
 
 (defalias 'db--tokenize-attr db--tokenize-keyword)
 
