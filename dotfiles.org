@@ -3904,8 +3904,8 @@ Can be an integer to determine the exact padding."
       (kvm
        :db.type/keyword db--serialize-keyword
        :db.type/string #'identity
-       :db.type/boolean (lambda (expr)
-                          (pcase expr
+       :db.type/boolean (lambda (v)
+                          (pcase v
                             (t 'true)
                             (nil 'false)))))
 
