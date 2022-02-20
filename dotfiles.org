@@ -3682,6 +3682,8 @@ Can be an integer to determine the exact padding."
 (defun db--entity->datoms (entity)
   (->> entity
        map-pairs
+       (map-remove (lambda (k _)
+                     (eq k :db/id)))
        (-map (-lambda ((a . v))
                (db--datom (map-elt entity :db/id) a v)))))
 
