@@ -2177,10 +2177,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  (developer? #t)
                  (login-shell default-login-shell)
                  (interactive-shell (if developer?
-                                        #:shell/zsh login-shell))
-                 (nix? #t)
-                 (desktop? #t)
-                 (pipewire? desktop?))
+                                        #:shell/zsh login-shell)))
   (let ((feature?
          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
            (lambda (feat)
