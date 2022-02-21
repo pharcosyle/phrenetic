@@ -835,6 +835,11 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                               #:password password
                               #:salt "toosimple")
                              (kvm))))))))
+         (nonguix-substitutes?
+          (let ((channel-deps (append
+                               (d:q $ '(#:system/features #:entity/channel-deps) system)
+                               (d:q-many $ '(#:entity/channel-deps) accounts))))
+            (member 'nonguix channel-deps)))
          (session?
           (let ((sessions
                  (->> accounts
@@ -853,8 +858,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         base-services+packages
         (users #:who who
                #:bluetooth? bluetooth?)
-        nonguix-substitutes
         (as-> $
+          (if nonguix-substitutes?
+              (nonguix-substitutes $) $)
           (if linux-nonfree?
               (linux-nonfree $) $)
           (if nix?
