@@ -844,13 +844,12 @@ I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the bla
         (grub-efi #:label "genesis"
                   #:target "/boot/efi")
         base-services+packages
-        (as-> $
-          (if linux-nonfree?
-              (linux-nonfree $) $))
         (users #:who who
                #:bluetooth? bluetooth?)
         nonguix-substitutes
         (as-> $
+          (if linux-nonfree?
+              (linux-nonfree $) $)
           (if nix?
               (nix $) $)
           (if console?
