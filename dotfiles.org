@@ -52,6 +52,7 @@
 |-----------------------+------------------+----------------------|
 | :system/features      | :db.type/keyword | :db.cardinality/many |
 | :feature/channel-deps | :db.type/symbol  | :db.cardinality/many |
+| :user/channel-deps    | :db.type/symbol  | :db.cardinality/many |
 | :user/full-name       | :db.type/string  | :db.cardinality/one  |
 | :user/login-shell     | :db.type/keyword | :db.cardinality/one  |
 | :user/sessions        | :db.type/keyword | :db.cardinality/many |
@@ -75,11 +76,11 @@
 | :id.system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
-| =:db/id=         | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|------------------+------------------------+---------------------+------------------------------|
-| :id.user/primary | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :id.user/aux     | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :id.user/guest   | Speak Friend and Enter | :shell/default      | :session/gnome               |
+| =:db/id=         | =:user/channel-deps=  | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|------------------+-----------------------+------------------------+---------------------+------------------------------|
+| :id.user/primary | 'nonguix 'flat        | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :id.user/aux     | 'nonguix 'flat        | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :id.user/guest   | 'nonguix              | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
@@ -1033,15 +1034,15 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 :END:
 #+begin_src scheme
 (define-module (ebullient home channels)
-  #:use-module (guix channels)
+  #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:re-export (guix
-               nonguix)
-  #:export (get-home-channels
-            flat))
+  #:export (get-home-channels))
 
-(define (get-home-channels #:rest cs)
-  (apply get-channels (cons* rde cs)))
+(define (get-home-channels user)
+  (as-> user $
+        (get (d:pull '(#:user/channel-deps) $) #:user/channel-deps)
+        (cons 'rde $)
+        (apply get-channels $)))
 #+end_src
 *** Definitions
 #+begin_src scheme
@@ -2337,7 +2338,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
-(get-channels nonguix flat)
+(get-home-channels #:id.user/primary)
 #+end_src
 **** Channels lock
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
