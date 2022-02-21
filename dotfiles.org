@@ -35,6 +35,7 @@
       '("db/schema"
         "db/systems-common"
         "db/feature-linux-nonfree"
+        "db/feature-macbook"
         "db/systems-frostfire"
         "db/users-common"
         "db/users-system"
@@ -741,6 +742,12 @@ The stateless service should come after base/desktop services (potentially other
 *** Macbook
 **** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
+
+#+name: db/feature-macbook
+| =:db/id=         | =:feature/channel-deps= |
+|------------------+-------------------------|
+| :feature/macbook | 'nonguix                |
+
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
