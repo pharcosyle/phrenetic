@@ -280,7 +280,7 @@ guix pull
 (define-module (ebullient system channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:export (system-channels))
+  #:export (get-system-channels))
 
 (define (get-system-channels system)
   (as-> system $
