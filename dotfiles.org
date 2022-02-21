@@ -48,19 +48,18 @@
 #+end_src
 
 #+name: db/schema
-| =:db/id=              | =:db/valueType=  | =:db/cardinality=    |
-|-----------------------+------------------+----------------------|
-| :system/features      | :db.type/keyword | :db.cardinality/many |
-| :feature/channel-deps | :db.type/symbol  | :db.cardinality/many |
-| :user/channel-deps    | :db.type/symbol  | :db.cardinality/many |
-| :user/full-name       | :db.type/string  | :db.cardinality/one  |
-| :user/login-shell     | :db.type/keyword | :db.cardinality/one  |
-| :user/sessions        | :db.type/keyword | :db.cardinality/many |
-| :user/admin?          | :db.type/boolean | :db.cardinality/one  |
-| :user/password        | :db.type/string  | :db.cardinality/one  |
-| :user/username        | :db.type/string  | :db.cardinality/one  |
-| :user/email           | :db.type/string  | :db.cardinality/one  |
-| :color/hex            | :db.type/string  | :db.cardinality/one  |
+| =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
+|----------------------+------------------+----------------------|
+| :entity/channel-deps | :db.type/symbol  | :db.cardinality/many |
+| :system/features     | :db.type/keyword | :db.cardinality/many |
+| :user/full-name      | :db.type/string  | :db.cardinality/one  |
+| :user/login-shell    | :db.type/keyword | :db.cardinality/one  |
+| :user/sessions       | :db.type/keyword | :db.cardinality/many |
+| :user/admin?         | :db.type/boolean | :db.cardinality/one  |
+| :user/password       | :db.type/string  | :db.cardinality/one  |
+| :user/username       | :db.type/string  | :db.cardinality/one  |
+| :user/email          | :db.type/string  | :db.cardinality/one  |
+| :color/hex           | :db.type/string  | :db.cardinality/one  |
 
 * Common
 :PROPERTIES:
@@ -76,11 +75,11 @@
 | :id.system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
-| =:db/id=         | =:user/channel-deps=  | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|------------------+-----------------------+------------------------+---------------------+------------------------------|
-| :id.user/primary | 'nonguix 'flat        | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :id.user/aux     | 'nonguix 'flat        | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :id.user/guest   | 'nonguix              | Speak Friend and Enter | :shell/default      | :session/gnome               |
+| =:db/id=         | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|------------------+------------------------+------------------------+---------------------+------------------------------|
+| :id.user/primary | 'nonguix 'flat         | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :id.user/aux     | 'nonguix 'flat         | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :id.user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
@@ -285,7 +284,7 @@ guix pull
 
 (define (get-system-channels system)
   (as-> system $
-        (d:q $ '(#:system/features #:feature/channel-deps))
+        (d:q $ '(#:system/features #:entity/channel-deps))
         (apply get-channels $)))
 #+end_src
 ** Components
@@ -406,7 +405,7 @@ guix pull
 #+end_src
 *** Linux nonfree
 #+name: db/feature-linux-nonfree
-| =:db/id=               | =:feature/channel-deps= |
+| =:db/id=               | =:entity/channel-deps= |
 |------------------------+-------------------------|
 | :feature/linux-nonfree | 'nonguix                |
 
@@ -745,7 +744,7 @@ The stateless service should come after base/desktop services (potentially other
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
 
 #+name: db/feature-macbook
-| =:db/id=         | =:feature/channel-deps= |
+| =:db/id=         | =:entity/channel-deps= |
 |------------------+-------------------------|
 | :feature/macbook | 'nonguix                |
 
@@ -1040,7 +1039,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 (define (get-home-channels user)
   (as-> user $
-        (get (d:pull '(#:user/channel-deps) $) #:user/channel-deps)
+        (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
         (cons 'rde $)
         (apply get-channels $)))
 #+end_src
