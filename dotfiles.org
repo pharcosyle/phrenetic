@@ -740,7 +740,7 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 *** Macbook
 **** Wireless
-I'm not sure if this requires [[Linux nonfree][Linux nonfree]] and/or if the blacklist refers to kernel modules that are only in the nonfree linux kernel.
+I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
