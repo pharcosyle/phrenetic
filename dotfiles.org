@@ -801,16 +801,11 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
          (disk-encryption? (feature? #:feature/disk-encryption))
          (stateless? (feature? #:feature/stateless))
          (nix? (feature? #:feature/nix))
-         (desktop? (and console?
-                        (feature? #:feature/desktop)))
-         (laptop? (and desktop?
-                       laptop?))
-         (macbook? (and laptop?
-                        (feature? #:feature/macbook)))
-         (pipewire? (and desktop?
-                         (feature? #:feature/pipewire)))
-         (bluetooth? (and desktop?
-                          bluetooth?))
+         (desktop? (feature? #:feature/desktop))
+         (laptop? (and desktop? laptop?))
+         (macbook? (and laptop? (feature? #:feature/macbook)))
+         (pipewire? (and desktop? (feature? #:feature/pipewire)))
+         (bluetooth? (and desktop? bluetooth?))
          (kbl (or kbl
                   (if macbook?
                       macbook-kbl #f)))
@@ -2558,7 +2553,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
        (magit +forge)
        (pass +auth)
        pdf
-       prodigy
+       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
        rgb
        taskrunner
 
@@ -3716,7 +3711,6 @@ Can be an integer to determine the exact padding."
   (syntax-rules ()
     ((_ test then else)
      (if (not test) then else))))
-
 #+end_src
 ** Lists
 #+begin_src scheme
