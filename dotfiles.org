@@ -48,14 +48,9 @@
 |----------------------+------------------+----------------------|
 | :entity/channel-deps | :db.type/symbol  | :db.cardinality/many |
 | :system/features     | :db.type/keyword | :db.cardinality/many |
-| :user/full-name      | :db.type/string  | :db.cardinality/one  |
-| :user/login-shell    | :db.type/keyword | :db.cardinality/one  |
+| :user/login-shell    | :db.type/keyword |                      |
 | :user/sessions       | :db.type/keyword | :db.cardinality/many |
-| :user/admin?         | :db.type/boolean | :db.cardinality/one  |
-| :user/password       | :db.type/string  | :db.cardinality/one  |
-| :user/username       | :db.type/string  | :db.cardinality/one  |
-| :user/email          | :db.type/string  | :db.cardinality/one  |
-| :color/hex           | :db.type/string  | :db.cardinality/one  |
+| :user/admin?         | :db.type/boolean |                      |
 
 ** \
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
@@ -3882,13 +3877,20 @@ Can be an integer to determine the exact padding."
 
 
 #+begin_src elisp
+(setq db--schema-defaults
+      (kvm
+       :db.valueType :db.type/string
+       :db.cardinality :db.cardinality/one))
+
 (defun db--get-schema (db attr schema-attr)
   (-as-> db $
          (db--with-base-schema $)
          (-first (lambda (datom)
                    (db--datom-match-e+a datom attr schema-attr))
                  $)
-         (db--dget $ :datom/v)))
+         (if $
+             (db--dget $ :datom/v)
+           (map-elt db--schema-defaults schema-attr))))
 #+end_src
 
 
