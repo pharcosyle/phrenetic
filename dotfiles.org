@@ -2552,7 +2552,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
        (syntax +childframe)
 
        :tools
-       direnv
+       direnv ; TODO should be contributed by direnv component
        (eval +overlay)
        lookup
        (magit +forge)
@@ -2563,8 +2563,8 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
        taskrunner
 
        :lang
-       clojure
-       common-lisp
+       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
+       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
        data
        emacs-lisp
        json
@@ -2573,7 +2573,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
        nix ; TODO this should be gated by Nix inclusion like system components do.
        (org +journal)
        rest
-       (scheme +guile)
+       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
        sh
        web
        yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
