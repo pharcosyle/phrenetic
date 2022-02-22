@@ -70,16 +70,16 @@
 #+end_src
 
 #+name: db/systems-common
-| =:db/id=             | =:system/features=                              |
-|----------------------+-------------------------------------------------|
-| :id.system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
+| =:db/id=          | =:system/features=                              |
+|-------------------+-------------------------------------------------|
+| :system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
-| =:db/id=         | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|------------------+------------------------+------------------------+---------------------+------------------------------|
-| :id.user/primary | 'nonguix 'flat         | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :id.user/aux     | 'nonguix 'flat         | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :id.user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
+| =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|---------------+------------------------+------------------------+---------------------+------------------------------|
+| :user/primary | 'nonguix 'flat         | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :user/aux     | 'nonguix 'flat         | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src sh :var name="" dir=""
 guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
@@ -269,11 +269,11 @@ guix pull
 :meta-dir+: /ebullient/system
 :END:
 #+name: db/users-system
-| =:db/id=         | =:user/username= | =:user/admin?= | =:user/password= |
-|------------------+------------------+----------------+------------------|
-| :id.user/primary | pharcosyle       | true           |                  |
-| :id.user/aux     | pcoulson         | true           |                  |
-| :id.user/guest   | gandalf          |                | mellon           |
+| =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
+|---------------+------------------+----------------+------------------|
+| :user/primary | pharcosyle       | true           |                  |
+| :user/aux     | pcoulson         | true           |                  |
+| :user/guest   | gandalf          |                | mellon           |
 
 ** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels.scm")
@@ -914,22 +914,22 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+end_src
 *** Frostfire
 #+name: db/systems-frostfire
-| =:db/id=             | =:system/features=                                                                  |
-|----------------------+-------------------------------------------------------------------------------------|
-| :id.system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
+| =:db/id=          | =:system/features=                                                                  |
+|-------------------+-------------------------------------------------------------------------------------|
+| :system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
 
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (ebullient system os frostfire)
   #:use-module (ebullient system base-os))
 
 (define-public os
-  (base-os #:system #:id.system/frostfire
+  (base-os #:system #:system/frostfire
            #:host-name "frostfire"
-           #:accounts '(#:id.user/primary
-                        #:id.user/aux
-                        #:id.user/guest)
+           #:accounts '(#:user/primary
+                        #:user/aux
+                        #:user/guest)
            #:luks-uuid "<<frostfire-luks-uuid>>"
-           ;; #:auto-login-account #:id.user/primary ; REVIEW Enable this later.
+           ;; #:auto-login-account #:user/primary ; REVIEW Enable this later.
            #:console? #t
            #:laptop? #t
            #:bluetooth? #t))
@@ -938,7 +938,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (use-modules (ebullient system channels))
 
-(get-system-channels #:id.system/frostfire)
+(get-system-channels #:system/frostfire)
 #+end_src
 **** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
@@ -975,30 +975,30 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 :meta-dir+: /ebullient/home
 :END:
 #+name: db/users-home
-| =:db/id=         | =:user/email=            |
-|------------------+--------------------------|
-| :id.user/primary | pharcosyle@gmail.com     |
-| :id.user/aux     | pharcosyle+aux@gmail.com |
-| :id.user/guest   |                          |
+| =:db/id=      | =:user/email=            |
+|---------------+--------------------------|
+| :user/primary | pharcosyle@gmail.com     |
+| :user/aux     | pharcosyle+aux@gmail.com |
+| :user/guest   |                          |
 
 #+name: db/palette
-| =:db/id=                    | =:color/hex= |
-|-----------------------------+--------------|
-| :id.color/fg                | #dee2f8      |
-| :id.color/highlight         | #8496ff      |
-| :id.color/comments          | #63677f      |
-| :id.color/comment-delimiter | #939abd      |
-| :id.color/red               | #fb8578      |
-| :id.color/orange            | #fdce5f      |
-| :id.color/green             | #9fed9c      |
-| :id.color/yellow            | #eddc91      |
-| :id.color/blue              | #7db9fe      |
-| :id.color/dark-blue         | #5f68de      |
-| :id.color/magenta           | #e29bf7      |
-| :id.color/violet            | #aeb9f3      |
-| :id.color/cyan              | #75e0f9      |
-| :id.color/gold              | #fdd94a      |
-| :id.color/pink              | #ff9999      |
+| =:db/id=                 | =:color/hex= |
+|--------------------------+--------------|
+| :color/fg                | #dee2f8      |
+| :color/highlight         | #8496ff      |
+| :color/comments          | #63677f      |
+| :color/comment-delimiter | #939abd      |
+| :color/red               | #fb8578      |
+| :color/orange            | #fdce5f      |
+| :color/green             | #9fed9c      |
+| :color/yellow            | #eddc91      |
+| :color/blue              | #7db9fe      |
+| :color/dark-blue         | #5f68de      |
+| :color/magenta           | #e29bf7      |
+| :color/violet            | #aeb9f3      |
+| :color/cyan              | #75e0f9      |
+| :color/gold              | #fdd94a      |
+| :color/pink              | #ff9999      |
 
 - FIXME remove this
 #+name: palette
@@ -2248,8 +2248,8 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
   #:export (he))
 
 (define-public he
-  (base-he #:system #:id.system/frostfire
-           #:account #:id.user/primary
+  (base-he #:system #:system/frostfire
+           #:account #:user/primary
            #:developer? #t))
 #+end_src
 **** Solitude old WIP
@@ -2338,7 +2338,7 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
-(get-home-channels #:id.user/primary)
+(get-home-channels #:user/primary)
 #+end_src
 **** Channels lock
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
