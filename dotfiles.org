@@ -28,11 +28,12 @@
 ** DB
 #+begin_src elisp
 (setq meta--table-refs
-      '("db/schema"
+      '("db/schema-common"
         "db/systems-common"
         "db/feature-linux-nonfree"
         "db/feature-macbook"
         "db/systems-frostfire"
+        "db/schema-whatever"
         "db/users-common"
         "db/users-system"
         "db/users-home"
@@ -42,16 +43,6 @@
 ;; (setq meta--database
 ;;       (db--load meta--table-refs))
 #+end_src
-
-#+name: db/schema
-| =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
-|----------------------+------------------+----------------------|
-| :entity/channel-deps | :db.type/symbol  | :db.cardinality/many |
-| :system/features     | :db.type/keyword | :db.cardinality/many |
-| :user/login-shell    | :db.type/keyword |                      |
-| :user/sessions       | :db.type/keyword | :db.cardinality/many |
-| :user/admin?         | :db.type/boolean |                      |
-
 ** \
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
@@ -60,6 +51,14 @@
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
+#+name: db/schema-common
+| =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
+|----------------------+------------------+----------------------|
+| :entity/channel-deps | :db.type/symbol  | :db.cardinality/many |
+| :system/features     | :db.type/keyword | :db.cardinality/many |
+| :user/login-shell    | :db.type/keyword |                      |
+| :user/sessions       | :db.type/keyword | :db.cardinality/many |
+
 #+name: db/systems-common
 | =:db/id=          | =:system/features=                              |
 |-------------------+-------------------------------------------------|
@@ -263,6 +262,11 @@ guix pull
 :PROPERTIES:
 :meta-dir+: /ebullient/system
 :END:
+#+name: db/schema-whatever
+| =:db/id=     | =:db/valueType=  |
+|--------------+------------------|
+| :user/admin? | :db.type/boolean |
+
 #+name: db/users-system
 | =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
 |---------------+------------------+----------------+------------------|
