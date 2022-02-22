@@ -3948,6 +3948,11 @@ Can be an integer to determine the exact padding."
 #+begin_src elisp
 (setq db--parse-keyword #'intern)
 
+(defun match-string-one (regex s)
+  (save-match-data
+    (when (string-match regex s)
+      (match-string 1 string))))
+
 (setq db--parsers
       (kvm
        :db.type/keyword db--parse-keyword
@@ -3957,7 +3962,7 @@ Can be an integer to determine the exact padding."
                             ("true" t)
                             ("false" nil)))
        :db.type/symbol (lambda (s)
-                         (intern (substring s 1)))))
+                         (intern (match-string-one (rx "'" (group (* anything))) s)))))
 
 (defalias 'db--parse-attr #'db--parse-keyword)
 
