@@ -3909,7 +3909,7 @@ Can be an integer to determine the exact padding."
                                           (db--dget datom :datom/e)
                                           (db--dget datom :datom/a))
                                db)))
-      (if (equal :db.cardinality/many (db--get-schema db (db--dget datom :datom/a) :db/cardinality))
+      (if (equal (db--get-schema db (db--dget datom :datom/a) :db/cardinality) :db.cardinality/many)
           (-update-at index
                       (-partial #'-concat (db--dget datom :datom/v))
                       db)
