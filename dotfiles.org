@@ -3836,8 +3836,13 @@ Can be an integer to determine the exact padding."
        map-pairs
        (map-remove (lambda (k _)
                      (equal k :db/id)))
-       (-map (-lambda ((a . v))
-               (db--datom (map-elt entity :db/id) a v)))))
+       (-mapcat (-lambda ((a . v))
+                  (let ((avs (if (listp v)
+                                 (-map (lambda (i) `(,a ,i)) v)
+                               `((,a ,v)))))
+                    (-map (-lambda ((attr value))
+                            (db--datom (map-elt entity :db/id) attr value))
+                          avs))))))
 #+end_src
 
 #+name: base-schema
@@ -3905,18 +3910,7 @@ Can be an integer to determine the exact padding."
        (equal (db--dget datom :datom/a) a)))
 
 (defun db--assert (db datom)
-  (if-let ((index (-find-index (-rpartial #'db--datom-match-e+a
-                                          (db--dget datom :datom/e)
-                                          (db--dget datom :datom/a))
-                               db)))
-      (if (equal (db--get-schema db (db--dget datom :datom/a) :db/cardinality) :db.cardinality/many)
-          (-update-at index
-                      (-partial #'-concat (db--dget datom :datom/v))
-                      db)
-        (->> db
-             (-remove-at index)
-             (cons datom)))
-    (cons datom)))
+  (cons datom))
 #+end_src
 *** Utils
 #+begin_src elisp
@@ -4038,12 +4032,8 @@ Can be an integer to determine the exact padding."
 
 (defun db--tokenize-value (db a v)
   (let* ((type (db--get-schema db a :db/valueType))
-         (tokenizer (map-elt db--tokenizers type))
-         (cardinality (db--get-schema db a :db/cardinality)))
-    (if (equal cardinality :db.cardinality/many)
-        (-map (lambda (item)
-                (funcall tokenizer item)))
-      (funcall tokenizer v))))
+         (tokenizer (map-elt db--tokenizers type)))
+    (funcall tokenizer v)))
 
 (defun db--tokenize-datom (db datom)
   (let ((e (db--dget datom :datom/e))
@@ -4108,12 +4098,8 @@ Can be an integer to determine the exact padding."
 
 (defun db--marshall-value (db a v)
   (let* ((type (db--get-schema db a :db/valueType))
-         (marshaller (map-elt db--marshallers type))
-         (cardinality (db--get-schema db a :db/cardinality)))
-    (if (equal cardinality :db.cardinality/many)
-        (-map (lambda (item)
-                (funcall marshaller item)))
-      (funcall marshaller v))))
+         (marshaller (map-elt db--marshallers type)))
+    (funcall marshaller v)))
 
 (defun db--marshall-datom (db tokenized-datom)
   (let ((e (db--dget tokenized-datom :datom/e))
