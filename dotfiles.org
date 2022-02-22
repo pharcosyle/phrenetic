@@ -6,10 +6,6 @@
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "meta.el")
 :END:
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/meta.el
-#+end_src
-
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 
@@ -61,14 +57,14 @@
 | :user/email          | :db.type/string  | :db.cardinality/one  |
 | :color/hex           | :db.type/string  | :db.cardinality/one  |
 
+** \
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+/meta.el
+#+end_src
 * Common
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
-#+end_src
-
 #+name: db/systems-common
 | =:db/id=          | =:system/features=                              |
 |-------------------+-------------------------------------------------|
@@ -80,10 +76,6 @@
 | :user/primary | 'nonguix 'flat         | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
 | :user/aux     | 'nonguix 'flat         | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
 | :user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
-
-#+begin_src sh :var name="" dir=""
-guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
-#+end_src
 
 #+begin_src scheme :tangle (meta-in-dir "common.scm")
 (define-module (ebullient common))
@@ -123,6 +115,14 @@ guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --f
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+#+end_src
+** \
+#+begin_src sh :var name="" dir=""
+guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
+#+end_src
+
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
 #+end_src
 * Installation
 ** Create bootable USB
@@ -909,9 +909,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 :PROPERTIES:
 :meta-dir+: /os
 :END:
-#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
-sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
-#+end_src
 *** Frostfire
 #+name: db/systems-frostfire
 | =:db/id=          | =:system/features=                                                                  |
@@ -969,6 +966,10 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+name: frostfire-luks-uuid
 #+begin_src org
 bdda56af-6ca0-4953-bc13-d5af8715e0e5
+#+end_src
+** \
+#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
+sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
 #+end_src
 * Home
 :PROPERTIES:
@@ -2235,12 +2236,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 :PROPERTIES:
 :meta-dir+: /he
 :END:
-#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
-guix pull --channels="$he_dir"/$he_name-channels-lock
-#+end_src
-#+begin_src sh :var he_name=""
-guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" reconfigure
-#+end_src
 *** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
 (define-module (ebullient home he solitude)
@@ -2387,46 +2382,17 @@ guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" recon
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
+** \
+#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
+guix pull --channels="$he_dir"/$he_name-channels-lock
+#+end_src
+#+begin_src sh :var he_name=""
+guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" reconfigure
+#+end_src
 ** Guix extra profiles
 :PROPERTIES:
 :meta-dir+: /manifests
 :END:
-#+name: install-profiles
-#+begin_src sh :results output silent :dir (meta-get-dir) :noweb yes :async
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-profiles=$*
-if [[ $# -eq 0 ]]; then
-    profiles="*";
-fi
-
-for profile in $profiles; do
-  profileName=$(basename $profile .scm)
-  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
-  mkdir -p $profilePath
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
-done
-#+end_src
-#+call: install-profiles[:cmdline ...]()
-
-#+name: upgrade-profiles
-#+begin_src sh :results output silent :noweb yes :async
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-profiles=$*
-if [[ $# -eq 0 ]]; then
-    profiles="$GUIX_EXTRA_PROFILES/*";
-fi
-
-for profile in $profiles; do
-  profileName=$(basename $profile)
-  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
-done
-#+end_src
-#+call: upgrade-profiles[:cmdline ...]()
 *** Manifests
 #+name: guix-extra-profile-path
 #+begin_src sh :var profileName="" :noweb yes
@@ -2490,6 +2456,43 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
    "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
    "clj-kondo")) ; TODO comes from nonguix channel, I might be making that explicit later
 #+end_src
+*** \
+#+name: install-profiles
+#+begin_src sh :results output silent :dir (meta-get-dir) :noweb yes :async
+gepp="<<guix-extra-profiles-path>>"
+GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
+
+profiles=$*
+if [[ $# -eq 0 ]]; then
+    profiles="*";
+fi
+
+for profile in $profiles; do
+  profileName=$(basename $profile .scm)
+  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
+  mkdir -p $profilePath
+  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
+done
+#+end_src
+#+call: install-profiles[:cmdline ...]()
+
+#+name: upgrade-profiles
+#+begin_src sh :results output silent :noweb yes :async
+gepp="<<guix-extra-profiles-path>>"
+GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
+
+profiles=$*
+if [[ $# -eq 0 ]]; then
+    profiles="$GUIX_EXTRA_PROFILES/*";
+fi
+
+for profile in $profiles; do
+  profileName=$(basename $profile)
+  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
+  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
+done
+#+end_src
+#+call: upgrade-profiles[:cmdline ...]()
 ** Doom
 :PROPERTIES:
 :meta-dir+: /doom
@@ -3813,9 +3816,6 @@ Can be an integer to determine the exact padding."
 :PROPERTIES:
 :meta-dir+: /donnager
 :END:
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
-#+end_src
 ** Core
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "donnager-core.el")
@@ -3920,7 +3920,7 @@ Can be an integer to determine the exact padding."
        (-map (-lambda ((a b))
                (cons a b)))))
 #+end_src
-*** Lib provide
+*** \
 #+begin_src elisp
 (provide 'donnager-core)
 #+end_src
@@ -4122,9 +4122,13 @@ Can be an integer to determine the exact padding."
        db--deserialize-fn
        (-map #'marshall-datom)))
 #+end_src
-*** Lib provide
+*** \
 #+begin_src elisp
 (provide 'donnager-org)
+#+end_src
+** \
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
 #+end_src
 * Dev
 ** Git ignore
