@@ -3904,7 +3904,7 @@ Can be an integer to determine the exact padding."
   (and (equal (db--dget datom :datom/e) e)
        (equal (db--dget datom :datom/a) a)))
 
-(defun db--insert (db datom)
+(defun db--assert (db datom)
   (if-let ((index (-find-index (-rpartial #'db--datom-match-e+a
                                           (db--dget datom :datom/e)
                                           (db--dget datom :datom/a))
@@ -4010,7 +4010,7 @@ Can be an integer to determine the exact padding."
   (->> raw-entity
        (db--parse-entity db)
        db--entity->datoms
-       (-reduce-from #'db--insert db)))
+       (-reduce-from #'db--assert db)))
 
 (defun db--tables-into-db (tables)
   (->> tables
