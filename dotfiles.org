@@ -4043,7 +4043,7 @@ Can be an integer to determine the exact padding."
     (if (equal cardinality :db.cardinality/many)
         (-map (lambda (item)
                 (funcall tokenizer item)))
-      (funcall tokenizer raw-v))))
+      (funcall tokenizer v))))
 
 (defun db--tokenize-datom (db datom)
   (let ((e (db--dget datom :datom/e))
@@ -4113,7 +4113,7 @@ Can be an integer to determine the exact padding."
     (if (equal cardinality :db.cardinality/many)
         (-map (lambda (item)
                 (funcall marshaller item)))
-      (funcall marshaller raw-v))))
+      (funcall marshaller v))))
 
 (defun db--marshall-datom (db tokenized-datom)
   (let ((e (db--dget tokenized-datom :datom/e))
