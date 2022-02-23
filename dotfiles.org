@@ -2247,7 +2247,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            #:developer? #t))
 #+end_src
 **** Solitude old WIP
-#+begin_src scheme :tangle (meta-in-dir "solitude-old-wip.scm")
+#+begin_src scheme
 (define-module (ebullient home he solitude)
   #:use-module (ebullient home base-he)
   #:export (he))
@@ -3933,6 +3933,22 @@ Can be an integer to determine the exact padding."
 ** Client API
 *** Elisp
 *** Scheme
+#+begin_src scheme
+(define-module (donnager client)
+  #:export (q
+            q-many
+            pull
+            pull-many))
+
+(define (q)
+  #f)
+(define (q-many)
+  #f)
+(define (pull)
+  #f)
+(define (pull-many)
+  #f)
+#+end_src
 ** Org API
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "donnager-org.el")
