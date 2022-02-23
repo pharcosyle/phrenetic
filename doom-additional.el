@@ -93,3 +93,13 @@
 (map! "s-&" (lambda (command)
               (interactive (list (read-shell-command "$ ")))
               (call-process-shell-command command nil 0 nil)))
+
+
+
+
+;; Presumably remove this after upgrading Emacs 29
+(undefadvice! doom--fix-helpful--autoloaded-p (fn &rest args)
+  :around #'helpful--autoloaded-p
+  (letf! (defun help-fns--autoloaded-p (sym _)
+           (funcall help-fns--autoloaded-p sym))
+    (apply fn args)))
