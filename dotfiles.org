@@ -2620,8 +2620,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               (home-git-configuration
                (config
                 `((user
-                   ((name . "<<user-full-name>>")
-                    (email . "<<user-email>>")))
+                   ((name . "Krzysztof Baranowski") ; FIXME <user-full-name>>
+                    (email . "pharcosyle@gmail.com"))) ; FIXME <user-email>>
                   ;; (http "https://weak.example.com"
                   ;;   ((ssl-verify . #f)))
                   ;; (gpg
@@ -2921,8 +2921,8 @@ done
 #+end_src
 **** Personal Info :user:
 #+begin_src elisp :noweb yes
-(setq user-full-name "Krzysztof Baranowski" ; FIXME <<user-full-name>>
-      user-mail-address "pharcosyle@gmail.com") ; FIXME <<user-email>>
+(setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>>
+      user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
 #+end_src
 **** Locals :path:
 #+begin_src elisp
@@ -4254,7 +4254,7 @@ Can be an integer to determine the exact padding."
 ** Client API
 *** Elisp
 *** Scheme
-#+begin_src scheme
+#+begin_src scheme :tangle (meta-in-dir "client.scm")
 (define-module (donnager client)
   #:export (q
             q-many
