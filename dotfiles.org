@@ -1499,7 +1499,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   ;; #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages llvm) #:select (clang))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
-  #:use-module ((gnu packages version-control) #:select (git)))
+  #:use-module ((gnu packages version-control) #:select (git))
+  #:use-module ((ebullient home fonts) #:select (fonts-emacs-all-the-icons)))
 
 (define-public doom-emacs
   (let ((commit "fc868105cefc6ce0091fc61f0fc4d8ccb653a048")
@@ -1528,7 +1529,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
         coreutils ; TODO might not be necessary because emacs Guix package already adds "coreutils/bin" to PATH with `wrap-program'
         fd
         clang ; TODO I still don't know what this is for. Notably hlissner doesn't install clang, nor gcc, in his emacs "module" in his dotfiles.
-        ))
+
+        fonts-emacs-all-the-icons))
       (build-system trivial-build-system)
       (arguments
        `(#:modules ((guix build utils))
@@ -1544,6 +1546,38 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (description synopsis)
       (home-page "https://github.com/hlissner/doom-emacs")
       (license license:expat))))
+#+end_src
+****** Emacs all-the-icons fonts package :package:version:
+#+begin_src scheme :tangle (meta-in-dir "fonts.scm")
+(define-module (ebullient home fonts)
+  #:use-module (guix build-system font)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
+  #:use-module (ebullient utils))
+
+(define-public fonts-emacs-all-the-icons
+  (let ((base-pkg emacs-all-the-icons)
+        (commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
+        (revision "0"))
+    (package
+      (name "fonts-emacs-all-the-icons")
+      (version (git-version (package-version base-pkg) revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url (-> base-pkg package-source origin-uri git-reference-url))
+               (commit commit)))
+         (sha256
+          (base32
+           "1gn5nyyhrvz8w1y5m8lg2khwfir0czjizmdzinr70gd7n8g1xqk9"))
+         (file-name (git-file-name name version))))
+      (build-system font-build-system)
+      (home-page (package-home-page base-pkg))
+      (synopsis (package-synopsis base-pkg))
+      (description (package-description base-pkg))
+      (license (package-license base-pkg)))))
 #+end_src
 *** Direnv
 #+begin_src scheme
