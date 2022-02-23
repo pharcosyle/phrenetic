@@ -1033,6 +1033,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 :END:
 #+begin_src scheme
 (define-module (ebullient home channels)
+  #:use-module (guix channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
   #:export (get-home-channels))
@@ -2512,10 +2513,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (extra-profile-path p)
   (string-append extra-profiles-path "/" p "/" p))
 
-(define (base-he #:key
-                 system
-                 account
-                 developer?)
+(define* (base-he #:key
+                  system
+                  account
+                  developer?)
   (let* ((login-shell
           (let ((shell (get (d:pull '(#:user/login-shell) user) #:user/login-shell)))
             (if (equal shell #:shell/default)
