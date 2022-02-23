@@ -1555,6 +1555,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
      (name 'he-zsh-direnv)
      (extensions
       (list
+       ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration.
        (service-extension
         home-profile-service-type
         (const (list direnv)))
