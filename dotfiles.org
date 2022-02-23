@@ -2987,13 +2987,6 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-******* org-persist :persistence:path:
-#+begin_src elisp
-(use-package! org-persist
-  :defer t
-  :init
-  (setq org-persist-directory (concat doom-cache-dir "org-persist/")))
-#+end_src
 ******* ob
 #+begin_src elisp
 (after! ob
