@@ -1548,6 +1548,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (license license:expat))))
 #+end_src
 ****** Ligatures patch
+Taken from this as-yet unmerged pull request: [[https://github.com/hlissner/doom-emacs/pull/5082][hlissner/doom-emacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
+
 #+begin_src diff :tangle (meta-in-dir "ligatures.patch")
 diff --git a/modules/ui/ligatures/README.org b/modules/ui/ligatures/README.org
 index 66d969ff1..ed486dbf6 100644
@@ -1868,6 +1870,9 @@ index 000000000..fa85cf83c
       (description (package-description base-pkg))
       (license (package-license base-pkg)))))
 #+end_src
+****** \
+- TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
+  https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
 *** Direnv
 #+begin_src scheme
 (define* (he-direnv svcs #:key shell)
