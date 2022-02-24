@@ -1447,7 +1447,7 @@ vterm_prompt_end() {
 setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
-**** Emacs 29 with pgtk + native comp package :package:version:
+**** Emacs 29 with pgtk + native comp :package:version:
 #+begin_src scheme :tangle (meta-in-dir "emacs.scm")
 (define-module (ebullient home emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
@@ -1487,7 +1487,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
      (default-value #f)))
    svcs))
 #+end_src
-***** Doom Emacs package :package:version:
+***** Doom Emacs :package:version:
 - TODO make the ~doom~ program (probably the entire =bin= directory) part of outputs
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
 (define-module (ebullient home doom-emacs)
@@ -1839,7 +1839,7 @@ index 000000000..c710f766c
 +             :files ("*.el"))
 +    :pin "c0e696a88824be6afa1f33fad548d36f96801d8e"))
 #+end_src
-****** Emacs all-the-icons fonts package :package:version:
+****** Emacs all-the-icons fonts :package:version:
 #+begin_src scheme :tangle (meta-in-dir "fonts.scm")
 (define-module (ebullient home fonts)
   #:use-module (guix build-system font)
