@@ -1728,7 +1728,7 @@ index 7856ff7c1..06486a4ec 100644
          (setf (alist-get mode +ligatures-extra-alist)
                (if-let (old-results (alist-get mode +ligatures-extra-alist))
 diff --git a/modules/ui/ligatures/config.el b/modules/ui/ligatures/config.el
-index 2c34fce8f..3958aefbd 100644
+index 484945ceb..3958aefbd 100644
 --- a/modules/ui/ligatures/config.el
 +++ b/modules/ui/ligatures/config.el
 @@ -47,44 +47,25 @@ font.")
@@ -1752,7 +1752,7 @@ index 2c34fce8f..3958aefbd 100644
 -    ;; (?x . "x") ; Also tries to match the x in 0xDEADBEEF
 -    ;; (regexp-opt '("<!--" "<$" "<$>" "<*" "<*>" "<**>" "<+" "<+>" "<-" "<--" "<---" "<->" "<-->" "<--->" "</" "</>" "<<" "<<-" "<<<" "<<=" "<=" "<=<" "<==" "<=>" "<===>" "<>" "<|" "<|>" "<~" "<~~" "<." "<.>" "<..>"))
 -    (?<  . "\\(?:<\\(?:!--\\|\\$>\\|\\*\\(?:\\*?>\\)\\|\\+>\\|-\\(?:-\\(?:->\\|[>-]\\)\\|[>-]\\)\\|\\.\\(?:\\.?>\\)\\|/>\\|<[<=-]\\|=\\(?:==>\\|[<=>]\\)\\||>\\|~~\\|[$*+./<=>|~-]\\)\\)")
--    (?=  . "\\(?:=\\(?:/=\\|:=\\|<<\\|=[=>]\\|>>\\|[=>]\\)\\)")               ; (regexp-opt '("=/=" "=:=" "=<<" "==" "===" "==>" "=>" "=>>"))
+-    (?=  . "\\(?:=\\(?:/=\\|:=\\|<[<=]\\|=[=>]\\|>[=>]\\|[=>]\\)\\)")         ; (regexp-opt '("=/=" "=:=" "=<<" "==" "===" "==>" "=>" "=>>" "=>=" "=<="))
 -    (?>  . "\\(?:>\\(?:->\\|=>\\|>[=>-]\\|[:=>-]\\)\\)")                      ; (regexp-opt '(">-" ">->" ">:" ">=" ">=>" ">>" ">>-" ">>=" ">>>"))
 -    (??  . "\\(?:\\?[.:=?]\\)")                                               ; (regexp-opt '("??" "?." "?:" "?="))
 -    (?\[ . "\\(?:\\[\\(?:|]\\|[]|]\\)\\)")                                    ; (regexp-opt '("[]" "[|]" "[|"))
@@ -1825,7 +1825,7 @@ index 2c34fce8f..3958aefbd 100644
   ;; `+ligatures/install-patched-font'
 diff --git a/modules/ui/ligatures/packages.el b/modules/ui/ligatures/packages.el
 new file mode 100644
-index 000000000..fa85cf83c
+index 000000000..c710f766c
 --- /dev/null
 +++ b/modules/ui/ligatures/packages.el
 @@ -0,0 +1,9 @@
