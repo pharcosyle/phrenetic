@@ -93,3 +93,18 @@
 (map! "s-&" (lambda (command)
               (interactive (list (read-shell-command "$ ")))
               (call-process-shell-command command nil 0 nil)))
+
+
+
+
+;; Not using waybar at the moment so these are handy
+
+(use-package! battery
+  :config
+  (display-battery-mode 1))
+
+(use-package! time
+  :config
+  (setq display-time-day-and-date t)
+  ;; (setq display-time-24hr-format t)
+  (display-time-mode 1))
