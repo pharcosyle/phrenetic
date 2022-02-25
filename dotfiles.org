@@ -4026,7 +4026,6 @@ Can be an integer to determine the exact padding."
 :END:
 #+begin_src scheme
 (define-module (ebullient utils)
-  #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold))
@@ -4154,17 +4153,6 @@ Can be an integer to determine the exact padding."
 #+end_src
 ** Guix
 #+begin_src scheme
-(define barebones-package
-  (package
-    (name #f)
-    (version "0")
-    (source #f)
-    (build-system #f)
-    (synopsis name)
-    (description synopsis)
-    (home-page #f)
-    (license #f)))
-
 (define (update-services* services pred update-fn)
   (update-list
    services
