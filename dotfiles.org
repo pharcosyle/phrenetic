@@ -4031,9 +4031,10 @@ Can be an integer to determine the exact padding."
 :END:
 #+begin_src scheme
 (define-module (ebullient utils)
+  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
   #:export (when-let
             if-let
             when-not
@@ -4172,6 +4173,11 @@ Can be an integer to determine the exact padding."
    (lambda (svc)
      (eq? (service-kind svc) kind))
    update-fn))
+
+(define (get-inferior-package channels package)
+  (-> (inferior-for-channels channels)
+      (lookup-inferior-packages package)
+      first))
 #+end_src
 * DB
 :PROPERTIES:
