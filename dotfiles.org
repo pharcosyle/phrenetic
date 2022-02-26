@@ -4092,13 +4092,13 @@ Can be an integer to determine the exact padding."
          (if (pred x) (f x) x))
        l))
 
-(define (partial f . args)
-  (lambda (. rest)
-    (apply f (append args rest))))
+(define* (partial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append args more))))
 
-(define (rpartial f . args)
-  (lambda (. rest)
-    (apply f (append rest args))))
+(define* (rpartial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append more args))))
 
 (define-syntax ->
   (syntax-rules ()
