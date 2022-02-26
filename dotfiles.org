@@ -54,7 +54,7 @@
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
-| :entity/channel-deps | :db.type/symbol  | :db.cardinality/many |
+| :entity/channel-deps | :db.type/keyword | :db.cardinality/many |
 | :system/features     | :db.type/keyword | :db.cardinality/many |
 | :user/login-shell    | :db.type/keyword |                      |
 | :user/sessions       | :db.type/keyword | :db.cardinality/many |
@@ -67,9 +67,9 @@
 #+name: db/users-common
 | =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
 |---------------+------------------------+------------------------+---------------------+------------------------------|
-| :user/primary | 'nonguix               | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :user/aux     | 'nonguix               | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
+| :user/primary | :channel/nonguix       | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :user/aux     | :channel/nonguix       | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :user/guest   | :channel/nonguix       | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src scheme :tangle (meta-in-dir "common.scm")
 (define-module (ebullient common))
@@ -109,6 +109,10 @@
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+
+(define channel-map
+  (kvm #:channel/guix guix
+       #:channel/nonguix nonguix))
 #+end_src
 ** \
 #+begin_src sh :var name="" dir=""
@@ -279,6 +283,7 @@ guix pull
 (define-module (ebullient system channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
+  #:use-module (ebullient utils)
   #:export (get-system-channels
             system-channel-deps))
 
@@ -288,7 +293,9 @@ guix pull
 (define (system-channel-deps system)
   (as-> system $
         (d:q $ '(#:system/features #:entity/channel-deps))
-        (map primitive-eval $)))
+        (map (partial get system-channel-map) $)))
+
+(define system-channel-map channel-map)
 #+end_src
 ** Components
 :PROPERTIES:
@@ -408,8 +415,8 @@ guix pull
 *** Linux nonfree
 #+name: db/feature-linux-nonfree
 | =:db/id=               | =:entity/channel-deps= |
-|------------------------+-------------------------|
-| :feature/linux-nonfree | 'nonguix                |
+|------------------------+------------------------|
+| :feature/linux-nonfree | :channel/nonguix       |
 
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
@@ -748,7 +755,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 #+name: db/feature-macbook
 | =:db/id=         | =:entity/channel-deps= |
 |------------------+------------------------|
-| :feature/macbook | 'nonguix               |
+| :feature/macbook | :channel/nonguix       |
 
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
@@ -836,7 +843,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
           (let ((channel-deps (append
                                (d:q $ '(#:system/features #:entity/channel-deps) system)
                                (d:q-many $ '(#:entity/channel-deps) accounts))))
-            (member 'nonguix channel-deps)))
+            (member #:channel/nonguix channel-deps)))
          (session?
           (let ((sessions
                  (->> accounts
@@ -981,8 +988,8 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 #+name: db/users-home
 | =:db/id=      | =:entity/channel-deps= | =:user/email=            |
 |---------------+------------------------+--------------------------|
-| :user/primary | 'flat                  | pharcosyle@gmail.com     |
-| :user/aux     | 'flat                  | pharcosyle+aux@gmail.com |
+| :user/primary | :channel/flat          | pharcosyle@gmail.com     |
+| :user/aux     | :channel/flat          | pharcosyle+aux@gmail.com |
 
 #+name: db/palette
 | =:db/id=                 | =:color/hex= |
@@ -1040,6 +1047,7 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
   #:use-module (guix channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
+  #:use-module (ebullient utils)
   #:export (get-home-channels
             user-channel-deps
             rde
@@ -1048,12 +1056,13 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
                nonguix))
 
 (define (get-home-channels cs)
-  (apply get-channels (cons rde cs)))
+  (apply get-channels (if (member rde cs)
+                          cs (cons rde cs))))
 
 (define (user-channel-deps user)
   (as-> user $
         (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
-        (map primitive-eval $)))
+        (map (partial get home-channel-map) $)))
 #+end_src
 *** Definitions
 #+begin_src scheme
@@ -1076,6 +1085,13 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
      "33f86a4b48205c0dc19d7c036c85393f0766f806"
      (openpgp-fingerprint
       "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
+#+end_src
+*** \
+#+begin_src scheme
+(define home-channel-map
+  (merge channel-map
+         (kvm #:channel/rde rde
+              #:channel/flat flat)))
 #+end_src
 ** Components
 :PROPERTIES:
