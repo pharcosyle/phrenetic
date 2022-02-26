@@ -284,6 +284,7 @@ guix pull
 (define (get-system-channels system)
   (as-> system $
         (d:q $ '(#:system/features #:entity/channel-deps))
+        (map primitive-eval $)
         (apply get-channels $)))
 #+end_src
 ** Components
@@ -1043,7 +1044,8 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 (define (get-home-channels user)
   (as-> user $
         (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
-        (cons 'rde $)
+        (map primitive-eval $)
+        (cons rde $)
         (apply get-channels $)))
 #+end_src
 *** Definitions
