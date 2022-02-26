@@ -1035,7 +1035,10 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
   #:use-module (guix channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:export (get-home-channels))
+  #:export (get-home-channels
+            flat)
+  #:re-export (guix
+               nonguix))
 
 (define (get-home-channels user)
   (as-> user $
