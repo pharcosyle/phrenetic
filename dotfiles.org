@@ -279,13 +279,16 @@ guix pull
 (define-module (ebullient system channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:export (get-system-channels))
+  #:export (get-system-channels
+            system-channel-deps))
 
-(define (get-system-channels system)
+(define (get-system-channels cs)
+  (apply get-channels cs))
+
+(define (system-channel-deps system)
   (as-> system $
         (d:q $ '(#:system/features #:entity/channel-deps))
-        (map primitive-eval $)
-        (apply get-channels $)))
+        (map primitive-eval $)))
 #+end_src
 ** Components
 :PROPERTIES:
@@ -934,7 +937,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (use-modules (ebullient system channels))
 
-(get-system-channels #:system/frostfire)
+(get-system-channels
+ (system-channel-deps #:system/frostfire))
 #+end_src
 **** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
@@ -1037,16 +1041,19 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
   #:export (get-home-channels
+            user-channel-deps
+            rde
             flat)
   #:re-export (guix
                nonguix))
 
-(define (get-home-channels user)
+(define (get-home-channels cs)
+  (apply get-channels (cons rde cs)))
+
+(define (user-channel-deps user)
   (as-> user $
         (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
-        (map primitive-eval $)
-        (cons rde $)
-        (apply get-channels $)))
+        (map primitive-eval $)))
 #+end_src
 *** Definitions
 #+begin_src scheme
@@ -2701,7 +2708,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
-(get-home-channels #:user/primary)
+(get-home-channels
+ (user-channel-deps #:user/primary))
 #+end_src
 **** Channels lock
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
