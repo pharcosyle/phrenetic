@@ -116,7 +116,11 @@
 #+end_src
 ** \
 #+begin_src sh :var name="" dir=""
-guix time-machine --load-path=. --channels="$dir"/$name-channels -- describe --format=channels > "$dir"/$name-channels-lock
+guix time-machine \
+	--load-path=. \
+	--channels="$dir"/$name-channels \
+	-- \
+	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
@@ -979,7 +983,13 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 ** \
 #+begin_src sh :var os_name="" os_dir=(meta-get-dir)
-sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --load-path=. --expression="(@ (ebullient system os $os_name) os)" reconfigure
+sudo guix time-machine \
+	--channels="$os_dir"/$os_name-channels-lock \
+	-- \
+	system \
+	--load-path=. \
+	--expression="(@ (ebullient system os $os_name) os)" \
+	reconfigure
 #+end_src
 * Home
 :PROPERTIES:
@@ -2779,7 +2789,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 guix pull --channels="$he_dir"/$he_name-channels-lock
 #+end_src
 #+begin_src sh :var he_name=""
-guix home --load-path=. --expression="(@ (ebullient home he $he_name) he)" reconfigure
+guix home \
+	--load-path=. \
+	--expression="(@ (ebullient home he $he_name) he)" \
+	reconfigure
 #+end_src
 ** Guix extra profiles
 :PROPERTIES:
