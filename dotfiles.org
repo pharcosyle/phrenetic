@@ -67,8 +67,8 @@
 #+name: db/users-common
 | =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
 |---------------+------------------------+------------------------+---------------------+------------------------------|
-| :user/primary | 'nonguix 'flat         | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :user/aux     | 'nonguix 'flat         | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :user/primary | 'nonguix               | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :user/aux     | 'nonguix               | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
 | :user/guest   | 'nonguix               | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src scheme :tangle (meta-in-dir "common.scm")
@@ -974,11 +974,10 @@ sudo guix time-machine --channels="$os_dir"/$os_name-channels-lock -- system --l
 :meta-dir+: /ebullient/home
 :END:
 #+name: db/users-home
-| =:db/id=      | =:user/email=            |
-|---------------+--------------------------|
-| :user/primary | pharcosyle@gmail.com     |
-| :user/aux     | pharcosyle+aux@gmail.com |
-| :user/guest   |                          |
+| =:db/id=      | =:entity/channel-deps= | =:user/email=            |
+|---------------+------------------------+--------------------------|
+| :user/primary | 'flat                  | pharcosyle@gmail.com     |
+| :user/aux     | 'flat                  | pharcosyle+aux@gmail.com |
 
 #+name: db/palette
 | =:db/id=                 | =:color/hex= |
