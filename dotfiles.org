@@ -831,19 +831,17 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                (apply d:pull-many '(*))
                (map (lambda (user)
                       (merge
-                       (kvm
-                        #:name (get user #:user/username)
-                        #:comment (get user #:user/full-name)
-                        #:shell (let ((shell (get user #:user/login-shell)))
-                                  (if (equal shell #:shell/default)
-                                      default-login-shell shell))
-                        #:admin? (get user #:user/admin?))
+                       (kvm #:name (get user #:user/username)
+                            #:comment (get user #:user/full-name)
+                            #:shell (let ((shell (get user #:user/login-shell)))
+                                      (if (equal shell #:shell/default)
+                                          default-login-shell shell))
+                            #:admin? (get user #:user/admin?))
                        (let ((admin? (get user #:user/admin?))
                              (password (get user #:user/password)))
                          (if (and password (not admin?))
-                             (kvm
-                              #:password password
-                              #:salt "toosimple")
+                             (kvm #:password password
+                                  #:salt "toosimple")
                              (kvm))))))))
          (nonguix-substitutes?
           (let ((channel-deps (append
@@ -4268,9 +4266,8 @@ Can be an integer to determine the exact padding."
 
 #+begin_src elisp
 (setq db--schema-defaults
-      (kvm
-       :db.valueType :db.type/string
-       :db.cardinality :db.cardinality/one))
+      (kvm :db.valueType :db.type/string
+           :db.cardinality :db.cardinality/one))
 
 (defun db--get-schema (db attr schema-attr)
   (-as-> db $
@@ -4356,15 +4353,14 @@ Can be an integer to determine the exact padding."
       (match-string 1 string))))
 
 (setq db--parsers
-      (kvm
-       :db.type/keyword db--parse-keyword
-       :db.type/string #'identity
-       :db.type/boolean (lambda (s)
-                          (pcase s
-                            ("true" t)
-                            ("false" nil)))
-       :db.type/symbol (lambda (s)
-                         (intern (match-string-one (rx "'" (group (* anything))) s)))))
+      (kvm :db.type/keyword db--parse-keyword
+           :db.type/string #'identity
+           :db.type/boolean (lambda (s)
+                              (pcase s
+                                ("true" t)
+                                ("false" nil)))
+           :db.type/symbol (lambda (s)
+                             (intern (match-string-one (rx "'" (group (* anything))) s)))))
 
 (defalias 'db--parse-attr #'db--parse-keyword)
 
@@ -4434,12 +4430,11 @@ Can be an integer to determine the exact padding."
 (setq db--tokenize-keyword #'identity)
 
 (setq db--tokenizers
-      (kvm
-       :db.type/keyword db--tokenize-keyword
-       :db.type/string #'identity
-       :db.type/boolean (lambda (v)
-                          (if v 'true 'false))
-       :db.type/symbol #'identity))
+      (kvm :db.type/keyword db--tokenize-keyword
+           :db.type/string #'identity
+           :db.type/boolean (lambda (v)
+                              (if v 'true 'false))
+           :db.type/symbol #'identity))
 
 (defalias 'db--tokenize-attr #'db--tokenize-keyword)
 
@@ -4498,14 +4493,13 @@ Can be an integer to determine the exact padding."
 (setq db--marshall-keyword #'identity)
 
 (setq db--marshallers
-      (kvm
-       :db.type/keyword db--marshall-keyword
-       :db.type/string #'identity
-       :db.type/boolean (lambda (token)
-                          (pcase s
-                            ('true t)
-                            ('false nil)))
-       :db.type/symbol #'identity))
+      (kvm :db.type/keyword db--marshall-keyword
+           :db.type/string #'identity
+           :db.type/boolean (lambda (token)
+                              (pcase s
+                                ('true t)
+                                ('false nil)))
+           :db.type/symbol #'identity))
 
 (defalias 'db--marshall-attr #'db--marshall-keyword)
 
