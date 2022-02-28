@@ -679,17 +679,6 @@ The stateless service should come after base/desktop services (potentially other
      ;; (if bluetooth?
      ;;     (cons* (bluetooth-service #:auto-enable? #t) $))
      )))
-
-(define (remove-services services kinds)
-  (remove (lambda (s)
-            (member (service-kind s) kinds))
-          services))
-
-(define selective-desktop-services
-  (remove-services %desktop-services
-                   (append (map service-kind %base-services)
-                           (list gdm-service-type
-                                 screen-locker-service-type))))
 #+end_src
 ***** Pipewire
 #+begin_src scheme
@@ -700,6 +689,19 @@ The stateless service should come after base/desktop services (potentially other
     (cons* (udev-rules-service 'pipewire-add-udev-rules
                                pipewire-0.3)
            $)))
+#+end_src
+***** \
+#+begin_src scheme
+(define (remove-services services kinds)
+  (remove (lambda (s)
+            (member (service-kind s) kinds))
+          services))
+
+(define selective-desktop-services
+  (remove-services %desktop-services
+                   (append (map service-kind %base-services)
+                           (list gdm-service-type
+                                 screen-locker-service-type))))
 #+end_src
 **** Display managers
 ***** GDM
