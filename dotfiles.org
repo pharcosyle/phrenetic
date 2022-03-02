@@ -4038,7 +4038,7 @@ Can be an integer to determine the exact padding."
 ;; TODO do hardcoded path better?
 (package! donnager
   :recipe (:local-repo "~/projects/dotfiles/donnager"
-           ;; Avoid having to run `doom sync' every time the package is changed.
+           ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all.
            :build (:not compile)))
 #+end_src
 * Utils
