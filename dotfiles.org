@@ -1872,16 +1872,33 @@ new file mode 100644
 index 000000000..c710f766c
 --- /dev/null
 +++ b/modules/ui/ligatures/packages.el
-@@ -0,0 +1,9 @@
+@@ -0,0 +1,<<ligature-package-num-lines(4)>> @@
 +(when (and EMACS28+
 +           (or (featurep 'ns)
 +               (string-match-p "HARFBUZZ" system-configuration-features))
 +           (featurep 'composite))
-+  (package! ligature
-+    :recipe (:host github
-+             :repo "mickeynp/ligature.el"
-+             :files ("*.el"))
-+    :pin "9357156a917a021a87b33ee391567a5d8e44794a"))
++  <<ligature-package>>)
+#+end_src
+******** ligature.el package :version:
+:PROPERTIES:
+:header-args+: :tangle no
+:END:
+#+name: ligature-package
+#+begin_src elisp
+(package! ligature
+  :recipe (:host github
+           :repo "mickeynp/ligature.el"
+           :files ("*.el"))
+  :pin "9357156a917a021a87b33ee391567a5d8e44794a")
+#+end_src
+
+#+name: ligature-package-num-lines
+#+begin_src elisp :var initial=""
+(let ((num-lines
+       (-> (-second-item (org-babel-lob--src-info "ligature-package"))
+           (split-string (rx "\n"))
+           length)))
+  (+ initial num-lines))
 #+end_src
 ****** All-the-icons fonts :package:version:
 :PROPERTIES:
