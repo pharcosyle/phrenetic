@@ -1555,15 +1555,12 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
          (file-name (git-file-name name version))))
       ;; TODO Ideally these wouldn't be propagated inputs. Instead of tracking down usages of these and doing `substitute' everywhere maybe `wrap-prgram' is an option? However maybe there are other things in these inputs than just binaries Doom depends on or it has parts outside of emacs that recquire them?
       (propagated-inputs
-       (list
-        ;; Required
-        ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
-        git
-        ripgrep
-        ;; Optional
-        fd
-
-        all-the-icons-fonts))
+       (list ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
+             git
+             ripgrep
+             all-the-icons-fonts
+             ;; Optional
+             fd))
       (build-system trivial-build-system)
       (arguments
        `(#:modules ((guix build utils))
@@ -1942,9 +1939,8 @@ index 000000000..c710f766c
                              (list "fontawesome.ttf"
                                    "material-design-icons.ttf")))))))))
       (propagated-inputs
-       (list
-        font-awesome
-        fonts:font-google-material-design-icons))
+       (list font-awesome
+             fonts:font-google-material-design-icons))
       (home-page (package-home-page base-pkg))
       (synopsis (package-synopsis base-pkg))
       (description (package-description base-pkg))
