@@ -1581,9 +1581,12 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (license license:expat))))
 #+end_src
 ****** Ligatures patch
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "ligatures.patch")
+:END:
 Taken from this as-yet unmerged pull request: [[https://github.com/hlissner/doom-emacs/pull/5082][hlissner/doom-emacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
-
-#+begin_src diff :tangle (meta-in-dir "ligatures.patch")
+******* README.org
+#+begin_src diff
 diff --git a/modules/ui/ligatures/README.org b/modules/ui/ligatures/README.org
 index 66d969ff1..ed486dbf6 100644
 --- a/modules/ui/ligatures/README.org
@@ -1686,6 +1689,9 @@ index 66d969ff1..ed486dbf6 100644
 +
  ,* TODO Troubleshooting
   If you have any problems with this module, do get in touch!
+#+END_SRC
+******* autoload/ligatures.el
+#+BEGIN_SRC diff
 diff --git a/modules/ui/ligatures/autoload/ligatures.el b/modules/ui/ligatures/autoload/ligatures.el
 index 7856ff7c1..06486a4ec 100644
 --- a/modules/ui/ligatures/autoload/ligatures.el
@@ -1759,6 +1765,9 @@ index 7856ff7c1..06486a4ec 100644
        (dolist (mode (doom-enlist modes))
          (setf (alist-get mode +ligatures-extra-alist)
                (if-let (old-results (alist-get mode +ligatures-extra-alist))
+#+END_SRC
+******* config.el
+#+BEGIN_SRC diff
 diff --git a/modules/ui/ligatures/config.el b/modules/ui/ligatures/config.el
 index 484945ceb..3958aefbd 100644
 --- a/modules/ui/ligatures/config.el
@@ -1855,6 +1864,9 @@ index 484945ceb..3958aefbd 100644
  
   ;; Fallback ligature support for certain, patched fonts. Install them with
   ;; `+ligatures/install-patched-font'
+#+END_SRC
+******* packages.el
+#+BEGIN_SRC diff :noweb yes
 diff --git a/modules/ui/ligatures/packages.el b/modules/ui/ligatures/packages.el
 new file mode 100644
 index 000000000..c710f766c
