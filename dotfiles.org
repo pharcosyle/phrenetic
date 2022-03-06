@@ -1933,11 +1933,10 @@ index 000000000..c710f766c
          (modify-phases %standard-phases
            (add-before 'install 'remove-unbundled-fonts
              (lambda _
-               (let* ((source (getcwd)))
-                 (with-directory-excursion (string-append source "/fonts")
-                   (for-each delete-file
-                             (list "fontawesome.ttf"
-                                   "material-design-icons.ttf")))))))))
+               (with-directory-excursion "fonts"
+                 (for-each delete-file
+                           (list "fontawesome.ttf"
+                                 "material-design-icons.ttf"))))))))
       (propagated-inputs
        (list font-awesome
              fonts:font-google-material-design-icons))
