@@ -4162,6 +4162,8 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
            :build (:not compile)))
 #+end_src
 ** Projects shared WIP
+- REVIEW does this belong in the top-level org headlines?
+  It doesn't really have anything to do with home environments (yet?) and could conceivably (though hopefully not?) contribute to the system config.
 :PROPERTIES:
 :meta-dir+: /projects
 :END:
@@ -4305,6 +4307,8 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                 "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
 #+end_src
 *** Datomic CLI tools :package:version:
+- TODO =bin/datomic= introduces a dependency (~com.datomic/tools.ops~)
+  Is that something I'd want to include in the package or whatever?
 #+begin_src scheme :tangle (meta-in-dir "datomic.scm")
 (define-module (ebullient home projects datomic)
   #:use-module (guix build-system copy)
