@@ -1561,7 +1561,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
              all-the-icons-fonts
              ;; Optional
              fd))
-      (build-system trivial-build-system)
+      (build-system trivial-build-system) ; TODO use copy-build-system to get the benefits of e.g. shebang patching? Diff the result with a plain git clone.
       (arguments
        `(#:modules ((guix build utils))
          #:builder
