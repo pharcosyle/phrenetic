@@ -1562,13 +1562,11 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
          ;; #:test-command '("./bin/doom" "test")
          #:phases
          ,#~(modify-phases %standard-phases
-              (add-after 'install 'symlink-scripts-to-bin
+              (add-after 'install 'symlink-bin
                 (lambda _
-                  (let ((bin (string-append #$output:bin "/bin")))
-                    (mkdir-p bin)
-                    (for-each (lambda (f)
-                                (symlink f (string-append bin "/" (basename f))))
-                              (find-files (string-append #$output "/bin")))))))))
+                  (mkdir #$output:bin)
+                  (symlink (string-append #$output "/bin")
+                           (string-append #$output:bin "/bin")))))))
       (propagated-inputs
        (list ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
              git
