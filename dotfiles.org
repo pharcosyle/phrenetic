@@ -1511,7 +1511,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (list
        (service-extension
         home-profile-service-type
-        (const (list doom-emacs
+        (const (list '(doom-emacs "bin")
                      font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically
        ;; (service-extension
        ;;  home-files-service-type
@@ -1552,23 +1552,24 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
          (file-name (git-file-name name version))))
       (build-system copy-build-system)
       (arguments
-       `(#:install-plan
-         '(("." "share/doom-emacs/"))
+       `(;; #:install-plan
+         ;; '(("." "share/doom-emacs/"))
          #:phases
          ,#~(modify-phases %standard-phases
               (add-after 'install 'symlink-scripts-to-bin
                 (lambda _
-                  (let ((bin (string-append #$output "/bin")))
+                  (let ((bin (string-append #$output:bin "/bin")))
                     (mkdir-p bin)
                     (for-each (lambda (f)
                                 (symlink f (string-append bin "/" (basename f))))
-                              (find-files (string-append #$output "/share/doom-emacs/bin")))))))))
+                              (find-files (string-append #$output "/bin")))))))))
       (propagated-inputs
        (list ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
              git
              ripgrep
              all-the-icons-fonts
              fd))
+      (outputs '("out" "bin"))
       (synopsis "An Emacs framework for the stubborn martian hacker")
       (description "Doom is a configuration framework for GNU Emacs tailored for
 Emacs bankruptcy veterans who want less framework in their frameworks, a modicum
