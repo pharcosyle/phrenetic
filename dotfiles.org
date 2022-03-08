@@ -1549,7 +1549,9 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
          (sha256
           (base32
            "178bbblcv2sc2np6np1gaknkabr8mgfsc0kg6f3sm8bi89lkmqa1"))
-         (file-name (git-file-name name version))))
+         (file-name (git-file-name name version))
+         (patches
+          (list (local-file "ligatures.patch")))))
       (build-system copy-build-system)
       (arguments
        `(;; #:install-plan
