@@ -1577,6 +1577,72 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (home-page "https://github.com/hlissner/doom-emacs")
       (license license:expat))))
 #+end_src
+****** All-the-icons fonts :package:version:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "fonts.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home fonts)
+  #:use-module (guix build-system font)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
+  #:use-module ((gnu packages fonts) #:select (font-awesome font-google-material-design-icons) #:prefix fonts:)
+  #:use-module (ebullient utils))
+
+(define-public all-the-icons-fonts
+  (let ((base-pkg emacs-all-the-icons)
+        (commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
+        (revision "0"))
+    (package
+      (name "all-the-icons-fonts")
+      (version (git-version (package-version base-pkg) revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url (-> base-pkg package-source origin-uri git-reference-url))
+               (commit commit)))
+         (sha256
+          (base32
+           "1gn5nyyhrvz8w1y5m8lg2khwfir0czjizmdzinr70gd7n8g1xqk9"))
+         (file-name (git-file-name name version))))
+      (build-system font-build-system)
+      (arguments
+       `(#:phases
+         (modify-phases %standard-phases
+           (add-before 'install 'remove-unbundled-fonts
+             (lambda _
+               (with-directory-excursion "fonts"
+                 (for-each delete-file
+                           (list "fontawesome.ttf"
+                                 "material-design-icons.ttf"))))))))
+      (propagated-inputs
+       (list font-awesome
+             fonts:font-google-material-design-icons))
+      (home-page (package-home-page base-pkg))
+      (synopsis (package-synopsis base-pkg))
+      (description (package-description base-pkg))
+      (license (package-license base-pkg)))))
+#+end_src
+******* Font Awesome :package:version:
+#+begin_src scheme
+(define-public font-awesome
+  (let ((base-pkg fonts:font-awesome))
+    (package (inherit base-pkg)
+      (version "6.0.0")
+      (source (origin
+                (method git-fetch)
+                (uri (git-reference
+                      (url (-> base-pkg package-source origin-uri git-reference-url))
+                      (commit version)))
+                (file-name (git-file-name (package-name base-pkg) version))
+                (sha256
+                 (base32
+                  "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8"))))
+      (build-system font-build-system)
+      (arguments '()))))
+#+end_src
 ****** Ligatures patch
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ligatures.patch")
@@ -1896,72 +1962,6 @@ index 000000000..c710f766c
            (split-string (rx "\n"))
            length)))
   (+ initial num-lines))
-#+end_src
-****** All-the-icons fonts :package:version:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "fonts.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient home fonts)
-  #:use-module (guix build-system font)
-  #:use-module (guix git-download)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
-  #:use-module ((gnu packages fonts) #:select (font-awesome font-google-material-design-icons) #:prefix fonts:)
-  #:use-module (ebullient utils))
-
-(define-public all-the-icons-fonts
-  (let ((base-pkg emacs-all-the-icons)
-        (commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
-        (revision "0"))
-    (package
-      (name "all-the-icons-fonts")
-      (version (git-version (package-version base-pkg) revision commit))
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url (-> base-pkg package-source origin-uri git-reference-url))
-               (commit commit)))
-         (sha256
-          (base32
-           "1gn5nyyhrvz8w1y5m8lg2khwfir0czjizmdzinr70gd7n8g1xqk9"))
-         (file-name (git-file-name name version))))
-      (build-system font-build-system)
-      (arguments
-       `(#:phases
-         (modify-phases %standard-phases
-           (add-before 'install 'remove-unbundled-fonts
-             (lambda _
-               (with-directory-excursion "fonts"
-                 (for-each delete-file
-                           (list "fontawesome.ttf"
-                                 "material-design-icons.ttf"))))))))
-      (propagated-inputs
-       (list font-awesome
-             fonts:font-google-material-design-icons))
-      (home-page (package-home-page base-pkg))
-      (synopsis (package-synopsis base-pkg))
-      (description (package-description base-pkg))
-      (license (package-license base-pkg)))))
-#+end_src
-******* Font Awesome :package:version:
-#+begin_src scheme
-(define-public font-awesome
-  (let ((base-pkg fonts:font-awesome))
-    (package (inherit base-pkg)
-      (version "6.0.0")
-      (source (origin
-                (method git-fetch)
-                (uri (git-reference
-                      (url (-> base-pkg package-source origin-uri git-reference-url))
-                      (commit version)))
-                (file-name (git-file-name (package-name base-pkg) version))
-                (sha256
-                 (base32
-                  "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8"))))
-      (build-system font-build-system)
-      (arguments '()))))
 #+end_src
 ****** \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
