@@ -834,7 +834,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                        (kvm #:name (get user #:user/username)
                             #:comment (get user #:user/full-name)
                             #:shell (let ((shell (get user #:user/login-shell)))
-                                      (if (equal shell #:shell/default)
+                                      (if (equal? shell #:shell/default)
                                           default-login-shell shell))
                             #:admin? (get user #:user/admin?))
                        (let ((admin? (get user #:user/admin?))
@@ -2607,7 +2607,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   developer?)
   (let* ((login-shell
           (let ((shell (get (d:pull '(#:user/login-shell) user) #:user/login-shell)))
-            (if (equal shell #:shell/default)
+            (if (equal? shell #:shell/default)
                 default-login-shell shell)))
          (interactive-shell (if developer?
                                 #:shell/zsh login-shell))
