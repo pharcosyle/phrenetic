@@ -1522,6 +1522,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
    svcs))
 #+end_src
 ***** Doom Emacs :package:version:
+- Tests
+  Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc mess stuff). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
 (define-module (ebullient home doom-emacs)
   #:use-module (guix build-system copy)
@@ -1556,6 +1558,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       (arguments
        `(;; #:install-plan
          ;; '(("." "share/doom-emacs/"))
+         ;; #:tests? #t
+         ;; #:test-command '("./bin/doom" "test")
          #:phases
          ,#~(modify-phases %standard-phases
               (add-after 'install 'symlink-scripts-to-bin
