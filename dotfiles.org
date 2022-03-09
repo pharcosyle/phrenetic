@@ -1553,7 +1553,8 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
            "178bbblcv2sc2np6np1gaknkabr8mgfsc0kg6f3sm8bi89lkmqa1"))
          (file-name (git-file-name name version))
          (patches
-          (list (local-file "ligatures.patch")))))
+          (list (local-file "change-paths.patch")
+                (local-file "ligatures.patch")))))
       (build-system copy-build-system)
       (arguments
        `(;; #:install-plan
@@ -1647,6 +1648,87 @@ performance of a hand rolled config (or better).")
                   "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8"))))
       (build-system font-build-system)
       (arguments '()))))
+#+end_src
+****** Change paths patch
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "change-paths.patch")
+:END:
+******* Core
+#+begin_src diff
+diff --git a/core/core.el b/core/core.el
+index 493e9c0e6..344111bde 100644
+--- a/core/core.el
++++ b/core/core.el
+@@ -76,7 +76,9 @@ envvar will enable this at startup.")
+ (defconst doom-local-dir
+   (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
+       (expand-file-name (file-name-as-directory localdir))
+-    (concat doom-emacs-dir ".local/"))
++    (expand-file-name "doom-local/"
++                      (or (getenv-internal "XDG_STATE_HOME")
++                          "~/.local/state")))
+   "Root directory for local storage.
+ 
+ Use this as a storage location for this system's installation of Doom Emacs.
+@@ -84,13 +86,20 @@ Use this as a storage location for this system's installation of Doom Emacs.
+ These files should not be shared across systems. By default, it is used by
+ `doom-etc-dir' and `doom-cache-dir'. Must end with a slash.")
+ 
+-(defconst doom-etc-dir (concat doom-local-dir "etc/")
++(defconst doom-state-dir
++  (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
++      (concat (expand-file-name (file-name-as-directory localdir)) "state/")
++    (expand-file-name "doom/"
++                      (or (getenv-internal "XDG_STATE_HOME")
++                          "~/.local/state"))))
++
++(defconst doom-etc-dir (concat doom-state-dir "etc/")
+   "Directory for non-volatile local storage.
+ 
+ Use this for files that don't change much, like server binaries, external
+ dependencies or long-term shared data. Must end with a slash.")
+ 
+-(defconst doom-cache-dir (concat doom-local-dir "cache/")
++(defconst doom-cache-dir (concat doom-state-dir "cache/")
+   "Directory for volatile local storage.
+ 
+ Use this for files that change often, like cache files. Must end with a slash.")
+@@ -167,7 +176,7 @@ users).")
+ (when NATIVECOMP
+   ;; Don't store eln files in ~/.emacs.d/eln-cache (they are likely to be purged
+   ;; when upgrading Doom).
+-  (add-to-list 'native-comp-eln-load-path (concat doom-cache-dir "eln/"))
++  (add-to-list 'native-comp-eln-load-path (concat doom-local-dir "eln/"))
+ 
+   (with-eval-after-load 'comp
+     ;; HACK Disable native-compilation for some troublesome packages
+@@ -183,7 +192,7 @@ users).")
+ 
+ ;; We avoid `no-littering' because it's a mote too opinionated for our needs.
+ (setq async-byte-compile-log-file  (concat doom-etc-dir "async-bytecomp.log")
+-      custom-file                  (concat doom-private-dir "custom.el")
++      custom-file                  (concat doom-state-dir "custom.el")
+       desktop-dirname              (concat doom-etc-dir "desktop")
+       desktop-base-file-name       "autosave"
+       desktop-base-lock-name       "autosave-lock"
+#+end_src
+******* RSS module
+#+begin_src diff
+diff --git a/modules/app/rss/config.el b/modules/app/rss/config.el
+index a8078d18f..075a5c8a7 100644
+--- a/modules/app/rss/config.el
++++ b/modules/app/rss/config.el
+@@ -20,8 +20,8 @@ easier to scroll through.")
+ (use-package! elfeed
+   :commands elfeed
+   :init
+-  (setq elfeed-db-directory (concat doom-local-dir "elfeed/db/")
+-        elfeed-enclosure-default-dir (concat doom-local-dir "elfeed/enclosures/"))
++  (setq elfeed-db-directory (concat doom-cache-dir "elfeed/db/")
++        elfeed-enclosure-default-dir (concat doom-cache-dir "elfeed/enclosures/"))
+   :config
+   (setq elfeed-search-filter "@2-week-ago "
+         elfeed-show-entry-switch #'pop-to-buffer
 #+end_src
 ****** Ligatures patch
 :PROPERTIES:
