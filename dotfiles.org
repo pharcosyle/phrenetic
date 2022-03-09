@@ -1649,11 +1649,12 @@ performance of a hand rolled config (or better).")
       (build-system font-build-system)
       (arguments '()))))
 #+end_src
-****** Change paths patch
+****** Patches
+******* Change paths
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "change-paths.patch")
 :END:
-******* Core
+******** Core
 #+begin_src diff
 diff --git a/core/core.el b/core/core.el
 index 493e9c0e6..344111bde 100644
@@ -1712,7 +1713,7 @@ index 493e9c0e6..344111bde 100644
        desktop-base-file-name       "autosave"
        desktop-base-lock-name       "autosave-lock"
 #+end_src
-******* RSS module
+******** RSS module
 #+begin_src diff
 diff --git a/modules/app/rss/config.el b/modules/app/rss/config.el
 index a8078d18f..075a5c8a7 100644
@@ -1730,12 +1731,12 @@ index a8078d18f..075a5c8a7 100644
    (setq elfeed-search-filter "@2-week-ago "
          elfeed-show-entry-switch #'pop-to-buffer
 #+end_src
-****** Ligatures patch
+******* Ligatures
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ligatures.patch")
 :END:
 Taken from this as-yet unmerged pull request: [[https://github.com/hlissner/doom-emacs/pull/5082][hlissner/doom-emacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
-******* README.org
+******** README
 #+begin_src diff
 diff --git a/modules/ui/ligatures/README.org b/modules/ui/ligatures/README.org
 index 66d969ff1..ed486dbf6 100644
@@ -1840,7 +1841,7 @@ index 66d969ff1..ed486dbf6 100644
  ,* TODO Troubleshooting
   If you have any problems with this module, do get in touch!
 #+end_src
-******* autoload/ligatures.el
+******** Autoload
 #+begin_src diff
 diff --git a/modules/ui/ligatures/autoload/ligatures.el b/modules/ui/ligatures/autoload/ligatures.el
 index 7856ff7c1..06486a4ec 100644
@@ -1916,7 +1917,7 @@ index 7856ff7c1..06486a4ec 100644
          (setf (alist-get mode +ligatures-extra-alist)
                (if-let (old-results (alist-get mode +ligatures-extra-alist))
 #+end_src
-******* config.el
+******** Config
 #+begin_src diff
 diff --git a/modules/ui/ligatures/config.el b/modules/ui/ligatures/config.el
 index 484945ceb..3958aefbd 100644
@@ -2015,7 +2016,7 @@ index 484945ceb..3958aefbd 100644
   ;; Fallback ligature support for certain, patched fonts. Install them with
   ;; `+ligatures/install-patched-font'
 #+end_src
-******* packages.el
+******** Packages
 #+begin_src diff :noweb yes
 diff --git a/modules/ui/ligatures/packages.el b/modules/ui/ligatures/packages.el
 new file mode 100644
@@ -2029,7 +2030,7 @@ index 000000000..c710f766c
 +           (featurep 'composite))
 +  <<ligature-package>>)
 #+end_src
-******** ligature.el package :version:
+********* ligature.el package :version:
 :PROPERTIES:
 :header-args+: :tangle no
 :END:
