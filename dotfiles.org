@@ -3973,7 +3973,7 @@ Can be an integer to determine the exact padding."
                        (add-to-list 'geiser-guile-load-path root-dir)))))
 #+end_src
 ***** Nyxt
-- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages.
+- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages. Also the changes it makes persist (modify ~lisp-imenu-generic-expression~), I don't know if that's a good idae.
 #+begin_src elisp
 (pushnew! safe-local-variable-values
           '(eval . (cl-flet ((enhance-imenu-lisp
