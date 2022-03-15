@@ -3563,6 +3563,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;   (after! copyright
 ;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
 #+end_src
+****** guix-packaging :persistence:path:
+#+begin_src elisp
+(use-package! guix-packaging
+  :defer t
+  :init
+  (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
+#+end_src
 ***** ?
 ****** avy
 #+begin_src elisp
@@ -4211,7 +4218,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
   :recipe (:host github
            :repo "ryanprior/emacs-guix-packaging"
            :files (:defaults "snippets"))
-  :pin "d843088252467db3c8a09de40ae9a62050196a0e")
+  :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
 
 (package! bluetooth :pin "a1ea361f17c6b4e5353160539cd3df6754007a9d") ; TODO just maybe make this dependent on my "bluetooth feature"
 
