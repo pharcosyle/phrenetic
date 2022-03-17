@@ -4244,7 +4244,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 
 ;; TODO do hardcoded path better?
-;; TODO currently donnager is part of my dotfiles but if that isn't going to be the case I might like to make my dotfiles able to work in a "self-contained" fashion by providing a fallback in case it isn't available. To a github repo, or somehing.
+;; TODO currently donnager is part of my dotfiles but if that isn't going to be the case I might like to make my dotfiles able to work in a "self-contained" fashion by providing a fallback in case it isn't available. To a github repo, or somehing. Actually can/should I do something like `out-of-band.el' and have donnager compiled and used like a regular package BUT prefer using the source in ~/projects if available. Does straight support doing things like this? Implement it myself if not?
 (package! donnager
   :recipe (:local-repo "~/projects/dotfiles/donnager"
            ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
