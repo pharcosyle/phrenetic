@@ -47,7 +47,8 @@
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
 #+end_src
-* Common
+* Guix
+** Common
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
@@ -76,7 +77,7 @@
 
 (define-public default-login-shell #:shell/bash)
 #+end_src
-** Channels
+*** Channels
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "channels.scm")
 :END:
@@ -96,7 +97,7 @@
                      (map channel-name cs)))
            %default-channels)))
 #+end_src
-*** Definitions
+**** Definitions
 #+begin_src scheme
 (define guix %default-guix-channel)
 
@@ -114,7 +115,7 @@
   (kvm #:channel/guix guix
        #:channel/nonguix nonguix))
 #+end_src
-** \
+*** \
 #+begin_src sh :var name="" dir=""
 guix time-machine \
 	--load-path=. \
@@ -126,8 +127,8 @@ guix time-machine \
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
-* Installation
-** Create bootable USB
+** Installation
+*** Create bootable USB
 Download (or create) a Guix installation ISO
 - I'm using the [[https://github.com/SystemCrafters/guix-installer/releases/latest][System Crafters Guix Installer]] since it's kept up-to-date which should speed things up a bit.
 - Run ~lsblk~ to find the usb device.
@@ -137,15 +138,15 @@ usb_device=/dev/sdc
 dd if=$iso_file of=$usb_device status=progress bs=4M
 sync
 #+end_src
-** Install
+*** Install
 Boot from the installation medium, select your language and country, and select "Install using the shell based process" when prompted.
-*** Keyboard layout
+**** Keyboard layout
 This messed up the keyboard when I tried it on mac, not doing ~loadkeys~ at all was fine.
 #+begin_src sh
 # keysfile=mac-us
 # loadkeys $keysfile
 #+end_src
-*** Networking
+**** Networking
 #+begin_src sh
 # List network interfaces and find one to use.
 ifconfig -a
@@ -159,7 +160,7 @@ dhclient -v $interface
 # Test that networking is up and working.
 ping -c 3 gnu.org
 #+end_src
-*** Partitioning
+**** Partitioning
 #+begin_src sh
 # Check out the current block devices and partitions if you want.
 lsblk
@@ -185,7 +186,7 @@ cryptsetup open --type luks $root_partition $crypt_name
 
 mkfs.btrfs -L $root_label $crypt_mapping
 #+end_src
-*** Set up subvolumes
+**** Set up subvolumes
 #+begin_src sh
 # I don't know if the type argument is necessary but that's how Andrew Tropin had it.
 mount -t btrfs LABEL=$root_label /mnt
@@ -204,7 +205,7 @@ btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
 
 umount /mnt
 #+end_src
-*** Mount
+**** Mount
 NB: ~$crypt_mapping~ can/"should" be ~LABEL=$root_label~
 #+begin_src sh
 mount -o subvol=root,compress=zstd,autodefrag $crypt_mapping /mnt
@@ -225,11 +226,11 @@ mount -o subvol=persist,compress=zstd,autodefrag $crypt_mapping /mnt/.persist
 mkdir -p /mnt/boot/efi
 mount LABEL=$efi_label /mnt/boot/efi
 #+end_src
-*** Proceeding with installation
+**** Proceeding with installation
 #+begin_src sh
 herd start cow-store /mnt
 #+end_src
-*** System configuration
+**** System configuration
 #+begin_src sh
 # Grab my dotfiles, from github if I put them up at some point or maybe from a USB or another computer with `woof`, into the current directory (the one I'm already in, not `/mnt`).
 # git clone https://github.com/pharcosyle/phrenetic
@@ -247,7 +248,7 @@ cryptsetup luksUUID $root_partition
 cd ~/projects/phrenetic/ebullient
 guix system --load-path=. init system/frostfire.scm /mnt
 #+end_src
-*** Post-installation
+**** Post-installation
 #+begin_src sh
 # Reboot the system, take out the installation medium, and login as root when faced with a login prompt.
 
@@ -266,7 +267,7 @@ guix pull
 
 # Run a system reconfigure, home reconfigure, install manifests, and deploy `home-state.git`. Copy over all my old data.
 #+end_src
-* System
+** System
 :PROPERTIES:
 :meta-dir+: /ebullient/system
 :END:
@@ -282,7 +283,7 @@ guix pull
 | :user/aux     | pcoulson         | true           |                  |
 | :user/guest   | gandalf          |                | mellon           |
 
-** Channels
+*** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels.scm")
 (define-module (ebullient system channels)
   #:use-module ((donnager client) #:prefix d:)
@@ -301,7 +302,7 @@ guix pull
 
 (define system-channel-map channel-map)
 #+end_src
-** Components
+*** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
 :END:
@@ -372,7 +373,7 @@ guix pull
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 #+end_src
-*** Barebones OS
+**** Barebones OS
 #+begin_src scheme
 (define barebones-os
   (operating-system
@@ -382,17 +383,17 @@ guix pull
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-*** Host info
+**** Host info
 #+begin_src scheme
 (define-system-comp (host-info #:key host-name timezone locale)
   (host-name host-name)
   (timezone timezone)
   (locale locale))
 #+end_src
-*** Boot
-**** Grub
+**** Boot
+***** Grub
 ...
-**** Grub EFI
+***** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key label target)
   (bootloader (bootloader-configuration
@@ -406,7 +407,7 @@ guix pull
             (type "vfat"))
           (operating-system-file-systems os))))
 #+end_src
-*** Base services and packages
+**** Base services and packages
 #+begin_src scheme
 (define-system-comp (base-services+packages)
   (packages
@@ -416,7 +417,7 @@ guix pull
    (append %base-services
            (operating-system-user-services os))))
 #+end_src
-*** Linux nonfree
+**** Linux nonfree
 #+name: db/feature-linux-nonfree
 | =:db/id=               | =:entity/channel-deps= |
 |------------------------+------------------------|
@@ -429,7 +430,7 @@ guix pull
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
 #+end_src
-*** Disk encryption
+**** Disk encryption
 #+begin_src scheme
 (define* (disk-encryption os #:key source-uuid target encrypted-mount-points)
   (let ((encrypted-device (mapped-device
@@ -451,7 +452,7 @@ guix pull
                  fs))
            (operating-system-file-systems os))))))
 #+end_src
-*** Stateless
+**** Stateless
 The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so users of this component should include it at the end of their component chain.
 #+begin_src scheme
 (define-system-comp (stateless #:key persist-dir bluetooth?)
@@ -486,7 +487,7 @@ The stateless service should come after base/desktop services (potentially other
                           (if bluetooth?
                               (list "/var/lib/bluetooth") '()))))))))
 #+end_src
-**** Service
+***** Service
 #+begin_src scheme
 (define save-or-restore-users+groups
   #~(lambda (persist-dir save-or-restore)
@@ -567,10 +568,10 @@ The stateless service should come after base/desktop services (potentially other
           (service-extension activation-service-type
                              activate-state-gexp)))))
 #+end_src
-*** File systems
-**** Ext4
+**** File systems
+***** Ext4
 ...
-**** Btrfs
+***** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key label subvols)
   (file-systems
@@ -585,7 +586,7 @@ The stateless service should come after base/desktop services (potentially other
          subvols)
     (operating-system-file-systems os))))
 #+end_src
-*** Users
+**** Users
 #+begin_src scheme
 (define* (account #:key name comment shell admin? password salt bluetooth?)
   (user-account
@@ -614,7 +615,7 @@ The stateless service should come after base/desktop services (potentially other
                 who)
            (operating-system-users os))))
 #+end_src
-*** Nonguix substitutes
+**** Nonguix substitutes
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
@@ -631,22 +632,22 @@ The stateless service should come after base/desktop services (potentially other
         (append (guix-configuration-authorized-keys config)
                 (list (local-file "substitutes.nonguix.org.pub")))))))))
 #+end_src
-**** Signing key
+***** Signing key
 #+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-*** Nix
+**** Nix
 #+begin_src scheme
 (define-system-comp (nix)
   (services
    (cons* (service nix-service-type)
           (operating-system-user-services os))))
 #+end_src
-*** Console
-**** Console keyboard layouts
+**** Console
+***** Console keyboard layouts
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key keyboard-layout)
   (keyboard-layout keyboard-layout)
@@ -654,7 +655,7 @@ The stateless service should come after base/desktop services (potentially other
                (inherit (operating-system-bootloader os))
                (keyboard-layout keyboard-layout))))
 #+end_src
-**** HiDPI console font
+***** HiDPI console font
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
   (services
@@ -667,8 +668,8 @@ The stateless service should come after base/desktop services (potentially other
                    (file-append font-terminus "/share/consolefonts/ter-132n")))
            config)))))
 #+end_src
-*** Desktop
-**** Desktop services
+**** Desktop
+***** Desktop services
 #+begin_src scheme
 (define-system-comp (desktop-services #:key pipewire? bluetooth?)
   (services
@@ -680,7 +681,7 @@ The stateless service should come after base/desktop services (potentially other
      ;;     (cons* (bluetooth-service #:auto-enable? #t) $))
      )))
 #+end_src
-***** Pipewire
+****** Pipewire
 #+begin_src scheme
 (define (with-pipewire services)
   (as-> services $
@@ -690,7 +691,7 @@ The stateless service should come after base/desktop services (potentially other
                                pipewire-0.3)
            $)))
 #+end_src
-***** \
+****** \
 #+begin_src scheme
 (define (remove-services services kinds)
   (remove (lambda (s)
@@ -703,8 +704,8 @@ The stateless service should come after base/desktop services (potentially other
                            (list gdm-service-type
                                  screen-locker-service-type))))
 #+end_src
-**** Display managers
-***** GDM
+***** Display managers
+****** GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key wayland? auto-login)
   (services
@@ -715,15 +716,15 @@ The stateless service should come after base/desktop services (potentially other
                     (wayland? wayland?)))
           (operating-system-user-services os))))
 #+end_src
-**** Desktop environments
-***** Gnome
+***** Desktop environments
+****** Gnome
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
    (cons* (service gnome-desktop-service-type)
           (operating-system-user-services os))))
 #+end_src
-**** Window managers
+***** Window managers
 #+begin_src scheme
 (define-system-comp (wm #:key package services)
   (packages
@@ -733,7 +734,7 @@ The stateless service should come after base/desktop services (potentially other
    (append services
            (operating-system-user-services os))))
 #+end_src
-***** Sway
+****** Sway
 #+begin_src scheme
 (define* (sway-wm os #:key laptop?)
   (wm os
@@ -742,20 +743,20 @@ The stateless service should come after base/desktop services (potentially other
                         (if laptop?
                             (list brightnessctl-udev-rules) '()))))
 #+end_src
-**** Screen lockers
-***** Swaylock
+***** Screen lockers
+****** Swaylock
 #+begin_src scheme
 (define swaylock-service
   (screen-locker-service swaylock))
 #+end_src
-**** Backlight
-***** Brightnessctl
+***** Backlight
+****** Brightnessctl
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
-*** Macbook
-**** Wireless
+**** Macbook
+***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
 
 #+name: db/feature-macbook
@@ -784,12 +785,12 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                                             (string-append blacklist "," new)))
       (cons* (string-append blacklist-param "=" new) kernel-args)))
 #+end_src
-**** Keyboard layout
+***** Keyboard layout
 #+begin_src scheme
 (define macbook-kbl
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
-** Base OS
+*** Base OS
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
   #:use-module ((donnager client) #:prefix d:)
@@ -918,11 +919,11 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                                  #:bluetooth? bluetooth?)
                       $))))))))
 #+end_src
-** Operating Systems
+*** Operating Systems
 :PROPERTIES:
 :meta-dir+: /os
 :END:
-*** Frostfire
+**** Frostfire
 #+name: db/systems-frostfire
 | =:db/id=          | =:system/features=                                                                  |
 |-------------------+-------------------------------------------------------------------------------------|
@@ -944,14 +945,14 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
            #:laptop? #t
            #:bluetooth? #t))
 #+end_src
-**** Channel deps
+***** Channel deps
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (use-modules (ebullient system channels))
 
 (get-system-channels
  (system-channel-deps #:system/frostfire))
 #+end_src
-**** Channels lock :version:
+***** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
         (name 'guix)
@@ -976,12 +977,12 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
-**** LUKS UUID :external_state:
+***** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
 #+begin_src org
 bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
-** \
+*** \
 #+begin_src sh :var os_name="" os_dir=(meta-get-dir)
 sudo guix time-machine \
 	--channels="$os_dir"/$os_name-channels-lock \
@@ -991,7 +992,7 @@ sudo guix time-machine \
 	--expression="(@ (ebullient system os $os_name) os)" \
 	reconfigure
 #+end_src
-* Home
+** Home
 :PROPERTIES:
 :meta-dir+: /ebullient/home
 :END:
@@ -1048,7 +1049,7 @@ sudo guix time-machine \
 #+begin_src sh
 ~/.guix-extra-profiles
 #+end_src
-** Channels
+*** Channels
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "channels.scm")
 :END:
@@ -1074,7 +1075,7 @@ sudo guix time-machine \
         (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
         (map (partial get home-channel-map) $)))
 #+end_src
-*** Definitions
+**** Definitions
 #+begin_src scheme
 (define rde
   (channel
@@ -1096,14 +1097,14 @@ sudo guix time-machine \
      (openpgp-fingerprint
       "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
 #+end_src
-*** \
+**** \
 #+begin_src scheme
 (define home-channel-map
   (merge channel-map
          (kvm #:channel/rde rde
               #:channel/flat flat)))
 #+end_src
-** Components
+*** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
 :END:
@@ -1145,7 +1146,7 @@ sudo guix time-machine \
             network-manager-service-type
             udiskie-service-type))
 #+end_src
-*** Shells
+**** Shells
 #+begin_src scheme
 (define* (he-shells svcs #:key login-shell interactive-shell)
   (append
@@ -1176,7 +1177,7 @@ sudo guix time-machine \
                            ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
    svcs))
 #+end_src
-**** Login shell service
+***** Login shell service
 #+begin_src scheme
 (define (he-login-shell-service-type shell)
   (service-type
@@ -1206,15 +1207,15 @@ sudo guix time-machine \
           ))))
    (default-value (kvm))))
 #+end_src
-**** Bash
-***** Bashrc
+***** Bash
+****** Bashrc
 ...
-**** Zsh
-***** Zshrc
+***** Zsh
+****** Zshrc
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "zshrc")
 :END:
-****** Andrew Tropin's zshrc
+******* Andrew Tropin's zshrc
 - TODO trying out Andrew Tropin's zsh configuration verbatim for now
 #+begin_src sh
 # Prevent freezing output on ^s, needed for various isearches
@@ -1325,17 +1326,17 @@ alias ls='ls -p --color=auto'
 alias ll='ls -l'
 alias grep='grep --color=auto'
 #+end_src
-****** History
+******* History
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
 #+end_src
-*** Extra profiles
-**** login shell profile wip
+**** Extra profiles
+***** login shell profile wip
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "profile")
 :END:
-***** Use Guix extra profiles
+****** Use Guix extra profiles
 #+begin_src sh :noweb yes
 gepp="<<guix-extra-profiles-path>>"
 GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
@@ -1372,7 +1373,7 @@ for i in $GUIX_EXTRA_PROFILES/*; do
   unset profile
 done
 #+end_src
-*** Nix
+**** Nix
 #+begin_src scheme
 (define (he-nix svcs)
   (cons*
@@ -1391,41 +1392,41 @@ done
      (default-value #f)))
    svcs))
 #+end_src
-**** Load Nix environment
+***** Load Nix environment
 #+begin_src sh
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
 fi
 #+end_src
-**** Nix channels
+***** Nix channels
 #+begin_src conf :tangle (meta-in-dir "nix-channels")
 https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+end_src
-**** Nixpkgs config
+***** Nixpkgs config
 #+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
-**** Nix WIP
+***** Nix WIP
 Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
-***** Update channels
+****** Update channels
 #+begin_src sh :results output silent :async
 nix-channel --update
 #+end_src
-***** "Manifest"
+****** "Manifest"
 - TODO might want to / see if I can make this a simple bulleted list I pass with :var to source block(s)
 #+name: nix-packages
 #+begin_src org
 google-chrome zoom-us
 #+end_src
-***** Install packages
+****** Install packages
 #+begin_src sh :results output silent :async :noweb yes
 nix-env --install <<nix-packages>>
 #+end_src
-***** Upgrade packages
+****** Upgrade packages
 #+begin_src sh :results output silent :async
 nix-env --upgrade
 #+end_src
-*** Emacs
+**** Emacs
 #+begin_src scheme
 (define* (he-emacs svcs #:key zsh-vterm? config)
   (cons*
@@ -1459,7 +1460,7 @@ nix-env --upgrade
      (or config
          (kvm #:emacs emacs-29-pgtk+native-comp)))))
 #+end_src
-**** Configure zsh for vterm
+***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
 vterm_printf(){
     if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
@@ -1481,7 +1482,7 @@ vterm_prompt_end() {
 setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
-**** Emacs 29 with pgtk + native comp :package:version:
+***** Emacs 29 with pgtk + native comp :package:version:
 #+begin_src scheme :tangle (meta-in-dir "emacs.scm")
 (define-module (ebullient home emacs)
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
@@ -1500,7 +1501,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
    #:git-commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0"
    #:checksum "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
 #+end_src
-**** Doom
+***** Doom
 #+begin_src scheme
 (define (he-doom svcs)
   (cons*
@@ -1523,7 +1524,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
      (default-value #f)))
    svcs))
 #+end_src
-***** Doom Emacs :package:version:
+****** Doom Emacs :package:version:
 Tests:
 Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc mess stuff). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
@@ -1585,7 +1586,7 @@ performance of a hand rolled config (or better).")
       (home-page "https://github.com/hlissner/doom-emacs")
       (license license:expat))))
 #+end_src
-****** Emacs packages :package:version:
+******* Emacs packages :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
 :END:
@@ -1600,7 +1601,7 @@ performance of a hand rolled config (or better).")
   #:use-module ((gnu packages emacs-xyz) #:prefix emacs-xyz:)
   #:use-module ((gnu packages compression) #:select (unzip)))
 #+end_src
-******* tldr
+******** tldr
 #+begin_src scheme
 (define-public emacs-tldr
   (package
@@ -1616,7 +1617,7 @@ performance of a hand rolled config (or better).")
     (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
               (prepend tldr-pages)))))
 #+end_src
-******** tldr pages
+********* tldr pages
 #+begin_src scheme
 (define-public tldr-pages
   (let ((commit "7ee7ed0f4afc90ef05b1dde87f6fec5b462a0394")
@@ -1640,7 +1641,7 @@ performance of a hand rolled config (or better).")
       (description synopsis)
       (license license:cc-by4.0))))
 #+end_src
-****** all-the-icons fonts :package:version:
+******* all-the-icons fonts :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "fonts.scm")
 :END:
@@ -1688,7 +1689,7 @@ performance of a hand rolled config (or better).")
       (description (package-description base-pkg))
       (license (package-license base-pkg)))))
 #+end_src
-******* Font Awesome :package:version:
+******** Font Awesome :package:version:
 #+begin_src scheme
 (define-public font-awesome
   (let ((base-pkg fonts:font-awesome))
@@ -1706,12 +1707,12 @@ performance of a hand rolled config (or better).")
       (build-system font-build-system)
       (arguments '()))))
 #+end_src
-****** Patches
-******* Change paths
+******* Patches
+******** Change paths
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "change-paths.patch")
 :END:
-******** Core
+********* Core
 #+begin_src diff
 diff --git a/core/core.el b/core/core.el
 index 493e9c0e6..344111bde 100644
@@ -1770,7 +1771,7 @@ index 493e9c0e6..344111bde 100644
        desktop-base-file-name       "autosave"
        desktop-base-lock-name       "autosave-lock"
 #+end_src
-******** RSS module
+********* RSS module
 #+begin_src diff
 diff --git a/modules/app/rss/config.el b/modules/app/rss/config.el
 index a8078d18f..075a5c8a7 100644
@@ -1788,12 +1789,12 @@ index a8078d18f..075a5c8a7 100644
    (setq elfeed-search-filter "@2-week-ago "
          elfeed-show-entry-switch #'pop-to-buffer
 #+end_src
-******* Ligatures
+******** Ligatures
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ligatures.patch")
 :END:
 Taken from this as-yet unmerged pull request: [[https://github.com/hlissner/doom-emacs/pull/5082][hlissner/doom-emacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
-******** README
+********* README
 #+begin_src diff
 diff --git a/modules/ui/ligatures/README.org b/modules/ui/ligatures/README.org
 index 66d969ff1..ed486dbf6 100644
@@ -1898,7 +1899,7 @@ index 66d969ff1..ed486dbf6 100644
  ,* TODO Troubleshooting
   If you have any problems with this module, do get in touch!
 #+end_src
-******** Autoload
+********* Autoload
 #+begin_src diff
 diff --git a/modules/ui/ligatures/autoload/ligatures.el b/modules/ui/ligatures/autoload/ligatures.el
 index 7856ff7c1..06486a4ec 100644
@@ -1974,7 +1975,7 @@ index 7856ff7c1..06486a4ec 100644
          (setf (alist-get mode +ligatures-extra-alist)
                (if-let (old-results (alist-get mode +ligatures-extra-alist))
 #+end_src
-******** Config
+********* Config
 #+begin_src diff
 diff --git a/modules/ui/ligatures/config.el b/modules/ui/ligatures/config.el
 index 484945ceb..3958aefbd 100644
@@ -2073,7 +2074,7 @@ index 484945ceb..3958aefbd 100644
   ;; Fallback ligature support for certain, patched fonts. Install them with
   ;; `+ligatures/install-patched-font'
 #+end_src
-******** Packages
+********* Packages
 #+begin_src diff :noweb yes
 diff --git a/modules/ui/ligatures/packages.el b/modules/ui/ligatures/packages.el
 new file mode 100644
@@ -2087,7 +2088,7 @@ index 000000000..c710f766c
 +           (featurep 'composite))
 +  <<ligature-package>>)
 #+end_src
-********* ligature.el package :version:
+********** ligature.el package :version:
 :PROPERTIES:
 :header-args+: :tangle no
 :END:
@@ -2108,10 +2109,10 @@ index 000000000..c710f766c
            length)))
   (+ initial num-lines))
 #+end_src
-****** \
+******* \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
   https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
-*** Direnv
+**** Direnv
 #+begin_src scheme
 (define* (he-direnv svcs #:key shell)
   (cons*
@@ -2144,8 +2145,8 @@ index 000000000..c710f766c
      (default-value #f)))
    svcs))
 #+end_src
-*** Desktop
-**** Pipewire
+**** Desktop
+***** Pipewire
 #+begin_src scheme
 (define (he-pipewire svcs)
   (cons*
@@ -2211,7 +2212,7 @@ index 000000000..c710f766c
      (default-value #f)))
    svcs))
 #+end_src
-**** Flatpak
+***** Flatpak
 #+begin_src scheme
 (define (he-flatpak svcs)
   (cons*
@@ -2228,11 +2229,11 @@ index 000000000..c710f766c
      (default-value #f)))
    svcs))
 #+end_src
-***** Make Flatpak apps visible
+****** Make Flatpak apps visible
 #+begin_src sh
 export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
-***** WIP Flatpak
+****** WIP Flatpak
 Ran these manually
 #+begin_src sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -2240,8 +2241,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # flatpak install --user flathub com.spotify.Client
 # flatpak install --user flathub us.zoom.Zoom
 #+end_src
-**** Window managers
-***** Sway
+***** Window managers
+****** Sway
 #+begin_src scheme
 (define-module (rde features wm)
   #:use-module (rde features)
@@ -2616,7 +2617,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (home-services-getter get-home-services)
    (system-services-getter get-system-services)))
 #+end_src
-****** Sway old WIP
+******* Sway old WIP
 #+begin_src scheme
 (define (sway-env-vars env-vars)
   (simple-service 'set-sway-env-vars
@@ -2652,14 +2653,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                    `((include "/home/pharcosyle/projects/phrenetic/config"))))
     (rde-config))))
 #+end_src
-**** Screen lockers
-***** Swaylock
-**** Idle management
-***** Swayidle
-**** Status bars
-***** Waybar
-**** Applets
-***** Gammastep
+***** Screen lockers
+****** Swaylock
+***** Idle management
+****** Swayidle
+***** Status bars
+****** Waybar
+***** Applets
+****** Gammastep
 - TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
 #+begin_src scheme
 (define (gammastep-shepherd-service _)
@@ -2684,7 +2685,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         gammastep-shepherd-service)))
                 (default-value #f)))
 #+end_src
-***** Network Manager
+****** Network Manager
 #+begin_src scheme
 (define (network-manager-shepherd-service _)
   (list
@@ -2708,7 +2709,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         network-manager-shepherd-service)))
                 (default-value #f)))
 #+end_src
-***** Udiskie
+****** Udiskie
 #+begin_src scheme
 (define (udiskie-shepherd-service _)
   (list
@@ -2736,7 +2737,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         udiskie-shepherd-service)))
                 (default-value #f)))
 #+end_src
-** Base HE
+*** Base HE
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
@@ -2794,11 +2795,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                           (he-sway $) $)))
                 $)))))))
 #+end_src
-** Home environments
+*** Home environments
 :PROPERTIES:
 :meta-dir+: /he
 :END:
-*** Solitude
+**** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
 (define-module (ebullient home he solitude)
   #:use-module (ebullient home base-he)
@@ -2809,7 +2810,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            #:account #:user/primary
            #:developer? #t))
 #+end_src
-**** Solitude old WIP
+***** Solitude old WIP
 #+begin_src scheme
 (define-module (ebullient home he solitude)
   #:use-module (ebullient home base-he)
@@ -2891,14 +2892,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;;                       "git@git.sr.ht:~abcdw/rde"))))
      ))))
 #+end_src
-**** Channel deps
+***** Channel deps
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (use-modules (ebullient home channels))
 
 (get-home-channels
  (user-channel-deps #:user/primary))
 #+end_src
-**** Channels lock
+***** Channels lock
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
 (list (channel
         (name 'guix)
@@ -2945,7 +2946,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
-** \
+*** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
 guix pull --channels="$he_dir"/$he_name-channels-lock
 #+end_src
@@ -2955,16 +2956,16 @@ guix home \
 	--expression="(@ (ebullient home he $he_name) he)" \
 	reconfigure
 #+end_src
-** Guix extra profiles
+*** Guix extra profiles
 :PROPERTIES:
 :meta-dir+: /manifests
 :END:
-*** Manifests
+**** Manifests
 #+name: guix-extra-profile-path
 #+begin_src sh :var profileName="" :noweb yes
 echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+end_src
-**** Multiverse :manifest:
+***** Multiverse :manifest:
 #+begin_src scheme :tangle (meta-in-dir "multiverse")
 (specifications->manifest
  '("btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
@@ -2999,7 +3000,7 @@ echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
 #+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
 "<<guix-extra-profile-path("multiverse")>>"
 #+end_src
-*** \
+**** \
 #+name: install-profiles
 #+begin_src sh :results output silent :dir (meta-get-dir) :noweb yes :async
 gepp="<<guix-extra-profiles-path>>"
@@ -3036,11 +3037,11 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
-** Doom private
+*** Doom private
 :PROPERTIES:
 :meta-dir+: /doom-private
 :END:
-*** Init
+**** Init
 #+begin_src elisp :tangle (meta-in-dir "init.el")
 ;;; -*- lexical-binding: t; -*-
 
@@ -3125,7 +3126,7 @@ done
        :config
        (default +bindings +smartparens))
 #+end_src
-*** Config
+**** Config
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "config.el")
 :END:
@@ -3135,12 +3136,12 @@ done
 (use-package! dash)
 (use-package! s)
 #+end_src
-**** Personal Info :user:
+***** Personal Info :user:
 #+begin_src elisp :noweb yes
 (setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>>
       user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
 #+end_src
-**** Locals :path:
+***** Locals :path:
 #+begin_src elisp
 (defconst biome--org-dir (concat org-directory "~/org"))
 (defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
@@ -3154,7 +3155,7 @@ done
   (let ((k (-> color symbol-name (substring 1))))
     (cadr (assoc k palette))))
 #+end_src
-**** General :UI:path:
+***** General :UI:path:
 #+begin_src elisp
 ;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
 (setq org-directory biome--org-dir)
@@ -3165,14 +3166,14 @@ done
 ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
 ;; (setq display-line-numbers-type nil)
 #+end_src
-***** Doom resets
+****** Doom resets
 #+begin_src elisp
 (setq-default indent-tabs-mode t)
 
 ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
 ;; (setq-default cursor-in-non-selected-windows t)
 #+end_src
-***** Doom
+****** Doom
 #+begin_src elisp
 ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
 (add-hook! 'doom-real-buffer-functions
@@ -3190,11 +3191,11 @@ done
          eol)
      (buffer-name buf))))
 #+end_src
-**** Keybindings :bindings:
+***** Keybindings :bindings:
 #+begin_src elisp
 (setq help-char (string-to-char "\C-_"))
 #+end_src
-***** Translations
+****** Translations
 #+begin_src elisp
 (defun biome--trans (&rest rest)
   (-each (-partition 2 rest)
@@ -3209,13 +3210,13 @@ done
               "s-k" "<up>"
               "s-l" "<right>")
 #+end_src
-***** Leader/localleader
+****** Leader/localleader
 #+begin_src elisp
 (setq doom-leader-alt-key "s-SPC"
       doom-localleader-key "s-m"
       doom-localleader-alt-key "s-m")
 #+end_src
-***** General
+****** General
 #+begin_src elisp
 (defalias 'original-yank-pop #'yank-pop)
 
@@ -3283,33 +3284,33 @@ done
         "s" #'org-gcal-sync
         "p" #'org-gcal-post-at-point)))
 #+end_src
-**** Modules
-***** Completion
-****** Vertico
-******* vertico
+***** Modules
+****** Completion
+******* Vertico
+******** vertico
 #+begin_src elisp
 (after! vertico
   (map! :map vertico-map
         "DEL" #'vertico-directory-delete-char))
 #+end_src
-***** UI
-****** Doom
-******* doom-themes
+****** UI
+******* Doom
+******** doom-themes
 - TODO get rid of this if I'm not going to try it out again
 #+begin_src elisp
 ;; (after! doom-themes
 ;;   (doom-themes-visual-bell-config))
 #+end_src
-****** Modeline
-******* doom-modeline
+******* Modeline
+******** doom-modeline
 #+begin_src elisp
 (after! doom-modeline
   ;; (setq doom-modeline-checker-simple-format nil)
   (setq doom-modeline-major-mode-icon t)
   (setq doom-modeline-persp-name t))
 #+end_src
-****** Indent Guides
-******* highlight-indent-guides :prog_mode:
+******* Indent Guides
+******** highlight-indent-guides :prog_mode:
 #+begin_src elisp
 (use-package! highlight-indent-guides
   :defer t
@@ -3320,8 +3321,8 @@ done
                   conf-mode-hook)
     #'highlight-indent-guides-mode))
 #+end_src
-****** Ligatures
-******* ligature
+******* Ligatures
+******** ligature
 #+begin_src elisp :tangle (meta-in-dir "init.el")
 (use-package-hook! ligature
   :pre-config
@@ -3346,9 +3347,9 @@ done
           "*)" "://"))
   t)
 #+end_src
-***** Editor
-****** Evil
-******* evil :bindings:theming:
+****** Editor
+******* Evil
+******** evil :bindings:theming:
 #+begin_src elisp
 (after! evil
   (defun biome--set-theme-cursor-color-symbols ()
@@ -3362,14 +3363,14 @@ done
 
   (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
 #+end_src
-****** Multiple Cursors
-******* evil-multiedit :evil:
+******* Multiple Cursors
+******** evil-multiedit :evil:
 #+begin_src elisp
 (after! evil-multiedit
   (setq evil-multiedit-follow-matches t))
 #+end_src
-****** Lisp
-******* lispy
+******* Lisp
+******** lispy
 #+begin_src elisp
 (use-package! lispy
   :defer t
@@ -3388,7 +3389,7 @@ done
     #'lispy-mode)
   (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 #+end_src
-******* lispyville :prog_mode:bindings:
+******** lispyville :prog_mode:bindings:
 #+begin_src elisp
 (use-package! lispyville
   :hook (prog-mode . lispyville-mode)
@@ -3410,9 +3411,9 @@ done
         (:prefix "C-s-;"
          "R" #'lispyville-raise-list)))
 #+end_src
-***** Emacs
-****** Dired
-******* dired-x :UI:hidden:
+****** Emacs
+******* Dired
+******** dired-x :UI:hidden:
 Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
 - TODO dired buffers always marked modified
   *wait to do this until I do my dired project*
@@ -3428,23 +3429,23 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
     (defun require-dired-x-h ()
       (require 'dired-x))))
 #+end_src
-***** Term
-****** eshell :persistence:
+****** Term
+******* eshell :persistence:
 #+begin_src elisp
 (after! eshell
   (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
 #+end_src
-***** Tools
-****** Magit
-******* magit :UI:
+****** Tools
+******* Magit
+******** magit :UI:
 #+begin_src elisp
 (after! magit
   (setq git-commit-style-convention-checks '(non-empty-second-line))
   (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
 #+end_src
-***** Lang
-****** Clojure
-******* clojure :bindings:theming:
+****** Lang
+******* Clojure
+******** clojure :bindings:theming:
 #+begin_src elisp
 (use-package! clojure-mode
   :defer t
@@ -3455,7 +3456,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (custom-theme-set-faces! biome--theme
     `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
 #+end_src
-******* cider :persistence:
+******** cider :persistence:
 #+begin_src elisp
 (after! cider
   (setq cider-repl-history-size biome--very-big
@@ -3470,19 +3471,19 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
              #'yas-minor-mode-on
              #'biome-sp-strict-h))
 #+end_src
-******* clj-refactor :bindings:
+******** clj-refactor :bindings:
 #+begin_src elisp
 (after! clj-refactor
   (cljr-add-keybindings-with-prefix "s-M R")) ; REVIEW temporary binding
 #+end_src
-****** Emacs Lisp
-******* emacs-lisp
+******* Emacs Lisp
+******** emacs-lisp
 #+begin_src elisp
 (after! elisp-mode
   (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
 #+end_src
-****** Org
-******* org :UI:path:theming:
+******* Org
+******** org :UI:path:theming:
 #+begin_src elisp
 (after! org
   (setq org-agenda-files `(,biome--org-dir
@@ -3497,25 +3498,25 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
                              (?D . ,(doom-color 'yellow))
                              (?E . ,(doom-color 'green)))))
 #+end_src
-******* ob
+******** ob
 #+begin_src elisp
 (after! ob
   (setq org-babel-noweb-error-all-langs t))
 #+end_src
-******* evil-org :evil:bindings:
+******** evil-org :evil:bindings:
 #+begin_src elisp
 (after! evil-org
   (map! :map evil-org-mode-map
         :nv "C-j" #'outline-forward-same-level
         :nv "C-k" #'outline-backward-same-level))
 #+end_src
-****** Scheme
-******* scheme
+******* Scheme
+******** scheme
 #+begin_src elisp
 (after! scheme
   (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
 #+end_src
-******* geiser :persistence:path:guix:
+******** geiser :persistence:path:guix:
 Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
 #+begin_src elisp
 (use-package! geiser
@@ -3524,9 +3525,9 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
   (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
   (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
 #+end_src
-***** App
-****** Calendar
-******* org-gcal :org:user:secret:persistence:path:
+****** App
+******* Calendar
+******** org-gcal :org:user:secret:persistence:path:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -3536,8 +3537,8 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
                                     ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
         org-gcal-recurring-events-mode 'nested))
 #+end_src
-***** Config
-****** expand-region :bindings:
+****** Config
+******* expand-region :bindings:
 #+begin_src elisp
 (use-package! expand-region
   :defer t
@@ -3553,9 +3554,9 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
     (when (memq last-command '(er/expand-region er/contract-region))
       (er/contract-region 0))))
 #+end_src
-***** Guix
-****** Emacs integration
-******* man :path:
+****** Guix
+******* Emacs integration
+******** man :path:
 #+begin_src elisp :noweb yes
 (after! man
   (prependq! Man-header-file-path
@@ -3564,7 +3565,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
                             '(<<guix-extra-profiles>>))
                       '("<<guix-home-profile>>/include"))))
 #+end_src
-******* tramp :path:
+******** tramp :path:
 Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
 #+begin_src elisp :noweb yes
 (after! tramp
@@ -3579,19 +3580,19 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                         "/run/current-system/profile/bin"
                         "/run/current-system/profile/sbin"))))
 #+end_src
-****** guix.el
-******* guix :UI:
+******* guix.el
+******** guix :UI:
 #+begin_src elisp
 (after! guix
   (set-popup-rules!
     '(("^\\*Guix" :height 0.5))))
 #+end_src
-******* guix-devel :scheme:
+******** guix-devel :scheme:
 #+begin_src elisp
 (use-package! guix-devel
   :hook (scheme-mode . guix-devel-mode))
 #+end_src
-******* guix-popup :bindings:
+******** guix-popup :bindings:
 #+begin_src elisp
 (use-package! guix-popup
   :defer t
@@ -3599,12 +3600,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   (map! :leader
         "l" #'guix))  ; REVIEW temporary binding?
 #+end_src
-******* guix-prettify :UI:
+******** guix-prettify :UI:
 #+begin_src elisp
 (use-package! guix-prettify
   :hook (doom-first-buffer . global-guix-prettify-mode))
 #+end_src
-****** Editing
+******* Editing
 - TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
 #+begin_src elisp
 ;; (let ((guix-source-path "???/guix"))
@@ -3618,30 +3619,30 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
 ;;   (after! copyright
 ;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
 #+end_src
-****** guix-packaging :persistence:path:
+******* guix-packaging :persistence:path:
 #+begin_src elisp
 (use-package! guix-packaging
   :defer t
   :init
   (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
 #+end_src
-***** ?
-****** avy
+****** ?
+******* avy
 #+begin_src elisp
 ;; REVIEW Trying out not having this so I can use avy dispatch commands.
 ;; (after! avy
 ;;   (setq avy-single-candidate-jump t))
 #+end_src
-****** paren :UI:
+******* paren :UI:
 #+begin_src elisp
 (after! paren
   (setq! show-paren-delay 0))
 #+end_src
-****** prog-mode :prog_mode:
+******* prog-mode :prog_mode:
 #+begin_src elisp
 (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 #+end_src
-****** rainbow-delimiters :theming:
+******* rainbow-delimiters :theming:
 #+begin_src elisp
 (after! rainbow-delimiters
   (let ((default-max rainbow-delimiters-max-face-count))
@@ -3663,12 +3664,12 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
     `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
     `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))))
 #+end_src
-****** recentf :persistence:
+******* recentf :persistence:
 #+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
 #+end_src
-****** smartparens :bindings:
+******* smartparens :bindings:
 #+begin_src elisp
 (after! smartparens
   (map! :map smartparens-mode-map
@@ -3695,7 +3696,7 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
          "c" #'sp-convolute-sexp
          "w" #'sp-rewrap-sexp)))
 #+end_src
-******* Hook :bindings:
+******** Hook :bindings:
 #+begin_src elisp
 (defun biome-sp-strict-h ()
   (add-hook! 'smartparens-enabled-hook :local
@@ -3704,35 +3705,35 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
-****** transient :persistence:
+******* transient :persistence:
 - TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
 #+begin_src elisp
 (after! transient
   (setq transient-history-limit biome--very-big))
 #+end_src
-****** undo-fu
+******* undo-fu
 #+begin_src elisp
 (after! undo-fu
   (setq undo-fu-ignore-keyboard-quit t))
 #+end_src
-****** undo-tree :UI:
+******* undo-tree :UI:
 #+begin_src elisp
 ;; (after! undo-tree
 ;;   (setq undo-tree-visualizer-timestamps t))
 #+end_src
-****** emojify :UI:
+******* emojify :UI:
 #+begin_src elisp
 (after! emojify
   (setq emojify-display-style 'unicode))
 #+end_src
-****** asdf :bindings:
+******* asdf :bindings:
 - TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
 #+begin_src elisp
 (define-key! :keymaps +default-minibuffer-maps
   "s-J" #'scroll-up-command
   "s-K" #'scroll-down-command)
 #+end_src
-**** Theming :theming:
+***** Theming :theming:
 #+begin_src elisp
 (setq doom-theme biome--theme)
 
@@ -3740,13 +3741,13 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
   `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
   `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 #+end_src
-***** Font
+****** Font
 #+begin_src elisp
 (let ((font (font-spec :family "Fira Code Retina" :size 12)))
   (when (find-font font)
     (setq doom-font font)))
 #+end_src
-***** Nuclear Theme
+****** Nuclear Theme
 
 #+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (meta-in-dir \"themes/doom-nuclear-theme.el\")"
 
@@ -3931,7 +3932,7 @@ Can be an integer to determine the exact padding."
 
 ;;; nuclear-theme.el ends here
 #+end_src
-****** Generator
+******* Generator
 :PROPERTIES:
 :header-args+: :tangle no
 :END:
@@ -4016,8 +4017,8 @@ Can be an integer to determine the exact padding."
        (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
        (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
 #+end_src
-**** Projects
-***** Phrenetic :path:
+***** Projects
+****** Phrenetic :path:
 #+begin_src elisp
 (load "~/projects/phrenetic/meta" 'noerror 'nomessage)
 
@@ -4029,7 +4030,7 @@ Can be an integer to determine the exact padding."
                        (make-local-variable 'geiser-guile-load-path)
                        (add-to-list 'geiser-guile-load-path root-dir)))))
 #+end_src
-***** Nyxt
+****** Nyxt
 - TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages. Also the changes it makes persist (modify ~lisp-imenu-generic-expression~), I don't know if that's a good idae.
 #+begin_src elisp
 (pushnew! safe-local-variable-values
@@ -4059,7 +4060,7 @@ Can be an integer to determine the exact padding."
                       "parenscript"
                       "user-class"))))
 #+end_src
-***** Hyperdrive :path:
+****** Hyperdrive :path:
 #+begin_src elisp
 (pushnew! safe-local-variable-values
           '(cider-preferred-build-tool . shadow-cljs)
@@ -4085,7 +4086,7 @@ Can be an integer to determine the exact padding."
   :cwd "~/projects/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 #+end_src
-***** Massrealty :path:
+****** Massrealty :path:
 #+begin_src elisp
 ;; (pushnew! safe-local-variable-values
 ;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
@@ -4094,7 +4095,7 @@ Can be an integer to determine the exact padding."
 ;; (after! org-gcal
 ;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
 #+end_src
-**** WIP
+***** WIP
 #+begin_src elisp
 (after! org
   (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
@@ -4148,7 +4149,7 @@ Can be an integer to determine the exact padding."
   (setq vertico-count 20  ; Trying out, maybe too big.
         vertico-scroll-margin 7))
 #+end_src
-***** "status bar"
+****** "status bar"
 Not using waybar at the moment so these are handy.
 #+begin_src elisp
 (use-package! battery
@@ -4161,7 +4162,7 @@ Not using waybar at the moment so these are handy.
   ;; (setq display-time-24hr-format t)
   (display-time-mode 1))
 #+end_src
-***** keybinding ideas
+****** keybinding ideas
 #+begin_src elisp
 ;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
 (biome--trans "s-h" "C-h")
@@ -4186,7 +4187,7 @@ Not using waybar at the moment so these are handy.
 ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
 ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
 #+end_src
-***** phrenetic auto-tangle :path:
+****** phrenetic auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
 ;; (setq biome--phrenetic-dir "~/projects/phrenetic")
@@ -4200,7 +4201,7 @@ Not using waybar at the moment so these are handy.
 ;;           (let ((org-confirm-babel-evaluate nil))
 ;;             (org-babel-tangle)))))))
 #+end_src
-***** org-tanglesync
+****** org-tanglesync
 #+begin_src elisp
 ;; (use-package! org-tanglesync
 ;;   :hook ((org-mode . org-tanglesync-mode)
@@ -4208,7 +4209,7 @@ Not using waybar at the moment so these are handy.
 ;;   :config
 ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/phrenetic/phrenetic.org")))
 #+end_src
-***** Temporary copypasta from bloodhound
+****** Temporary copypasta from bloodhound
 Copying this here for now, for convenience.
 #+begin_src elisp
 (setq my-dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/home-state.git")))
@@ -4222,7 +4223,7 @@ Copying this here for now, for convenience.
              ;; - Update: because `delq!' tests for equality with `eq'
              (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
 #+end_src
-***** until I get semicolon working
+****** until I get semicolon working
 #+begin_src elisp
 (map! (:map minibuffer-local-map
        "C-:" #'embark-act
@@ -4233,14 +4234,14 @@ Copying this here for now, for convenience.
       "C-:" #'embark-act
       "s-q" #'embark-cycle)
 #+end_src
-***** ligatures
+****** ligatures
 Probably move these to ~after!~ blocks
 #+begin_src elisp
 (set-ligatures! '(html-mode nxml-mode web-mode)
   :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
                     "://"))
 #+end_src
-**** Out-of-band
+***** Out-of-band
 Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
 #+begin_src elisp :var oob-dir=(meta-get-dir)
 (let ((oob-dir (concat "~/projects/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
@@ -4248,10 +4249,10 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
     (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
         (load! file 'noerror))))
 #+end_src
-***** File
+****** File
 #+begin_src elisp :tangle (meta-in-dir "out-of-band.el")
 #+end_src
-*** Packages :version:
+**** Packages :version:
 #+begin_src elisp :tangle (meta-in-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
 
@@ -4493,182 +4494,6 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
    "clj-kondo")) ; TODO comes from nonguix channel, I might be making that explicit later
 #+end_src
 ** \
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
-#+end_src
-* Utils
-** Scheme
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient utils)
-  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-  #:use-module (gnu services)
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
-  #:export (when-let
-            if-let
-            when-not
-            if-not
-            update-list
-            partial
-            ->
-            ->>
-            as->
-            kvm
-            get
-            keys
-            massoc
-            merge
-            keyvals
-            update-services*
-            update-services))
-#+end_src
-*** Conditionals
-#+begin_src scheme
-(define-syntax when-let
-  (syntax-rules ()
-    ((_ ((var expr)) body ...)
-     (let ((var expr))
-       (when var body ...)))))
-
-(define-syntax if-let
-  (syntax-rules ()
-    ((_ ((var expr)) then else)
-     (let ((var expr))
-       (if var then else)))))
-
-(define-syntax when-not
-  (syntax-rules ()
-    ((_ test body ...)
-     (when (not test) body ...))))
-
-(define-syntax if-not
-  (syntax-rules ()
-    ((_ test then else)
-     (if (not test) then else))))
-#+end_src
-*** Lists
-#+begin_src scheme
-(define (update-list l pred f)
-  (map (lambda (x)
-         (if (pred x) (f x) x))
-       l))
-
-(define* (partial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append args more))))
-
-(define* (rpartial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append more args))))
-
-(define-syntax ->
-  (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (-> (f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
-
-(define (thread-last-helper f value . body)
-  (apply f (append body (list value))))
-
-(define-syntax ->>
-  (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
-
-(define-syntax as->
-  (syntax-rules ()
-    ((_ expr name) expr)
-    ((_ expr name form form* ...)
-     (let ((name expr))
-       (as-> form name form* ...)))))
-#+end_src
-*** Maps
-#+begin_src scheme
-(define* (kvm #:rest keyvals)
-  (let loop ((m '())
-             (more keyvals))
-    (if (null? more)
-        m
-        (loop (cons (as-> more $
-                          (take $ 2)
-                          (apply cons $))
-                    m)
-              (drop more 2)))))
-
-(define get assoc-ref)
-
-(define (keys m)
-  (map car m))
-
-(define (massoc m k v)
-  (->> m
-       (remove (match-lambda
-                 ((k1 . _)
-                  (equal? k k1))))
-       (cons '(k . v))))
-
-(define* (merge #:rest maps)
-  (fold
-   (lambda (m1 m2)
-     (fold
-      (match-lambda
-        (((k . v) res)
-         (massoc res k v)))
-      m1 m2))
-   (kvm)
-   maps))
-
-(define (keyvals m)
-  (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
-       (apply append)))
-#+end_src
-*** Guix
-#+begin_src scheme
-(define (update-services* services pred update-fn)
-  (update-list
-   services
-   pred
-   (lambda (svc)
-     (service (service-kind svc)
-              (update-fn (service-value svc))))))
-
-(define (update-services services kind update-fn)
-  (update-services*
-   services
-   (lambda (svc)
-     (eq? (service-kind svc) kind))
-   update-fn))
-
-(define (get-inferior-package channels package)
-  (-> (inferior-for-channels channels)
-      (lookup-inferior-packages package)
-      first))
-#+end_src
-*** \
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
-#+end_src
-** Emacs Lisp
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "exuberant/utils.el")
-:END:
-#+begin_src elisp
-(defun kvm (&rest keyvals)
-  (->> keyvals
-       (-partition 2)
-       (-map (-lambda ((a b))
-               (cons a b)))))
-
-(provide 'exuberant)
-#+end_src
-
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
@@ -5004,6 +4829,182 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 (provide 'donnager-org)
 #+end_src
 ** \
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
+#+end_src
+* Utils
+** Scheme
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient utils)
+  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+  #:use-module (gnu services)
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
+  #:export (when-let
+            if-let
+            when-not
+            if-not
+            update-list
+            partial
+            ->
+            ->>
+            as->
+            kvm
+            get
+            keys
+            massoc
+            merge
+            keyvals
+            update-services*
+            update-services))
+#+end_src
+*** Conditionals
+#+begin_src scheme
+(define-syntax when-let
+  (syntax-rules ()
+    ((_ ((var expr)) body ...)
+     (let ((var expr))
+       (when var body ...)))))
+
+(define-syntax if-let
+  (syntax-rules ()
+    ((_ ((var expr)) then else)
+     (let ((var expr))
+       (if var then else)))))
+
+(define-syntax when-not
+  (syntax-rules ()
+    ((_ test body ...)
+     (when (not test) body ...))))
+
+(define-syntax if-not
+  (syntax-rules ()
+    ((_ test then else)
+     (if (not test) then else))))
+#+end_src
+*** Lists
+#+begin_src scheme
+(define (update-list l pred f)
+  (map (lambda (x)
+         (if (pred x) (f x) x))
+       l))
+
+(define* (partial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append args more))))
+
+(define* (rpartial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append more args))))
+
+(define-syntax ->
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f . body) next ...) (-> (f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
+
+(define (thread-last-helper f value . body)
+  (apply f (append body (list value))))
+
+(define-syntax ->>
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
+
+(define-syntax as->
+  (syntax-rules ()
+    ((_ expr name) expr)
+    ((_ expr name form form* ...)
+     (let ((name expr))
+       (as-> form name form* ...)))))
+#+end_src
+*** Maps
+#+begin_src scheme
+(define* (kvm #:rest keyvals)
+  (let loop ((m '())
+             (more keyvals))
+    (if (null? more)
+        m
+        (loop (cons (as-> more $
+                          (take $ 2)
+                          (apply cons $))
+                    m)
+              (drop more 2)))))
+
+(define get assoc-ref)
+
+(define (keys m)
+  (map car m))
+
+(define (massoc m k v)
+  (->> m
+       (remove (match-lambda
+                 ((k1 . _)
+                  (equal? k k1))))
+       (cons '(k . v))))
+
+(define* (merge #:rest maps)
+  (fold
+   (lambda (m1 m2)
+     (fold
+      (match-lambda
+        (((k . v) res)
+         (massoc res k v)))
+      m1 m2))
+   (kvm)
+   maps))
+
+(define (keyvals m)
+  (->> m
+       (map (match-lambda
+              ((k . v)
+               (list k v))))
+       (apply append)))
+#+end_src
+*** Guix
+#+begin_src scheme
+(define (update-services* services pred update-fn)
+  (update-list
+   services
+   pred
+   (lambda (svc)
+     (service (service-kind svc)
+              (update-fn (service-value svc))))))
+
+(define (update-services services kind update-fn)
+  (update-services*
+   services
+   (lambda (svc)
+     (eq? (service-kind svc) kind))
+   update-fn))
+
+(define (get-inferior-package channels package)
+  (-> (inferior-for-channels channels)
+      (lookup-inferior-packages package)
+      first))
+#+end_src
+*** \
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
+#+end_src
+** Emacs Lisp
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "exuberant/utils.el")
+:END:
+#+begin_src elisp
+(defun kvm (&rest keyvals)
+  (->> keyvals
+       (-partition 2)
+       (-map (-lambda ((a b))
+               (cons a b)))))
+
+(provide 'exuberant)
+#+end_src
+
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
