@@ -1,4 +1,4 @@
-#+TITLE: Dotfiles
+#+TITLE: Phrenetic
 #+PROPERTY: header-args :mkdirp yes
 #+PROPERTY: header-args:elisp :lexical t
 
@@ -232,19 +232,19 @@ herd start cow-store /mnt
 *** System configuration
 #+begin_src sh
 # Grab my dotfiles, from github if I put them up at some point or maybe from a USB or another computer with `woof`, into the current directory (the one I'm already in, not `/mnt`).
-# git clone https://github.com/pharcosyle/dotfiles
+# git clone https://github.com/pharcosyle/phrenetic
 # guix environment --ad-hoc woof -- woof -U
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/projects/dotfiles/ebullient/home/channels.scm ~/.config/guix
+cp ~/projects/phrenetic/ebullient/home/channels.scm ~/.config/guix
 guix pull
 hash guix
 
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/projects/dotfiles/ebullient
+cd ~/projects/phrenetic/ebullient
 guix system --load-path=. init system/frostfire.scm /mnt
 #+end_src
 *** Post-installation
@@ -2649,7 +2649,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                    #:extra-config
                    ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
                    ;; `((include ,(local-file "./config/sway/config")))
-                   `((include "/home/pharcosyle/projects/dotfiles/config"))))
+                   `((include "/home/pharcosyle/projects/phrenetic/config"))))
     (rde-config))))
 #+end_src
 **** Screen lockers
@@ -4017,9 +4017,9 @@ Can be an integer to determine the exact padding."
        (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
 #+end_src
 **** Projects
-***** Dotfiles :path:
+***** Phrenetic :path:
 #+begin_src elisp
-(load "~/projects/dotfiles/meta" 'noerror 'nomessage)
+(load "~/projects/phrenetic/meta" 'noerror 'nomessage)
 
 (pushnew! safe-local-variable-values
           '(eval . (with-eval-after-load 'geiser-guile
@@ -4186,16 +4186,16 @@ Not using waybar at the moment so these are handy.
 ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
 ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
 #+end_src
-***** dotfiles auto-tangle :path:
+***** phrenetic auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
-;; (setq biome--dotfiles-dir "~/projects/dotfiles")
+;; (setq biome--phrenetic-dir "~/projects/phrenetic")
 
 ;; (add-hook! 'org-mode-hook
 ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
 ;;     (add-hook! 'after-save-hook :local
 ;;       (defun biome-autotangle-h ()
-;;         (when (file-in-directory-p buffer-file-name biome--dotfiles-dir)
+;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
 ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
 ;;           (let ((org-confirm-babel-evaluate nil))
 ;;             (org-babel-tangle)))))))
@@ -4206,7 +4206,7 @@ Not using waybar at the moment so these are handy.
 ;;   :hook ((org-mode . org-tanglesync-mode)
 ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
 ;;   :config
-;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/dotfiles/dotfiles.org")))
+;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/phrenetic/phrenetic.org")))
 #+end_src
 ***** Temporary copypasta from bloodhound
 Copying this here for now, for convenience.
@@ -4243,7 +4243,7 @@ Probably move these to ~after!~ blocks
 **** Out-of-band
 Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
 #+begin_src elisp :var oob-dir=(meta-get-dir)
-(let ((oob-dir (concat "~/projects/dotfiles/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the dotfiles dir. That might change but regardless don't hardcode the path here eventually.
+(let ((oob-dir (concat "~/projects/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
   (let* ((file "out-of-band"))
     (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
         (load! file 'noerror))))
@@ -4294,7 +4294,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 ;; TODO do hardcoded path better?
 ;; TODO currently donnager is part of my dotfiles but if that isn't going to be the case I might like to make my dotfiles able to work in a "self-contained" fashion by providing a fallback in case it isn't available. To a github repo, or somehing. Actually can/should I do something like `out-of-band.el' and have donnager compiled and used like a regular package BUT prefer using the source in ~/projects if available. Does straight support doing things like this? Implement it myself if not?
 (package! donnager
-  :recipe (:local-repo "~/projects/dotfiles/donnager"
+  :recipe (:local-repo "~/projects/phrenetic/donnager"
            ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
            :build (:not compile)))
 #+end_src
@@ -5013,7 +5013,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 *** Git config
 #+begin_src gitconfig :tangle (meta-in-dir ".git/config")
 [remote "origin"]
-	url = https://github.com/pharcosyle/dotfiles.git
+	url = https://github.com/pharcosyle/phrenetic.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
 
 [branch "master"]
