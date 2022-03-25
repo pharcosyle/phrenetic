@@ -1585,6 +1585,61 @@ performance of a hand rolled config (or better).")
       (home-page "https://github.com/hlissner/doom-emacs")
       (license license:expat))))
 #+end_src
+****** Emacs packages :package:version:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home emacs-xyz)
+  #:use-module (guix build-system copy)
+  #:use-module (guix download)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages emacs-xyz) #:prefix emacs-xyz:)
+  #:use-module ((gnu packages compression) #:select (unzip)))
+#+end_src
+******* tldr
+#+begin_src scheme
+(define-public emacs-tldr
+  (package
+    (inherit emacs-xyz:emacs-tldr)
+    (arguments
+     (substitute-keyword-arguments (package-arguments emacs-xyz:emacs-tldr)
+       ((#:phases phases '%standard-phases)
+        `(modify-phases ,phases
+           (add-after 'unpack 'patch-tldr-directory-path
+             (lambda* (#:key inputs #:allow-other-keys)
+               (emacs-substitute-variables "tldr.el"
+                 ("tldr-directory-path" (search-input-directory inputs "/share/tldr-pages")))))))))
+    (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
+              (prepend tldr-pages)))))
+#+end_src
+******** tldr pages
+#+begin_src scheme
+(define-public tldr-pages
+  (let ((commit "7ee7ed0f4afc90ef05b1dde87f6fec5b462a0394")
+        (revision "0"))
+    (package
+      (name "tldr-pages")
+      (version (git-version "1.5b" revision commit))
+      (source
+       (origin
+         (method url-fetch/zipbomb)
+         (uri (string-append "https://raw.githubusercontent.com/tldr-pages/tldr-pages.github.io/" commit "/assets/tldr.zip"))
+         (sha256
+          (base32
+           "0a09ycfrxiaxv0hzjrkwi56l0ga5d7ydrlclmk4vd6ndb242vhgr"))))
+      (build-system copy-build-system)
+      (arguments
+       `(#:install-plan
+         '(("." "share/tldr-pages/"))))
+      (home-page "https://tldr.sh")
+      (synopsis "A collection of community-maintained help pages for command-line tools")
+      (description synopsis)
+      (license license:cc-by4.0))))
+#+end_src
 ****** all-the-icons fonts :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "fonts.scm")
@@ -3648,13 +3703,6 @@ Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so i
              (defun biome-modify-sp-strict-mode-map-h ()
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
-#+end_src
-****** tldr :persistence:path:
-#+begin_src elisp
-(use-package! tldr
-  :defer t
-  :config
-  (setq tldr-directory-path (concat doom-etc-dir "tldr/")))
 #+end_src
 ****** transient :persistence:
 - TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
