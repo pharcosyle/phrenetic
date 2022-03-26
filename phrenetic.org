@@ -48,10 +48,10 @@
 /meta.el
 #+end_src
 * Guix
-** Common
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
+** Common
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
@@ -59,18 +59,6 @@
 | :system/features     | :db.type/keyword | :db.cardinality/many |
 | :user/login-shell    | :db.type/keyword |                      |
 | :user/sessions       | :db.type/keyword | :db.cardinality/many |
-
-#+name: db/systems-common
-| =:db/id=          | =:system/features=                              |
-|-------------------+-------------------------------------------------|
-| :system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
-
-#+name: db/users-common
-| =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|---------------+------------------------+------------------------+---------------------+------------------------------|
-| :user/primary | :channel/nonguix       | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :user/aux     | :channel/nonguix       | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :user/guest   | :channel/nonguix       | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 #+begin_src scheme :tangle (meta-in-dir "common.scm")
 (define-module (ebullient common))
@@ -269,19 +257,12 @@ guix pull
 #+end_src
 ** System
 :PROPERTIES:
-:meta-dir+: /ebullient/system
+:meta-dir+: /system
 :END:
 #+name: db/schema-whatever
 | =:db/id=     | =:db/valueType=  |
 |--------------+------------------|
 | :user/admin? | :db.type/boolean |
-
-#+name: db/users-system
-| =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
-|---------------+------------------+----------------+------------------|
-| :user/primary | pharcosyle       | true           |                  |
-| :user/aux     | pcoulson         | true           |                  |
-| :user/guest   | gandalf          |                | mellon           |
 
 *** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels.scm")
@@ -919,69 +900,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                                  #:bluetooth? bluetooth?)
                       $))))))))
 #+end_src
-*** Operating Systems
-:PROPERTIES:
-:meta-dir+: /os
-:END:
-**** Frostfire
-#+name: db/systems-frostfire
-| =:db/id=          | =:system/features=                                                                  |
-|-------------------+-------------------------------------------------------------------------------------|
-| :system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
-
-#+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
-(define-module (ebullient system os frostfire)
-  #:use-module (ebullient system base-os))
-
-(define-public os
-  (base-os #:system #:system/frostfire
-           #:host-name "frostfire"
-           #:accounts '(#:user/primary
-                        #:user/aux
-                        #:user/guest)
-           #:luks-uuid "<<frostfire-luks-uuid>>"
-           ;; #:auto-login-account #:user/primary ; REVIEW Enable this later.
-           #:console? #t
-           #:laptop? #t
-           #:bluetooth? #t))
-#+end_src
-***** Channel deps
-#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
-(use-modules (ebullient system channels))
-
-(get-system-channels
- (system-channel-deps #:system/frostfire))
-#+end_src
-***** Channels lock :version:
-#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
-(list (channel
-        (name 'guix)
-        (url "https://git.savannah.gnu.org/git/guix.git")
-        (branch "master")
-        (commit
-          "85f026f36ae93ac3ce3fa50150848eab9b31b69f")
-        (introduction
-          (make-channel-introduction
-            "9edb3f66fd807b096b48283debdcddccfea34bad"
-            (openpgp-fingerprint
-              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
-      (channel
-        (name 'nonguix)
-        (url "https://gitlab.com/nonguix/nonguix")
-        (branch "master")
-        (commit
-          "35533c763a81365e14d0b58ad262e8f88c82872c")
-        (introduction
-          (make-channel-introduction
-            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-            (openpgp-fingerprint
-              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-#+end_src
-***** LUKS UUID :external_state:
-#+name: frostfire-luks-uuid
-#+begin_src org
-bdda56af-6ca0-4953-bc13-d5af8715e0e5
-#+end_src
 *** \
 #+begin_src sh :var os_name="" os_dir=(meta-get-dir)
 sudo guix time-machine \
@@ -994,53 +912,8 @@ sudo guix time-machine \
 #+end_src
 ** Home
 :PROPERTIES:
-:meta-dir+: /ebullient/home
+:meta-dir+: /home
 :END:
-#+name: db/users-home
-| =:db/id=      | =:entity/channel-deps= | =:user/email=            |
-|---------------+------------------------+--------------------------|
-| :user/primary | :channel/flat          | pharcosyle@gmail.com     |
-| :user/aux     | :channel/flat          | pharcosyle+aux@gmail.com |
-
-#+name: db/palette
-| =:db/id=                 | =:color/hex= |
-|--------------------------+--------------|
-| :color/fg                | #dee2f8      |
-| :color/highlight         | #8496ff      |
-| :color/comments          | #63677f      |
-| :color/comment-delimiter | #939abd      |
-| :color/red               | #fb8578      |
-| :color/orange            | #fdce5f      |
-| :color/green             | #9fed9c      |
-| :color/yellow            | #eddc91      |
-| :color/blue              | #7db9fe      |
-| :color/dark-blue         | #5f68de      |
-| :color/magenta           | #e29bf7      |
-| :color/violet            | #aeb9f3      |
-| :color/cyan              | #75e0f9      |
-| :color/gold              | #fdd94a      |
-| :color/pink              | #ff9999      |
-
-- FIXME remove this
-#+name: palette
-| Name              | Color   |
-|-------------------+---------|
-| fg                | #dee2f8 |
-| highlight         | #8496ff |
-| comments          | #63677f |
-| comment-delimiter | #939abd |
-| red               | #fb8578 |
-| orange            | #fdce5f |
-| green             | #9fed9c |
-| yellow            | #eddc91 |
-| blue              | #7db9fe |
-| dark-blue         | #5f68de |
-| magenta           | #e29bf7 |
-| violet            | #aeb9f3 |
-| cyan              | #75e0f9 |
-| gold              | #fdd94a |
-| pink              | #ff9999 |
-
 #+name: guix-home-profile
 #+begin_src sh
 ~/.guix-home/profile
@@ -2795,157 +2668,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                           (he-sway $) $)))
                 $)))))))
 #+end_src
-*** Home environments
-:PROPERTIES:
-:meta-dir+: /he
-:END:
-**** Solitude
-#+begin_src scheme :tangle (meta-in-dir "solitude.scm")
-(define-module (ebullient home he solitude)
-  #:use-module (ebullient home base-he)
-  #:export (he))
-
-(define-public he
-  (base-he #:system #:system/frostfire
-           #:account #:user/primary
-           #:developer? #t))
-#+end_src
-***** Solitude old WIP
-#+begin_src scheme
-(define-module (ebullient home he solitude)
-  #:use-module (ebullient home base-he)
-  #:export (he))
-
-(define he
-  (home-environment
-   (packages (list ;; (specification->package "font-adobe-source-code-pro")
-                   (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
-                   (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
-                   ))
-   (services
-    (list
-     (service gammastep-service-type)
-     (service network-manager-service-type)
-     (service udiskie-service-type)
-
-     (service home-xdg-user-directories-service-type
-              (let* ((xdg-user-subdir "/files")
-                     (xdg-dir (lambda (path)
-                                (string-append "$HOME" xdg-user-subdir path))))
-                (home-xdg-user-directories-configuration
-                 (desktop "$HOME/desktop")
-                 (documents (xdg-dir "/docs"))
-                 (download "$HOME/dl")
-                 (music (xdg-dir "/music"))
-                 (pictures (xdg-dir "/pics"))
-                 (publicshare (xdg-dir "/public"))
-                 (templates (xdg-dir "/templates"))
-                 (videos (xdg-dir "/vids")))))
-
-     (service home-mcron-service-type
-              (home-mcron-configuration
-               (jobs
-                (list
-                 #~(job '(next-hour)
-                        (lambda ()
-                          (call-with-output-file "/tmp/test-mcron-file"
-                            (lambda (port)
-                              (display "Output!" port))))
-                        "Test mcron output")))))
-     (service home-git-service-type
-              (home-git-configuration
-               (config
-                `((user
-                   ((name . "Krzysztof Baranowski") ; FIXME <user-full-name>>
-                    (email . "pharcosyle@gmail.com"))) ; FIXME <user-email>>
-                  ;; (http "https://weak.example.com"
-                  ;;   ((ssl-verify . #f)))
-                  ;; (gpg
-                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-                  ;; (sendmail
-                  ;;  ((annotate . #t)))
-                  ))))
-     (service home-ssh-service-type
-              ;; (home-ssh-configuration
-              ;;  (extra-config
-              ;;   (list
-              ;;    (ssh-host "savannah"
-              ;;              '((compression . #f))))))
-              )
-
-
-     ;; TODO Examples from RDE I may want to make use of.
-     ;; (service home-keyboard-service-type
-     ;;          (keyboard-layout "us,ru" "dvorak,"
-     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-     ;; (service home-gnupg-service-type
-     ;;          (home-gnupg-configuration
-     ;;           (gpg-agent-config
-     ;;            (home-gpg-agent-configuration
-     ;;             (ssh-agent? #t)))))
-     ;; (service home-state-service-type
-     ;;          (append
-     ;;           (list
-     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
-     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
-     ;;            (state-git "/home/bob/tmp/talkes/"
-     ;;                       "git@git.sr.ht:~abcdw/rde"))))
-     ))))
-#+end_src
-***** Channel deps
-#+begin_src scheme :tangle (meta-in-dir "solitude-channels")
-(use-modules (ebullient home channels))
-
-(get-home-channels
- (user-channel-deps #:user/primary))
-#+end_src
-***** Channels lock
-#+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
-(list (channel
-        (name 'guix)
-        (url "https://git.savannah.gnu.org/git/guix.git")
-        (branch "master")
-        (commit
-          "04ac1a248c188e4e49e6372e8336c31d32d1c96e")
-        (introduction
-          (make-channel-introduction
-            "9edb3f66fd807b096b48283debdcddccfea34bad"
-            (openpgp-fingerprint
-              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
-      (channel
-        (name 'flat)
-        (url "https://github.com/flatwhatson/guix-channel.git")
-        (branch "master")
-        (commit
-          "ece373bcd1e00ef746fb7b104e56ab610cc4af2a")
-        (introduction
-          (make-channel-introduction
-            "33f86a4b48205c0dc19d7c036c85393f0766f806"
-            (openpgp-fingerprint
-              "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
-      (channel
-        (name 'rde)
-        (url "https://git.sr.ht/~abcdw/rde")
-        (branch "master")
-        (commit
-          "520e1429593c2daf4a296a9ea55c4aa32848b491")
-        (introduction
-          (make-channel-introduction
-            "257cebd587b66e4d865b3537a9a88cccd7107c95"
-            (openpgp-fingerprint
-              "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
-      (channel
-        (name 'nonguix)
-        (url "https://gitlab.com/nonguix/nonguix")
-        (branch "master")
-        (commit
-          "35533c763a81365e14d0b58ad262e8f88c82872c")
-        (introduction
-          (make-channel-introduction
-            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-            (openpgp-fingerprint
-              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-#+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
 guix pull --channels="$he_dir"/$he_name-channels-lock
@@ -3037,1269 +2759,8 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
-*** Doom private
-:PROPERTIES:
-:meta-dir+: /doom-private
-:END:
-**** Init
-#+begin_src elisp :tangle (meta-in-dir "init.el")
-;;; -*- lexical-binding: t; -*-
-
-(doom! :completion
-       (company +childframe)
-       (vertico +icons)
-
-       :ui
-       doom
-       doom-dashboard
-       (emoji +unicode)
-       hl-todo
-       hydra
-       indent-guides
-       (ligatures +extra)
-       modeline
-       nav-flash
-       ophints
-       (popup +defaults +all)
-       tabs
-       treemacs
-       vc-gutter
-       vi-tilde-fringe
-       window-select
-       workspaces
-
-       :editor
-       (evil +everywhere)
-       file-templates
-       fold
-       format
-       lispy
-       multiple-cursors
-       rotate-text
-       snippets
-       word-wrap
-
-       :emacs
-       (dired +icons)
-       electric
-       (ibuffer +icons)
-       undo
-       vc
-
-       :term
-       eshell
-       vterm
-
-       :checkers
-       (syntax +childframe)
-
-       :tools
-       direnv ; TODO should be contributed by direnv component
-       (eval +overlay)
-       lookup
-       (magit +forge)
-       (pass +auth)
-       pdf
-       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
-       rgb
-       taskrunner
-
-       :lang
-       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
-       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
-       data
-       emacs-lisp
-       json
-       javascript
-       markdown
-       nix ; TODO this should be gated by Nix inclusion like system components do.
-       (org +journal)
-       rest
-       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
-       sh
-       web
-       yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
-
-       :app
-       calendar
-
-       :config
-       (default +bindings +smartparens))
-#+end_src
-**** Config
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "config.el")
-:END:
-#+begin_src elisp
-;;; -*- lexical-binding: t; -*-
-
-(use-package! dash)
-(use-package! s)
-#+end_src
-***** Personal Info :user:
-#+begin_src elisp :noweb yes
-(setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>>
-      user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
-#+end_src
-***** Locals :path:
-#+begin_src elisp
-(defconst biome--org-dir (concat org-directory "~/org"))
-(defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
-
-(defconst biome--very-big 1000000)
-
-(defconst biome--theme 'doom-nuclear)
-#+end_src
-#+begin_src elisp :var palette=palette
-(defun biome--color (color)
-  (let ((k (-> color symbol-name (substring 1))))
-    (cadr (assoc k palette))))
-#+end_src
-***** General :UI:path:
-#+begin_src elisp
-;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
-(setq org-directory biome--org-dir)
-
-(setq scroll-margin 10
-      save-interprogram-paste-before-kill t)
-
-;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
-;; (setq display-line-numbers-type nil)
-#+end_src
-****** Doom resets
-#+begin_src elisp
-(setq-default indent-tabs-mode t)
-
-;; I'd like to have this on but in the Doom code it says it's more efficient not to.
-;; (setq-default cursor-in-non-selected-windows t)
-#+end_src
-****** Doom
-#+begin_src elisp
-;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
-(add-hook! 'doom-real-buffer-functions
-  ;; (defun biome-new-buffer-p (buf)
-  ;;   (s-matches?
-  ;;    (rx bol "*new*"
-  ;;        (* "<" (+ digit) ">")
-  ;;        eol)
-  ;;    (buffer-name buf)))
-  ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
-  (defun biome-org-src-edit-buffer-p (buf)
-    (s-matches?
-     (rx bol "*Org Src " (+ anything) "*"
-         (* "<" (+ digit) ">")
-         eol)
-     (buffer-name buf))))
-#+end_src
-***** Keybindings :bindings:
-#+begin_src elisp
-(setq help-char (string-to-char "\C-_"))
-#+end_src
-****** Translations
-#+begin_src elisp
-(defun biome--trans (&rest rest)
-  (-each (-partition 2 rest)
-    (-lambda ((to from))
-      (define-key key-translation-map (kbd to) (kbd from)))))
-
-(biome--trans "C-h" "DEL"
-              "C-?" "C-h"
-
-              "s-h" "<left>"
-              "s-j" "<down>"
-              "s-k" "<up>"
-              "s-l" "<right>")
-#+end_src
-****** Leader/localleader
-#+begin_src elisp
-(setq doom-leader-alt-key "s-SPC"
-      doom-localleader-key "s-m"
-      doom-localleader-alt-key "s-m")
-#+end_src
-****** General
-#+begin_src elisp
-(defalias 'original-yank-pop #'yank-pop)
-
-;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
-(map! "s-V" #'original-yank-pop
-
-      "s-SPC" doom-leader-map
-
-      ;; Adapted from Doom macOS bindings: ~/.config/emacs/modules/config/default/config.el:263
-      "s-`" #'other-frame
-      "s-n" #'+default/new-buffer
-      "s-z" #'undo
-      "s-Z" #'redo
-      "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
-      "s-v" #'yank
-      "s-s" #'save-buffer
-      "s-x" #'execute-extended-command
-      ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
-      ;; :v "s-x" #'kill-region
-      "s-/" (cmd! (save-excursion (comment-line 1)))
-      :n "s-/" #'evilnc-comment-or-uncomment-lines
-      :v "s-/" #'evilnc-comment-operator
-
-      "s-t" (lookup-key doom-leader-map (kbd "`"))
-      "s-f" (lookup-key doom-leader-map (kbd "s b"))
-      "s-r" (lookup-key doom-leader-map (kbd "f r"))
-      "s-w" (lookup-key doom-leader-map (kbd "b k"))
-      "s-d w" (lookup-key doom-leader-map (kbd "w d"))
-      "s-d s-w" (cmd! (kill-current-buffer)
-                      (+workspace/close-window-or-workspace))
-      "s-g" (lookup-key doom-leader-map (kbd "g g"))
-      "s-," (lookup-key doom-leader-map (kbd "w w"))
-      "s-<" (lookup-key doom-leader-map (kbd "w W"))
-      "s-y" (lookup-key doom-leader-map (kbd "i y"))
-      "s-{" (lookup-key doom-leader-map (kbd "b p"))
-      "s-}" (lookup-key doom-leader-map (kbd "b n"))
-      "s-p" (lookup-key global-map (kbd "C-~")) ; TODO if I'm keeping this, improve it to first switch focus to a/the popup window if one isn't focused already
-
-      "s-u" (lookup-key doom-leader-map (kbd "u"))
-      "s-U" #'negative-argument         ; Trying this out.
-      (:map universal-argument-map
-       "s-u" #'universal-argument-more)
-
-      (:after evil-easymotion
-       "s-a" (lookup-key evilem-map (kbd "SPC")))
-
-      "s-." #'repeat
-
-      "s-J" #'evil-scroll-down
-      "s-K" #'evil-scroll-up
-
-      (:prefix "s-d"
-       "." #'repeat-complex-command
-
-       "h" #'git-gutter:popup-hunk
-       ;; "o" #'+macos/open-in-default-program ;; TODO consider a Guix alternative? Meh.
-       "r" #'projectile-replace
-       "t" #'tldr
-       "s" #'org-save-all-org-buffers
-       "a" #'link-hint-open-multiple-links
-       ;; "b" (cmd! (evil-local-mode 'toggle)
-       ;;           (when evil-local-mode (evil-normal-state)))
-       (:prefix "c"
-        "f" #'org-gcal-fetch
-        "s" #'org-gcal-sync
-        "p" #'org-gcal-post-at-point)))
-#+end_src
-***** Modules
-****** Completion
-******* Vertico
-******** vertico
-#+begin_src elisp
-(after! vertico
-  (map! :map vertico-map
-        "DEL" #'vertico-directory-delete-char))
-#+end_src
-****** UI
-******* Doom
-******** doom-themes
-- TODO get rid of this if I'm not going to try it out again
-#+begin_src elisp
-;; (after! doom-themes
-;;   (doom-themes-visual-bell-config))
-#+end_src
-******* Modeline
-******** doom-modeline
-#+begin_src elisp
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-major-mode-icon t)
-  (setq doom-modeline-persp-name t))
-#+end_src
-******* Indent Guides
-******** highlight-indent-guides :prog_mode:
-#+begin_src elisp
-(use-package! highlight-indent-guides
-  :defer t
-  :init
-  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-  (remove-hook! '(prog-mode-hook
-                  text-mode-hook
-                  conf-mode-hook)
-    #'highlight-indent-guides-mode))
-#+end_src
-******* Ligatures
-******** ligature
-#+begin_src elisp :tangle (meta-in-dir "init.el")
-(use-package-hook! ligature
-  :pre-config
-  (setq +ligatures-all-modes-list
-        '("www")
-        +ligatures-prog-mode-list
-        '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
-          "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-          ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-          "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-          "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-          "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-          "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-          "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-          "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-          "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-          "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
-          ;; Doom defaults (just the ones not already present in Fira Code)
-          "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
-          "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
-          ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
-          "*)" "://"))
-  t)
-#+end_src
-****** Editor
-******* Evil
-******** evil :bindings:theming:
-#+begin_src elisp
-(after! evil
-  (defun biome--set-theme-cursor-color-symbols ()
-    (put 'cursor 'evil-normal-color (biome--color :gold))
-    (put 'cursor 'evil-emacs-color  (biome--color :pink)))
-
-  (defadvice! biome-update-cursor-color-a (&rest _)
-    :after #'+evil-update-cursor-color-h
-    (when (memq biome--theme custom-enabled-themes)
-      (biome--set-theme-cursor-color-symbols)))
-
-  (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
-#+end_src
-******* Multiple Cursors
-******** evil-multiedit :evil:
-#+begin_src elisp
-(after! evil-multiedit
-  (setq evil-multiedit-follow-matches t))
-#+end_src
-******* Lisp
-******** lispy
-#+begin_src elisp
-(use-package! lispy
-  :defer t
-  :init
-  ;; Not using lispy, remove all the Doom module's hooks.
-  (remove-hook! '(lisp-mode-hook
-                  emacs-lisp-mode-hook
-                  ielm-mode-hook
-                  scheme-mode-hook
-                  racket-mode-hook
-                  hy-mode-hook
-                  lfe-mode-hook
-                  dune-mode-hook
-                  clojure-mode-hook
-                  fennel-mode-hook)
-    #'lispy-mode)
-  (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
-#+end_src
-******** lispyville :prog_mode:bindings:
-#+begin_src elisp
-(use-package! lispyville
-  :hook (prog-mode . lispyville-mode)
-  :init
-  (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
-  :config
-  (lispyville-set-key-theme
-   '(operators
-     c-w
-     c-u
-     commentary))
-  (map! :map lispyville-mode-map
-        "C-s-j" #'lispyville-beginning-of-next-defun
-        "C-s-k" #'lispyville-beginning-of-defun
-        "C-s-," #'lispyville-end-of-defun
-        "C-s-a" #'lispyville-drag-backward
-        "C-s-g" #'lispyville-drag-forward
-        "C-s-p" #'lispyville-prettify
-        (:prefix "C-s-;"
-         "R" #'lispyville-raise-list)))
-#+end_src
-****** Emacs
-******* Dired
-******** dired-x :UI:hidden:
-Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
-- TODO dired buffers always marked modified
-  *wait to do this until I do my dired project*
-  Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
-  - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
-    Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
-#+begin_src elisp
-(use-package! dired-x
-  :defer t
-  :init
-  (remove-hook! 'dired-mode-hook #'dired-omit-mode)
-  (add-hook! 'dired-mode-hook
-    (defun require-dired-x-h ()
-      (require 'dired-x))))
-#+end_src
-****** Term
-******* eshell :persistence:
-#+begin_src elisp
-(after! eshell
-  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
-#+end_src
-****** Tools
-******* Magit
-******** magit :UI:
-#+begin_src elisp
-(after! magit
-  (setq git-commit-style-convention-checks '(non-empty-second-line))
-  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
-#+end_src
-****** Lang
-******* Clojure
-******** clojure :bindings:theming:
-#+begin_src elisp
-(use-package! clojure-mode
-  :defer t
-  :init
-  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
-  :config
-  (set-ligatures! 'clojure-mode :lambda "fn")
-  (custom-theme-set-faces! biome--theme
-    `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
-#+end_src
-******** cider :persistence:
-#+begin_src elisp
-(after! cider
-  (setq cider-repl-history-size biome--very-big
-        cider-print-options '(("length" 100))))
-
-;; REVIEW make sure this is still working after nesting in `after!'
-(after! cider-repl
-  (add-hook! 'cider-repl-mode-hook
-             #'goto-address-prog-mode
-             #'highlight-numbers-mode
-             #'rainbow-delimiters-mode
-             #'yas-minor-mode-on
-             #'biome-sp-strict-h))
-#+end_src
-******** clj-refactor :bindings:
-#+begin_src elisp
-(after! clj-refactor
-  (cljr-add-keybindings-with-prefix "s-M R")) ; REVIEW temporary binding
-#+end_src
-******* Emacs Lisp
-******** emacs-lisp
-#+begin_src elisp
-(after! elisp-mode
-  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
-#+end_src
-******* Org
-******** org :UI:path:theming:
-#+begin_src elisp
-(after! org
-  (setq org-agenda-files `(,biome--org-dir
-                           ,biome--org-gcal-dir
-                           ,(concat biome--org-dir "/projects"))
-        org-log-done 'time
-        org-priority-lowest ?E
-        org-priority-default ?C
-        org-priority-faces `((?A . ,(doom-color 'red))
-                             (?B . ,(doom-color 'orange))
-                             (?C . ,(doom-color 'blue))
-                             (?D . ,(doom-color 'yellow))
-                             (?E . ,(doom-color 'green)))))
-#+end_src
-******** ob
-#+begin_src elisp
-(after! ob
-  (setq org-babel-noweb-error-all-langs t))
-#+end_src
-******** evil-org :evil:bindings:
-#+begin_src elisp
-(after! evil-org
-  (map! :map evil-org-mode-map
-        :nv "C-j" #'outline-forward-same-level
-        :nv "C-k" #'outline-backward-same-level))
-#+end_src
-******* Scheme
-******** scheme
-#+begin_src elisp
-(after! scheme
-  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
-#+end_src
-******** geiser :persistence:path:guix:
-Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
-#+begin_src elisp
-(use-package! geiser
-  :defer t
-  :init
-  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
-  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
-#+end_src
-****** App
-******* Calendar
-******** org-gcal :org:user:secret:persistence:path:
-#+begin_src elisp
-(after! org-gcal
-  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
-        org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-        org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
-                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
-        org-gcal-recurring-events-mode 'nested))
-#+end_src
-****** Config
-******* expand-region :bindings:
-#+begin_src elisp
-(use-package! expand-region
-  :defer t
-  :init
-  (map! :nv "s-e" #'er/expand-region
-        :nv "s-E" #'er/contract-region)
-  :config
-  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
-  (defadvice! biome--quit-expand-region-a (&rest _)
-    "Properly abort an expand-region region."
-    :before '(evil-escape doom/escape)
-    (when (memq last-command '(er/expand-region er/contract-region))
-      (er/contract-region 0))))
-#+end_src
-****** Guix
-******* Emacs integration
-******** man :path:
-#+begin_src elisp :noweb yes
-(after! man
-  (prependq! Man-header-file-path
-             (-concat (-map (lambda (p)
-                              (concat p "/include"))
-                            '(<<guix-extra-profiles>>))
-                      '("<<guix-home-profile>>/include"))))
-#+end_src
-******** tramp :path:
-Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
-#+begin_src elisp :noweb yes
-(after! tramp
-  (prependq! tramp-remote-path
-             (-concat (-map (lambda (p)
-                              (concat p "/bin"))
-                            '(<<guix-extra-profiles>>))
-                      '("<<guix-home-profile>>/bin"
-                        "~/.config/guix/current/bin"
-                        "~/.guix-profile/bin"
-                        "~/.guix-profile/sbin"
-                        "/run/current-system/profile/bin"
-                        "/run/current-system/profile/sbin"))))
-#+end_src
-******* guix.el
-******** guix :UI:
-#+begin_src elisp
-(after! guix
-  (set-popup-rules!
-    '(("^\\*Guix" :height 0.5))))
-#+end_src
-******** guix-devel :scheme:
-#+begin_src elisp
-(use-package! guix-devel
-  :hook (scheme-mode . guix-devel-mode))
-#+end_src
-******** guix-popup :bindings:
-#+begin_src elisp
-(use-package! guix-popup
-  :defer t
-  :init
-  (map! :leader
-        "l" #'guix))  ; REVIEW temporary binding?
-#+end_src
-******** guix-prettify :UI:
-#+begin_src elisp
-(use-package! guix-prettify
-  :hook (doom-first-buffer . global-guix-prettify-mode))
-#+end_src
-******* Editing
-- TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
-#+begin_src elisp
-;; (let ((guix-source-path "???/guix"))
-
-;;   (after! yasnippet
-;;     (add-to-list 'yas-snippet-dirs (concat guix-source-path "/etc/snippets")))
-
-;;   (after! skeleton
-;;     (load-file (concat guix-source-path "/etc/copyright.el")))
-
-;;   (after! copyright
-;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
-#+end_src
-******* guix-packaging :persistence:path:
-#+begin_src elisp
-(use-package! guix-packaging
-  :defer t
-  :init
-  (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
-#+end_src
-****** ?
-******* avy
-#+begin_src elisp
-;; REVIEW Trying out not having this so I can use avy dispatch commands.
-;; (after! avy
-;;   (setq avy-single-candidate-jump t))
-#+end_src
-******* paren :UI:
-#+begin_src elisp
-(after! paren
-  (setq! show-paren-delay 0))
-#+end_src
-******* prog-mode :prog_mode:
-#+begin_src elisp
-(add-hook! 'prog-mode-hook #'biome-sp-strict-h)
-#+end_src
-******* rainbow-delimiters :theming:
-#+begin_src elisp
-(after! rainbow-delimiters
-  (let ((default-max rainbow-delimiters-max-face-count))
-    (defun biome-set-rainbow-delimiters-max-face-count ()
-      (setq rainbow-delimiters-max-face-count
-            (if (memq biome--theme custom-enabled-themes)
-                8 default-max))))
-
-  (biome-set-rainbow-delimiters-max-face-count)
-  (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
-
-  (custom-theme-set-faces! biome--theme
-    `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
-    `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
-    `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
-    `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
-    `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
-    `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
-    `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
-    `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))))
-#+end_src
-******* recentf :persistence:
-#+begin_src elisp
-(after! recentf
-  (setq recentf-max-saved-items 500))
-#+end_src
-******* smartparens :bindings:
-#+begin_src elisp
-(after! smartparens
-  (map! :map smartparens-mode-map
-        "C-s-h" #'sp-backward-sexp
-        "C-s-l" #'sp-forward-sexp
-        "C-s-u" #'sp-backward-up-sexp
-        "C-s-o" #'sp-up-sexp
-        :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
-        "C-s-." #'sp-down-sexp
-        "C-s-c" #'sp-splice-sexp
-        "C-s-s" #'sp-splice-sexp-killing-backward
-        "C-s-f" #'sp-splice-sexp-killing-forward
-        "C-s-x" #'sp-backward-slurp-sexp
-        "C-s-v" #'sp-forward-slurp-sexp
-        "C-s-w" #'sp-backward-barf-sexp
-        "C-s-r" #'sp-forward-barf-sexp
-        (:prefix "C-s-;"
-         "(" #'sp-wrap-round
-         "[" #'sp-wrap-square
-         "{" #'sp-wrap-curly
-         "s" #'sp-split-sexp
-         "j" #'sp-join-sexp
-         "r" #'sp-raise-sexp
-         "c" #'sp-convolute-sexp
-         "w" #'sp-rewrap-sexp)))
-#+end_src
-******** Hook :bindings:
-#+begin_src elisp
-(defun biome-sp-strict-h ()
-  (add-hook! 'smartparens-enabled-hook :local
-             #'turn-on-smartparens-strict-mode
-             (defun biome-modify-sp-strict-mode-map-h ()
-               (map! :map smartparens-strict-mode-map
-                     :i "DEL" #'sp-backward-delete-char))))
-#+end_src
-******* transient :persistence:
-- TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
-#+begin_src elisp
-(after! transient
-  (setq transient-history-limit biome--very-big))
-#+end_src
-******* undo-fu
-#+begin_src elisp
-(after! undo-fu
-  (setq undo-fu-ignore-keyboard-quit t))
-#+end_src
-******* undo-tree :UI:
-#+begin_src elisp
-;; (after! undo-tree
-;;   (setq undo-tree-visualizer-timestamps t))
-#+end_src
-******* emojify :UI:
-#+begin_src elisp
-(after! emojify
-  (setq emojify-display-style 'unicode))
-#+end_src
-******* asdf :bindings:
-- TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-#+begin_src elisp
-(define-key! :keymaps +default-minibuffer-maps
-  "s-J" #'scroll-up-command
-  "s-K" #'scroll-down-command)
-#+end_src
-***** Theming :theming:
-#+begin_src elisp
-(setq doom-theme biome--theme)
-
-(custom-theme-set-faces! biome--theme
-  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
-  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
-#+end_src
-****** Font
-#+begin_src elisp
-(let ((font (font-spec :family "Fira Code Retina" :size 12)))
-  (when (find-font font)
-    (setq doom-font font)))
-#+end_src
-****** Nuclear Theme
-
-#+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (meta-in-dir \"themes/doom-nuclear-theme.el\")"
-
-#+RESULTS:
-#+begin_src elisp :tangle (meta-in-dir "themes/doom-nuclear-theme.el")
-;;; nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
-;;
-;;
-;; Created: December 6, 2020
-;; Version: 2.0.0
-;; Keywords: custom themes, faces
-;; Homepage: https://github.com/hlissner/emacs-doom-themes
-;; Package-Requires: ((emacs "25.1") (cl-lib "0.5") (doom-themes "2.2.1"))
-;;
-;;; Commentary:
-;;
-;; Inspired by Atom's One Dark color scheme.
-;;
-;;; Code:
-
-(require 'doom-themes)
-
-
-;;
-;;; Variables
-
-(defgroup nuclear-theme nil
-  "Options for the `nuclear' theme."
-  :group 'doom-themes)
-
-(defcustom nuclear-brighter-modeline nil
-  "If non-nil, more vivid colors will be used to style the mode-line."
-  :group 'nuclear-theme
-  :type 'boolean)
-
-(defcustom nuclear-brighter-comments nil
-  "If non-nil, comments will be highlighted in more vivid colors."
-  :group 'nuclear-theme
-  :type 'boolean)
-
-(defcustom nuclear-padded-modeline doom-themes-padded-modeline
-  "If non-nil, adds a 4px padding to the mode-line.
-Can be an integer to determine the exact padding."
-  :group 'nuclear-theme
-  :type '(choice integer boolean))
-
-
-;;
-;;; Theme definition
-
-(def-doom-theme doom-nuclear
-  "A dark theme inspired by Atom One Dark."
-
-  ;; name        default   256           16
-  ((bg         '("#282c34" "black"       "black"  ))
-   (fg         '("#dee2f8" "#bfbfbf"     "brightwhite"  ))
-
-   ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
-   ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
-   ;; or region), especially when paired with the `doom-darken', `doom-lighten',
-   ;; and `doom-blend' helper functions.
-   (bg-alt     '("#21242b" "black"       "black"        ))
-   (fg-alt     '("#5B6268" "#2d2d2d"     "white"        ))
-
-   ;; These should represent a spectrum from bg to fg, where base0 is a starker
-   ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
-   ;; dark grey, base0 should be white and base8 should be black.
-   (base0      '("#1B2229" "black"       "black"        ))
-   (base1      '("#1c1f24" "#1e1e1e"     "brightblack"  ))
-   (base2      '("#202328" "#2e2e2e"     "brightblack"  ))
-   (base3      '("#23272e" "#262626"     "brightblack"  ))
-   (base4      '("#3f444a" "#3f3f3f"     "brightblack"  ))
-   (base5      '("#5B6268" "#525252"     "brightblack"  ))
-   (base6      '("#73797e" "#6b6b6b"     "brightblack"  ))
-   (base7      '("#9ca0a4" "#979797"     "brightblack"  ))
-   (base8      '("#DFDFDF" "#dfdfdf"     "white"        ))
-
-   (grey       base4)
-   (red        '("#fb8578" "#ff6655" "red"          ))
-   (orange     '("#fdce5f" "#dd8844" "brightred"    ))
-   (green      '("#9fed9c" "#99bb66" "green"        ))
-   (teal       '("#4db5bd" "#44b9b1" "brightgreen"  ))
-   (yellow     '("#eddc91" "#ECBE7B" "yellow"       ))
-   (blue       '("#7db9fe" "#51afef" "brightblue"   ))
-   (dark-blue  '("#5f68de" "#2257A0" "blue"         ))
-   (magenta    '("#e29bf7" "#c678dd" "brightmagenta"))
-   (violet     '("#aeb9f3" "#a9a1e1" "magenta"      ))
-   (cyan       '("#75e0f9" "#46D9FF" "brightcyan"   ))
-   (dark-cyan  '("#5699AF" "#5699AF" "cyan"         ))
-
-   ;; These are the "universal syntax classes" that doom-themes establishes.
-   ;; These *must* be included in every doom themes, or your theme will throw an
-   ;; error, as they are used in the base theme defined in doom-themes-base.
-   (highlight      "#8496ff")
-   (vertical-bar   (doom-darken base1 0.1))
-   (selection      dark-blue)
-   (builtin        blue)
-   (comments       "#63677f")
-   (doc-comments   (doom-lighten (if nuclear-brighter-comments dark-cyan base5) 0.25))
-   (constants      yellow)
-   (functions      blue)
-   (keywords       magenta)
-   (methods        violet)
-   (operators      cyan)
-   (type           orange)
-   (strings        green)
-   (variables      red)
-   (numbers        violet)
-   (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
-   (error          red)
-   (warning        yellow)
-   (success        green)
-   (vc-modified    orange)
-   (vc-added       green)
-   (vc-deleted     red)
-
-   ;; These are extra color variables used only in this theme; i.e. they aren't
-   ;; mandatory for derived themes.
-   (modeline-fg              fg)
-   (modeline-fg-alt          base5)
-   (modeline-bg              (if nuclear-brighter-modeline
-                                 (doom-darken blue 0.45)
-                               (doom-darken bg-alt 0.1)))
-   (modeline-bg-alt          (if nuclear-brighter-modeline
-                                 (doom-darken blue 0.475)
-                               `(,(doom-darken (car bg-alt) 0.15) ,@(cdr bg))))
-   (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
-   (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg)))
-
-   (-modeline-pad
-    (when nuclear-padded-modeline
-      (if (integerp nuclear-padded-modeline) nuclear-padded-modeline 4))))
-
-
-  ;;;; Base theme face overrides
-  (((line-number &override) :foreground base4)
-   ((line-number-current-line &override) :foreground violet)
-   ((font-lock-comment-face &override)
-    :background (if nuclear-brighter-comments (doom-lighten bg 0.05)))
-   (mode-line
-    :background modeline-bg :foreground modeline-fg
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
-   (mode-line-inactive
-    :background modeline-bg-inactive :foreground modeline-fg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
-   (mode-line-emphasis :foreground (if nuclear-brighter-modeline base8 highlight))
-
-   ;;;; css-mode <built-in> / scss-mode
-   (css-proprietary-property :foreground orange)
-   (css-property             :foreground green)
-   (css-selector             :foreground blue)
-   ;;;; doom-modeline
-   (doom-modeline-bar :background (if nuclear-brighter-modeline modeline-bg highlight))
-   (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
-   (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
-   (doom-modeline-buffer-project-root :foreground green :weight 'bold)
-   ;;;; elscreen
-   (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
-   ;;;; ivy
-   (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
-   ;;;; LaTeX-mode
-   (font-latex-math-face :foreground green)
-   ;;;; markdown-mode
-   (markdown-markup-face :foreground base5)
-   (markdown-header-face :inherit 'bold :foreground red)
-   ((markdown-code-face &override) :background (doom-lighten base3 0.05))
-   ;;;; rjsx-mode
-   (rjsx-tag :foreground red)
-   (rjsx-attr :foreground orange)
-   ;;;; solaire-mode
-   (solaire-mode-line-face
-    :inherit 'mode-line
-    :background modeline-bg-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-alt)))
-   (solaire-mode-line-inactive-face
-    :inherit 'mode-line-inactive
-    :background modeline-bg-inactive-alt
-    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive-alt))))
-
-  ;;;; Base theme variable overrides-
-  ())
-
-;;; nuclear-theme.el ends here
-#+end_src
-******* Generator
-:PROPERTIES:
-:header-args+: :tangle no
-:END:
-#+name: gen-doom-theme
-#+begin_src elisp :var palette=palette
-(defun dt--color (color)
-  (let ((k (-> color symbol-name (substring 1))))
-    (cadr (assoc k palette))))
-
-(defmacro dt--buffer->string (&rest body)
-  `(with-temp-buffer
-     ,@body
-     (buffer-string)))
-
-(defun dt--slurp (f)
-  (dt--buffer->string
-   (insert-file-contents f)))
-
-(defun dt--replace (s match replacement)
-  (replace-regexp-in-string match replacement s 'fixedcase 'literal))
-
-(defun dt--replace-sexp (s match replacement)
-  (dt--buffer->string
-   (insert s)
-   (goto-char (point-min))
-   (re-search-forward match)
-   ;; Calling `forward-sexp' and `backward-sexp' here to preserve whitespace.
-   (forward-sexp)
-   (backward-sexp)
-   (kill-sexp)
-   (insert (format "%S" replacement))))
-
-(defun dt--gen-doom-theme (f)
-  (-as->
-   (dt--slurp f) $
-   (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
-   (dt--replace $ "doom-one" "nuclear")
-   (-reduce-from
-    (-lambda (s (match replacement))
-      (dt--replace-sexp s match replacement))
-    $
-    (-partition
-     2
-     (let ((match-base-color (lambda (form)
-                               (rx-to-string `(seq "(" ,form (+ whitespace) "'("))))
-           (match-face (lambda (&rest forms)
-                         (rx-to-string `(seq "(" ,@forms)))))
-       (list
-        (funcall match-base-color "fg") (dt--color :fg)
-        (funcall match-base-color "red") (dt--color :red)
-        (funcall match-base-color "orange") (dt--color :orange)
-        (funcall match-base-color "green") (dt--color :green)
-        (funcall match-base-color "yellow") (dt--color :yellow)
-        (funcall match-base-color "blue") (dt--color :blue)
-        (funcall match-base-color "dark-blue") (dt--color :dark-blue)
-        (funcall match-base-color "magenta") (dt--color :magenta)
-        (funcall match-base-color "violet") (dt--color :violet)
-        (funcall match-base-color "cyan") (dt--color :cyan)
-        (funcall match-face "highlight") (dt--color :highlight)
-        (funcall match-face "builtin") 'blue
-        (funcall match-face "comments") (dt--color :comments)
-        (funcall match-face "constants") 'yellow
-        (funcall match-face "functions") 'blue
-        (funcall match-face "keywords") 'magenta
-        (funcall match-face "methods") 'violet
-        (funcall match-face "operators") 'cyan
-        (funcall match-face "type") 'orange
-        (funcall match-face "variables") 'red
-        (funcall match-face "numbers") 'violet
-        (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))
-   (dt--replace $ (rx ";; Copyright" (*? anything) "\n") "")
-   (dt--replace $ (rx ";; Author" (*? anything) "\n") "")))
-
-;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary. Perhaps it would be best to have the doom-themes repo be an explicit dependency in some way and manage like I do other Guix or Doom/straight dependencies.
-(dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
-#+end_src
-
-#+name: unescape
-#+begin_src elisp :var s=""
-(-as-> s $
-       (substring s 1 -1) ; Remove outer quotes.
-       (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
-       (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
-#+end_src
-***** Projects
-****** Phrenetic :path:
-#+begin_src elisp
-(load "~/projects/phrenetic/meta" 'noerror 'nomessage)
-
-(pushnew! safe-local-variable-values
-          '(eval . (with-eval-after-load 'geiser-guile
-                     (let ((root-dir
-                            (file-name-directory
-                             (locate-dominating-file default-directory ".dir-locals.el"))))
-                       (make-local-variable 'geiser-guile-load-path)
-                       (add-to-list 'geiser-guile-load-path root-dir)))))
-#+end_src
-****** Nyxt
-- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages. Also the changes it makes persist (modify ~lisp-imenu-generic-expression~), I don't know if that's a good idae.
-#+begin_src elisp
-(pushnew! safe-local-variable-values
-          '(eval . (cl-flet ((enhance-imenu-lisp
-                              (&rest keywords)
-                              (dolist (keyword keywords)
-                                (add-to-list
-                                 'lisp-imenu-generic-expression
-                                 (list (purecopy (concat (capitalize keyword)
-                                                         (if (string= (substring-no-properties keyword -1) "s")
-                                                             "es"
-                                                           "s")))
-                                       (purecopy (concat "^\\s-*("
-                                                         (regexp-opt
-                                                          (list (concat "define-" keyword))
-                                                          t)
-                                                         "\\s-+\\(" lisp-mode-symbol-regexp "\\)"))
-                                       2)))))
-                     ;; This adds the argument to the list of imenu known keywords.
-                     (enhance-imenu-lisp
-                      "bookmarklet-command"
-                      "class"
-                      "command"
-                      "ffi-method"
-                      "function"
-                      "mode"
-                      "parenscript"
-                      "user-class"))))
-#+end_src
-****** Hyperdrive :path:
-#+begin_src elisp
-(pushnew! safe-local-variable-values
-          '(cider-preferred-build-tool . shadow-cljs)
-          '(cider-default-cljs-repl . shadow)
-          '(cider-shadow-default-options . ":app")
-          '(cider-offer-to-open-cljs-app-in-browser . nil)
-          '(cider-clojure-cli-global-options . "-A:dev")
-          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
-          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
-          '(cider-clojure-cli-global-options . nil))
-
-(prodigy-define-service
-  :name "Amplify Mock"
-  :command "amplify"
-  :args '("mock")
-  :cwd "~/projects/Krush/hyperdrive/apps/singularity"
-  :kill-process-buffer-on-stop t)
-
-(prodigy-define-service
-  :name "Datomic Access (exogenesis)"
-  :command "bash"
-  :args '("datomic" "client" "access" "exogenesis")
-  :cwd "~/projects/Krush/hyperdrive/ion/team"
-  :kill-process-buffer-on-stop t)
-#+end_src
-****** Massrealty :path:
-#+begin_src elisp
-;; (pushnew! safe-local-variable-values
-;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
-;;           '(ssh-deploy-automatically-detect-remote-changes . t))
-
-;; (after! org-gcal
-;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
-#+end_src
-***** WIP
-#+begin_src elisp
-(after! org
-  (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
-
-;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
-;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
-
-(map! "s-A" #'app-launcher-run-app)
-
-(map! "s-&" (lambda (command)
-              (interactive (list (read-shell-command "$ ")))
-              (call-process-shell-command command nil 0 nil)))
-
-(map! :leader
-      "s-," (lookup-key doom-leader-map (kbd "<")))
-
-(after! company
-  (map! :map company-active-map
-        "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-        "s-]" #'company-show-location))
-
-(after! evil-org
-  (map! :map evil-org-mode-map
-        (:prefix "g"
-         :nv "{" #'evil-backward-paragraph
-         :nv "}" #'evil-forward-paragraph)))
-
-;; TODO Maybe do this if popping to the side is too annoying
-;; (after! geiser-repl
-;;   (setq geiser-repl-use-other-window nil))
-
-;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
-(map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
-
-;; `forward-char' in original definition is messing things up, do this for now
-;; (defun +eshell/search-history ()
-;;   (interactive)
-;;   (consult-history))
-(after! esh-mode
-  (map! :map eshell-mode-map
-        "C-s" #'consult-history))
-
-;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
-;; TODO should this go in the Guix or Nix config section?
-(use-package! nix-drv-mode
-  :defer t
-  :init
-  (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
-
-(after! vertico
-  (setq vertico-count 20  ; Trying out, maybe too big.
-        vertico-scroll-margin 7))
-#+end_src
-****** "status bar"
-Not using waybar at the moment so these are handy.
-#+begin_src elisp
-(use-package! battery
-  :config
-  (display-battery-mode 1))
-
-(use-package! time
-  :config
-  (setq display-time-day-and-date t)
-  ;; (setq display-time-24hr-format t)
-  (display-time-mode 1))
-#+end_src
-****** keybinding ideas
-#+begin_src elisp
-;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
-(biome--trans "s-h" "C-h")
-
-(map! "s-o" (lookup-key doom-leader-map (kbd "<")))
-;; Get rid of binding for =s-r=?
-(map! "s-r" nil)
-
-;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
-(biome--trans "C-S-i" "<backtab>")
-;; Also messes with my sexp-movement bindings
-;; (map! "C-s-j" #'evil-scroll-down
-;;       "C-s-k" #'evil-scroll-up)
-
-(after! evil
-  (map! :map evil-motion-state-map
-        ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
-        "C-S-o" #'evil-jump-forward))
-
-;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
-;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
-;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
-;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
-#+end_src
-****** phrenetic auto-tangle :path:
-- TODO Might be easier to do this with file-local variables.
-#+begin_src elisp
-;; (setq biome--phrenetic-dir "~/projects/phrenetic")
-
-;; (add-hook! 'org-mode-hook
-;;   (defun biome-add-org-autotangle-after-save-hook-h ()
-;;     (add-hook! 'after-save-hook :local
-;;       (defun biome-autotangle-h ()
-;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
-;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
-;;           (let ((org-confirm-babel-evaluate nil))
-;;             (org-babel-tangle)))))))
-#+end_src
-****** org-tanglesync
-#+begin_src elisp
-;; (use-package! org-tanglesync
-;;   :hook ((org-mode . org-tanglesync-mode)
-;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
-;;   :config
-;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/phrenetic/phrenetic.org")))
-#+end_src
-****** Temporary copypasta from bloodhound
-Copying this here for now, for convenience.
-#+begin_src elisp
-(setq my-dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/home-state.git")))
-;; (setq my-dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
-(map! "s-b" (cmd!
-             (pushnew! magit-git-global-arguments my-dotfiles-git-dir)
-             (magit-status "~")))
-(map! "s-B" (cmd!
-             ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
-             ;; Why is the above not working? Doing this for now:
-             ;; - Update: because `delq!' tests for equality with `eq'
-             (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
-#+end_src
-****** until I get semicolon working
-#+begin_src elisp
-(map! (:map minibuffer-local-map
-       "C-:" #'embark-act
-       "C-c C-:" #'embark-export)
-      (:leader
-       "A" #'embark-dwim)
-      ;; Trying out cycling (temp)
-      "C-:" #'embark-act
-      "s-q" #'embark-cycle)
-#+end_src
-****** ligatures
-Probably move these to ~after!~ blocks
-#+begin_src elisp
-(set-ligatures! '(html-mode nxml-mode web-mode)
-  :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
-                    "://"))
-#+end_src
-***** Out-of-band
-Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
-#+begin_src elisp :var oob-dir=(meta-get-dir)
-(let ((oob-dir (concat "~/projects/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
-  (let* ((file "out-of-band"))
-    (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
-        (load! file 'noerror))))
-#+end_src
-****** File
-#+begin_src elisp :tangle (meta-in-dir "out-of-band.el")
-#+end_src
-**** Packages :version:
-#+begin_src elisp :tangle (meta-in-dir "packages.el")
-;; -*- no-byte-compile: t; -*-
-
-(package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
-(package! expand-region :pin "7e5bbe2763c12bae3e77fe0c49bcad05ff91dbfe")
-(package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-(package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
-
-(package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
-(package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
-(package! guix-packaging ; REVIEW trying out
-  :recipe (:host github
-           :repo "ryanprior/emacs-guix-packaging"
-           :files (:defaults "snippets"))
-  :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
-
-(package! bluetooth :pin "a1ea361f17c6b4e5353160539cd3df6754007a9d") ; TODO just maybe make this dependent on my "bluetooth feature"
-
-(package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
-
-;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
-;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
-
-(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
-
-(package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
-
-;; REVIEW Breaks stuff after I updated to emacs 29 latest:
-;; Compiling EmacSQL SQLite binary ...
-;; Code Review initialization: (error "No EmacSQL SQLite binary available, aborting")
-(package! code-review :disable t)
-
-(package! app-launcher
-  :recipe (:host github
-           :repo "SebastienWae/app-launcher")
-  :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
-
-(package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
-
-;; TODO do hardcoded path better?
-;; TODO currently donnager is part of my dotfiles but if that isn't going to be the case I might like to make my dotfiles able to work in a "self-contained" fashion by providing a fallback in case it isn't available. To a github repo, or somehing. Actually can/should I do something like `out-of-band.el' and have donnager compiled and used like a regular package BUT prefer using the source in ~/projects if available. Does straight support doing things like this? Implement it myself if not?
-(package! donnager
-  :recipe (:local-repo "~/projects/phrenetic/donnager"
-           ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
-           :build (:not compile)))
-#+end_src
 * Projects
+- TODO call this something different? Maybe it'll end up being just a container for Guix packages shared across projects and should just be called "Packages" or "Auxillary" or something.
 :PROPERTIES:
 :meta-dir+: /penitent
 :END:
@@ -5007,6 +3468,1554 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
+#+end_src
+* Configurations
+:PROPERTIES:
+:meta-dir+: /tangential
+:END:
+** Common
+#+name: db/systems-common
+| =:db/id=          | =:system/features=                              |
+|-------------------+-------------------------------------------------|
+| :system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
+
+#+name: db/users-common
+| =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|---------------+------------------------+------------------------+---------------------+------------------------------|
+| :user/primary | :channel/nonguix       | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :user/aux     | :channel/nonguix       | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :user/guest   | :channel/nonguix       | Speak Friend and Enter | :shell/default      | :session/gnome               |
+
+** Operating systems
+:PROPERTIES:
+:meta-dir+: /os
+:END:
+#+name: db/users-system
+| =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
+|---------------+------------------+----------------+------------------|
+| :user/primary | pharcosyle       | true           |                  |
+| :user/aux     | pcoulson         | true           |                  |
+| :user/guest   | gandalf          |                | mellon           |
+
+*** Frostfire
+#+name: db/systems-frostfire
+| =:db/id=          | =:system/features=                                                                  |
+|-------------------+-------------------------------------------------------------------------------------|
+| :system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
+
+#+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
+(define-module (ebullient system os frostfire)
+  #:use-module (ebullient system base-os))
+
+(define-public os
+  (base-os #:system #:system/frostfire
+           #:host-name "frostfire"
+           #:accounts '(#:user/primary
+                        #:user/aux
+                        #:user/guest)
+           #:luks-uuid "<<frostfire-luks-uuid>>"
+           ;; #:auto-login-account #:user/primary ; REVIEW Enable this later.
+           #:console? #t
+           #:laptop? #t
+           #:bluetooth? #t))
+#+end_src
+**** Channel deps
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
+(use-modules (ebullient system channels))
+
+(get-system-channels
+ (system-channel-deps #:system/frostfire))
+#+end_src
+**** Channels lock :version:
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
+(list (channel
+        (name 'guix)
+        (url "https://git.savannah.gnu.org/git/guix.git")
+        (branch "master")
+        (commit
+          "85f026f36ae93ac3ce3fa50150848eab9b31b69f")
+        (introduction
+          (make-channel-introduction
+            "9edb3f66fd807b096b48283debdcddccfea34bad"
+            (openpgp-fingerprint
+              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+      (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (commit
+          "35533c763a81365e14d0b58ad262e8f88c82872c")
+        (introduction
+          (make-channel-introduction
+            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+            (openpgp-fingerprint
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+#+end_src
+**** LUKS UUID :external_state:
+#+name: frostfire-luks-uuid
+#+begin_src org
+bdda56af-6ca0-4953-bc13-d5af8715e0e5
+#+end_src
+** Home environments
+:PROPERTIES:
+:meta-dir+: /he
+:END:
+#+name: db/users-home
+| =:db/id=      | =:entity/channel-deps= | =:user/email=            |
+|---------------+------------------------+--------------------------|
+| :user/primary | :channel/flat          | pharcosyle@gmail.com     |
+| :user/aux     | :channel/flat          | pharcosyle+aux@gmail.com |
+
+*** Solitude
+#+begin_src scheme :tangle (meta-in-dir "solitude.scm")
+(define-module (ebullient home he solitude)
+  #:use-module (ebullient home base-he)
+  #:export (he))
+
+(define-public he
+  (base-he #:system #:system/frostfire
+           #:account #:user/primary
+           #:developer? #t))
+#+end_src
+**** Solitude old WIP
+#+begin_src scheme
+(define-module (ebullient home he solitude)
+  #:use-module (ebullient home base-he)
+  #:export (he))
+
+(define he
+  (home-environment
+   (packages (list ;; (specification->package "font-adobe-source-code-pro")
+                   (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
+                   (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
+                   ))
+   (services
+    (list
+     (service gammastep-service-type)
+     (service network-manager-service-type)
+     (service udiskie-service-type)
+
+     (service home-xdg-user-directories-service-type
+              (let* ((xdg-user-subdir "/files")
+                     (xdg-dir (lambda (path)
+                                (string-append "$HOME" xdg-user-subdir path))))
+                (home-xdg-user-directories-configuration
+                 (desktop "$HOME/desktop")
+                 (documents (xdg-dir "/docs"))
+                 (download "$HOME/dl")
+                 (music (xdg-dir "/music"))
+                 (pictures (xdg-dir "/pics"))
+                 (publicshare (xdg-dir "/public"))
+                 (templates (xdg-dir "/templates"))
+                 (videos (xdg-dir "/vids")))))
+
+     (service home-mcron-service-type
+              (home-mcron-configuration
+               (jobs
+                (list
+                 #~(job '(next-hour)
+                        (lambda ()
+                          (call-with-output-file "/tmp/test-mcron-file"
+                            (lambda (port)
+                              (display "Output!" port))))
+                        "Test mcron output")))))
+     (service home-git-service-type
+              (home-git-configuration
+               (config
+                `((user
+                   ((name . "Krzysztof Baranowski") ; FIXME <user-full-name>>
+                    (email . "pharcosyle@gmail.com"))) ; FIXME <user-email>>
+                  ;; (http "https://weak.example.com"
+                  ;;   ((ssl-verify . #f)))
+                  ;; (gpg
+                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+                  ;; (sendmail
+                  ;;  ((annotate . #t)))
+                  ))))
+     (service home-ssh-service-type
+              ;; (home-ssh-configuration
+              ;;  (extra-config
+              ;;   (list
+              ;;    (ssh-host "savannah"
+              ;;              '((compression . #f))))))
+              )
+
+
+     ;; TODO Examples from RDE I may want to make use of.
+     ;; (service home-keyboard-service-type
+     ;;          (keyboard-layout "us,ru" "dvorak,"
+     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
+     ;; (service home-gnupg-service-type
+     ;;          (home-gnupg-configuration
+     ;;           (gpg-agent-config
+     ;;            (home-gpg-agent-configuration
+     ;;             (ssh-agent? #t)))))
+     ;; (service home-state-service-type
+     ;;          (append
+     ;;           (list
+     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
+     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
+     ;;            (state-git "/home/bob/tmp/talkes/"
+     ;;                       "git@git.sr.ht:~abcdw/rde"))))
+     ))))
+#+end_src
+**** Channel deps
+#+begin_src scheme :tangle (meta-in-dir "solitude-channels")
+(use-modules (ebullient home channels))
+
+(get-home-channels
+ (user-channel-deps #:user/primary))
+#+end_src
+**** Channels lock
+#+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
+(list (channel
+        (name 'guix)
+        (url "https://git.savannah.gnu.org/git/guix.git")
+        (branch "master")
+        (commit
+          "04ac1a248c188e4e49e6372e8336c31d32d1c96e")
+        (introduction
+          (make-channel-introduction
+            "9edb3f66fd807b096b48283debdcddccfea34bad"
+            (openpgp-fingerprint
+              "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+      (channel
+        (name 'flat)
+        (url "https://github.com/flatwhatson/guix-channel.git")
+        (branch "master")
+        (commit
+          "ece373bcd1e00ef746fb7b104e56ab610cc4af2a")
+        (introduction
+          (make-channel-introduction
+            "33f86a4b48205c0dc19d7c036c85393f0766f806"
+            (openpgp-fingerprint
+              "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
+      (channel
+        (name 'rde)
+        (url "https://git.sr.ht/~abcdw/rde")
+        (branch "master")
+        (commit
+          "520e1429593c2daf4a296a9ea55c4aa32848b491")
+        (introduction
+          (make-channel-introduction
+            "257cebd587b66e4d865b3537a9a88cccd7107c95"
+            (openpgp-fingerprint
+              "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+      (channel
+        (name 'nonguix)
+        (url "https://gitlab.com/nonguix/nonguix")
+        (branch "master")
+        (commit
+          "35533c763a81365e14d0b58ad262e8f88c82872c")
+        (introduction
+          (make-channel-introduction
+            "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+            (openpgp-fingerprint
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+#+end_src
+**** Dotfiles
+- TODO move the "Dotfiles" headline somewhere better later?
+
+#+name: db/palette
+| =:db/id=                 | =:color/hex= |
+|--------------------------+--------------|
+| :color/fg                | #dee2f8      |
+| :color/highlight         | #8496ff      |
+| :color/comments          | #63677f      |
+| :color/comment-delimiter | #939abd      |
+| :color/red               | #fb8578      |
+| :color/orange            | #fdce5f      |
+| :color/green             | #9fed9c      |
+| :color/yellow            | #eddc91      |
+| :color/blue              | #7db9fe      |
+| :color/dark-blue         | #5f68de      |
+| :color/magenta           | #e29bf7      |
+| :color/violet            | #aeb9f3      |
+| :color/cyan              | #75e0f9      |
+| :color/gold              | #fdd94a      |
+| :color/pink              | #ff9999      |
+
+- FIXME remove this
+#+name: palette
+| Name              | Color   |
+|-------------------+---------|
+| fg                | #dee2f8 |
+| highlight         | #8496ff |
+| comments          | #63677f |
+| comment-delimiter | #939abd |
+| red               | #fb8578 |
+| orange            | #fdce5f |
+| green             | #9fed9c |
+| yellow            | #eddc91 |
+| blue              | #7db9fe |
+| dark-blue         | #5f68de |
+| magenta           | #e29bf7 |
+| violet            | #aeb9f3 |
+| cyan              | #75e0f9 |
+| gold              | #fdd94a |
+| pink              | #ff9999 |
+
+***** Doom private
+:PROPERTIES:
+:meta-dir+: /doom-private
+:END:
+****** Init
+#+begin_src elisp :tangle (meta-in-dir "init.el")
+;;; -*- lexical-binding: t; -*-
+
+(doom! :completion
+       (company +childframe)
+       (vertico +icons)
+
+       :ui
+       doom
+       doom-dashboard
+       (emoji +unicode)
+       hl-todo
+       hydra
+       indent-guides
+       (ligatures +extra)
+       modeline
+       nav-flash
+       ophints
+       (popup +defaults +all)
+       tabs
+       treemacs
+       vc-gutter
+       vi-tilde-fringe
+       window-select
+       workspaces
+
+       :editor
+       (evil +everywhere)
+       file-templates
+       fold
+       format
+       lispy
+       multiple-cursors
+       rotate-text
+       snippets
+       word-wrap
+
+       :emacs
+       (dired +icons)
+       electric
+       (ibuffer +icons)
+       undo
+       vc
+
+       :term
+       eshell
+       vterm
+
+       :checkers
+       (syntax +childframe)
+
+       :tools
+       direnv ; TODO should be contributed by direnv component
+       (eval +overlay)
+       lookup
+       (magit +forge)
+       (pass +auth)
+       pdf
+       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
+       rgb
+       taskrunner
+
+       :lang
+       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
+       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
+       data
+       emacs-lisp
+       json
+       javascript
+       markdown
+       nix ; TODO this should be gated by Nix inclusion like system components do.
+       (org +journal)
+       rest
+       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
+       sh
+       web
+       yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+
+       :app
+       calendar
+
+       :config
+       (default +bindings +smartparens))
+#+end_src
+****** Config
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "config.el")
+:END:
+#+begin_src elisp
+;;; -*- lexical-binding: t; -*-
+
+(use-package! dash)
+(use-package! s)
+#+end_src
+******* Personal Info :user:
+#+begin_src elisp :noweb yes
+(setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>>
+      user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
+#+end_src
+******* Locals :path:
+#+begin_src elisp
+(defconst biome--org-dir (concat org-directory "~/org"))
+(defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
+
+(defconst biome--very-big 1000000)
+
+(defconst biome--theme 'doom-nuclear)
+#+end_src
+#+begin_src elisp :var palette=palette
+(defun biome--color (color)
+  (let ((k (-> color symbol-name (substring 1))))
+    (cadr (assoc k palette))))
+#+end_src
+******* General :UI:path:
+#+begin_src elisp
+;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
+(setq org-directory biome--org-dir)
+
+(setq scroll-margin 10
+      save-interprogram-paste-before-kill t)
+
+;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
+;; (setq display-line-numbers-type nil)
+#+end_src
+******** Doom resets
+#+begin_src elisp
+(setq-default indent-tabs-mode t)
+
+;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+;; (setq-default cursor-in-non-selected-windows t)
+#+end_src
+******** Doom
+#+begin_src elisp
+;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
+(add-hook! 'doom-real-buffer-functions
+  ;; (defun biome-new-buffer-p (buf)
+  ;;   (s-matches?
+  ;;    (rx bol "*new*"
+  ;;        (* "<" (+ digit) ">")
+  ;;        eol)
+  ;;    (buffer-name buf)))
+  ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
+  (defun biome-org-src-edit-buffer-p (buf)
+    (s-matches?
+     (rx bol "*Org Src " (+ anything) "*"
+         (* "<" (+ digit) ">")
+         eol)
+     (buffer-name buf))))
+#+end_src
+******* Keybindings :bindings:
+#+begin_src elisp
+(setq help-char (string-to-char "\C-_"))
+#+end_src
+******** Translations
+#+begin_src elisp
+(defun biome--trans (&rest rest)
+  (-each (-partition 2 rest)
+    (-lambda ((to from))
+      (define-key key-translation-map (kbd to) (kbd from)))))
+
+(biome--trans "C-h" "DEL"
+              "C-?" "C-h"
+
+              "s-h" "<left>"
+              "s-j" "<down>"
+              "s-k" "<up>"
+              "s-l" "<right>")
+#+end_src
+******** Leader/localleader
+#+begin_src elisp
+(setq doom-leader-alt-key "s-SPC"
+      doom-localleader-key "s-m"
+      doom-localleader-alt-key "s-m")
+#+end_src
+******** General
+#+begin_src elisp
+(defalias 'original-yank-pop #'yank-pop)
+
+;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
+(map! "s-V" #'original-yank-pop
+
+      "s-SPC" doom-leader-map
+
+      ;; Adapted from Doom macOS bindings: ~/.config/emacs/modules/config/default/config.el:263
+      "s-`" #'other-frame
+      "s-n" #'+default/new-buffer
+      "s-z" #'undo
+      "s-Z" #'redo
+      "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
+      "s-v" #'yank
+      "s-s" #'save-buffer
+      "s-x" #'execute-extended-command
+      ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
+      ;; :v "s-x" #'kill-region
+      "s-/" (cmd! (save-excursion (comment-line 1)))
+      :n "s-/" #'evilnc-comment-or-uncomment-lines
+      :v "s-/" #'evilnc-comment-operator
+
+      "s-t" (lookup-key doom-leader-map (kbd "`"))
+      "s-f" (lookup-key doom-leader-map (kbd "s b"))
+      "s-r" (lookup-key doom-leader-map (kbd "f r"))
+      "s-w" (lookup-key doom-leader-map (kbd "b k"))
+      "s-d w" (lookup-key doom-leader-map (kbd "w d"))
+      "s-d s-w" (cmd! (kill-current-buffer)
+                      (+workspace/close-window-or-workspace))
+      "s-g" (lookup-key doom-leader-map (kbd "g g"))
+      "s-," (lookup-key doom-leader-map (kbd "w w"))
+      "s-<" (lookup-key doom-leader-map (kbd "w W"))
+      "s-y" (lookup-key doom-leader-map (kbd "i y"))
+      "s-{" (lookup-key doom-leader-map (kbd "b p"))
+      "s-}" (lookup-key doom-leader-map (kbd "b n"))
+      "s-p" (lookup-key global-map (kbd "C-~")) ; TODO if I'm keeping this, improve it to first switch focus to a/the popup window if one isn't focused already
+
+      "s-u" (lookup-key doom-leader-map (kbd "u"))
+      "s-U" #'negative-argument         ; Trying this out.
+      (:map universal-argument-map
+       "s-u" #'universal-argument-more)
+
+      (:after evil-easymotion
+       "s-a" (lookup-key evilem-map (kbd "SPC")))
+
+      "s-." #'repeat
+
+      "s-J" #'evil-scroll-down
+      "s-K" #'evil-scroll-up
+
+      (:prefix "s-d"
+       "." #'repeat-complex-command
+
+       "h" #'git-gutter:popup-hunk
+       ;; "o" #'+macos/open-in-default-program ;; TODO consider a Guix alternative? Meh.
+       "r" #'projectile-replace
+       "t" #'tldr
+       "s" #'org-save-all-org-buffers
+       "a" #'link-hint-open-multiple-links
+       ;; "b" (cmd! (evil-local-mode 'toggle)
+       ;;           (when evil-local-mode (evil-normal-state)))
+       (:prefix "c"
+        "f" #'org-gcal-fetch
+        "s" #'org-gcal-sync
+        "p" #'org-gcal-post-at-point)))
+#+end_src
+******* Modules
+******** Completion
+********* Vertico
+********** vertico
+#+begin_src elisp
+(after! vertico
+  (map! :map vertico-map
+        "DEL" #'vertico-directory-delete-char))
+#+end_src
+******** UI
+********* Doom
+********** doom-themes
+- TODO get rid of this if I'm not going to try it out again
+#+begin_src elisp
+;; (after! doom-themes
+;;   (doom-themes-visual-bell-config))
+#+end_src
+********* Modeline
+********** doom-modeline
+#+begin_src elisp
+(after! doom-modeline
+  ;; (setq doom-modeline-checker-simple-format nil)
+  (setq doom-modeline-major-mode-icon t)
+  (setq doom-modeline-persp-name t))
+#+end_src
+********* Indent Guides
+********** highlight-indent-guides :prog_mode:
+#+begin_src elisp
+(use-package! highlight-indent-guides
+  :defer t
+  :init
+  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+  (remove-hook! '(prog-mode-hook
+                  text-mode-hook
+                  conf-mode-hook)
+    #'highlight-indent-guides-mode))
+#+end_src
+********* Ligatures
+********** ligature
+#+begin_src elisp :tangle (meta-in-dir "init.el")
+(use-package-hook! ligature
+  :pre-config
+  (setq +ligatures-all-modes-list
+        '("www")
+        +ligatures-prog-mode-list
+        '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
+          "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+          ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+          "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+          "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+          "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+          "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+          "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+          "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+          "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+          "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
+          ;; Doom defaults (just the ones not already present in Fira Code)
+          "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
+          "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
+          ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
+          "*)" "://"))
+  t)
+#+end_src
+******** Editor
+********* Evil
+********** evil :bindings:theming:
+#+begin_src elisp
+(after! evil
+  (defun biome--set-theme-cursor-color-symbols ()
+    (put 'cursor 'evil-normal-color (biome--color :gold))
+    (put 'cursor 'evil-emacs-color  (biome--color :pink)))
+
+  (defadvice! biome-update-cursor-color-a (&rest _)
+    :after #'+evil-update-cursor-color-h
+    (when (memq biome--theme custom-enabled-themes)
+      (biome--set-theme-cursor-color-symbols)))
+
+  (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
+#+end_src
+********* Multiple Cursors
+********** evil-multiedit :evil:
+#+begin_src elisp
+(after! evil-multiedit
+  (setq evil-multiedit-follow-matches t))
+#+end_src
+********* Lisp
+********** lispy
+#+begin_src elisp
+(use-package! lispy
+  :defer t
+  :init
+  ;; Not using lispy, remove all the Doom module's hooks.
+  (remove-hook! '(lisp-mode-hook
+                  emacs-lisp-mode-hook
+                  ielm-mode-hook
+                  scheme-mode-hook
+                  racket-mode-hook
+                  hy-mode-hook
+                  lfe-mode-hook
+                  dune-mode-hook
+                  clojure-mode-hook
+                  fennel-mode-hook)
+    #'lispy-mode)
+  (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
+#+end_src
+********** lispyville :prog_mode:bindings:
+#+begin_src elisp
+(use-package! lispyville
+  :hook (prog-mode . lispyville-mode)
+  :init
+  (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
+  :config
+  (lispyville-set-key-theme
+   '(operators
+     c-w
+     c-u
+     commentary))
+  (map! :map lispyville-mode-map
+        "C-s-j" #'lispyville-beginning-of-next-defun
+        "C-s-k" #'lispyville-beginning-of-defun
+        "C-s-," #'lispyville-end-of-defun
+        "C-s-a" #'lispyville-drag-backward
+        "C-s-g" #'lispyville-drag-forward
+        "C-s-p" #'lispyville-prettify
+        (:prefix "C-s-;"
+         "R" #'lispyville-raise-list)))
+#+end_src
+******** Emacs
+********* Dired
+********** dired-x :UI:hidden:
+Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
+- TODO dired buffers always marked modified
+  *wait to do this until I do my dired project*
+  Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
+  - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
+    Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
+#+begin_src elisp
+(use-package! dired-x
+  :defer t
+  :init
+  (remove-hook! 'dired-mode-hook #'dired-omit-mode)
+  (add-hook! 'dired-mode-hook
+    (defun require-dired-x-h ()
+      (require 'dired-x))))
+#+end_src
+******** Term
+********* eshell :persistence:
+#+begin_src elisp
+(after! eshell
+  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+#+end_src
+******** Tools
+********* Magit
+********** magit :UI:
+#+begin_src elisp
+(after! magit
+  (setq git-commit-style-convention-checks '(non-empty-second-line))
+  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
+#+end_src
+******** Lang
+********* Clojure
+********** clojure :bindings:theming:
+#+begin_src elisp
+(use-package! clojure-mode
+  :defer t
+  :init
+  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
+  :config
+  (set-ligatures! 'clojure-mode :lambda "fn")
+  (custom-theme-set-faces! biome--theme
+    `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
+#+end_src
+********** cider :persistence:
+#+begin_src elisp
+(after! cider
+  (setq cider-repl-history-size biome--very-big
+        cider-print-options '(("length" 100))))
+
+;; REVIEW make sure this is still working after nesting in `after!'
+(after! cider-repl
+  (add-hook! 'cider-repl-mode-hook
+             #'goto-address-prog-mode
+             #'highlight-numbers-mode
+             #'rainbow-delimiters-mode
+             #'yas-minor-mode-on
+             #'biome-sp-strict-h))
+#+end_src
+********** clj-refactor :bindings:
+#+begin_src elisp
+(after! clj-refactor
+  (cljr-add-keybindings-with-prefix "s-M R")) ; REVIEW temporary binding
+#+end_src
+********* Emacs Lisp
+********** emacs-lisp
+#+begin_src elisp
+(after! elisp-mode
+  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
+#+end_src
+********* Org
+********** org :UI:path:theming:
+#+begin_src elisp
+(after! org
+  (setq org-agenda-files `(,biome--org-dir
+                           ,biome--org-gcal-dir
+                           ,(concat biome--org-dir "/projects"))
+        org-log-done 'time
+        org-priority-lowest ?E
+        org-priority-default ?C
+        org-priority-faces `((?A . ,(doom-color 'red))
+                             (?B . ,(doom-color 'orange))
+                             (?C . ,(doom-color 'blue))
+                             (?D . ,(doom-color 'yellow))
+                             (?E . ,(doom-color 'green)))))
+#+end_src
+********** ob
+#+begin_src elisp
+(after! ob
+  (setq org-babel-noweb-error-all-langs t))
+#+end_src
+********** evil-org :evil:bindings:
+#+begin_src elisp
+(after! evil-org
+  (map! :map evil-org-mode-map
+        :nv "C-j" #'outline-forward-same-level
+        :nv "C-k" #'outline-backward-same-level))
+#+end_src
+********* Scheme
+********** scheme
+#+begin_src elisp
+(after! scheme
+  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+#+end_src
+********** geiser :persistence:path:guix:
+Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
+#+begin_src elisp
+(use-package! geiser
+  :defer t
+  :init
+  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
+  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
+#+end_src
+******** App
+********* Calendar
+********** org-gcal :org:user:secret:persistence:path:
+#+begin_src elisp
+(after! org-gcal
+  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+        org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+        org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
+                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
+                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
+        org-gcal-recurring-events-mode 'nested))
+#+end_src
+******** Config
+********* expand-region :bindings:
+#+begin_src elisp
+(use-package! expand-region
+  :defer t
+  :init
+  (map! :nv "s-e" #'er/expand-region
+        :nv "s-E" #'er/contract-region)
+  :config
+  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
+  (defadvice! biome--quit-expand-region-a (&rest _)
+    "Properly abort an expand-region region."
+    :before '(evil-escape doom/escape)
+    (when (memq last-command '(er/expand-region er/contract-region))
+      (er/contract-region 0))))
+#+end_src
+******** Guix
+********* Emacs integration
+********** man :path:
+#+begin_src elisp :noweb yes
+(after! man
+  (prependq! Man-header-file-path
+             (-concat (-map (lambda (p)
+                              (concat p "/include"))
+                            '(<<guix-extra-profiles>>))
+                      '("<<guix-home-profile>>/include"))))
+#+end_src
+********** tramp :path:
+Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
+#+begin_src elisp :noweb yes
+(after! tramp
+  (prependq! tramp-remote-path
+             (-concat (-map (lambda (p)
+                              (concat p "/bin"))
+                            '(<<guix-extra-profiles>>))
+                      '("<<guix-home-profile>>/bin"
+                        "~/.config/guix/current/bin"
+                        "~/.guix-profile/bin"
+                        "~/.guix-profile/sbin"
+                        "/run/current-system/profile/bin"
+                        "/run/current-system/profile/sbin"))))
+#+end_src
+********* guix.el
+********** guix :UI:
+#+begin_src elisp
+(after! guix
+  (set-popup-rules!
+    '(("^\\*Guix" :height 0.5))))
+#+end_src
+********** guix-devel :scheme:
+#+begin_src elisp
+(use-package! guix-devel
+  :hook (scheme-mode . guix-devel-mode))
+#+end_src
+********** guix-popup :bindings:
+#+begin_src elisp
+(use-package! guix-popup
+  :defer t
+  :init
+  (map! :leader
+        "l" #'guix))  ; REVIEW temporary binding?
+#+end_src
+********** guix-prettify :UI:
+#+begin_src elisp
+(use-package! guix-prettify
+  :hook (doom-first-buffer . global-guix-prettify-mode))
+#+end_src
+********* Editing
+- TODO The Guix repo offers some [[https://github.com/guix-mirror/guix/tree/master/etc/snippets][snippets]] and less importantly a copyright inserter I'd like to use ([[https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup][described here]]) but I don't know where if anywhere the repo code lives on my machine.
+#+begin_src elisp
+;; (let ((guix-source-path "???/guix"))
+
+;;   (after! yasnippet
+;;     (add-to-list 'yas-snippet-dirs (concat guix-source-path "/etc/snippets")))
+
+;;   (after! skeleton
+;;     (load-file (concat guix-source-path "/etc/copyright.el")))
+
+;;   (after! copyright
+;;     (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address))))
+#+end_src
+********* guix-packaging :persistence:path:
+#+begin_src elisp
+(use-package! guix-packaging
+  :defer t
+  :init
+  (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
+#+end_src
+******** ?
+********* avy
+#+begin_src elisp
+;; REVIEW Trying out not having this so I can use avy dispatch commands.
+;; (after! avy
+;;   (setq avy-single-candidate-jump t))
+#+end_src
+********* paren :UI:
+#+begin_src elisp
+(after! paren
+  (setq! show-paren-delay 0))
+#+end_src
+********* prog-mode :prog_mode:
+#+begin_src elisp
+(add-hook! 'prog-mode-hook #'biome-sp-strict-h)
+#+end_src
+********* rainbow-delimiters :theming:
+#+begin_src elisp
+(after! rainbow-delimiters
+  (let ((default-max rainbow-delimiters-max-face-count))
+    (defun biome-set-rainbow-delimiters-max-face-count ()
+      (setq rainbow-delimiters-max-face-count
+            (if (memq biome--theme custom-enabled-themes)
+                8 default-max))))
+
+  (biome-set-rainbow-delimiters-max-face-count)
+  (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
+
+  (custom-theme-set-faces! biome--theme
+    `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
+    `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
+    `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
+    `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
+    `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
+    `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
+    `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
+    `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))))
+#+end_src
+********* recentf :persistence:
+#+begin_src elisp
+(after! recentf
+  (setq recentf-max-saved-items 500))
+#+end_src
+********* smartparens :bindings:
+#+begin_src elisp
+(after! smartparens
+  (map! :map smartparens-mode-map
+        "C-s-h" #'sp-backward-sexp
+        "C-s-l" #'sp-forward-sexp
+        "C-s-u" #'sp-backward-up-sexp
+        "C-s-o" #'sp-up-sexp
+        :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
+        "C-s-." #'sp-down-sexp
+        "C-s-c" #'sp-splice-sexp
+        "C-s-s" #'sp-splice-sexp-killing-backward
+        "C-s-f" #'sp-splice-sexp-killing-forward
+        "C-s-x" #'sp-backward-slurp-sexp
+        "C-s-v" #'sp-forward-slurp-sexp
+        "C-s-w" #'sp-backward-barf-sexp
+        "C-s-r" #'sp-forward-barf-sexp
+        (:prefix "C-s-;"
+         "(" #'sp-wrap-round
+         "[" #'sp-wrap-square
+         "{" #'sp-wrap-curly
+         "s" #'sp-split-sexp
+         "j" #'sp-join-sexp
+         "r" #'sp-raise-sexp
+         "c" #'sp-convolute-sexp
+         "w" #'sp-rewrap-sexp)))
+#+end_src
+********** Hook :bindings:
+#+begin_src elisp
+(defun biome-sp-strict-h ()
+  (add-hook! 'smartparens-enabled-hook :local
+             #'turn-on-smartparens-strict-mode
+             (defun biome-modify-sp-strict-mode-map-h ()
+               (map! :map smartparens-strict-mode-map
+                     :i "DEL" #'sp-backward-delete-char))))
+#+end_src
+********* transient :persistence:
+- TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
+#+begin_src elisp
+(after! transient
+  (setq transient-history-limit biome--very-big))
+#+end_src
+********* undo-fu
+#+begin_src elisp
+(after! undo-fu
+  (setq undo-fu-ignore-keyboard-quit t))
+#+end_src
+********* undo-tree :UI:
+#+begin_src elisp
+;; (after! undo-tree
+;;   (setq undo-tree-visualizer-timestamps t))
+#+end_src
+********* emojify :UI:
+#+begin_src elisp
+(after! emojify
+  (setq emojify-display-style 'unicode))
+#+end_src
+********* asdf :bindings:
+- TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+#+begin_src elisp
+(define-key! :keymaps +default-minibuffer-maps
+  "s-J" #'scroll-up-command
+  "s-K" #'scroll-down-command)
+#+end_src
+******* Theming :theming:
+#+begin_src elisp
+(setq doom-theme biome--theme)
+
+(custom-theme-set-faces! biome--theme
+  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
+  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
+#+end_src
+******** Font
+#+begin_src elisp
+(let ((font (font-spec :family "Fira Code Retina" :size 12)))
+  (when (find-font font)
+    (setq doom-font font)))
+#+end_src
+******** Nuclear Theme
+
+#+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (meta-in-dir \"themes/doom-nuclear-theme.el\")"
+
+#+RESULTS:
+#+begin_src elisp :tangle (meta-in-dir "themes/doom-nuclear-theme.el")
+;;; nuclear-theme.el --- inspired by Atom One Dark -*- lexical-binding: t; no-byte-compile: t; -*-
+;;
+;;
+;; Created: December 6, 2020
+;; Version: 2.0.0
+;; Keywords: custom themes, faces
+;; Homepage: https://github.com/hlissner/emacs-doom-themes
+;; Package-Requires: ((emacs "25.1") (cl-lib "0.5") (doom-themes "2.2.1"))
+;;
+;;; Commentary:
+;;
+;; Inspired by Atom's One Dark color scheme.
+;;
+;;; Code:
+
+(require 'doom-themes)
+
+
+;;
+;;; Variables
+
+(defgroup nuclear-theme nil
+  "Options for the `nuclear' theme."
+  :group 'doom-themes)
+
+(defcustom nuclear-brighter-modeline nil
+  "If non-nil, more vivid colors will be used to style the mode-line."
+  :group 'nuclear-theme
+  :type 'boolean)
+
+(defcustom nuclear-brighter-comments nil
+  "If non-nil, comments will be highlighted in more vivid colors."
+  :group 'nuclear-theme
+  :type 'boolean)
+
+(defcustom nuclear-padded-modeline doom-themes-padded-modeline
+  "If non-nil, adds a 4px padding to the mode-line.
+Can be an integer to determine the exact padding."
+  :group 'nuclear-theme
+  :type '(choice integer boolean))
+
+
+;;
+;;; Theme definition
+
+(def-doom-theme doom-nuclear
+  "A dark theme inspired by Atom One Dark."
+
+  ;; name        default   256           16
+  ((bg         '("#282c34" "black"       "black"  ))
+   (fg         '("#dee2f8" "#bfbfbf"     "brightwhite"  ))
+
+   ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
+   ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
+   ;; or region), especially when paired with the `doom-darken', `doom-lighten',
+   ;; and `doom-blend' helper functions.
+   (bg-alt     '("#21242b" "black"       "black"        ))
+   (fg-alt     '("#5B6268" "#2d2d2d"     "white"        ))
+
+   ;; These should represent a spectrum from bg to fg, where base0 is a starker
+   ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
+   ;; dark grey, base0 should be white and base8 should be black.
+   (base0      '("#1B2229" "black"       "black"        ))
+   (base1      '("#1c1f24" "#1e1e1e"     "brightblack"  ))
+   (base2      '("#202328" "#2e2e2e"     "brightblack"  ))
+   (base3      '("#23272e" "#262626"     "brightblack"  ))
+   (base4      '("#3f444a" "#3f3f3f"     "brightblack"  ))
+   (base5      '("#5B6268" "#525252"     "brightblack"  ))
+   (base6      '("#73797e" "#6b6b6b"     "brightblack"  ))
+   (base7      '("#9ca0a4" "#979797"     "brightblack"  ))
+   (base8      '("#DFDFDF" "#dfdfdf"     "white"        ))
+
+   (grey       base4)
+   (red        '("#fb8578" "#ff6655" "red"          ))
+   (orange     '("#fdce5f" "#dd8844" "brightred"    ))
+   (green      '("#9fed9c" "#99bb66" "green"        ))
+   (teal       '("#4db5bd" "#44b9b1" "brightgreen"  ))
+   (yellow     '("#eddc91" "#ECBE7B" "yellow"       ))
+   (blue       '("#7db9fe" "#51afef" "brightblue"   ))
+   (dark-blue  '("#5f68de" "#2257A0" "blue"         ))
+   (magenta    '("#e29bf7" "#c678dd" "brightmagenta"))
+   (violet     '("#aeb9f3" "#a9a1e1" "magenta"      ))
+   (cyan       '("#75e0f9" "#46D9FF" "brightcyan"   ))
+   (dark-cyan  '("#5699AF" "#5699AF" "cyan"         ))
+
+   ;; These are the "universal syntax classes" that doom-themes establishes.
+   ;; These *must* be included in every doom themes, or your theme will throw an
+   ;; error, as they are used in the base theme defined in doom-themes-base.
+   (highlight      "#8496ff")
+   (vertical-bar   (doom-darken base1 0.1))
+   (selection      dark-blue)
+   (builtin        blue)
+   (comments       "#63677f")
+   (doc-comments   (doom-lighten (if nuclear-brighter-comments dark-cyan base5) 0.25))
+   (constants      yellow)
+   (functions      blue)
+   (keywords       magenta)
+   (methods        violet)
+   (operators      cyan)
+   (type           orange)
+   (strings        green)
+   (variables      red)
+   (numbers        violet)
+   (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
+   (error          red)
+   (warning        yellow)
+   (success        green)
+   (vc-modified    orange)
+   (vc-added       green)
+   (vc-deleted     red)
+
+   ;; These are extra color variables used only in this theme; i.e. they aren't
+   ;; mandatory for derived themes.
+   (modeline-fg              fg)
+   (modeline-fg-alt          base5)
+   (modeline-bg              (if nuclear-brighter-modeline
+                                 (doom-darken blue 0.45)
+                               (doom-darken bg-alt 0.1)))
+   (modeline-bg-alt          (if nuclear-brighter-modeline
+                                 (doom-darken blue 0.475)
+                               `(,(doom-darken (car bg-alt) 0.15) ,@(cdr bg))))
+   (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
+   (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg)))
+
+   (-modeline-pad
+    (when nuclear-padded-modeline
+      (if (integerp nuclear-padded-modeline) nuclear-padded-modeline 4))))
+
+
+  ;;;; Base theme face overrides
+  (((line-number &override) :foreground base4)
+   ((line-number-current-line &override) :foreground violet)
+   ((font-lock-comment-face &override)
+    :background (if nuclear-brighter-comments (doom-lighten bg 0.05)))
+   (mode-line
+    :background modeline-bg :foreground modeline-fg
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg)))
+   (mode-line-inactive
+    :background modeline-bg-inactive :foreground modeline-fg-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive)))
+   (mode-line-emphasis :foreground (if nuclear-brighter-modeline base8 highlight))
+
+   ;;;; css-mode <built-in> / scss-mode
+   (css-proprietary-property :foreground orange)
+   (css-property             :foreground green)
+   (css-selector             :foreground blue)
+   ;;;; doom-modeline
+   (doom-modeline-bar :background (if nuclear-brighter-modeline modeline-bg highlight))
+   (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
+   (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
+   (doom-modeline-buffer-project-root :foreground green :weight 'bold)
+   ;;;; elscreen
+   (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
+   ;;;; ivy
+   (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
+   ;;;; LaTeX-mode
+   (font-latex-math-face :foreground green)
+   ;;;; markdown-mode
+   (markdown-markup-face :foreground base5)
+   (markdown-header-face :inherit 'bold :foreground red)
+   ((markdown-code-face &override) :background (doom-lighten base3 0.05))
+   ;;;; rjsx-mode
+   (rjsx-tag :foreground red)
+   (rjsx-attr :foreground orange)
+   ;;;; solaire-mode
+   (solaire-mode-line-face
+    :inherit 'mode-line
+    :background modeline-bg-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-alt)))
+   (solaire-mode-line-inactive-face
+    :inherit 'mode-line-inactive
+    :background modeline-bg-inactive-alt
+    :box (if -modeline-pad `(:line-width ,-modeline-pad :color ,modeline-bg-inactive-alt))))
+
+  ;;;; Base theme variable overrides-
+  ())
+
+;;; nuclear-theme.el ends here
+#+end_src
+********* Generator
+:PROPERTIES:
+:header-args+: :tangle no
+:END:
+#+name: gen-doom-theme
+#+begin_src elisp :var palette=palette
+(defun dt--color (color)
+  (let ((k (-> color symbol-name (substring 1))))
+    (cadr (assoc k palette))))
+
+(defmacro dt--buffer->string (&rest body)
+  `(with-temp-buffer
+     ,@body
+     (buffer-string)))
+
+(defun dt--slurp (f)
+  (dt--buffer->string
+   (insert-file-contents f)))
+
+(defun dt--replace (s match replacement)
+  (replace-regexp-in-string match replacement s 'fixedcase 'literal))
+
+(defun dt--replace-sexp (s match replacement)
+  (dt--buffer->string
+   (insert s)
+   (goto-char (point-min))
+   (re-search-forward match)
+   ;; Calling `forward-sexp' and `backward-sexp' here to preserve whitespace.
+   (forward-sexp)
+   (backward-sexp)
+   (kill-sexp)
+   (insert (format "%S" replacement))))
+
+(defun dt--gen-doom-theme (f)
+  (-as->
+   (dt--slurp f) $
+   (dt--replace-sexp $ "def-doom-theme" 'doom-nuclear)
+   (dt--replace $ "doom-one" "nuclear")
+   (-reduce-from
+    (-lambda (s (match replacement))
+      (dt--replace-sexp s match replacement))
+    $
+    (-partition
+     2
+     (let ((match-base-color (lambda (form)
+                               (rx-to-string `(seq "(" ,form (+ whitespace) "'("))))
+           (match-face (lambda (&rest forms)
+                         (rx-to-string `(seq "(" ,@forms)))))
+       (list
+        (funcall match-base-color "fg") (dt--color :fg)
+        (funcall match-base-color "red") (dt--color :red)
+        (funcall match-base-color "orange") (dt--color :orange)
+        (funcall match-base-color "green") (dt--color :green)
+        (funcall match-base-color "yellow") (dt--color :yellow)
+        (funcall match-base-color "blue") (dt--color :blue)
+        (funcall match-base-color "dark-blue") (dt--color :dark-blue)
+        (funcall match-base-color "magenta") (dt--color :magenta)
+        (funcall match-base-color "violet") (dt--color :violet)
+        (funcall match-base-color "cyan") (dt--color :cyan)
+        (funcall match-face "highlight") (dt--color :highlight)
+        (funcall match-face "builtin") 'blue
+        (funcall match-face "comments") (dt--color :comments)
+        (funcall match-face "constants") 'yellow
+        (funcall match-face "functions") 'blue
+        (funcall match-face "keywords") 'magenta
+        (funcall match-face "methods") 'violet
+        (funcall match-face "operators") 'cyan
+        (funcall match-face "type") 'orange
+        (funcall match-face "variables") 'red
+        (funcall match-face "numbers") 'violet
+        (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))
+   (dt--replace $ (rx ";; Copyright" (*? anything) "\n") "")
+   (dt--replace $ (rx ";; Author" (*? anything) "\n") "")))
+
+;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary. Perhaps it would be best to have the doom-themes repo be an explicit dependency in some way and manage like I do other Guix or Doom/straight dependencies.
+(dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
+#+end_src
+
+#+name: unescape
+#+begin_src elisp :var s=""
+(-as-> s $
+       (substring s 1 -1) ; Remove outer quotes.
+       (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
+       (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
+#+end_src
+******* Projects
+******** Phrenetic :path:
+#+begin_src elisp
+(load "~/projects/phrenetic/meta" 'noerror 'nomessage)
+
+(pushnew! safe-local-variable-values
+          '(eval . (with-eval-after-load 'geiser-guile
+                     (let ((root-dir
+                            (file-name-directory
+                             (locate-dominating-file default-directory ".dir-locals.el"))))
+                       (make-local-variable 'geiser-guile-load-path)
+                       (add-to-list 'geiser-guile-load-path root-dir)))))
+#+end_src
+******** Nyxt
+- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages. Also the changes it makes persist (modify ~lisp-imenu-generic-expression~), I don't know if that's a good idae.
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(eval . (cl-flet ((enhance-imenu-lisp
+                              (&rest keywords)
+                              (dolist (keyword keywords)
+                                (add-to-list
+                                 'lisp-imenu-generic-expression
+                                 (list (purecopy (concat (capitalize keyword)
+                                                         (if (string= (substring-no-properties keyword -1) "s")
+                                                             "es"
+                                                           "s")))
+                                       (purecopy (concat "^\\s-*("
+                                                         (regexp-opt
+                                                          (list (concat "define-" keyword))
+                                                          t)
+                                                         "\\s-+\\(" lisp-mode-symbol-regexp "\\)"))
+                                       2)))))
+                     ;; This adds the argument to the list of imenu known keywords.
+                     (enhance-imenu-lisp
+                      "bookmarklet-command"
+                      "class"
+                      "command"
+                      "ffi-method"
+                      "function"
+                      "mode"
+                      "parenscript"
+                      "user-class"))))
+#+end_src
+******** Hyperdrive :path:
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(cider-preferred-build-tool . shadow-cljs)
+          '(cider-default-cljs-repl . shadow)
+          '(cider-shadow-default-options . ":app")
+          '(cider-offer-to-open-cljs-app-in-browser . nil)
+          '(cider-clojure-cli-global-options . "-A:dev")
+          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
+          '(cider-clojure-cli-global-options . nil))
+
+(prodigy-define-service
+  :name "Amplify Mock"
+  :command "amplify"
+  :args '("mock")
+  :cwd "~/projects/Krush/hyperdrive/apps/singularity"
+  :kill-process-buffer-on-stop t)
+
+(prodigy-define-service
+  :name "Datomic Access (exogenesis)"
+  :command "bash"
+  :args '("datomic" "client" "access" "exogenesis")
+  :cwd "~/projects/Krush/hyperdrive/ion/team"
+  :kill-process-buffer-on-stop t)
+#+end_src
+******** Massrealty :path:
+#+begin_src elisp
+;; (pushnew! safe-local-variable-values
+;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
+;;           '(ssh-deploy-automatically-detect-remote-changes . t))
+
+;; (after! org-gcal
+;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
+#+end_src
+******* WIP
+#+begin_src elisp
+(after! org
+  (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
+
+;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
+;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+(map! "s-A" #'app-launcher-run-app)
+
+(map! "s-&" (lambda (command)
+              (interactive (list (read-shell-command "$ ")))
+              (call-process-shell-command command nil 0 nil)))
+
+(map! :leader
+      "s-," (lookup-key doom-leader-map (kbd "<")))
+
+(after! company
+  (map! :map company-active-map
+        "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+        "s-]" #'company-show-location))
+
+(after! evil-org
+  (map! :map evil-org-mode-map
+        (:prefix "g"
+         :nv "{" #'evil-backward-paragraph
+         :nv "}" #'evil-forward-paragraph)))
+
+;; TODO Maybe do this if popping to the side is too annoying
+;; (after! geiser-repl
+;;   (setq geiser-repl-use-other-window nil))
+
+;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
+(map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
+
+;; `forward-char' in original definition is messing things up, do this for now
+;; (defun +eshell/search-history ()
+;;   (interactive)
+;;   (consult-history))
+(after! esh-mode
+  (map! :map eshell-mode-map
+        "C-s" #'consult-history))
+
+;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
+;; TODO should this go in the Guix or Nix config section?
+(use-package! nix-drv-mode
+  :defer t
+  :init
+  (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
+
+(after! vertico
+  (setq vertico-count 20  ; Trying out, maybe too big.
+        vertico-scroll-margin 7))
+#+end_src
+******** "status bar"
+Not using waybar at the moment so these are handy.
+#+begin_src elisp
+(use-package! battery
+  :config
+  (display-battery-mode 1))
+
+(use-package! time
+  :config
+  (setq display-time-day-and-date t)
+  ;; (setq display-time-24hr-format t)
+  (display-time-mode 1))
+#+end_src
+******** keybinding ideas
+#+begin_src elisp
+;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
+(biome--trans "s-h" "C-h")
+
+(map! "s-o" (lookup-key doom-leader-map (kbd "<")))
+;; Get rid of binding for =s-r=?
+(map! "s-r" nil)
+
+;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
+(biome--trans "C-S-i" "<backtab>")
+;; Also messes with my sexp-movement bindings
+;; (map! "C-s-j" #'evil-scroll-down
+;;       "C-s-k" #'evil-scroll-up)
+
+(after! evil
+  (map! :map evil-motion-state-map
+        ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
+        "C-S-o" #'evil-jump-forward))
+
+;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
+;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
+#+end_src
+******** phrenetic auto-tangle :path:
+- TODO Might be easier to do this with file-local variables.
+#+begin_src elisp
+;; (setq biome--phrenetic-dir "~/projects/phrenetic")
+
+;; (add-hook! 'org-mode-hook
+;;   (defun biome-add-org-autotangle-after-save-hook-h ()
+;;     (add-hook! 'after-save-hook :local
+;;       (defun biome-autotangle-h ()
+;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
+;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
+;;           (let ((org-confirm-babel-evaluate nil))
+;;             (org-babel-tangle)))))))
+#+end_src
+******** org-tanglesync
+#+begin_src elisp
+;; (use-package! org-tanglesync
+;;   :hook ((org-mode . org-tanglesync-mode)
+;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
+;;   :config
+;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/phrenetic/phrenetic.org")))
+#+end_src
+******** Temporary copypasta from bloodhound
+Copying this here for now, for convenience.
+#+begin_src elisp
+(setq my-dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/home-state.git")))
+;; (setq my-dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+(map! "s-b" (cmd!
+             (pushnew! magit-git-global-arguments my-dotfiles-git-dir)
+             (magit-status "~")))
+(map! "s-B" (cmd!
+             ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
+             ;; Why is the above not working? Doing this for now:
+             ;; - Update: because `delq!' tests for equality with `eq'
+             (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
+#+end_src
+******** until I get semicolon working
+#+begin_src elisp
+(map! (:map minibuffer-local-map
+       "C-:" #'embark-act
+       "C-c C-:" #'embark-export)
+      (:leader
+       "A" #'embark-dwim)
+      ;; Trying out cycling (temp)
+      "C-:" #'embark-act
+      "s-q" #'embark-cycle)
+#+end_src
+******** ligatures
+Probably move these to ~after!~ blocks
+#+begin_src elisp
+(set-ligatures! '(html-mode nxml-mode web-mode)
+  :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
+                    "://"))
+#+end_src
+******* Out-of-band
+Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
+#+begin_src elisp :var oob-dir=(meta-get-dir)
+(let ((oob-dir (concat "~/projects/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
+  (let* ((file "out-of-band"))
+    (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
+        (load! file 'noerror))))
+#+end_src
+******** File
+#+begin_src elisp :tangle (meta-in-dir "out-of-band.el")
+#+end_src
+****** Packages :version:
+#+begin_src elisp :tangle (meta-in-dir "packages.el")
+;; -*- no-byte-compile: t; -*-
+
+(package! dash :pin "da167c51e9fd167a48d06c7c0ee8e3ac7abd9718") ; TODO make this be introduced by my doom config (where I need it)?
+(package! expand-region :pin "7e5bbe2763c12bae3e77fe0c49bcad05ff91dbfe")
+(package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+(package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
+
+(package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+(package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
+(package! guix-packaging ; REVIEW trying out
+  :recipe (:host github
+           :repo "ryanprior/emacs-guix-packaging"
+           :files (:defaults "snippets"))
+  :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
+
+(package! bluetooth :pin "a1ea361f17c6b4e5353160539cd3df6754007a9d") ; TODO just maybe make this dependent on my "bluetooth feature"
+
+(package! symon :pin "8dd8b6df49b03cd7d31b85aedbe9dd08fb922335")
+
+;; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+;; (package! graphql-mode :pin "2371316a750b807de941184d49ca19d277ecadcd")
+
+(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
+
+(package! i3wm-config-mode :pin "c70bdc1367e461299e13a4797bc9d9d950184edd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
+
+;; REVIEW Breaks stuff after I updated to emacs 29 latest:
+;; Compiling EmacSQL SQLite binary ...
+;; Code Review initialization: (error "No EmacSQL SQLite binary available, aborting")
+(package! code-review :disable t)
+
+(package! app-launcher
+  :recipe (:host github
+           :repo "SebastienWae/app-launcher")
+  :pin "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
+
+(package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
+
+;; TODO do hardcoded path better?
+;; TODO currently donnager is part of my dotfiles but if that isn't going to be the case I might like to make my dotfiles able to work in a "self-contained" fashion by providing a fallback in case it isn't available. To a github repo, or somehing. Actually can/should I do something like `out-of-band.el' and have donnager compiled and used like a regular package BUT prefer using the source in ~/projects if available. Does straight support doing things like this? Implement it myself if not?
+(package! donnager
+  :recipe (:local-repo "~/projects/phrenetic/donnager"
+           ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
+           :build (:not compile)))
 #+end_src
 * Dev
 ** Git ignore
