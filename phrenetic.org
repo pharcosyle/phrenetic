@@ -1994,6 +1994,295 @@ index 000000000..c710f766c
 ******* \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
   https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
+******* packaging doom WIP
+******** first attempts
+Extremely WIP, basically just a scratchpad
+#+begin_src scheme :tangle (meta-in-dir "packaging-doom-wip.scm")
+(define-module (ebullient home doom-inputs)
+  #:use-module (guix build-system trivial)
+  #:use-module (guix gexp)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((guix licenses) #:prefix license:)
+  ;; #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages version-control) #:select (git))
+  #:use-module (ebullient home emacs)
+  #:use-module (ebullient home doom-emacs)
+  )
+
+;; (define doom-inputs
+;;   (computed-file
+;;    "doom-inputs"
+;;    (with-imported-modules '((guix build utils))
+;;      #~(begin
+;;          (use-modules (guix build utils))
+;;          (invoke (string-append #+doom-emacs:bin "/bin/doom") "help")
+;;          (copy-file #$(local-file "nixpkgs-config.nix") #$output)
+;;          ;; `emacs-substitute-sexps' might be useful here if my needs get more sophisticated.
+;;          ;; (substitute* #$output
+;;          ;;   (("(dunstctl|dunst)" all) (case (string->symbol all)
+;;          ;;                               ((dunst) (string-append #$(file-append dunst "/bin/dunst")
+;;          ;;                                                       " -config " #$(local-file "dunstrc")))
+;;          ;;                               ((dunstctl) #$(file-append dunst "/bin/dunstctl"))))
+;;          ;;   (("nm-applet") #$(file-append network-manager-applet "/bin/nm-applet"))
+;;          ;;   (("pasystray") #$(file-append pasystray "/bin/pasystray"))
+;;          ;;   (("redshift-gtk") (string-append #$redshift:gtk "/bin/redshift-gtk"))
+;;          ;;   (("udiskie") #$(file-append udiskie "/bin/udiskie")))
+;;          ))))
+
+
+(define-public temp-doom-emacs
+  (package
+    (name "doom-emacs")
+    (version "0")
+    (source
+     (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t))
+    (build-system (@ (guix build-system copy) copy-build-system))
+    (synopsis "")
+    (description "")
+    (home-page "")
+    (license #f)))
+
+(define-public doom-inputs
+  (package
+    (name "doom-inputs")
+    (version "0")
+    (source #f)
+    (inputs
+     (list emacs-29-pgtk+native-comp
+           ;; doom-emacs
+           temp-doom-emacs
+           ;; (local-file "doom-private" #:recursive? #t)
+           git
+           ;; (local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/straight.el" #:recursive? #t)
+           ;; (local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/use-package" #:recursive? #t)
+           ))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       ,#~(begin
+            (use-modules (guix build utils))
+            (let ((doom-private #$(local-file "doom-private" #:recursive? #t))
+                  (doom-local-dir (string-append #$output "/doom-local")))
+              (mkdir-p doom-local-dir)
+
+              ;; (mkdir-p (string-append #$output "/asdf"))
+              ;; (with-output-to-file (string-append #$output "/asdf/asdf.txt")
+              ;;   (lambda _
+              ;;     (display "asdffffffffffff")))
+
+              (setenv "PATH" (string-append (getenv "PATH")
+                                            ":" (assoc-ref %build-inputs "emacs-29-pgtk+native-comp") "/bin"
+                                            ":" (assoc-ref %build-inputs "git") "/bin"
+                                            ))
+              ;; (setenv "DOOMDIR" (assoc-ref %build-inputs "doom-private"))
+              (setenv "DOOMDIR" doom-private)
+              (setenv "DOOMLOCALDIR" doom-local-dir)
+
+              ;; (chdir #$output)
+              ;; (invoke "git" "clone" "https://github.com/dracula/gtk")
+
+              ;; (display "hi!")
+              ;; (display doom-private)
+              ;; (display straight-el)
+
+              (let ((repos-dir (string-append doom-local-dir "/straight/repos")))
+                (mkdir-p repos-dir)
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/straight.el" #:recursive? #t)
+                         (string-append repos-dir "/straight.el"))
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/use-package" #:recursive? #t)
+                         (string-append repos-dir "/use-package"))
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" #:recursive? #t)
+                         (string-append repos-dir "/melpa"))
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/gnu-elpa-mirror" #:recursive? #t)
+                         (string-append repos-dir "/gnu-elpa-mirror"))
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/el-get" #:recursive? #t)
+                         (string-append repos-dir "/el-get"))
+                (symlink #$(local-file "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/emacsmirror-mirror" #:recursive? #t)
+                         (string-append repos-dir "/emacsmirror-mirror")))
+
+              (setenv "HOME" "/tmp/asdfasdf")
+              (mkdir-p "/tmp/asdfasdf")
+
+              ;; (symlink #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+              ;;            (string-append #$output "/temp-doom-emacs"))
+              (let ((doom
+                     ;; #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                     (assoc-ref %build-inputs "doom-emacs")
+                     ;; (string-append #$output "/temp-doom-emacs")
+                     ))
+                ;; (invoke (string-append #$(@ (gnu packages base) coreutils) "/bin/echo") "asdfasdfsdf")
+                ;; (invoke (string-append doom "/bin/doom") "help")
+                (invoke (string-append doom "/bin/doom") "install" "--no-config" "--no-env" "--no-fonts" "--no-hooks")
+                )
+
+              ;; (copy-file #$(local-file "nixpkgs-config.nix") #$output)
+              )
+
+
+            #t)))
+
+    ;; (arguments
+    ;;  `(;; #:install-plan
+    ;;    ;; '(("." "share/doom-emacs/"))
+    ;;    ;; #:tests? #t
+    ;;    ;; #:test-command '("./bin/doom" "test")
+    ;;    #:phases
+    ;;    ,#~(modify-phases %standard-phases
+    ;;         (add-after 'install 'symlink-bin
+    ;;           (lambda _
+    ;;             (mkdir #$output:bin)
+    ;;             (symlink (string-append #$output "/bin")
+    ;;                      (string-append #$output:bin "/bin")))))))
+
+    (synopsis "")
+    (description "")
+    (home-page "")
+    (license #f)))
+
+
+
+
+
+(define (git-origin url commit hash recursive?)
+  (origin
+    (method git-fetch)
+    (uri (git-reference
+          (url url)
+          (commit commit)))
+    (sha256
+     (base32
+      hash))))
+
+
+
+(use-modules ((guix base32) #:select (bytevector->nix-base32-string))
+             ((guix build git) #:select (git-fetch))
+             (guix build utils)
+             ((guix hash) #:select (file-hash*)))
+
+(define (git-checkout-hash url commit recursive?)
+  (let ((dir (string-append "/tmp" "/8888")))
+    (mkdir-p dir)
+    (git-fetch url commit dir
+               #:recursive? recursive?
+               ;; #:git-command (string-append #+git "/bin/git")
+               )
+    (let ((hash (bytevector->nix-base32-string (file-hash* dir))))
+      (delete-file-recursively dir)
+      hash)))
+
+
+
+
+(use-modules ((guix packages) #:select (content-hash content-hash-algorithm content-hash-value)))
+
+(define doom-build
+  (computed-file
+   "doom-build"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules (guix build utils))
+
+         ;; (mkdir-p #$output)
+
+         (setenv "GIT_SSL_NO_VERIFY" "true") ; do ssl if it's easy. Also if I'm using `(guix build git) git-fetch' consider if it setting this variable leaks out.
+
+         ;; (invoke (string-append #+doom-emacs:bin "/bin/doom") "help")
+         ;; (copy-file #$(local-file "nixpkgs-config.nix") #$output)
+         ;; (invoke (string-append #$(@ (gnu packages wget) wget) "/bin/wget") "--no-check-certificate" "https://xkcd.com/")
+         ;; (copy-file "index.html" #$output)
+
+         ;; TODO Consider making e.g. emacs, git not ungexped in a let but instead everywhere they're used (and move this let outside of the gexp). Then I could use file-append instead of string-append in places I guess. Which is better practice?
+         (let ((doom-private #+(file-union "doom-private"
+                                           `(("init.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                                                      "/init.example.el"))
+                                             ("config.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                                                        "/core/templates/config.example.el"))
+                                             ("packages.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                                                          "/core/templates/packages.example.el")))))
+               ;; (doom-private #$(local-file "doom-private" #:recursive? #t))
+               (doom-local-dir (string-append #$output "/doom-local"))
+               (emacs #+emacs-29-pgtk+native-comp)
+               (git #+git)
+               ;; (emacs (assoc-ref %build-inputs "emacs-29-pgtk+native-comp"))
+               ;; (git (assoc-ref %build-inputs "git"))
+               (doom-emacs #+temp-doom-emacs)
+               ;; (doom-emacs #+doom-emacs)
+               ;; (doom-emacs (assoc-ref %build-inputs "doom-emacs"))
+               ;; (doom-emacs #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t))
+               )
+           (mkdir-p doom-local-dir)
+
+           (setenv "PATH" (string-append (getenv "PATH")
+                                         ":" emacs "/bin"
+                                         ":" git "/bin"
+                                         ":" #+(@ (gnu packages base) coreutils) "/bin" ; donno if this is necessary
+                                         ":" #+(@ (gnu packages base) sed) "/bin"
+                                         ))
+           ;; Is this a better/cleaner way to do path-setting? Consider also the comment (from git-download.scm), should I add more stuff to the path?
+           ;;
+           ;; The 'git submodule' commands expects Coreutils, sed,
+           ;; grep, etc. to be in $PATH.
+           ;; (set-path-environment-variable "PATH" '("bin")
+           ;;                                (match '#+inputs
+           ;;                                  (((names dirs outputs ...) ...)
+           ;;                                   dirs)))
+
+           (setenv "DOOMDIR" doom-private)
+           (setenv "DOOMLOCALDIR" doom-local-dir)
+
+           ;; (chdir #$output)
+           ;; (invoke "git" "clone" "https://github.com/dracula/gtk")
+
+           ;; donno if this is necessary
+           (setenv "HOME" "/tmp/asdfasdf")
+           (mkdir-p "/tmp/asdfasdf")
+
+           ;; temporary straight.el experimentation
+           ;; (mkdir-p "/tmp/asdfasdf/123456")
+           (mkdir-p (string-append doom-local-dir "/straight/repos"))
+           (symlink #+(local-file "/home/pharcosyle/projects/dotfiles/straight.el" #:recursive? #t)
+                    (string-append doom-local-dir "/straight/repos/straight.el"))
+
+           ;; (copy-file #$(local-file "nixpkgs-config.nix") (string-append doom-local-dir "/asdf.txt"))
+           ;; (invoke (string-append doom-emacs "/bin/doom") "help")
+           (invoke (string-append doom-emacs "/bin/doom") "install" "--no-config" "--no-env" "--no-fonts" "--no-hooks")
+           ;; (invoke (string-append doom-emacs "/bin/doom") "upgrade")
+           ;; (invoke (string-append doom-emacs "/bin/doom") "build")
+           ;; (invoke (string-append doom-emacs "/bin/doom") "sync")
+
+           ;; (invoke (string-append emacs "/bin/emacs") "--batch" "--eval=\"(progn (load user-init-file) (straight-freeze-versions))\"")
+           ;; (invoke (string-append emacs "/bin/emacs") "--batch" "--eval='(progn (message \"hello!\"))'")
+           ;; (invoke "emacs" "--batch" "--eval='(message \"hello!\")'")
+           ;; (chdir #$output)
+           ;; (invoke "emacs" "--batch" "--eval='(with-temp-file \"asdf.txt\" (insert \"asdfasdf\"))'")
+           ;; (invoke "emacs" "--batch" "--eval='(message \"hello!\")'")
+           ;; (invoke "emacs" "--help")
+           ;; (invoke "echo" (string-append (string-append emacs "/bin/emacs") "--batch" (string-append "--load=" doom-emacs "/init.el") "--eval=(progn (message \"hi\") (message \"yo\"))"))
+           ;; (invoke (string-append emacs "/bin/emacs") "--batch" (string-append "--load=" doom-emacs "/init.el") "--eval=(progn (message \"hi\") (straight-freeze-versions) (message \"yo\"))")
+           ;; (invoke "echo" "asdf")
+
+           )))
+   #:options (let ((ch (content-hash "1zcpkabkizadc3j9jqnnpyqm4d71bnvxz2x6as53f6wjwn82ahd9")))
+               (list #:hash (content-hash-value ch)
+                     #:hash-algo (content-hash-algorithm ch)
+                     #:recursive? #t
+                     ;; #:substitutable? #f ; This isn't appropriate, right?
+                     ))))
+
+;; (define-public doom-build-pkg
+;;   (package
+;;     (name "doom-build-pkg")
+;;     (version "0")
+;;     (source doom-build)
+;;     (build-system (@ (guix build-system copy) copy-build-system))
+;;     (synopsis "")
+;;     (description "")
+;;     (home-page "")
+;;     (license #f)))
+#+end_src
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv svcs #:key shell)
