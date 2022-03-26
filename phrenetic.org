@@ -3,13 +3,13 @@
 #+PROPERTY: header-args:elisp :lexical t
 
 * Meta
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "meta.el")
+:END:
 - REVIEW depending on how I do per-project literate config, I may want/need to pull out this code for use in other projects
   - ideally capture file-wide properties as well
     ~mkdirp~ and ~lexical~ at the time of this writing
   - a name for the project: "illiterate"
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "meta.el")
-:END:
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 
@@ -2766,10 +2766,10 @@ done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
 * Projects
-- TODO call this something different? Maybe it'll end up being just a container for Guix packages shared across projects and should just be called "Packages" or "Auxillary" or something.
 :PROPERTIES:
 :meta-dir+: /penitent
 :END:
+- TODO call this something different? Maybe it'll end up being just a container for Guix packages shared across projects and should just be called "Packages" or "Auxillary" or something.
 ** Packages
 *** AWS CLI :package:version:
 :PROPERTIES:
