@@ -77,9 +77,11 @@
 (define-module (ebullient channels)
   #:use-module (guix channels)
   #:use-module ((srfi srfi-1) #:select (remove))
+  #:use-module (mendicant utils)
   #:export (get-channels
             guix
-            nonguix))
+            nonguix
+            channel-map))
 
 (define* (get-channels #:rest cs)
   (append
