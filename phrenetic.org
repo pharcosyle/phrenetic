@@ -3457,7 +3457,7 @@ done
       first))
 #+end_src
 *** \
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+#+begin_src gitignore :tangle (meta-in-dir "mendicant/.gitignore")
 *
 #+end_src
 ** Emacs Lisp
@@ -3474,7 +3474,7 @@ done
 (provide 'tangential)
 #+end_src
 
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+#+begin_src gitignore :tangle (meta-in-dir "tangential/.gitignore")
 *
 #+end_src
 * Configurations
@@ -5025,6 +5025,10 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
   :recipe (:local-repo "~/projects/phrenetic/donnager"
            ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
            :build (:not compile)))
+#+end_src
+** \
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
 #+end_src
 * Dev
 ** Git ignore
