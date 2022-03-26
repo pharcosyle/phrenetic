@@ -230,15 +230,15 @@ herd start cow-store /mnt
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/projects/phrenetic/ebullient/home/channels.scm ~/.config/guix
+cp ~/projects/phrenetic/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
 guix pull
 hash guix
 
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/projects/phrenetic/ebullient
-guix system --load-path=. init system/frostfire.scm /mnt
+cd ~/projects/phrenetic
+guix system --load-path=. init exuberant/os/frostfire.scm /mnt
 #+end_src
 **** Post-installation
 #+begin_src sh
@@ -273,7 +273,7 @@ guix pull
 (define-module (ebullient system channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:use-module (ebullient utils)
+  #:use-module (mendicant utils)
   #:export (get-system-channels
             system-channel-deps))
 
@@ -322,7 +322,7 @@ guix pull
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
   #:use-module (ebullient common)
-  #:use-module (ebullient utils)
+  #:use-module (mendicant utils)
   #:export (barebones-os
             host-info
             grub-efi
@@ -781,7 +781,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient system components)
   #:use-module (ebullient common)
-  #:use-module (ebullient utils)
+  #:use-module (mendicant utils)
   #:export (base-os))
 
 (define* (base-os #:key
@@ -913,7 +913,7 @@ sudo guix time-machine \
 	-- \
 	system \
 	--load-path=. \
-	--expression="(@ (ebullient system os $os_name) os)" \
+	--expression="(@ (exuberant os $os_name) os)" \
 	reconfigure
 #+end_src
 ** Home
@@ -937,7 +937,7 @@ sudo guix time-machine \
   #:use-module (guix channels)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient channels)
-  #:use-module (ebullient utils)
+  #:use-module (mendicant utils)
   #:export (get-home-channels
             user-channel-deps
             rde
@@ -1011,7 +1011,7 @@ sudo guix time-machine \
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
-  #:use-module (ebullient utils)
+  #:use-module (mendicant utils)
   #:export (he-shells
             he-extra-profiles
             he-nix
@@ -1531,7 +1531,7 @@ performance of a hand rolled config (or better).")
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
   #:use-module ((gnu packages fonts) #:select (font-awesome font-google-material-design-icons) #:prefix fonts:)
-  #:use-module (ebullient utils))
+  #:use-module (mendicant utils))
 
 (define-public all-the-icons-fonts
   (let ((base-pkg emacs-all-the-icons)
@@ -2621,9 +2621,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module ((donnager client) #:prefix d:)
-  #:use-module (ebullient home components)
   #:use-module (ebullient common)
-  #:use-module (ebullient utils)
+  #:use-module (ebullient home components)
+  #:use-module (mendicant utils)
   #:export (base-he))
 
 (define* (base-he #:key
@@ -2681,7 +2681,7 @@ guix pull --channels="$he_dir"/$he_name-channels-lock
 #+begin_src sh :var he_name=""
 guix home \
 	--load-path=. \
-	--expression="(@ (ebullient home he $he_name) he)" \
+	--expression="(@ (exuberant he $he_name) he)" \
 	reconfigure
 #+end_src
 *** Guix extra profiles
@@ -2976,7 +2976,7 @@ done
 ;;; -*- lexical-binding: t; -*-
 
 (require 'dash)
-(require 'exuberant)
+(require 'tangential)
 #+end_src
 
 
@@ -3302,10 +3302,10 @@ done
 * Utils
 ** Scheme
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
+:header-args+: :tangle (meta-in-dir "mendicant/utils.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient utils)
+(define-module (mendicant utils)
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -3460,7 +3460,7 @@ done
 #+end_src
 ** Emacs Lisp
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "exuberant/utils.el")
+:header-args+: :tangle (meta-in-dir "tangential/utils.el")
 :END:
 #+begin_src elisp
 (defun kvm (&rest keyvals)
@@ -3469,7 +3469,7 @@ done
        (-map (-lambda ((a b))
                (cons a b)))))
 
-(provide 'exuberant)
+(provide 'tangential)
 #+end_src
 
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
@@ -3477,7 +3477,7 @@ done
 #+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: /tangential
+:meta-dir+: /exuberant
 :END:
 ** Common
 #+name: db/systems-common
@@ -3510,7 +3510,7 @@ done
 | :system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
 
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
-(define-module (ebullient system os frostfire)
+(define-module (exuberant os frostfire)
   #:use-module (ebullient system base-os))
 
 (define-public os
@@ -3575,7 +3575,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 *** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
-(define-module (ebullient home he solitude)
+(define-module (exuberant he solitude)
   #:use-module (ebullient home base-he)
   #:export (he))
 
@@ -3586,7 +3586,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 **** Solitude old WIP
 #+begin_src scheme
-(define-module (ebullient home he solitude)
+(define-module (exuberant he solitude)
   #:use-module (ebullient home base-he)
   #:export (he))
 
