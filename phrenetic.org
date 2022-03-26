@@ -783,6 +783,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define* (base-os #:key
                   system
                   host-name
+                  timezone
+                  (locale "en_US.utf8")
                   accounts
                   luks-uuid
                   auto-login-account
@@ -841,8 +843,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
          sway? (session? #:session/sway))
     (-> barebones-os
         (host-info #:host-name host-name
-                   #:timezone "America/Los_Angeles"
-                   #:locale "en_US.utf8")
+                   #:timezone timezone
+                   #:locale locale)
         (grub-efi #:label "genesis"
                   #:target "/boot/efi")
         base-services+packages
@@ -3510,6 +3512,7 @@ done
 (define-public os
   (base-os #:system #:system/frostfire
            #:host-name "frostfire"
+           #:timezone "America/Los_Angeles"
            #:accounts '(#:user/primary
                         #:user/aux
                         #:user/guest)
