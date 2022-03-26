@@ -907,6 +907,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                       $))))))))
 #+end_src
 *** \
+- TODO expression shouldn't reference "exhuberant"
 #+begin_src sh :var os_name="" os_dir=(meta-get-dir)
 sudo guix time-machine \
 	--channels="$os_dir"/$os_name-channels-lock \
@@ -2678,6 +2679,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
 guix pull --channels="$he_dir"/$he_name-channels-lock
 #+end_src
+- TODO expression shouldn't reference "exhuberant"
 #+begin_src sh :var he_name=""
 guix home \
 	--load-path=. \
