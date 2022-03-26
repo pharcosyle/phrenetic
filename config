@@ -3,7 +3,7 @@
 # TODO gexp and put this in a more generic location (but ideally make it run there like exec_always, that is, on every sway reload)
 # Alternatively it would make sense to have it regenerated on Guix Home reconfigure (`home-run-on-change-service-type`) since it's not Sway-specific but rather necessary for any Wayland environment but that might be annoying
 # exec_always import-gsettings
-exec_always ~/projects/dotfiles/import-gsettings
+exec_always ~/projects/phrenetic/import-gsettings
 
 # TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
 exec herd start pipewire
@@ -34,7 +34,7 @@ input "type:keyboard" {
     # xkb_model macbook78
     # # xkb_options grp:alt_shift_toggle
 
-    xkb_file ~/projects/dotfiles/ekskaybee.xkb
+    xkb_file ~/projects/phrenetic/ekskaybee.xkb
 
     repeat_delay 250
     repeat_rate 35
@@ -69,7 +69,7 @@ input "type:touchpad" {
 }
 
 # TODO Can I add this binary file to the guix store with a gexp? At least parameterize the path to it.
-output * bg ~/projects/dotfiles/res/alucard_bg.png fill
+output * bg ~/projects/phrenetic/res/alucard_bg.png fill
 
 # TODO Andrew Tropin added this to RDE recently, maybe use his version: https://github.com/abcdw/rde/commit/6b8acfc27514beff53db235352074c8eeb4054d5
 bindsym --locked XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
