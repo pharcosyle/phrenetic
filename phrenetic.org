@@ -5340,7 +5340,8 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 ** Dev
 *** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
+/*
+!res/
 #+end_src
 * Dev
 - TODO maybe make this a =*= with excludes later. I could then get rid of any subproject dirs' gitignores that consist solely of a =*= but I might not want to, for project isolation
