@@ -56,7 +56,6 @@
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
-** Common
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
@@ -70,6 +69,7 @@
 
 (define-public default-login-shell #:shell/bash)
 #+end_src
+** Common
 *** Channels
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ebullient/channels.scm")
@@ -109,14 +109,6 @@
 (define channel-map
   (kvm #:channel/guix guix
        #:channel/nonguix nonguix))
-#+end_src
-*** \
-#+begin_src sh :var name="" dir=""
-guix time-machine \
-	--load-path=. \
-	--channels="$dir"/$name-channels \
-	-- \
-	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 ** Installation WIP
 *** Create bootable USB
@@ -3055,6 +3047,14 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
+** \
+#+begin_src sh :var name="" dir=""
+guix time-machine \
+	--load-path=. \
+	--channels="$dir"/$name-channels \
+	-- \
+	describe --format=channels > "$dir"/$name-channels-lock
+#+end_src
 ** Dev
 *** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
@@ -3789,8 +3789,6 @@ done
 :PROPERTIES:
 :meta-dir+: /exuberant
 :END:
-** Common
-- REVIEW maybe get rid of this heading (have this stuff directly under "Configurations" heading)
 #+name: db/systems-common
 | =:db/id=          | =:system/features=                              |
 |-------------------+-------------------------------------------------|
