@@ -57,6 +57,9 @@
 :meta-dir+: /ebullient
 :END:
 ** Common
+:PROPERTIES:
+:meta-dir+: /ebullient
+:END:
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
@@ -229,7 +232,7 @@ herd start cow-store /mnt
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/projects/phrenetic/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
+cp ~/projects/phrenetic/exuberant/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
 guix pull
 hash guix
 
@@ -237,7 +240,7 @@ hash guix
 cryptsetup luksUUID $root_partition
 
 cd ~/projects/phrenetic
-guix system --load-path=. init exuberant/os/frostfire.scm /mnt
+guix system --load-path=. init exuberant/exuberant/os/frostfire.scm /mnt
 #+end_src
 **** Post-installation
 #+begin_src sh
@@ -260,7 +263,7 @@ guix pull
 #+end_src
 ** System
 :PROPERTIES:
-:meta-dir+: /system
+:meta-dir+: /ebullient/system
 :END:
 #+name: db/schema-whatever
 | =:db/id=     | =:db/valueType=  |
@@ -918,7 +921,7 @@ sudo guix time-machine \
 #+end_src
 ** Home
 :PROPERTIES:
-:meta-dir+: /home
+:meta-dir+: /ebullient/home
 :END:
 #+name: guix-home-profile
 #+begin_src sh
@@ -3067,7 +3070,7 @@ done
 - TODO call this something different? Maybe it'll end up being just a container for Guix packages shared across projects and should just be called "Packages" or "Auxillary" or something.
 ** Packages
 :PROPERTIES:
-:meta-dir+: /packages
+:meta-dir+: /penitent/packages
 :END:
 *** AWS CLI :package:version:
 :PROPERTIES:
@@ -3377,7 +3380,7 @@ done
 ** Client API
 *** Elisp
 *** Scheme
-#+begin_src scheme :tangle (meta-in-dir "client.scm")
+#+begin_src scheme :tangle (meta-in-dir "donnager/client.scm")
 (define-module (donnager client)
   #:export (q
             q-many
@@ -3606,7 +3609,7 @@ done
 :END:
 *** Utils
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "utils.scm")
+:header-args+: :tangle (meta-in-dir "mendicant/utils.scm")
 :END:
 #+begin_src scheme
 (define-module (mendicant utils)
@@ -3804,7 +3807,7 @@ done
 
 ** Operating systems
 :PROPERTIES:
-:meta-dir+: /os
+:meta-dir+: /exuberant/os
 :END:
 #+name: db/users-system
 | =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
@@ -3875,7 +3878,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 ** Home environments
 :PROPERTIES:
-:meta-dir+: /he
+:meta-dir+: /exuberant/he
 :END:
 #+name: db/users-home
 | =:db/id=      | =:entity/channel-deps= | =:user/email=            |
