@@ -3064,6 +3064,9 @@ done
 :END:
 - TODO call this something different? Maybe it'll end up being just a container for Guix packages shared across projects and should just be called "Packages" or "Auxillary" or something.
 ** Packages
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
 *** AWS CLI :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "aws.scm")
@@ -3076,7 +3079,7 @@ done
   - set up command completion
     [[https://github.com/aws/aws-cli/tree/v2#command-completion][GitHub - aws/aws-cli at v2 (command completion)]]
 #+begin_src scheme
-(define-module (penitent aws)
+(define-module (penitent packages aws)
   #:use-module (guix build-system python)
   #:use-module (guix download)
   #:use-module (guix gexp)
@@ -3207,7 +3210,7 @@ done
 - TODO =bin/datomic= introduces a dependency (~com.datomic/tools.ops~)
   Is that something I'd want to include in the package or whatever?
 #+begin_src scheme :tangle (meta-in-dir "datomic.scm")
-(define-module (penitent datomic)
+(define-module (penitent packages datomic)
   #:use-module (guix build-system copy)
   #:use-module (guix download)
   #:use-module (guix gexp)
