@@ -5325,6 +5325,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 *
 #+end_src
 * Dev
+- TODO maybe make this a =*= with excludes later
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
@@ -5357,6 +5358,8 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
   - an alternative approach to setting up geiser for a project: [[https://github.com/guix-mirror/guix/blob/master/.dir-locals.el#L21][guix/.dir-locals.el at master · guix-mirror/guix · GitHub]]
     Maybe try that or something like it.
     - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
+  - update [2022-03-26 Sat]: this won't work as-is any more
+    I have multiple directories to load (ebullient, exhuberant...)
 #+begin_src elisp :tangle (meta-in-dir ".dir-locals.el")
 ((nil
   (eval . (with-eval-after-load 'geiser-guile
