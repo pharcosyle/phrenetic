@@ -57,9 +57,6 @@
 :meta-dir+: /ebullient
 :END:
 ** Common
-:PROPERTIES:
-:meta-dir+: /ebullient
-:END:
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
@@ -68,14 +65,14 @@
 | :user/login-shell    | :db.type/keyword |                      |
 | :user/sessions       | :db.type/keyword | :db.cardinality/many |
 
-#+begin_src scheme :tangle (meta-in-dir "common.scm")
-(define-module (ebullient common))
+#+begin_src scheme :tangle (meta-in-dir "ebullient.scm")
+(define-module (ebullient))
 
 (define-public default-login-shell #:shell/bash)
 #+end_src
 *** Channels
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "channels.scm")
+:header-args+: :tangle (meta-in-dir "ebullient/channels.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient channels)
@@ -323,7 +320,7 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
-  #:use-module (ebullient common)
+  #:use-module (ebullient)
   #:use-module (mendicant utils)
   #:export (barebones-os
             host-info
@@ -782,7 +779,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define-module (ebullient system base-os)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient system components)
-  #:use-module (ebullient common)
+  #:use-module (ebullient)
   #:use-module (mendicant utils)
   #:export (base-os))
 
@@ -2913,7 +2910,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module ((donnager client) #:prefix d:)
-  #:use-module (ebullient common)
+  #:use-module (ebullient)
   #:use-module (ebullient home components)
   #:use-module (mendicant utils)
   #:export (base-he))
