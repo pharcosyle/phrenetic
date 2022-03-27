@@ -47,7 +47,8 @@
 ;; (setq meta--database
 ;;       (db--load meta--table-refs))
 #+end_src
-** \
+** Dev
+*** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
 #+end_src
@@ -116,10 +117,6 @@ guix time-machine \
 	--channels="$dir"/$name-channels \
 	-- \
 	describe --format=channels > "$dir"/$name-channels-lock
-#+end_src
-
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-*
 #+end_src
 ** Installation WIP
 *** Create bootable USB
@@ -3058,6 +3055,11 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
+** Dev
+*** Git ignore
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+*
+#+end_src
 * Projects
 :PROPERTIES:
 :meta-dir+: /penitent
@@ -3256,7 +3258,8 @@ done
    "icedtea" ; For clojure-tools ; TODO can I make this a non-propagated input to "clojure-tools" (`substitute*' or `wrap-program'? Automatic in some way?) or is that a bad idea / a pain?
    "clj-kondo")) ; TODO comes from nonguix channel, I might be making that explicit later
 #+end_src
-** \
+** Dev
+*** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
@@ -3591,14 +3594,19 @@ done
 #+begin_src elisp
 (provide 'donnager-org)
 #+end_src
-** \
+** Dev
+*** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
 * Utils
 ** Scheme
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "mendicant/utils.scm")
+:meta-dir+: /mendicant
+:END:
+*** Utils
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "utils.scm")
 :END:
 #+begin_src scheme
 (define-module (mendicant utils)
@@ -3629,7 +3637,7 @@ done
          (if (pred x) (f x) x))
        l))
 #+end_src
-*** Branching
+**** Branching
 #+begin_src scheme
 (define-syntax when-let
   (syntax-rules ()
@@ -3653,7 +3661,7 @@ done
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-*** Functions
+**** Functions
 #+begin_src scheme
 (define* (partial f #:rest args)
   (lambda* (#:rest more)
@@ -3685,7 +3693,7 @@ done
      (let ((name expr))
        (as-> form name form* ...)))))
 #+end_src
-*** Maps
+**** Maps
 #+begin_src scheme
 (define* (kvm #:rest keyvals)
   (let loop ((m '())
@@ -3728,7 +3736,7 @@ done
                (list k v))))
        (apply append)))
 #+end_src
-*** Guix
+**** Guix
 #+begin_src scheme
 (define (update-services* services pred update-fn)
   (update-list
@@ -3750,13 +3758,18 @@ done
       (lookup-inferior-packages package)
       first))
 #+end_src
-*** \
-#+begin_src gitignore :tangle (meta-in-dir "mendicant/.gitignore")
+*** Dev
+**** Git ignore
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
 ** Emacs Lisp
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "tangential/utils.el")
+:meta-dir+: /tangential
+:END:
+*** Utils
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "utils.el")
 :END:
 #+begin_src elisp
 (defun kvm (&rest keyvals)
@@ -3767,8 +3780,9 @@ done
 
 (provide 'tangential)
 #+end_src
-
-#+begin_src gitignore :tangle (meta-in-dir "tangential/.gitignore")
+*** Dev
+**** Git ignore
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
 * Configurations
@@ -5320,12 +5334,13 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
            ;; Avoid having to run `doom sync' every time the package is changed. REVIEW after packaging Doom revisit this and see if it still makes sense to disable compilation. Byte-compiled code is faster, after all. Natively-compiled even more so.
            :build (:not compile)))
 #+end_src
-** \
+** Dev
+*** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 *
 #+end_src
 * Dev
-- TODO maybe make this a =*= with excludes later
+- TODO maybe make this a =*= with excludes later. I could then get rid of any subproject dirs' gitignores that consist solely of a =*= but I might not want to, for project isolation
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
