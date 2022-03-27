@@ -3793,6 +3793,7 @@ done
 :meta-dir+: /exuberant
 :END:
 ** Common
+- REVIEW maybe get rid of this heading (have this stuff directly under "Configurations" heading)
 #+name: db/systems-common
 | =:db/id=          | =:system/features=                              |
 |-------------------+-------------------------------------------------|
@@ -5338,6 +5339,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
            :build (:not compile)))
 #+end_src
 ** Dev
+- REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to the dotfiles config that uses them. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
 *** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /*
