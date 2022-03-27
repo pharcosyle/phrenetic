@@ -3603,11 +3603,11 @@ done
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
-  #:export (when-let
+  #:export (update-list
+            when-let
             if-let
             when-not
             if-not
-            update-list
             partial
             ->
             ->>
@@ -3620,6 +3620,11 @@ done
             keyvals
             update-services*
             update-services))
+
+(define (update-list l pred f)
+  (map (lambda (x)
+         (if (pred x) (f x) x))
+       l))
 #+end_src
 *** Branching
 #+begin_src scheme
@@ -3645,13 +3650,8 @@ done
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-*** Lists
+*** Functions
 #+begin_src scheme
-(define (update-list l pred f)
-  (map (lambda (x)
-         (if (pred x) (f x) x))
-       l))
-
 (define* (partial f #:rest args)
   (lambda* (#:rest more)
     (apply f (append args more))))
