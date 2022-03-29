@@ -1494,7 +1494,7 @@ Tests fail in Emacs 28+ (see [[https://github.com/magnars/dash.el/issues/389][ma
            (add-after 'unpack 'patch-tldr-directory-path
              (lambda* (#:key inputs #:allow-other-keys)
                (emacs-substitute-variables "tldr.el"
-                 ("tldr-directory-path" (search-input-directory inputs "/share/tldr-pages")))))))))
+                 ("tldr-directory-path" (search-input-directory inputs "share/tldr-pages")))))))))
     (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
               (prepend tldr-pages)))))
 #+end_src
