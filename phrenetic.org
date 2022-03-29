@@ -4668,7 +4668,8 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******** Guix
 ********* Emacs integration
-- TODO if I can somehow get the profile paths generic perhaps these should be in a patch phase of my emacs package
+- TODO if I can somehow get the profile paths generic perhaps these should be in a patch phase of my emacs package. Also since I'm getting rid of my extra profiles (I think?) I can just patch in =~/.guix-home=.
+  Check out the Guix emacs package's patching of man and tramp (in the source snippets), I think those files have moved since Emacs 27, check
 ********** man :path:
 #+begin_src elisp :noweb yes
 (after! man
