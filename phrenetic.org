@@ -1257,8 +1257,11 @@ done
         home-files-service-type
         (const
          `(("nix-channels"
-            ,(local-file "nix-channels"))
-           ("config/nixpkgs/config.nix"
+            ,(local-file "nix-channels")))))
+       (service-extension
+        home-xdg-configuration-files-service-type
+        (const
+         `(("nixpkgs/config.nix"
             ,(local-file "nixpkgs-config.nix")))))))
      (default-value #f)))
    svcs))
@@ -1422,8 +1425,8 @@ Just add a propagated input for now. Using ~wrap-program~ on the emacs executabl
         (const (list `(,doom-emacs "bin")
                      font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically. Really what I want is to unquote a gexp for it inside the config like I'll be doing for e.g. the sway config. Even though my Doom private config is in elisp and not scheme, how might I do this as similarly to that as possible?
        (service-extension
-        home-files-service-type
-        (const `(("config/emacs"
+        home-xdg-configuration-files-service-type
+        (const `(("emacs"
                   ,#~#$doom-emacs)
                  ;; ("config/doom"
                  ;;  ,(local-file "doom-private" #:recursive? #t))
@@ -2513,9 +2516,9 @@ Extremely WIP, basically just a scratchpad
                              (default-environment-variables))))
            (auto-start? #f)))))
        (service-extension
-        home-files-service-type
+        home-xdg-configuration-files-service-type
         (const
-         `(("config/alsa/asoundrc"
+         `(("alsa/asoundrc"
             ,(mixed-text-file
               "asoundrc"
               #~(string-append
