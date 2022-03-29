@@ -1314,7 +1314,9 @@ nix-env --upgrade
       (service-extension
        home-profile-service-type
        (lambda (config)
-         (list (get config #:emacs))))
+         (list (-> (get config #:emacs)
+                   emacs-with-C-source
+                   emacs-with-zstd))))
       (service-extension
        he-login-shell-service-type
        (lambda (config)
@@ -1353,12 +1355,73 @@ vterm_prompt_end() {
 setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
-***** Emacs 29 with pgtk + native comp :package:version:
-#+begin_src scheme :tangle (meta-in-dir "emacs.scm")
+***** Emacs packages
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "emacs.scm")
+:END:
+#+begin_src scheme
 (define-module (ebullient home emacs)
+  ;; #:use-module (guix build-system glib-or-gtk)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages compression) #:select (zstd))
+  ;; #:use-module ((gnu packages emacs) #:select (emacs-minimal emacs-next-pgtk))
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
+#+end_src
+****** With C source
+#+begin_src scheme
+(define-public (emacs-with-C-source emacs)
+  (package
+    (inherit emacs)
+    (arguments
+     (substitute-keyword-arguments (package-arguments emacs)
+       ((#:phases phases '%standard-phases)
+        #~(modify-phases #$phases
+            (add-after 'unpack 'patch-C-source-directory
+              (lambda _
+                (substitute* "lisp/emacs-lisp/find-func.el"
+                  (("\\(expand-file-name \"src\" source-directory\\)")
+                   (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 
+;; TODO see if I can quote e.g. '%default-modules in #:modules default like how %standard-phases is for phases
+;; (define-public (emacs-with-C-source emacs)
+;;   (package
+;;     (inherit emacs)
+;;     (arguments
+;;      (substitute-keyword-arguments (package-arguments emacs)
+;;        ((#:imported-modules imported-modules %glib-or-gtk-build-system-modules)
+;;         `((guix build emacs-utils)
+;;           ,@imported-modules))
+;;        ((#:modules modules '((guix build glib-or-gtk-build-system)
+;;                              (guix build utils)))
+;;         `((guix build emacs-utils)
+;;           ,@modules))
+;;        ((#:phases phases '%standard-phases)
+;;         #~(modify-phases #$phases
+;;             (add-after 'unpack 'patch-C-source-directory
+;;               (lambda _
+;;                 (emacs-substitute-variables "lisp/emacs-lisp/find-func.el"
+;;                   ("find-function-C-source-directory" #$(file-append (package-source emacs) "/src")))))))))
+;;     (native-inputs
+;;      (modify-inputs (package-native-inputs emacs)
+;;        (prepend emacs-minimal)))))
+
+;; (define-public cool-emacs-bro (emacs-with-C-source emacs-next-pgtk))
+#+end_src
+****** With =zstd=
+Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
+#+begin_src scheme
+(define-public (emacs-with-zstd emacs)
+  (package
+    (inherit emacs)
+    (propagated-inputs
+     (modify-inputs (package-propagated-inputs emacs)
+       (prepend zstd)))))
+#+end_src
+****** Emacs 29 with pgtk + native comp :package:version:
+#+begin_src scheme
 (define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 
