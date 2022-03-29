@@ -1361,12 +1361,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 :END:
 #+begin_src scheme
 (define-module (ebullient home emacs)
-  ;; #:use-module (guix build-system glib-or-gtk)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
-  ;; #:use-module ((gnu packages emacs) #:select (emacs-minimal emacs-next-pgtk))
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
 #+end_src
@@ -1384,31 +1382,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                 (substitute* "lisp/emacs-lisp/find-func.el"
                   (("\\(expand-file-name \"src\" source-directory\\)")
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
-
-;; TODO see if I can quote e.g. '%default-modules in #:modules default like how %standard-phases is for phases
-;; (define-public (emacs-with-C-source emacs)
-;;   (package
-;;     (inherit emacs)
-;;     (arguments
-;;      (substitute-keyword-arguments (package-arguments emacs)
-;;        ((#:imported-modules imported-modules %glib-or-gtk-build-system-modules)
-;;         `((guix build emacs-utils)
-;;           ,@imported-modules))
-;;        ((#:modules modules '((guix build glib-or-gtk-build-system)
-;;                              (guix build utils)))
-;;         `((guix build emacs-utils)
-;;           ,@modules))
-;;        ((#:phases phases '%standard-phases)
-;;         #~(modify-phases #$phases
-;;             (add-after 'unpack 'patch-C-source-directory
-;;               (lambda _
-;;                 (emacs-substitute-variables "lisp/emacs-lisp/find-func.el"
-;;                   ("find-function-C-source-directory" #$(file-append (package-source emacs) "/src")))))))))
-;;     (native-inputs
-;;      (modify-inputs (package-native-inputs emacs)
-;;        (prepend emacs-minimal)))))
-
-;; (define-public cool-emacs-bro (emacs-with-C-source emacs-next-pgtk))
 #+end_src
 ****** With =zstd=
 Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
@@ -2412,6 +2385,52 @@ Extremely WIP, basically just a scratchpad
 ;;     (description "")
 ;;     (home-page "")
 ;;     (license #f)))
+#+end_src
+******** asdf
+#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm")
+(define-module (ebullient home packaging-wip)
+  ;; #:use-module (guix build-system trivial)
+  ;; #:use-module (guix gexp)
+  ;; #:use-module (guix git-download)
+  ;; #:use-module (guix packages)
+  ;; #:use-module ((guix licenses) #:prefix license:)
+  ;; ;; #:use-module ((gnu packages emacs) #:select (emacs))
+  ;; #:use-module ((gnu packages version-control) #:select (git))
+  ;; #:use-module (ebullient home emacs)
+  ;; #:use-module (ebullient home doom-emacs)
+
+  #:use-module ((guix packages) #:select (package-input-rewriting))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x emacs-next emacs-next-pgtk emacs-xwidgets emacs-no-x-toolkit emacs-wide-int))
+
+  )
+(define emacs-variant (@ (ebullient home emacs) emacs-29-pgtk+native-comp))
+
+;; TODO does this rewrite recursively?
+;; package-input-rewriting/spec says it specifically does this while package-input-rewriting does not. And what about using `package-mapping'? I can check the final product for references to emacs/emacs-minimal but still read over the source code of each later. What about native-inputs, sometimes emacs(-minimal) is in there.
+;; TODO do I need to specify all of the different emacs packages for rewriting?
+;; Does it work without doing this already? Would package-input-rewriting/spec handle them somehow? Does `package/inherit' (in both the -spec and non-spec versions)?
+(define with-emacs-variant
+  (package-input-rewriting `((,emacs . ,emacs-variant)
+                             (,emacs-minimal . ,emacs-variant)
+                             (,emacs-no-x . ,emacs-variant)
+
+                             ;; TODO maybe ths should be in a nested `package-input-rewriting' or having packages with themselves as input rewrites
+                             ;; will cause problems, I donno. Putting this here for now.
+                             (,(@ (gnu packages emacs-xyz) emacs-dash) . ,(@ (ebullient home emacs-xyz) emacs-dash)))))
+
+;; (define-public test-reftex
+;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-company-reftex)))
+;; (define-public test-dash-existing
+;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-dash)))
+;; (define-public test-dash
+;;   (with-emacs-variant (@ (ebullient home emacs-xyz) emacs-dash)))
+
+;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-build-farm))
+;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-cider))
+;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-buttercup))
+
+(define-public test-pkg
+  (with-emacs-variant orig-pkg))
 #+end_src
 **** Direnv
 #+begin_src scheme
