@@ -1468,7 +1468,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
          (patches
           (list (local-file "change-paths.patch")
                 (local-file "ligatures.patch")))))
-      (build-system copy-build-system)
+      (build-system copy-build-system) ; TOOD LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
       (arguments
        `(;; #:install-plan
          ;; '(("." "share/doom-emacs/"))
