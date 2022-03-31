@@ -1637,6 +1637,7 @@ Tests fail in Emacs 28+ (see [[https://github.com/magnars/dash.el/issues/389][ma
 (define-module (ebullient home emacs-xyz-batch)
   #:use-module (guix build-system emacs)
   #:use-module (guix git-download)
+  #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz)))
 
@@ -4337,6 +4338,129 @@ string from the minibuffer can be used too.
 The default host and the host this package is named after is https://0x0.st.
 Consider donating to https://liberapay.com/mia/donate if you like the service.")
     (license #f)))
+#+end_src
+******** added myself
+#+begin_src scheme
+(define-public emacs-ligature
+  (let ((commit "9357156a917a021a87b33ee391567a5d8e44794a")
+        (revision "0"))
+    (package
+      (name "emacs-ligature")
+      (version (git-version "1.0" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://www.github.com/mickeynp/ligature.el")
+               (commit commit)))
+         (sha256
+          (base32 "0m98bwj8dy90ifck8rsda6zfgbjrv5z0166pp7qzvwls9rqa695m"))))
+      (build-system emacs-build-system)
+      (home-page "https://www.github.com/mickeynp/ligature.el")
+      (synopsis "This package maps ordinary graphemes (characters) to fancy ligatures")
+      (description "With this package you can control where Emacs must display
+ligatures. That is useful if you only want a subset of the ligatures in certain
+major modes, for instance, or if you want to ensure that some modes have no
+ligatures at all.")
+      (license license:gpl3+))))
+
+;; No license, assumed nonfree.
+(define-public emacs-evil-quick-diff
+  (let ((commit "69c883720b30a892c63bc89f49d4f0e8b8028908")
+        (revision "0"))
+    (package
+      (name "emacs-evil-quick-diff")
+      (version (git-version "0.0.1" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/rgrinberg/evil-quick-diff")
+               (commit commit)))
+         (sha256
+          (base32 "0m98bwj8dy90ifck8rsda6zfgbjrv5z0166pp7qzvwls9rqa695m"))))
+      (build-system emacs-build-system)
+      (propagated-inputs (list emacs-evil))
+      (home-page "https://github.com/rgrinberg/evil-quick-diff")
+      (synopsis "Port of @code{linediff.vim}")
+      (description "This is a replacement for the @code{linediff.vim} plugin.
+It's not a faithful port, as it uses ediff for diffing, but the spirit is the
+same. The implementation itself is heavily based on @code{evil-exchange}.")
+      (license #f))))
+
+;; No license, assumed nonfree.
+(define-public emacs-org-yt
+  (let ((commit "40cc1ac76d741055cbefa13860d9f070a7ade001")
+        (revision "0"))
+    (package
+      (name "emacs-org-yt")
+      (version (git-version "0" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/TobiasZawada/org-yt")
+               (commit commit)))
+         (sha256
+          (base32 "0m98bwj8dy90ifck8rsda6zfgbjrv5z0166pp7qzvwls9rqa695m"))))
+      (build-system emacs-build-system)
+      (propagated-inputs (list emacs-org))
+      (home-page "https://github.com/TobiasZawada/org-yt")
+      (synopsis "Youtube links in org-mode")
+      (description "Idea from @url{https://emacs.stackexchange.com/questions/38098/org-mode-custom-youtube-link-syntax}")
+      (license #f))))
+
+;; No license, assumed nonfree.
+(define-public emacs-guix-packaging
+  (let ((commit "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
+        (revision "0"))
+    (package
+      (name "emacs-guix-packaging")
+      (version (git-version "1.5" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/ryanprior/emacs-guix-packaging")
+               (commit commit)))
+         (sha256
+          (base32 "0m98bwj8dy90ifck8rsda6zfgbjrv5z0166pp7qzvwls9rqa695m"))))
+      (build-system emacs-build-system)
+      (arguments
+       '(#:include (cons* "^snippets\\/" %default-include)))
+      (propagated-inputs
+       (list emacs-dash
+             emacs-yasnippet))
+      (home-page "https://github.com/ryanprior/emacs-guix-packaging")
+      (synopsis "Tools to create and maintain Guix packages quickly and with confidence")
+      (description "Writing and maintaining Guix packages in Emacs should be a
+breeze. The information you need should be ready at your fingertips and any
+chores or guesswork that can be reasonably automated should be. In particular,
+maintainers of Emacs packages in Guix should be able to complete the entire cycle
+of package creation, testing, installation, updates, maintenance and discovery
+within Emacs.")
+      (license #f))))
+
+(define-public emacs-app-launcher
+  (let ((commit "80a9ed37892ee6e21fe44487ed11f66a15e3f440")
+        (revision "0"))
+    (package
+      (name "emacs-app-launcher")
+      (version (git-version "0.1" revision commit))
+      (source
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/SebastienWae/app-launcher")
+               (commit commit)))
+         (sha256
+          (base32 "0m98bwj8dy90ifck8rsda6zfgbjrv5z0166pp7qzvwls9rqa695m"))))
+      (build-system emacs-build-system)
+      (home-page "https://github.com/SebastienWae/app-launcher")
+      (synopsis "Use the Emacs standard completion feature to select an
+application installed on your machine and launch it")
+      (description synopsis)
+      (license license:gpl3+))))
 #+end_src
 ******* all-the-icons fonts :package:version:
 :PROPERTIES:
