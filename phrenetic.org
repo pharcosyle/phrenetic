@@ -5273,6 +5273,7 @@ Extremely WIP, basically just a scratchpad
       hash)))
 
 (use-modules (gnu packages)
+             (guix profiles)
              ((srfi srfi-1) #:select (remove))
              (mendicant utils))
 
@@ -5280,12 +5281,18 @@ Extremely WIP, basically just a scratchpad
   (let ((ps
          (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages.txt" read)
               (remove (lambda (dpns)
-                        (member dpns (list ;; "donnager"
-                                           ;; "auto-minor-mode"
-                                           ;; "straight"
-                                           ;; "better-jumper"
-                                           ;; "company-dict"
-                                           ;; "0x0"
+                        (member dpns (list "donnager"
+
+                                           "straight"
+
+                                           ;; TODO built-in, ignoring for now but handle this when grabbing (doom-packages)
+                                           ;; - what about built-in 'prefer
+                                           "hideshow"
+                                           "vc"
+                                           "vc-annotate"
+                                           "smerge-mode"
+                                           "elisp-mode"
+                                           "css-mode"
                                            ))))
               (map (lambda (x)
                      (string-append "emacs-" x))))))
@@ -5293,14 +5300,28 @@ Extremely WIP, basically just a scratchpad
     ;;  (map (lambda (x)
     ;;         (find-best-packages-by-name x #f))
     ;;       ps))
-    (display
-     (->> ps
-          (map (lambda (x)
-                 (let ((found (find-best-packages-by-name x #f)))
-                   (if (null? found)
-                     x '()))))
-          (remove null?)))
-    ;; (map (specification->package x) ps)
+    ;; (display
+    ;;  (->> ps
+    ;;       (map (lambda (x)
+    ;;              (let ((found (find-best-packages-by-name x #f)))
+    ;;                (if (null? found)
+    ;;                  x '()))))
+    ;;       (remove null?)))
+
+    (use-modules (gnu packages emacs-xyz)
+                 (ebullient home emacs-xyz)
+                 (ebullient home emacs-xyz-batch))
+
+    (packages->manifest
+     (map (lambda (x)
+            (primitive-eval
+             (if (equal? "emacs-git-modes" x)
+                 "git-modes"
+                 x)))
+          ps))
+
+    ;; (map specification->package ps)
+
     ))
 
 (asdf)
