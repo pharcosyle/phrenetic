@@ -5446,61 +5446,64 @@ Extremely WIP, basically just a scratchpad
              ((srfi srfi-1) #:select (remove))
              (mendicant utils))
 
-(define (asdf)
-  (let ((emacs-ps
-         (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
-              (remove (lambda (dpns)
-                        (member dpns (list "donnager"
+(define doom-ps
+  (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
+       (remove
+        (lambda (dpns)
+          (member dpns (list "donnager"
 
-                                           "straight"
+                             "straight"
 
-                                           ;; TODO built-in, ignoring for now but handle this when grabbing from ~doom-packages~. It marks them as ~:ignored t~
-                                           ;; - but what about built-in 'prefer, this isn't marked specially
-                                           "hideshow"
-                                           "vc"
-                                           "vc-annotate"
-                                           "smerge-mode"
-                                           "elisp-mode"
-                                           "css-mode"
+                             ;; TODO built-in, ignoring for now but handle this when grabbing from ~doom-packages~. It marks them as ~:ignored t~
+                             ;; - but what about built-in 'prefer, this isn't marked specially
+                             "hideshow"
+                             "vc"
+                             "vc-annotate"
+                             "smerge-mode"
+                             "elisp-mode"
+                             "css-mode"
 
-                                           "org-elpa"
-                                           "melpa"
-                                           "gnu-elpa-mirror"
-                                           "el-get"
-                                           "emacsmirror-mirror"
-                                           ))))
-              (map (lambda (x)
-                     (string-append "emacs-" x))))))
-    ;; (display
-    ;;  (map (lambda (x)
-    ;;         (find-best-packages-by-name x #f))
-    ;;       emacs-ps))
+                             "org-elpa"
+                             "melpa"
+                             "gnu-elpa-mirror"
+                             "el-get"
+                             "emacsmirror-mirror"
+                             ))))))
 
-    ;; (display
-    ;;  (->> emacs-ps
-    ;;       (map (lambda (x)
-    ;;              (let ((found (find-best-packages-by-name x #f)))
-    ;;                (if (null? found)
-    ;;                  x '()))))
-    ;;       (remove null?)))
+(define emacs-ps
+  (map (lambda (x)
+         (string-append "emacs-" x))
+       doom-ps))
 
-    (use-modules (gnu packages emacs-xyz)
-                 (ebullient home emacs-xyz)
-                 (ebullient home emacs-xyz-batch))
-    (let ((the-manifest
-           (packages->manifest
-            (map (lambda (x)
-                   (primitive-eval
-                    (string->symbol
-                     (if (equal? "emacs-git-modes" x)
-                         "git-modes"
-                         x))))
-                 emacs-ps))))
-      ;; (display the-manifest)
-      #f
-      )
-    ))
-;; (asdf)
+;; (display
+;;  (map (lambda (x)
+;;         (find-best-packages-by-name x #f))
+;;       emacs-ps))
+
+;; (display
+;;  (->> emacs-ps
+;;       (map (lambda (x)
+;;              (let ((found (find-best-packages-by-name x #f)))
+;;                (if (null? found)
+;;                  x '()))))
+;;       (remove null?)))
+
+(use-modules (gnu packages emacs-xyz)
+             (ebullient home emacs-xyz)
+             (ebullient home emacs-xyz-batch))
+
+(define (str->pkg x)
+  (primitive-eval
+   (string->symbol
+    (if (equal? "emacs-git-modes" x)
+        "git-modes"
+        x))))
+
+;; (let ((the-manifest
+;;        (packages->manifest
+;;         (map str->pkg emacs-ps))))
+;;   ;; (display the-manifest)
+;;   #f)
 
 
 
@@ -5514,6 +5517,7 @@ Extremely WIP, basically just a scratchpad
 
 (define (git-checkout-hash url commit recursive?)
   (let ((dir (string-append "/tmp" "/8888")))
+    (delete-file-recursively dir)
     (mkdir-p dir)
     (other:git-fetch url commit dir
                      #:recursive? recursive?
@@ -5532,6 +5536,27 @@ Extremely WIP, basically just a scratchpad
     #t)))
 
 ;; (test-get-hash)
+
+
+(define (hashes ps)
+  (let ((commits (call-with-input-file "../doom-packaging/straight-commits.txt" read)))
+    (map
+     (lambda (doom-pkg)
+       (let* ((p (str->pkg doom-pkg))
+              (commit (assoc-ref commits doom-pkg))
+              (hash
+               (git-checkout-hash
+                (-> p
+                    package-source
+                    origin-uri
+                    git-reference-url)
+                commit)))
+         (let ((res (list p commit hash)))
+           (display (format "~s" res))
+           res)))
+     ps)))
+
+;; (hashes doom-ps)
 #+end_src
 
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
