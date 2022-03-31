@@ -5251,7 +5251,8 @@ Extremely WIP, basically just a scratchpad
     (method git-fetch)
     (uri (git-reference
           (url url)
-          (commit commit)))
+          (commit commit)
+          (recursive? recursive?)))
     (sha256
      (base32
       hash))))
@@ -5314,13 +5315,16 @@ Extremely WIP, basically just a scratchpad
                  (ebullient home emacs-xyz)
                  (ebullient home emacs-xyz-batch))
 
-    (packages->manifest
-     (map (lambda (x)
-            (primitive-eval
-             (if (equal? "emacs-git-modes" x)
-                 "git-modes"
-                 x)))
-          ps))
+    (let ((the-manifest
+           (packages->manifest
+            (map (lambda (x)
+                   (primitive-eval
+                    (string->symbol
+                     (if (equal? "emacs-git-modes" x)
+                         "git-modes"
+                         x))))
+                 ps))))
+      (display the-manifest))
 
     ;; (map specification->package ps)
 
