@@ -5259,22 +5259,6 @@ Extremely WIP, basically just a scratchpad
 
 
 
-(use-modules ((guix base32) #:select (bytevector->nix-base32-string))
-             ((guix build git) #:select (git-fetch) #:prefix other:)
-             (guix build utils)
-             ((guix hash) #:select (file-hash*)))
-
-(define (git-checkout-hash url commit recursive?)
-  (let ((dir (string-append "/tmp" "/8888")))
-    (mkdir-p dir)
-    (other:git-fetch url commit dir
-                     #:recursive? recursive?
-                     ;; #:git-command (string-append #+git "/bin/git")
-                     )
-    (let ((hash (bytevector->nix-base32-string (file-hash* dir))))
-      (delete-file-recursively dir)
-      hash)))
-
 (use-modules (gnu packages)
              (guix profiles)
              ((srfi srfi-1) #:select (remove))
@@ -5330,7 +5314,38 @@ Extremely WIP, basically just a scratchpad
 
     ))
 
-(asdf)
+;; (asdf)
+
+
+
+
+
+
+(use-modules ((guix base32) #:select (bytevector->nix-base32-string))
+             ((guix build git) #:select (git-fetch) #:prefix other:)
+             (guix build utils)
+             ((guix hash) #:select (file-hash*)))
+
+(define (git-checkout-hash url commit recursive?)
+  (let ((dir (string-append "/tmp" "/8888")))
+    (mkdir-p dir)
+    (other:git-fetch url commit dir
+                     #:recursive? recursive?
+                     ;; #:git-command (string-append #+git "/bin/git")
+                     )
+    (let ((hash (bytevector->nix-base32-string (file-hash* dir))))
+      (delete-file-recursively dir)
+      hash)))
+
+
+(define (test-get-hash)
+  (display
+   (git-checkout-hash
+    "https://github.com/emacs-evil/evil-surround"
+    "282a975bda83310d20a2c536ac3cf95d2bf188a5"
+    #t)))
+
+(test-get-hash)
 #+end_src
 
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
