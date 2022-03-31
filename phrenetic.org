@@ -5447,7 +5447,7 @@ Extremely WIP, basically just a scratchpad
              (mendicant utils))
 
 (define (asdf)
-  (let ((ps
+  (let ((emacs-ps
          (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
               (remove (lambda (dpns)
                         (member dpns (list "donnager"
@@ -5474,10 +5474,10 @@ Extremely WIP, basically just a scratchpad
     ;; (display
     ;;  (map (lambda (x)
     ;;         (find-best-packages-by-name x #f))
-    ;;       ps))
+    ;;       emacs-ps))
 
     ;; (display
-    ;;  (->> ps
+    ;;  (->> emacs-ps
     ;;       (map (lambda (x)
     ;;              (let ((found (find-best-packages-by-name x #f)))
     ;;                (if (null? found)
@@ -5495,12 +5495,11 @@ Extremely WIP, basically just a scratchpad
                      (if (equal? "emacs-git-modes" x)
                          "git-modes"
                          x))))
-                 ps))))
+                 emacs-ps))))
       ;; (display the-manifest)
       #f
       )
     ))
-
 ;; (asdf)
 
 
@@ -5545,14 +5544,47 @@ Extremely WIP, basically just a scratchpad
   (with-temp-file f
     (insert content)))
 
+
+
+
 (defun m-process ()
   (-as-> (m-slurp "~/projects/phrenetic/doom-packaging/my-doom-packages.el") $
          (read $)
          (-map #'-first-item $)
          (-map #'symbol-name $)))
 
-(m-spit "doom-packaging/guix-doom-emacs-packages.txt"
-        (pp (m-process)))
+(defun write-doom-pkgs-txt ()
+  (m-spit "doom-packaging/guix-doom-emacs-packages.txt"
+          (pp (m-process))))
+
+
+
+
+
+(defun repo-commit (r)
+  (let ((default-directory (concat "~/.local/var/lib/doom-local/straight/repos/" r)))
+    (straight--process-output "git" "rev-parse" "HEAD")))
+
+(defun write-current-commits ()
+  (let ((pkgs-to-repos
+         (-map
+          (lambda (x)
+            (cons
+             (-first-item x)
+             (-as-> x $
+                    (-fourth-item $)
+                    (plist-get $ :local-repo))))
+          (map-into straight--build-cache 'list))))
+    (-map (lambda (x)
+            (cons (car x)
+                  (if-let ((y (cdr x)))
+                      (if (not (equal y "/home/pharcosyle/projects/dotfiles/donnager"))
+                          (repo-commit y)
+                        nil)
+                    y)))
+          pkgs-to-repos)))
+
+;; (write-current-commits)
 #+end_src
 **** Direnv
 #+begin_src scheme
