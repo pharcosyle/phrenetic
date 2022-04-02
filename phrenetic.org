@@ -2479,7 +2479,8 @@ Extremely WIP, basically just a scratchpad
 
 (use-modules (gnu packages emacs-xyz)
              (ebullient home emacs-xyz)
-             (ebullient home emacs-xyz-batch))
+             ;; (ebullient home emacs-xyz-batch)
+             )
 
 (define (str->pkg x)
   (primitive-eval
@@ -2568,6 +2569,25 @@ Extremely WIP, basically just a scratchpad
 ;; (write-hashes
 ;;  (hashes (list "restart-emacs" "smartparens")))
 ;; (write-hashes doom-ps)
+
+
+
+
+(use-modules ((gnu packages guile-xyz) #:prefix guile-xyz:))
+
+(define-public lokke-new
+  (let ((pkg guile-xyz:lokke))
+    (package
+      (inherit pkg)
+      (source
+       (origin
+         (inherit (package-source pkg))
+         (uri (git-reference
+               (inherit (-> pkg package-source origin-uri))
+               (commit "69a97ca5c6448d7a319cd175594ccf9f2a4a8bde")))
+         (sha256
+          (base32
+           "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
 #+end_src
 ********* elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
