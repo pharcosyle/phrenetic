@@ -317,7 +317,8 @@ guix pull
   #:export (barebones-os
             host-info
             grub-efi
-            base-services+packages
+            base-services
+            nss
             linux-nonfree
             disk-encryption
             stateless
@@ -383,15 +384,19 @@ guix pull
             (type "vfat"))
           (operating-system-file-systems os))))
 #+end_src
-**** Base services and packages
+**** Base services
 #+begin_src scheme
-(define-system-comp (base-services+packages)
-  (packages
-   (cons* nss-certs
-          (operating-system-packages os)))
+(define-system-comp (base-services)
   (services
    (append %base-services
            (operating-system-user-services os))))
+#+end_src
+**** NSS
+#+begin_src scheme
+(define-system-comp (nss)
+  (packages
+   (cons* nss-certs
+          (operating-system-packages os))))
 #+end_src
 **** Linux nonfree
 #+name: db/feature-linux-nonfree
@@ -842,7 +847,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                    #:locale locale)
         (grub-efi #:label "genesis"
                   #:target "/boot/efi")
-        base-services+packages
+        base-services
+        nss
         (users #:who who
                #:bluetooth? bluetooth?)
         (as-> $
