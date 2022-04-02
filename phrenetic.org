@@ -2498,17 +2498,18 @@ Extremely WIP, basically just a scratchpad
              (guix build utils)
              ((guix hash) #:select (file-hash*)))
 
-(define (git-checkout-hash url commit recursive?)
+(define* (git-checkout-hash url commit #:key recursive?)
   (let ((dir (string-append "/tmp" "/8888")))
-    (delete-file-recursively dir)
-    (mkdir-p dir)
-    (other:git-fetch url commit dir
-                     #:recursive? recursive?
-                     ;; #:git-command (string-append #+git "/bin/git")
-                     )
-    (let ((hash (bytevector->nix-base32-string (file-hash* dir))))
-      (delete-file-recursively dir)
-      hash)))
+    (when (file-exists? dir)
+      (delete-file-recursively dir))
+    (if (other:git-fetch url commit dir
+                         #:recursive? recursive?
+                         ;; #:git-command (string-append #+git "/bin/git")
+                         )
+        (let ((hash (bytevector->nix-base32-string (file-hash* dir))))
+          (delete-file-recursively dir)
+          hash)
+        #f)))
 
 
 (define (test-get-hash)
@@ -2516,30 +2517,51 @@ Extremely WIP, basically just a scratchpad
    (git-checkout-hash
     "https://github.com/emacs-evil/evil-surround"
     "282a975bda83310d20a2c536ac3cf95d2bf188a5"
-    #t)))
+    #:recursive? #t)))
 
 ;; (test-get-hash)
 
 
+(define* (find-hash doom-pkg p commit #:key recursive?)
+  (let ((hasher (lambda (url)
+                  (git-checkout-hash url commit #:recursive? recursive?))))
+    (as-> hasher $
+          ($ (if (eq? (-> p package-source origin-method) git-fetch)
+                 (-> p
+                     package-source
+                     origin-uri
+                     git-reference-url)
+                 (string-append "https://github.com/emacs-straight/" doom-pkg)))
+          (if $ $ "NONE_FOUND"))))
+
+;; TODO later: maybe don't look for hashes if the requested commit is already in the Guix package
+;; - and maybe if the hashes turn out to be the same after doing `git-checkout-hash', presumably
+;; because the Guix package had a git tag or something but it ended up being the same as the
+;; Doom-requested commit, don't save the hash? Meh.
+;; TODO maybe don't write out the hashes file
+;; Just cache the results somehow in the guix store so hash generation can be run as-needed
 (define (hashes ps)
   (let ((commits (call-with-input-file "../doom-packaging/straight-commits.txt" read)))
     (map
      (lambda (doom-pkg)
-       (let* ((p (str->pkg doom-pkg))
+       (let* ((p (str->pkg (string-append "emacs-" doom-pkg)))
               (commit (assoc-ref commits doom-pkg))
-              (hash
-               (git-checkout-hash
-                (-> p
-                    package-source
-                    origin-uri
-                    git-reference-url)
-                commit)))
-         (let ((res (list p commit hash)))
-           (display (format "~s" res))
-           res)))
+              (hash (find-hash doom-pkg p commit #:recursive? #t)))
+         (kvm #:package doom-pkg
+              #:commit commit
+              #:hash hash)))
      ps)))
 
-;; (hashes doom-ps)
+(define (spit f content)
+  (call-with-output-file f
+    (lambda (port)
+      (write content port))))
+
+(define write-hashes (partial spit "../doom-packaging/hashes.txt"))
+
+;; (write-hashes
+;;  (hashes (list "restart-emacs" "smartparens")))
+;; (write-hashes doom-ps)
 #+end_src
 
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
