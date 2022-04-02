@@ -1450,11 +1450,11 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
   #:use-module ((ebullient home fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "42e5763782fdc1aabb9f2624d468248d6978abe2")
+  (let ((commit "d7ad4daf32df749a468f97cdd94e6f9715204e8c")
         (revision "0"))
     (package
       (name "doom-emacs")
-      (version (git-version "21.12.0-alpha" revision commit))
+      (version (git-version "3.0.0-dev" revision commit))
       (source
        (origin
          (method git-fetch)
@@ -1463,7 +1463,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
                (commit commit)))
          (sha256
           (base32
-           "178bbblcv2sc2np6np1gaknkabr8mgfsc0kg6f3sm8bi89lkmqa1"))
+           "1fmgwdrkny9i4sfm0pz6hmpk11pvbfvd6zvy3vg4xpyip674zalp"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "change-paths.patch")
