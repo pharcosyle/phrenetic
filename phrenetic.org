@@ -2365,7 +2365,7 @@ Extremely WIP, basically just a scratchpad
 ;;     (license #f)))
 #+end_src
 ******** asdf
-#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm")
+#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm") :comments link
 (define-module (ebullient home packaging-wip)
   ;; #:use-module (guix build-system trivial)
   ;; #:use-module (guix gexp)
@@ -2435,7 +2435,7 @@ Extremely WIP, basically just a scratchpad
              ((srfi srfi-1) #:select (remove))
              (mendicant utils))
 
-(define doom-ps
+(define (doom-ps)
   (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
        (remove
         (lambda (dpns)
@@ -2459,18 +2459,18 @@ Extremely WIP, basically just a scratchpad
                              "emacsmirror-mirror"
                              ))))))
 
-(define emacs-ps
+(define (emacs-ps)
   (map (lambda (x)
          (string-append "emacs-" x))
-       doom-ps))
+       (doom-ps)))
 
 ;; (display
 ;;  (map (lambda (x)
 ;;         (find-best-packages-by-name x #f))
-;;       emacs-ps))
+;;       (emacs-ps)))
 
 ;; (display
-;;  (->> emacs-ps
+;;  (->> (emacs-ps)
 ;;       (map (lambda (x)
 ;;              (let ((found (find-best-packages-by-name x #f)))
 ;;                (if (null? found)
@@ -2491,7 +2491,7 @@ Extremely WIP, basically just a scratchpad
 
 ;; (let ((the-manifest
 ;;        (packages->manifest
-;;         (map str->pkg emacs-ps))))
+;;         (map str->pkg (emacs-ps)))))
 ;;   ;; (display the-manifest)
 ;;   #f)
 
@@ -2568,26 +2568,42 @@ Extremely WIP, basically just a scratchpad
 
 ;; (write-hashes
 ;;  (hashes (list "restart-emacs" "smartparens")))
-;; (write-hashes doom-ps)
+;; (write-hashes (doom-ps))
 
 
 
 
-(use-modules ((gnu packages guile-xyz) #:prefix guile-xyz:))
+;; (use-modules ((gnu packages guile-xyz) #:prefix guile-xyz:))
 
-(define-public lokke-new
-  (let ((pkg guile-xyz:lokke))
-    (package
-      (inherit pkg)
-      (source
-       (origin
-         (inherit (package-source pkg))
-         (uri (git-reference
-               (inherit (-> pkg package-source origin-uri))
-               (commit "69a97ca5c6448d7a319cd175594ccf9f2a4a8bde")))
-         (sha256
-          (base32
-           "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
+;; (define-public lokke-new
+;;   (let ((pkg guile-xyz:lokke))
+;;     (package
+;;       (inherit pkg)
+;;       (source
+;;        (origin
+;;          (inherit (package-source pkg))
+;;          (uri (git-reference
+;;                (inherit (-> pkg package-source origin-uri))
+;;                (commit "69a97ca5c6448d7a319cd175594ccf9f2a4a8bde")))
+;;          (sha256
+;;           (base32
+;;            "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
+
+
+
+
+
+(use-modules ((lokke core)
+              ;; #:select (name)
+              ))
+
+(defn process-doom-packages #()
+  (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
+        (read-string $)
+        (first $)))
+
+(+ 1 1)
+(println (process-doom-packages))
 #+end_src
 ********* elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
