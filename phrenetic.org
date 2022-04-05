@@ -2109,7 +2109,7 @@ index 000000000..c710f766c
 ******* packaging doom WIP
 Extremely WIP, basically just a scratchpad
 ******** first attempts
-#+begin_src scheme :tangle (meta-in-dir "packaging-doom-wip.scm")
+#+begin_src scheme :tangle (meta-in-dir "packaging-doom-wip-1.scm")
 (define-module (ebullient home packaging-doom-wip)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
@@ -2364,8 +2364,8 @@ Extremely WIP, basically just a scratchpad
 ;;     (home-page "")
 ;;     (license #f)))
 #+end_src
-******** asdf
-#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm") :comments link
+******** second attempt
+#+begin_src scheme :tangle (meta-in-dir "packaging-wip-2.scm") :comments link
 (define-module (ebullient home packaging-wip)
   ;; #:use-module (guix build-system trivial)
   ;; #:use-module (guix gexp)
@@ -2590,10 +2590,9 @@ Extremely WIP, basically just a scratchpad
 ;;          (sha256
 ;;           (base32
 ;;            "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
-
-
-
-
+#+end_src
+******** third attempt
+#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm") :comments link
 (read-set! keywords 'prefix)
 
 (use-modules (lokke ns))
@@ -2681,7 +2680,7 @@ Extremely WIP, basically just a scratchpad
                                            hg :vc/hg)
                               :recipe/repo (get r :url))
          (hash-set 'github 'gitlab) (hash-map
-                                     :recipe/vc 'git
+                                     :recipe/vc :vc/git
                                      :recipe/host fetcher
                                      :recipe/repo (get r :repo))))
      (select-and-rename-keys
@@ -2798,7 +2797,8 @@ Extremely WIP, basically just a scratchpad
 (defn parse-single #(name dir)
   (when-let [s (slurp-extant (str dir "/" name ".el"))]
     (as-> s $
-      (let [rx (make-regexp "^;*\\s*Package-Requires:\\s*(.*)$" regexp/newline)]
+      (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
+                            regexp/newline)]
         (regexp-exec rx $))
       (when $
         (match:substring $ 1))
@@ -2828,6 +2828,10 @@ Extremely WIP, basically just a scratchpad
    ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"))
    ))
 
+;; TODO downloading to a cache like the elpa importer does would speed up successive/reattempted runs, no?
+;; - assuming that is what it's doing (check). Do those repo caches stick around forever though? Will adding my own interfere with anything?
+;; - if it's /really/ fast maybe I could get rid of the later-to-come bump "scripts"'s need to read an existing list of generated packges at all! I wouldn't even have to save it to disk, just the lockfile!
+;;   - even if the guix git repositories cache thing is untenable maybe there's some other cache I could write the repos or the generated packages-with-hashes to, even just ~./cache. I'd like to not have to manage a generated packages file if I don't have to
 ;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
 ;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
 ;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'?
