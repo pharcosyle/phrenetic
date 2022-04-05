@@ -2432,32 +2432,33 @@ Extremely WIP, basically just a scratchpad
 
 (use-modules (gnu packages)
              (guix profiles)
-             ((srfi srfi-1) #:select (remove))
-             (mendicant utils))
+             ;; ((srfi srfi-1) #:select (remove))
+             ;; (mendicant utils)
+             )
 
-(define (doom-ps)
-  (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
-       (remove
-        (lambda (dpns)
-          (member dpns (list "donnager"
+;; (define (doom-ps)
+;;   (->> (call-with-input-file "../doom-packaging/guix-doom-emacs-packages-from-straight-build-cache.txt" read)
+;;        (remove
+;;         (lambda (dpns)
+;;           (member dpns (list "donnager"
 
-                             "straight"
+;;                              "straight"
 
-                             ;; TODO built-in, ignoring for now but handle this when grabbing from ~doom-packages~. It marks them as ~:ignored t~
-                             ;; - but what about built-in 'prefer, this isn't marked specially
-                             "hideshow"
-                             "vc"
-                             "vc-annotate"
-                             "smerge-mode"
-                             "elisp-mode"
-                             "css-mode"
+;;                              ;; TODO built-in, ignoring for now but handle this when grabbing from ~doom-packages~. It marks them as ~:ignored t~
+;;                              ;; - but what about built-in 'prefer, this isn't marked specially
+;;                              "hideshow"
+;;                              "vc"
+;;                              "vc-annotate"
+;;                              "smerge-mode"
+;;                              "elisp-mode"
+;;                              "css-mode"
 
-                             "org-elpa"
-                             "melpa"
-                             "gnu-elpa-mirror"
-                             "el-get"
-                             "emacsmirror-mirror"
-                             ))))))
+;;                              "org-elpa"
+;;                              "melpa"
+;;                              "gnu-elpa-mirror"
+;;                              "el-get"
+;;                              "emacsmirror-mirror"
+;;                              ))))))
 
 (define (emacs-ps)
   (map (lambda (x)
@@ -2564,7 +2565,7 @@ Extremely WIP, basically just a scratchpad
     (lambda (port)
       (write content port))))
 
-(define write-hashes (partial spit "../doom-packaging/hashes.txt"))
+;; (define write-hashes (partial spit "../doom-packaging/hashes.txt"))
 
 ;; (write-hashes
 ;;  (hashes (list "restart-emacs" "smartparens")))
@@ -2596,23 +2597,44 @@ Extremely WIP, basically just a scratchpad
 (read-set! keywords 'prefix)
 
 (use-modules (lokke ns))
-(use-modules ((lokke core) :select (let if-let when-let))) ; TODO could mendicant utils be causing the errors this is solving? Doubt it but check.
+(use-modules ((lokke core) :select (let if-let when-let case assoc merge))) ; TODO later: find out where the binding of e.g. `merge' is coming from (with and without the :select)
 (require #(clojure.core :refer :all))
 
 (defn update #(m k f & args)
   (apply update-in m (vector k) f args))
 
+(defn not-empty #(coll)
+  (when (seq coll)
+    coll))
+
+(defn merge #(& maps)
+  (when (some identity maps)
+    (reduce
+     (fn #(res x)
+         (conj (or res
+                   (hash-map))
+               x))
+     maps)))
+
 (defn select-keys #(m keyseq)
   (loop [ret (hash-map) keys (seq keyseq)]
-        (if keys
-            (let [k (first keys)
-                  v (get m k)]
-              (recur
-               (if (contains? m k)
-                   (conj ret (vector k v))
-                   ret)
-               (next keys)))
-            ret)))
+    (if keys
+        (let [k (first keys)
+              v (get m k)]
+          (recur
+           (if (contains? m k)
+               (conj ret (vector k v))
+               ret)
+           (next keys)))
+        ret)))
+
+(defn rename-keys #(map kmap)
+  (reduce
+   (fn #(m #(old new))
+       (if (contains? map old)
+           (assoc m new (get map old))
+           m))
+   (apply dissoc map (keys kmap)) kmap))
 
 
 
@@ -2629,92 +2651,118 @@ Extremely WIP, basically just a scratchpad
     (select-keys $ (keys kmap))
     (rename-keys $ kmap)))
 
+;; TODO hack. Maybe I can override stuff in the edn reader if it's not too tough.
+;; - or find an elisp->clj/edn parser and do the parsing on the emacs side
+;; - or maybe guile's parsing is a better match and I should use that
 (defn icky #(x)
-  (if (= x "0") ; TODO hack. Maybe I can override stuff in the edn reader if it's not too tough.
+  (if (= x "0")
     "0x0" x))
 
 
 
 (def archives (atom (hash-map)))
 
-(defn add-archive #(id methods)
+(defn add-archive! #(id methods)
   (swap! archives assoc id methods))
 
 (defn get-recipe #(a & args)
   (apply (get-in (deref archives) (vector a 'get-recipe)) args))
 
-(defn parse-melpa-recipe #(r)
-  (as-> (read-string r) $
-        ;; (hash-map
-        ;;  :package/name (icky (str (first $)))
-        ;;  :package/recipe (apply hash-map (rest $)))
-        (apply hash-map (rest $))
-        (merge
-         (hash-map
-          :recipe/flavor 'melpa ; TODO putting this here for completion for now, donno if I'll need it
-          )
-         (let [fetcher (get $ :fetcher)]
-           (condp some (vector fetcher)
-             (hash-set 'git 'hg) (hash-map
-                                  :recipe/vc (case fetcher
-                                               'git :vc/git
-                                               'hg :vc/hg)
-                                  :recipe/repo (get $ :url))
-             (hash-set 'github 'gitlab) (hash-map
-                                         :recipe/vc 'git
-                                         :recipe/host fetcher
-                                         :recipe/repo (get $ :repo))))
-         (select-and-rename-keys
-          $
-          (hash-map
-           :branch :recipe/branch
-           :files :recipe/files)))))
+(defn parse-melpa-recipe #(r*)
+  (let [r (apply hash-map (rest r*))]
+    (merge
+     (hash-map
+      :recipe/flavor :flavor/melpa) ; TODO putting this here for completion for now, donno if I'll need it
+     (let [fetcher (get r :fetcher)]
+       (condp some (vector fetcher)
+         (hash-set 'git 'hg) (hash-map
+                              :recipe/vc (case fetcher
+                                           git :vc/git
+                                           hg :vc/hg)
+                              :recipe/repo (get r :url))
+         (hash-set 'github 'gitlab) (hash-map
+                                     :recipe/vc 'git
+                                     :recipe/host fetcher
+                                     :recipe/repo (get r :repo))))
+     (select-and-rename-keys
+      r
+      (hash-map
+       :branch :recipe/branch
+       :files :recipe/files)))))
 
-(add-archive
+(add-archive!
  :archive/melpa
  (hash-map
   'get-recipe (fn #(p)
                   (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
-                    (parse-melpa-recipe s)))))
+                    (-> s
+                        read-string
+                        parse-melpa-recipe)))))
 
-;; TODO just use `archives' for priority instead? Maybe not friendly to other users.
+;; TODO just use `archives' for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
 (def archive-priority (vector
                        :archive/melpa
                        :archive/elpa))
 
 
 
-(defn parse-doom-package #(p)
-  (merge
-   (hash-map
-    :package/name (icky (str (first p))))
-   (as-> (apply hash-map (rest p)) $
+(defn parse-doom-package #(p*)
+  (let [p (apply hash-map (rest p*))]
+    (merge
+     (hash-map
+      :package/name (icky (str (first p*))))
+     (when (some (hash-set (get p :type)) (vector 'local 'built-in))
+       (hash-map
+        :doom/type (case type
+                     local :doom.type/local
+                     built-in :doom.type/built-in)))
+     ;; TODO read https://github.com/melpa/melpa#recipe-format
+     ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
+     ;; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported
+     ;; TODO protocol can be "ssh" in straight, handle or make unsupported.
+     ;; - update: I already have a check for it in my "error-reporting" thing below but I should make sure that's it's not an /invalid/ value ("https" is fine if its stated explicitly)
+     ;; TODO might need :build and :local-repo for donnager
+     ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
+     ;; TODO at end: ensure an empty map isn't dded / the map doesn't have any empty values
+     (let [r (apply hash-map (get p :recipe))
+           recipe
+           (merge
+            (when-let [type (get r :type)]
+              (hash-map
+               :recipe/vc (case type
+                            git :vc/git
+                            built-in :vc/built-in)))
+            (when-let [flavor (get r :flavor)]
+              (hash-map
+               :recipe/flavor (case flavor
+                                melpa :flavor/melpa)))
+            (select-and-rename-keys
+             r
+             (hash-map
+              :host :recipe/host
+              :repo :recipe/repo
+              :branch :recipe/branch
+              :files :recipe/files
+              :nonrecursive :recipe.straight/nonrecursive
+              :build :recipe.straight/build
+              :pre-build :recipe.straight/pre-build
+              :post-build :recipe.straight/post-build
+              :local-repo :recipe.straight/local-repo
+              :protocol :recipe.straight/protocol
+              :source :recipe.straight/source
+              :fork :recipe.straight/fork
+              :upstream :recipe.straight/upstream
+              :includes :recipe.straight/includes)))]
+       (when (not-empty recipe)
+         (hash-map
+          :package/recipe recipe)))
      (select-and-rename-keys
-      $
-      (hash-map :type :doom/type
-                :recipe :package/recipe
-                :pin :doom/pin
-                :disable :doom/disable
-                :ignore :doom/ignore))
-     (when (some (hash-set (get $ :doom/type)) (vector 'local 'built-in))
-       (update :doom/type (fn #(type)
-                              (cond type
-                                'local :doom.type/local
-                                'built-in :doom.type/built-in))))
-     (update :package/recipe (partial apply hash-map)
-             ;; TODO read https://github.com/melpa/melpa#recipe-format
-             ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
-             ;; TODO do renaming of keys
-             ;; - rename :type to :recipe/vc, 'git and 'hg to :vc/git and :vc/hg
-             ;; (fn #(r)
-             ;;     (select-keys
-             ;;      (apply hash-map r)
-             ;;      #(:host :repo :branch :protocol :files :nonrecursive :pre-build :post-build ; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported ; TODO protocol can be "ssh" in straight, handle or make unsupported.
-             ;;        ;; :build :local-repo ; TODO might need these for donnager
-             ;;        ;; :flavor ; TODO read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
-             ;;        )))
-             )
-     $)))
+      p
+      (hash-map :pin :doom/pin))
+     (when (or (get p :disable)
+               (get p :ignore))
+       (hash-map
+        :package/deactivated? #t)))))
 
 (defn parse-doom-packages #()
   (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
@@ -2725,22 +2773,9 @@ Extremely WIP, basically just a scratchpad
                     (= (get p :package/name) "straight"))
                 $)
         (remove (fn #(p)
-                    (or (get p :doom/disable)
-                        (get p :doom/ignore)))
-                $)
-        (if-let [unsupported (seq (filter (fn #(p)
-                                              (or (let [type (get p :doom/type)]
-                                                    (some (hash-set type) (vector :doom.type/local :doom.type/built-in)))
-                                                  (let [recipe-type (get-in p (vector :package/recipe :recipe/vc))]
-                                                    (and recipe-type (not= recipe-type :vc/git)))
-                                                  (get-in p (vector :package/recipe :recipe/protocol))
-                                                  (get-in p (vector :package/recipe :recipe/source))
-                                                  (get-in p (vector :package/recipe :recipe/fork))
-                                                  (get-in p (vector :package/recipe :recipe/upstream))
-                                                  (get-in p (vector :package/recipe :recipe/includes))))
-                                          $))]
-                (throw (ex-info "Package(s) with unsupported configuration" (hash-map :packages unsupported)))
+                    (get p :package/deactivated?))
                 $)))
+
 ;; (println (parse-doom-packages))
 
 (defn parse-deps #(form)
@@ -2779,6 +2814,9 @@ Extremely WIP, basically just a scratchpad
 ;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
 ;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
 ;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
+
+
+(def straight-allow-recipe-inheritance? #t)
 
 (def defaults
      (hash-map
@@ -2833,6 +2871,21 @@ Extremely WIP, basically just a scratchpad
 ;;     (synopsis ,(elpa-package-synopsis pkg))
 ;;     (description ,(beautify-description (elpa-package-description pkg)))
 ;;     (license ,license)))
+
+
+;; (if-let [unsupported (seq (filter (fn #(p)
+;;                                       (or (let [type (get p :doom/type)]
+;;                                             (some (hash-set type) (vector :doom.type/local :doom.type/built-in)))
+;;                                           (let [vc (get-in p (vector :package/recipe :recipe/vc))]
+;;                                             (and vc (not= vc :vc/git)))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/protocol))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/source))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/fork))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/upstream))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/includes))))
+;;                                   $))]
+;;         (throw (ex-info "Package(s) with unsupported configuration" (hash-map :packages unsupported)))
+;;         $)
 #+end_src
 ********* elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
