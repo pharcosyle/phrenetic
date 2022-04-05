@@ -2573,6 +2573,7 @@ Extremely WIP, basically just a scratchpad
 
 
 
+;; TODO commented out for now, it worked from the repl but it throws an error under some other circumstances because lokke isn't found? Whatever.
 ;; (use-modules ((gnu packages guile-xyz) #:prefix guile-xyz:))
 
 ;; (define-public lokke-new
@@ -2592,18 +2593,246 @@ Extremely WIP, basically just a scratchpad
 
 
 
+(read-set! keywords 'prefix)
 
-(use-modules ((lokke core)
-              ;; #:select (name)
-              ))
+(use-modules (lokke ns))
+(use-modules ((lokke core) :select (let if-let when-let))) ; TODO could mendicant utils be causing the errors this is solving? Doubt it but check.
+(require #(clojure.core :refer :all))
 
-(defn process-doom-packages #()
+(defn update #(m k f & args)
+  (apply update-in m (vector k) f args))
+
+(defn select-keys #(m keyseq)
+  (loop [ret (hash-map) keys (seq keyseq)]
+        (if keys
+            (let [k (first keys)
+                  v (get m k)]
+              (recur
+               (if (contains? m k)
+                   (conj ret (vector k v))
+                   ret)
+               (next keys)))
+            ret)))
+
+
+
+(defn slurp-extant #(f)
+  ;; (when-let [s (try
+  ;;               (slurp f)
+  ;;               (catch java.io.FileNotFoundException _))]
+  ;;   (read-string s))
+  (when (file-exists? f)
+    (slurp f)))
+
+(defn select-and-rename-keys #(m kmap)
+  (as-> m $
+    (select-keys $ (keys kmap))
+    (rename-keys $ kmap)))
+
+(defn icky #(x)
+  (if (= x "0") ; TODO hack. Maybe I can override stuff in the edn reader if it's not too tough.
+    "0x0" x))
+
+
+
+(def archives (atom (hash-map)))
+
+(defn add-archive #(id methods)
+  (swap! archives assoc id methods))
+
+(defn get-recipe #(a & args)
+  (apply (get-in (deref archives) (vector a 'get-recipe)) args))
+
+(defn parse-melpa-recipe #(r)
+  (as-> (read-string r) $
+        ;; (hash-map
+        ;;  :package/name (icky (str (first $)))
+        ;;  :package/recipe (apply hash-map (rest $)))
+        (apply hash-map (rest $))
+        (merge
+         (hash-map
+          :recipe/flavor 'melpa ; TODO putting this here for completion for now, donno if I'll need it
+          )
+         (let [fetcher (get $ :fetcher)]
+           (condp some (vector fetcher)
+             (hash-set 'git 'hg) (hash-map
+                                  :recipe/vc (case fetcher
+                                               'git :vc/git
+                                               'hg :vc/hg)
+                                  :recipe/repo (get $ :url))
+             (hash-set 'github 'gitlab) (hash-map
+                                         :recipe/vc 'git
+                                         :recipe/host fetcher
+                                         :recipe/repo (get $ :repo))))
+         (select-and-rename-keys
+          $
+          (hash-map
+           :branch :recipe/branch
+           :files :recipe/files)))))
+
+(add-archive
+ :archive/melpa
+ (hash-map
+  'get-recipe (fn #(p)
+                  (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
+                    (parse-melpa-recipe s)))))
+
+;; TODO just use `archives' for priority instead? Maybe not friendly to other users.
+(def archive-priority (vector
+                       :archive/melpa
+                       :archive/elpa))
+
+
+
+(defn parse-doom-package #(p)
+  (merge
+   (hash-map
+    :package/name (icky (str (first p))))
+   (as-> (apply hash-map (rest p)) $
+     (select-and-rename-keys
+      $
+      (hash-map :type :doom/type
+                :recipe :package/recipe
+                :pin :doom/pin
+                :disable :doom/disable
+                :ignore :doom/ignore))
+     (when (some (hash-set (get $ :doom/type)) (vector 'local 'built-in))
+       (update :doom/type (fn #(type)
+                              (cond type
+                                'local :doom.type/local
+                                'built-in :doom.type/built-in))))
+     (update :package/recipe (partial apply hash-map)
+             ;; TODO read https://github.com/melpa/melpa#recipe-format
+             ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
+             ;; TODO do renaming of keys
+             ;; - rename :type to :recipe/vc, 'git and 'hg to :vc/git and :vc/hg
+             ;; (fn #(r)
+             ;;     (select-keys
+             ;;      (apply hash-map r)
+             ;;      #(:host :repo :branch :protocol :files :nonrecursive :pre-build :post-build ; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported ; TODO protocol can be "ssh" in straight, handle or make unsupported.
+             ;;        ;; :build :local-repo ; TODO might need these for donnager
+             ;;        ;; :flavor ; TODO read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
+             ;;        )))
+             )
+     $)))
+
+(defn parse-doom-packages #()
   (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
         (read-string $)
-        (first $)))
+        (map parse-doom-package $)
+        ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
+        (remove (fn #(p)
+                    (= (get p :package/name) "straight"))
+                $)
+        (remove (fn #(p)
+                    (or (get p :doom/disable)
+                        (get p :doom/ignore)))
+                $)
+        (if-let [unsupported (seq (filter (fn #(p)
+                                              (or (let [type (get p :doom/type)]
+                                                    (some (hash-set type) (vector :doom.type/local :doom.type/built-in)))
+                                                  (let [recipe-type (get-in p (vector :package/recipe :recipe/vc))]
+                                                    (and recipe-type (not= recipe-type :vc/git)))
+                                                  (get-in p (vector :package/recipe :recipe/protocol))
+                                                  (get-in p (vector :package/recipe :recipe/source))
+                                                  (get-in p (vector :package/recipe :recipe/fork))
+                                                  (get-in p (vector :package/recipe :recipe/upstream))
+                                                  (get-in p (vector :package/recipe :recipe/includes))))
+                                          $))]
+                (throw (ex-info "Package(s) with unsupported configuration" (hash-map :packages unsupported)))
+                $)))
+;; (println (parse-doom-packages))
 
-(+ 1 1)
-(println (process-doom-packages))
+(defn parse-deps #(form)
+  (map (fn #(dep)
+           (str
+            (if (list? dep)
+                (first dep)
+                dep)))
+       form))
+
+(defn parse-multi #(name dir)
+  (when-let [s (slurp-extant (str dir "/" name "-pkg.el"))]
+    (as-> (read-string s) $
+          (nth $ 4)
+          (fnext $) ; Form is wrapped in `quote'.
+          (parse-deps $))))
+
+(use-modules (ice-9 regex))
+
+(defn parse-single #(name dir)
+  (when-let [s (slurp-extant (str dir "/" name ".el"))]
+    (as-> s $
+      (let [rx (make-regexp "^;*\\s*Package-Requires:\\s*(.*)$" regexp/newline)]
+        (regexp-exec rx $))
+      (when $
+        (match:substring $ 1))
+      (read-string $)
+      (parse-deps $))))
+
+(defn package-deps #(name dir)
+  (or (seq (parse-multi name dir))
+      (parse-single name dir)))
+
+;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
+;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
+;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
+;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
+;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
+
+(def defaults
+     (hash-map
+      :recipe/protocol "https"
+      ;; maybe?:
+      ;; :files '("*.el" "*.el.in" "dir"
+      ;;          "*.info" "*.texi" "*.texinfo"
+      ;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
+      ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"))
+      ))
+
+;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
+;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
+;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'?
+;; - Straight claims to be able to "deal with built-in packages" even without this variable. How? Something like hlissner does when :built-in is set to 'prefer? Use one
+;;   of these approaches instead of making a (brittle) list of built-in pseudo packages?
+;; - Remember, sometimes even if a package is built-in it should still be installed (like org)
+;; - unrelated: are there any built-in dependencies with newer upstream/external versions? Do I want them?
+;;   Perhaps not even proper versions just newer commits in a git repo
+;; - what's `straight-recipes-gnu-elpa-ignored-packages' all about?
+;; TODO always include *pkg.el like straight.el::3168 says?
+;; Is that just about making sure that dependencies get resolved? It says "linked over" though. But then why wouldn't the other `straight-recipes-REPO-retrieve' methods have it? For
+;; the elpa one at least it could be because it includes everything (=:files "*"=)
+;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
+;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
+
+(defn asdfasdf #(p)
+  1)
+
+;; (defn the-package #()
+;;   (package
+;;     (name ,(elpa-name->package-name name))
+;;     (version ,version)
+;;     (source ,(or melpa-source
+;;                  (let ((tarball (with-store store
+;;                                   (download-to-store store source-url))))
+;;                    `(origin
+;;                       (method url-fetch)
+;;                       (uri (string-append ,@(factorize-uri source-url version)))
+;;                       (sha256
+;;                        (base32
+;;                         ,(if tarball
+;;                              (bytevector->nix-base32-string
+;;                               (file-hash* tarball #:recursive? #false))
+;;                              "failed to download package")))))))
+;;     (build-system emacs-build-system)
+;;     ,@(maybe-inputs 'propagated-inputs dependencies)
+;;     ,@(if melpa-source
+;;           (melpa-recipe->maybe-arguments melpa-recipe)
+;;           '())
+;;     (home-page ,(elpa-package-home-page pkg))
+;;     (synopsis ,(elpa-package-synopsis pkg))
+;;     (description ,(beautify-description (elpa-package-description pkg)))
+;;     (license ,license)))
 #+end_src
 ********* elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
