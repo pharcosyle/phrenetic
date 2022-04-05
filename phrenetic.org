@@ -2611,29 +2611,29 @@ Extremely WIP, basically just a scratchpad
   (when (some identity maps)
     (reduce
      (fn #(res x)
-         (conj (or res
-                   (hash-map))
-               x))
+       (conj (or res
+                 (hash-map))
+             x))
      maps)))
 
 (defn select-keys #(m keyseq)
   (loop [ret (hash-map) keys (seq keyseq)]
     (if keys
-        (let [k (first keys)
-              v (get m k)]
-          (recur
-           (if (contains? m k)
-               (conj ret (vector k v))
-               ret)
-           (next keys)))
-        ret)))
+      (let [k (first keys)
+            v (get m k)]
+        (recur
+         (if (contains? m k)
+           (conj ret (vector k v))
+           ret)
+         (next keys)))
+      ret)))
 
 (defn rename-keys #(map kmap)
   (reduce
    (fn #(m #(old new))
-       (if (contains? map old)
-           (assoc m new (get map old))
-           m))
+     (if (contains? map old)
+       (assoc m new (get map old))
+       m))
    (apply dissoc map (keys kmap)) kmap))
 
 
@@ -2694,10 +2694,10 @@ Extremely WIP, basically just a scratchpad
  :archive/melpa
  (hash-map
   'get-recipe (fn #(p)
-                  (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
-                    (-> s
-                        read-string
-                        parse-melpa-recipe)))))
+                (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
+                  (-> s
+                      read-string
+                      parse-melpa-recipe)))))
 
 ;; TODO just use `archives' for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
 (def archive-priority (vector
@@ -2766,32 +2766,32 @@ Extremely WIP, basically just a scratchpad
 
 (defn parse-doom-packages #()
   (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
-        (read-string $)
-        (map parse-doom-package $)
-        ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
-        (remove (fn #(p)
-                    (= (get p :package/name) "straight"))
-                $)
-        (remove (fn #(p)
-                    (get p :package/deactivated?))
-                $)))
+    (read-string $)
+    (map parse-doom-package $)
+    ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
+    (remove (fn #(p)
+              (= (get p :package/name) "straight"))
+            $)
+    (remove (fn #(p)
+              (get p :package/deactivated?))
+            $)))
 
 ;; (println (parse-doom-packages))
 
 (defn parse-deps #(form)
   (map (fn #(dep)
-           (str
-            (if (list? dep)
-                (first dep)
-                dep)))
+         (str
+          (if (list? dep)
+            (first dep)
+            dep)))
        form))
 
 (defn parse-multi #(name dir)
   (when-let [s (slurp-extant (str dir "/" name "-pkg.el"))]
     (as-> (read-string s) $
-          (nth $ 4)
-          (fnext $) ; Form is wrapped in `quote'.
-          (parse-deps $))))
+      (nth $ 4)
+      (fnext $) ; Form is wrapped in `quote'.
+      (parse-deps $))))
 
 (use-modules (ice-9 regex))
 
@@ -2819,14 +2819,14 @@ Extremely WIP, basically just a scratchpad
 (def straight-allow-recipe-inheritance? #t)
 
 (def defaults
-     (hash-map
-      :recipe/protocol "https"
-      ;; maybe?:
-      ;; :files '("*.el" "*.el.in" "dir"
-      ;;          "*.info" "*.texi" "*.texinfo"
-      ;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
-      ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"))
-      ))
+  (hash-map
+   :recipe/protocol "https"
+   ;; maybe?:
+   ;; :files '("*.el" "*.el.in" "dir"
+   ;;          "*.info" "*.texi" "*.texinfo"
+   ;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
+   ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"))
+   ))
 
 ;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
 ;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
