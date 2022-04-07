@@ -2668,26 +2668,28 @@ Extremely WIP, basically just a scratchpad
   (apply (get-in (deref archives) (vector a 'get-recipe)) args))
 
 (defn parse-melpa-recipe #(r*)
-  (let [r (apply hash-map (rest r*))]
-    (merge
-     (hash-map
-      :recipe/flavor :flavor/melpa) ; TODO putting this here for completion for now, donno if I'll need it
-     (let [fetcher (get r :fetcher)]
-       (condp some (vector fetcher)
-         (hash-set 'git 'hg) (hash-map
-                              :recipe/vc (case fetcher
-                                           git :vc/git
-                                           hg :vc/hg)
-                              :recipe/repo (get r :url))
-         (hash-set 'github 'gitlab) (hash-map
-                                     :recipe/vc :vc/git
-                                     :recipe/host fetcher
-                                     :recipe/repo (get r :repo))))
-     (select-and-rename-keys
-      r
-      (hash-map
-       :branch :recipe/branch
-       :files :recipe/files)))))
+  (let [r (apply hash-map (rest r*))
+        recipe
+        (merge
+         (hash-map
+          :recipe/flavor :flavor/melpa) ; TODO putting this here for completion for now, donno if I'll need it
+         (let [fetcher (get r :fetcher)]
+           (condp some (vector fetcher)
+             (hash-set 'git 'hg) (hash-map
+                                  :recipe/vc (case fetcher
+                                               git :vc/git
+                                               hg :vc/hg)
+                                  :recipe/repo (get r :url))
+             (hash-set 'github 'gitlab) (hash-map
+                                         :recipe/vc :vc/git
+                                         :recipe/host fetcher
+                                         :recipe/repo (get r :repo))))
+         (select-and-rename-keys
+          r (hash-map
+             :branch :recipe/branch
+             :files :recipe/files)))]
+    (when (not-empty recipe)
+      recipe)))
 
 (add-archive!
  :archive/melpa
@@ -2736,28 +2738,26 @@ Extremely WIP, basically just a scratchpad
                :recipe/flavor (case flavor
                                 melpa :flavor/melpa)))
             (select-and-rename-keys
-             r
-             (hash-map
-              :host :recipe/host
-              :repo :recipe/repo
-              :branch :recipe/branch
-              :files :recipe/files
-              :nonrecursive :recipe.straight/nonrecursive
-              :build :recipe.straight/build
-              :pre-build :recipe.straight/pre-build
-              :post-build :recipe.straight/post-build
-              :local-repo :recipe.straight/local-repo
-              :protocol :recipe.straight/protocol
-              :source :recipe.straight/source
-              :fork :recipe.straight/fork
-              :upstream :recipe.straight/upstream
-              :includes :recipe.straight/includes)))]
+             r (hash-map
+                :host :recipe/host
+                :repo :recipe/repo
+                :branch :recipe/branch
+                :files :recipe/files
+                :nonrecursive :recipe.straight/nonrecursive
+                :build :recipe.straight/build
+                :pre-build :recipe.straight/pre-build
+                :post-build :recipe.straight/post-build
+                :local-repo :recipe.straight/local-repo
+                :protocol :recipe.straight/protocol
+                :source :recipe.straight/source
+                :fork :recipe.straight/fork
+                :upstream :recipe.straight/upstream
+                :includes :recipe.straight/includes)))]
        (when (not-empty recipe)
          (hash-map
           :package/recipe recipe)))
      (select-and-rename-keys
-      p
-      (hash-map :pin :doom/pin))
+      p (hash-map :pin :doom/pin))
      (when (or (get p :disable)
                (get p :ignore))
        (hash-map
