@@ -1324,7 +1324,7 @@ nix-env --upgrade
        home-profile-service-type
        (lambda (config)
          (list (-> (get config #:emacs)
-                   emacs-with-C-source
+                   emacs-with-findable-C-source
                    emacs-with-zstd))))
       (service-extension
        he-login-shell-service-type
@@ -1379,7 +1379,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+end_src
 ****** With C source
 #+begin_src scheme
-(define-public (emacs-with-C-source emacs)
+(define-public (emacs-with-findable-C-source emacs)
   (package
     (inherit emacs)
     (arguments
