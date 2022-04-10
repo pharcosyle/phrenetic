@@ -2106,6 +2106,29 @@ index 000000000..c710f766c
 ******* \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
   https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
+******* Lokke
+TODO move me
+#+begin_src scheme :tangle (meta-in-dir "guile-xyz.scm")
+(define-module (ebullient home guile-xyz)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages guile-xyz) #:prefix guile-xyz:)
+  #:use-module (mendicant utils))
+
+(define-public lokke
+  (let ((pkg guile-xyz:lokke))
+    (package
+      (inherit pkg)
+      (source
+       (origin
+         (inherit (package-source pkg))
+         (uri (git-reference
+               (inherit (-> pkg package-source origin-uri))
+               (commit "041e9a42b7579ac1af584e627c443f84962148a3")))
+         (sha256
+          (base32
+           "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
+#+end_src
 ******* packaging doom WIP
 Extremely WIP, basically just a scratchpad
 ******** first attempts
@@ -2570,26 +2593,6 @@ Extremely WIP, basically just a scratchpad
 ;; (write-hashes
 ;;  (hashes (list "restart-emacs" "smartparens")))
 ;; (write-hashes (doom-ps))
-
-
-
-
-;; TODO commented out for now, it worked from the repl but it throws an error under some other circumstances because lokke isn't found? Whatever.
-;; (use-modules ((gnu packages guile-xyz) #:prefix guile-xyz:))
-
-;; (define-public lokke-new
-;;   (let ((pkg guile-xyz:lokke))
-;;     (package
-;;       (inherit pkg)
-;;       (source
-;;        (origin
-;;          (inherit (package-source pkg))
-;;          (uri (git-reference
-;;                (inherit (-> pkg package-source origin-uri))
-;;                (commit "69a97ca5c6448d7a319cd175594ccf9f2a4a8bde")))
-;;          (sha256
-;;           (base32
-;;            "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb")))))))
 #+end_src
 ******** third attempt
 #+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm") :comments link
