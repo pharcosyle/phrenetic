@@ -2620,9 +2620,11 @@ Extremely WIP, basically just a scratchpad
 ******** third attempt
 #+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
 (ns ebullient.home.packaging-wip
-  (:require [clojure.edn :as edn]))
+  (:require [clojure.edn :as edn]
+            [guile :refer [file-exists?]]))
 
 ;; Bug in lokke: if the first argument is `nil` the result is a seq of pairs (two-element vectors) instead of a map.
+;; - Changed `reduce1` to `reduce`.
 (defn merge
   "Returns a map that consists of the rest of the maps conj-ed onto
   the first.  If a key occurs in more than one map, the mapping from
@@ -2648,13 +2650,33 @@ Extremely WIP, basically just a scratchpad
 
 
 
-(defn slurp-safe [f]
-  (try
-    (slurp f)
-    ;; TODO
-    ;; (catch java.io.FileNotFoundException _)
-    (catch Exception _)
-    ))
+(def poly-methods (atom {}))
+
+(defn dispatch-method [name k & args]
+  (apply (get-in (deref poly-methods) [name k]) args))
+
+(defmacro defpoly [k & methods]
+  (let [register
+        (fn [[name argslist & body]]
+          `(swap! poly-methods assoc-in ['~name ~k] (fn ~argslist ~@body)))
+        create-var
+        (fn [[name]]
+          `(def ~name (partial dispatch-method '~name)))
+        setup-method
+        (fn [m]
+          `(do
+             ~(register m)
+             ~(create-var m)))]
+    `(do
+       ~@(map setup-method methods))))
+
+
+
+
+
+(defn slurp-extant [f]
+  (when (file-exists? f)
+    (slurp f)))
 
 (defn select-and-rename-keys [m kmap]
   (as-> m $
@@ -2676,14 +2698,6 @@ Extremely WIP, basically just a scratchpad
 
 
 
-(def archives (atom {}))
-
-(defn add-archive! [id methods]
-  (swap! archives assoc id methods))
-
-(defn get-recipe [a & args]
-  (apply (get-in (deref archives) [a 'get-recipe]) args))
-
 (defn parse-melpa-recipe [r*]
   (let [r (apply hash-map (rest r*))
         recipe
@@ -2704,15 +2718,12 @@ Extremely WIP, basically just a scratchpad
     (when-not (empty? recipe)
       recipe)))
 
-(add-archive!
- :archive/melpa
- {'get-recipe (fn [p]
-                (when-let [s (slurp-safe (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
-                  (-> s
-                      edn/read-string
-                      parse-melpa-recipe)))})
+(defpoly
+  :archive/melpa
+  (get-recipe [p] (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
+                    (parse-melpa-recipe (edn/read-string s)))))
 
-;; TODO just use `archives' for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
+;; TODO just use `archives` for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
 (def archive-priority [:archive/melpa
                        :archive/elpa])
 
@@ -2787,10 +2798,10 @@ Extremely WIP, basically just a scratchpad
        form))
 
 (defn parse-multi [name dir]
-  (when-let [s (slurp-safe (str dir "/" name "-pkg.el"))]
+  (when-let [s (slurp-extant (str dir "/" name "-pkg.el"))]
     (as-> (edn/read-string s) $
       (nth $ 4)
-      (fnext $) ; Form is wrapped in `quote'.
+      (fnext $) ; Form is wrapped in `quote`.
       (parse-deps $))))
 
 ;; TODO here and in parse-single
@@ -2798,7 +2809,7 @@ Extremely WIP, basically just a scratchpad
 
 (defn parse-single [name dir]
   ["dash"]
-  ;; (when-let [s (slurp-safe (str dir "/" name ".el"))]
+  ;; (when-let [s (slurp-extant (str dir "/" name ".el"))]
   ;;   (as-> s $
   ;;     (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
   ;;                           regexp/newline)]
