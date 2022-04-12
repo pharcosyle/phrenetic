@@ -2618,44 +2618,28 @@ Extremely WIP, basically just a scratchpad
 ;; (write-hashes (doom-ps))
 #+end_src
 ******** third attempt
-#+begin_src scheme :tangle (meta-in-dir "packaging-wip.scm") :comments link
-(read-set! keywords 'prefix)
+#+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
+(ns ebullient.home.packaging-wip
+  (:require [clojure.edn :as edn]))
 
-(use-modules (lokke ns))
-(use-modules ((lokke core) :select (let if-let when-let case assoc merge))) ; TODO later: find out where the binding of e.g. `merge' is coming from (with and without the :select)
-(require #(clojure.core :refer :all))
-
-(defn update #(m k f & args)
-  (apply update-in m (vector k) f args))
-
-(defn not-empty #(coll)
-  (when (seq coll)
-    coll))
-
-(defn merge #(& maps)
+;; Bug in lokke: if the first argument is `nil` the result is a seq of pairs (two-element vectors) instead of a map.
+(defn merge
+  "Returns a map that consists of the rest of the maps conj-ed onto
+  the first.  If a key occurs in more than one map, the mapping from
+  the latter (left-to-right) will be the mapping in the result."
+  {:added "1.0"
+   :static true}
+  [& maps]
   (when (some identity maps)
-    (reduce
-     (fn #(res x)
-       (conj (or res
-                 (hash-map))
-             x))
-     maps)))
+    (reduce #(conj (or %1 {}) %2) maps)))
 
-(defn select-keys #(m keyseq)
-  (loop [ret (hash-map) keys (seq keyseq)]
-    (if keys
-      (let [k (first keys)
-            v (get m k)]
-        (recur
-         (if (contains? m k)
-           (conj ret (vector k v))
-           ret)
-         (next keys)))
-      ret)))
-
-(defn rename-keys #(map kmap)
+;; Not in lokke.
+(defn rename-keys
+  "Returns the map with the keys in kmap renamed to the vals in kmap"
+  {:added "1.0"}
+  [map kmap]
   (reduce
-   (fn #(m #(old new))
+   (fn [m [old new]]
      (if (contains? map old)
        (assoc m new (get map old))
        m))
@@ -2663,86 +2647,86 @@ Extremely WIP, basically just a scratchpad
 
 
 
-(defn slurp-extant #(f)
-  ;; (when-let [s (try
-  ;;               (slurp f)
-  ;;               (catch java.io.FileNotFoundException _))]
-  ;;   (read-string s))
-  (when (file-exists? f)
-    (slurp f)))
 
-(defn select-and-rename-keys #(m kmap)
+(defn slurp-safe [f]
+  (try
+    (slurp f)
+    ;; TODO
+    ;; (catch java.io.FileNotFoundException _)
+    (catch Exception _)
+    ))
+
+(defn select-and-rename-keys [m kmap]
   (as-> m $
     (select-keys $ (keys kmap))
     (rename-keys $ kmap)))
 
-;; TODO hack. Maybe I can override stuff in the edn reader if it's not too tough.
-;; - or find an elisp->clj/edn parser and do the parsing on the emacs side
-;; - or maybe guile's parsing is a better match and I should use that
-(defn icky #(x)
+;; TODO hack
+;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
+;; Ideas:
+;; - hack scm/edn.scm somehow?
+;; - convert `doom-packages` (and melpa recipes) package names to strings on the elisp side
+;;   Would be messy with melpa recipes since there's no "elisp-reading phase"
+;; - elisp "parseclj"/"parseedn" are nice but they don't solve the 0x0 problem
+;;   Are they worth the additional overhead of running them on the elisp side? Again, with melpa there might not /be/ an elisp side
+;;   - nice to have but maybe not necessary: handling dotted pairs, t/nil become true/nil
+(defn icky [x]
   (if (= x "0")
     "0x0" x))
 
 
 
-(def archives (atom (hash-map)))
+(def archives (atom {}))
 
-(defn add-archive! #(id methods)
+(defn add-archive! [id methods]
   (swap! archives assoc id methods))
 
-(defn get-recipe #(a & args)
-  (apply (get-in (deref archives) (vector a 'get-recipe)) args))
+(defn get-recipe [a & args]
+  (apply (get-in (deref archives) [a 'get-recipe]) args))
 
-(defn parse-melpa-recipe #(r*)
+(defn parse-melpa-recipe [r*]
   (let [r (apply hash-map (rest r*))
         recipe
         (merge
-         (hash-map
-          :recipe/flavor :flavor/melpa) ; TODO putting this here for completion for now, donno if I'll need it
-         (let [fetcher (get r :fetcher)]
-           (condp some (vector fetcher)
-             (hash-set 'git 'hg) (hash-map
-                                  :recipe/vc (case fetcher
-                                               git :vc/git
-                                               hg :vc/hg)
-                                  :recipe/repo (get r :url))
-             (hash-set 'github 'gitlab) (hash-map
-                                         :recipe/vc :vc/git
-                                         :recipe/host fetcher
-                                         :recipe/repo (get r :repo))))
+         {:recipe/flavor :recipe.flavor/melpa} ; TODO putting this here for completion for now, donno if I'll need it
+         (let [fetcher (:fetcher r)]
+           (condp some #{fetcher}
+             #{'git 'hg} {:recipe/vc (case fetcher
+                                       git :recipe.vc/git
+                                       hg :recipe.vc/hg)
+                          :recipe/repo (:url r)}
+             #{'github 'gitlab} {:recipe/vc :recipe.vc/git
+                                 :recipe/host fetcher
+                                 :recipe/repo (:repo r)}))
          (select-and-rename-keys
-          r (hash-map
-             :branch :recipe/branch
-             :files :recipe/files)))]
-    (when (not-empty recipe)
+          r {:branch :recipe/branch
+             :files :recipe/files}))]
+    (when-not (empty? recipe)
       recipe)))
 
 (add-archive!
  :archive/melpa
- (hash-map
-  'get-recipe (fn #(p)
-                (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
+ {'get-recipe (fn [p]
+                (when-let [s (slurp-safe (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
                   (-> s
-                      read-string
-                      parse-melpa-recipe)))))
+                      edn/read-string
+                      parse-melpa-recipe)))})
 
 ;; TODO just use `archives' for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
-(def archive-priority (vector
-                       :archive/melpa
-                       :archive/elpa))
+(def archive-priority [:archive/melpa
+                       :archive/elpa])
 
 
 
-(defn parse-doom-package #(p*)
+(defn parse-doom-package [p*]
   (let [p (apply hash-map (rest p*))]
     (merge
-     (hash-map
-      :package/name (icky (str (first p*))))
-     (when (some (hash-set (get p :type)) (vector 'local 'built-in))
-       (hash-map
-        :doom/type (case type
-                     local :doom.type/local
-                     built-in :doom.type/built-in)))
+     {:package/name (icky (str (first p*)))}
+     (let [type (:type p)]
+       (when (some #{type} ['local 'built-in])
+         {:doom/type (case type
+                       local :doom.type/local
+                       built-in :doom.type/built-in)}))
      ;; TODO read https://github.com/melpa/melpa#recipe-format
      ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
      ;; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported
@@ -2751,21 +2735,18 @@ Extremely WIP, basically just a scratchpad
      ;; TODO might need :build and :local-repo for donnager
      ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
      ;; TODO at end: ensure an empty map isn't dded / the map doesn't have any empty values
-     (let [r (apply hash-map (get p :recipe))
+     (let [r (apply hash-map (:recipe p))
            recipe
            (merge
-            (when-let [type (get r :type)]
-              (hash-map
-               :recipe/vc (case type
-                            git :vc/git
-                            built-in :vc/built-in)))
-            (when-let [flavor (get r :flavor)]
-              (hash-map
-               :recipe/flavor (case flavor
-                                melpa :flavor/melpa)))
+            (when-let [type (:type r)]
+              {:recipe/vc (case type
+                            git :recipe.vc/git
+                            built-in :recipe.vc/built-in)})
+            (when-let [flavor (:flavor r)]
+              {:recipe/flavor (case flavor
+                                melpa :recipe.flavor/melpa)})
             (select-and-rename-keys
-             r (hash-map
-                :host :recipe/host
+             r {:host :recipe/host
                 :repo :recipe/repo
                 :branch :recipe/branch
                 :files :recipe/files
@@ -2778,60 +2759,57 @@ Extremely WIP, basically just a scratchpad
                 :source :recipe.straight/source
                 :fork :recipe.straight/fork
                 :upstream :recipe.straight/upstream
-                :includes :recipe.straight/includes)))]
-       (when (not-empty recipe)
-         (hash-map
-          :package/recipe recipe)))
+                :includes :recipe.straight/includes}))]
+       (when-not (empty? recipe)
+         {:package/recipe recipe}))
      (select-and-rename-keys
-      p (hash-map :pin :doom/pin))
-     (when (or (get p :disable)
-               (get p :ignore))
-       (hash-map
-        :package/deactivated? #t)))))
+      p {:pin :doom/pin})
+     (when (or (:disable p)
+               (:ignore p))
+       {:package/deactivated? true}))))
 
-(defn parse-doom-packages #()
+(defn parse-doom-packages []
   (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
-    (read-string $)
+    (edn/read-string $)
     (map parse-doom-package $)
     ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
-    (remove (fn #(p)
-              (= (get p :package/name) "straight"))
-            $)
-    (remove (fn #(p)
-              (get p :package/deactivated?))
-            $)))
+    (remove #(= (:package/name %) "straight") $)
+    (remove :package/deactivated? $)))
 
 ;; (println (parse-doom-packages))
 
-(defn parse-deps #(form)
-  (map (fn #(dep)
+(defn parse-deps [form]
+  (map (fn [dep]
          (str
           (if (list? dep)
             (first dep)
             dep)))
        form))
 
-(defn parse-multi #(name dir)
-  (when-let [s (slurp-extant (str dir "/" name "-pkg.el"))]
-    (as-> (read-string s) $
+(defn parse-multi [name dir]
+  (when-let [s (slurp-safe (str dir "/" name "-pkg.el"))]
+    (as-> (edn/read-string s) $
       (nth $ 4)
       (fnext $) ; Form is wrapped in `quote'.
       (parse-deps $))))
 
-(use-modules (ice-9 regex))
+;; TODO here and in parse-single
+;; (use-modules (ice-9 regex))
 
-(defn parse-single #(name dir)
-  (when-let [s (slurp-extant (str dir "/" name ".el"))]
-    (as-> s $
-      (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
-                            regexp/newline)]
-        (regexp-exec rx $))
-      (when $
-        (match:substring $ 1))
-      (read-string $)
-      (parse-deps $))))
+(defn parse-single [name dir]
+  ["dash"]
+  ;; (when-let [s (slurp-safe (str dir "/" name ".el"))]
+  ;;   (as-> s $
+  ;;     (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
+  ;;                           regexp/newline)]
+  ;;       (regexp-exec rx $))
+  ;;     (when $
+  ;;       (match:substring $ 1))
+  ;;     (edn/read-string $)
+  ;;     (parse-deps $)))
+  )
 
-(defn package-deps #(name dir)
+(defn package-deps [name dir]
   (or (seq (parse-multi name dir))
       (parse-single name dir)))
 
@@ -2842,17 +2820,14 @@ Extremely WIP, basically just a scratchpad
 ;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
 
 
-(def straight-allow-recipe-inheritance? #t)
+(def straight-allow-recipe-inheritance? true)
 
-(def defaults
-  (hash-map
-   :recipe/protocol "https"
-   ;; maybe?:
-   ;; :files '("*.el" "*.el.in" "dir"
-   ;;          "*.info" "*.texi" "*.texinfo"
-   ;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
-   ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el"))
-   ))
+(def defaults {:recipe/protocol "https"})
+;; maybe?:
+;; :files '("*.el" "*.el.in" "dir"
+;;          "*.info" "*.texi" "*.texinfo"
+;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
+;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el")
 
 ;; TODO downloading to a cache like the elpa importer does would speed up successive/reattempted runs, no?
 ;; - assuming that is what it's doing (check). Do those repo caches stick around forever though? Will adding my own interfere with anything?
@@ -2874,7 +2849,7 @@ Extremely WIP, basically just a scratchpad
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
 
 
-;; (defn the-package #()
+;; (defn the-package []
 ;;   (package
 ;;     (name ,(elpa-name->package-name name))
 ;;     (version ,version)
@@ -2901,7 +2876,7 @@ Extremely WIP, basically just a scratchpad
 ;;     (license ,license)))
 
 
-;; (if-let [unsupported (seq (filter (fn #(p)
+;; (if-let [unsupported (seq (filter (fn [p]
 ;;                                       (or (let [type (get p :doom/type)]
 ;;                                             (some (hash-set type) (vector :doom.type/local :doom.type/built-in)))
 ;;                                           (let [vc (get-in p (vector :package/recipe :recipe/vc))]
@@ -2912,8 +2887,46 @@ Extremely WIP, basically just a scratchpad
 ;;                                           (get-in p (vector :package/recipe :straight.recipe/upstream))
 ;;                                           (get-in p (vector :package/recipe :straight.recipe/includes))))
 ;;                                   $))]
-;;         (throw (ex-info "Package(s) with unsupported configuration" (hash-map :packages unsupported)))
+;;         (throw (ex-info "Package(s) with unsupported configuration" {:packages unsupported}))
 ;;         $)
+#+end_src
+********* packaging runner
+#+begin_src scheme :tangle (meta-in-dir "packaging-runner.scm")
+(use-modules (lokke ns))
+(require #(ebullient.home.packaging-wip))
+#+end_src
+********* test clj
+#+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link
+(ns ebullient.home.test-clj
+  (:require [guile.guix.gexp :as g]
+            [guile.guix.packages :refer [package package-description]]))
+
+(println
+ (gexp "asdf"))
+
+;; (println
+;;  (p/package (name "asdf")))
+
+;; (println
+;;  (package-description
+;;   (package
+;;     (name "asdf")
+;;     (version "0")
+;;     (source nil)
+;;     (build-system nil)
+;;     (synopsis "asdf")
+;;     (description "asdf3333")
+;;     (home-page nil)
+;;     (license nil))))
+
+(+ 1 1)
+(println 5)
+
+#+end_src
+********* test scm
+#+begin_src scheme :tangle (meta-in-dir "test-scm.scm")
+(use-modules (lokke ns))
+(require #(ebullient.home.test-clj))
 #+end_src
 ********* elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
