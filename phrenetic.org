@@ -2117,16 +2117,6 @@ TODO move me
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages guile-xyz) #:prefix guile-xyz:))
 
-(define (source-with-commit-and-hash p commit hash)
-  (origin
-    (inherit (package-source p))
-    (uri (git-reference
-          (inherit (origin-uri (package-source p)))
-          (commit commit)))
-    (sha256
-     (base32
-      hash))))
-
 (define-public lokke
   (let ((commit "041e9a42b7579ac1af584e627c443f84962148a3")
         (revision "0"))
@@ -2134,10 +2124,14 @@ TODO move me
       (inherit guile-xyz:lokke)
       (version (git-version "0.0.1" revision commit)) ; The guix package uses "0.0.0" for the version but the lokke version.scm says "0.0.1".
       (source
-       (source-with-commit-and-hash
-        guile-xyz:lokke
-        commit
-        "1vx40r010gmz40lpamj862xvmslzr0krkpnvy44kij0l7frip5sb"))
+       (origin
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/lokke-org/lokke")
+               (commit commit)))
+         (sha256
+          (base32
+           "0ff4fw9fwm92wzrqxb56g0hdqi5kpb56l0ar2124dldcrpfa28cf"))))
       (arguments
        (substitute-keyword-arguments (package-arguments guile-xyz:lokke)
          ((#:imported-modules imported-modules %gnu-build-system-modules)
