@@ -2655,28 +2655,24 @@ Extremely WIP, basically just a scratchpad
 (defn dispatch-method [name k & args]
   (apply (get-in (deref poly-methods) [name k]) args))
 
-(defmacro defpoly [k & methods]
-  (let [register
-        (fn [[name argslist & body]]
-          `(swap! poly-methods assoc-in ['~name ~k] (fn ~argslist ~@body)))
-        create-var
-        (fn [[name]]
-          `(def ~name (partial dispatch-method '~name)))
-        setup-method
-        (fn [m]
-          `(do
-             ~(register m)
-             ~(create-var m)))]
+(defmacro defpoly [& methods]
+  (let [create-var
+        (fn [name]
+          `(def ~name (partial dispatch-method '~name)))]
     `(do
-       ~@(map setup-method methods))))
+       ~@(map create-var methods))))
+
+(defmacro defimpl [k & methods]
+  (let [register-method
+        (fn [[name argslist & body]]
+          `(swap! poly-methods assoc-in ['~name ~k] (fn ~argslist ~@body)))]
+    `(do
+       ~@(map register-method methods))))
 
 
 
 
 
-(defn slurp-extant [f]
-  (when (file-exists? f)
-    (slurp f)))
 
 (defn select-and-rename-keys [m kmap]
   (as-> m $
@@ -2698,6 +2694,10 @@ Extremely WIP, basically just a scratchpad
 
 
 
+;; Archives
+(defpoly
+  get-recipe)
+
 (defn parse-melpa-recipe [r*]
   (let [r (apply hash-map (rest r*))
         recipe
@@ -2718,14 +2718,15 @@ Extremely WIP, basically just a scratchpad
     (when-not (empty? recipe)
       recipe)))
 
-(defpoly
+(defimpl
   :archive/melpa
-  (get-recipe [p] (when-let [s (slurp-extant (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p))]
-                    (parse-melpa-recipe (edn/read-string s)))))
+  (get-recipe [p] (let [f (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p)]
+                    (when (file-exists? f)
+                      (parse-melpa-recipe (edn/read-string (slurp f)))))))
 
-;; TODO just use `archives` for priority instead? Maybe not friendly to other users. Also I don't want a non-atom top-level form ideally maybe?
 (def archive-priority [:archive/melpa
                        :archive/elpa])
+
 
 
 
@@ -2798,26 +2799,29 @@ Extremely WIP, basically just a scratchpad
        form))
 
 (defn parse-multi [name dir]
-  (when-let [s (slurp-extant (str dir "/" name "-pkg.el"))]
-    (as-> (edn/read-string s) $
-      (nth $ 4)
-      (fnext $) ; Form is wrapped in `quote`.
-      (parse-deps $))))
+  (let [f (str dir "/" name "-pkg.el")]
+    (when (file-exists? f)
+      (as-> (slurp f) $
+        (edn/read-string $)
+        (nth $ 4)
+        (fnext $) ; Form is wrapped in `quote`.
+        (parse-deps $)))))
 
 ;; TODO here and in parse-single
 ;; (use-modules (ice-9 regex))
 
 (defn parse-single [name dir]
   ["dash"]
-  ;; (when-let [s (slurp-extant (str dir "/" name ".el"))]
-  ;;   (as-> s $
-  ;;     (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
-  ;;                           regexp/newline)]
-  ;;       (regexp-exec rx $))
-  ;;     (when $
-  ;;       (match:substring $ 1))
-  ;;     (edn/read-string $)
-  ;;     (parse-deps $)))
+  ;; (let [f (str dir "/" name ".el")]
+  ;;   (when (file-exists? f)
+  ;;     (as-> (slurp f) $
+  ;;       (let [rx (make-regexp (str "^" ";*" "\\s*" "Package-Requires:" "\\s*" "(.*)" "$")
+  ;;                             regexp/newline)]
+  ;;         (regexp-exec rx $))
+  ;;       (when $
+  ;;         (match:substring $ 1))
+  ;;       (edn/read-string $)
+  ;;       (parse-deps $))))
   )
 
 (defn package-deps [name dir]
