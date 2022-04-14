@@ -2836,7 +2836,7 @@ Extremely WIP, basically just a scratchpad
     (when (file-exists? f)
       (as-> (slurp f) $
         (edn/read-string $)
-        (nth $ 4)
+        (nth $ 4) ; TODO requirements field is optional in emacs package specification, this will error!
         (fnext $) ; Form is wrapped in `quote`.
         (parse-deps $)))))
 
