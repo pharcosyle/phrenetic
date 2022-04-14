@@ -2108,6 +2108,8 @@ index 000000000..c710f766c
   https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
 ******* Lokke
 TODO move me
+- TODO maybe: clj files aren't compiled to =.go= files ahead of time, maybe do this
+  Minor optimization but it impacts startup time after clearing =~/.cache/guile/ccache=
 #+begin_src scheme :tangle (meta-in-dir "guile-xyz.scm")
 (define-module (ebullient home guile-xyz)
   #:use-module (guix build-system gnu)
