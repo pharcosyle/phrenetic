@@ -2814,15 +2814,6 @@ Extremely WIP, basically just a scratchpad
             dep)))
        form))
 
-(defn parse-multi [name dir]
-  (let [f (str dir "/" name "-pkg.el")]
-    (when (file-exists? f)
-      (as-> (slurp f) $
-        (edn/read-string $)
-        (nth $ 4)
-        (fnext $) ; Form is wrapped in `quote`.
-        (parse-deps $)))))
-
 ;; TODO here and in parse-single
 ;; (use-modules (ice-9 regex))
 
@@ -2839,6 +2830,15 @@ Extremely WIP, basically just a scratchpad
   ;;       (edn/read-string $)
   ;;       (parse-deps $))))
   )
+
+(defn parse-multi [name dir]
+  (let [f (str dir "/" name "-pkg.el")]
+    (when (file-exists? f)
+      (as-> (slurp f) $
+        (edn/read-string $)
+        (nth $ 4)
+        (fnext $) ; Form is wrapped in `quote`.
+        (parse-deps $)))))
 
 (defn package-deps [name dir]
   (or (seq (parse-multi name dir))
