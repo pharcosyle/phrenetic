@@ -2650,25 +2650,41 @@ Extremely WIP, basically just a scratchpad
 
 
 
-(def poly-methods (atom {}))
+(defn multi-fn [var]
+  (fn [& args]
+    (let [m (meta var)
+          val (apply (::dispatch-fn m) args)
+          method (get-in m [::dispatch-vals val])]
+      (apply method args))))
 
-(defn dispatch-method [name k & args]
-  (apply (get-in (deref poly-methods) [name k]) args))
+(defmacro defmulti [name dispatch-fn]
+  `(do
+     (def ~name nil)
+     (def ~name (multi-fn (var ~name)))
+     (alter-meta! (var ~name) assoc ::dispatch-fn ~dispatch-fn)))
+
+(defmacro defmethod [name dispatch-val & fn-tail]
+  (let [[argslist & body] fn-tail]
+    `(alter-meta! (var ~name) assoc-in [::dispatch-vals ~dispatch-val] (fn ~argslist ~@body))))
+
+
+
+
+
+(defn poly-dispatch [k & _] k)
 
 (defmacro defpoly [& methods]
-  (let [create-var
-        (fn [name]
-          `(def ~name (partial dispatch-method '~name)))]
+  (let [create (fn [name]
+                 `(defmulti ~name poly-dispatch))]
     `(do
-       ~@(map create-var methods))))
+       ~@(map create methods))))
 
 (defmacro defimpl [k & methods]
-  (let [register-method
+  (let [register
         (fn [[name argslist & body]]
-          `(swap! poly-methods assoc-in ['~name ~k] (fn ~argslist ~@body)))]
+          `(defmethod ~name ~k ~(vec (cons '_ argslist)) ~@body))]
     `(do
-       ~@(map register-method methods))))
-
+       ~@(map register methods))))
 
 
 
