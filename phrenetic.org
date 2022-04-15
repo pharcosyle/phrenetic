@@ -2714,6 +2714,7 @@ Extremely WIP, basically just a scratchpad
 
 ;; Archives
 (defpoly
+  has-recipe
   get-recipe)
 
 (defn parse-melpa-recipe [r*]
@@ -2736,11 +2737,15 @@ Extremely WIP, basically just a scratchpad
     (when-not (empty? recipe)
       recipe)))
 
+(defn melpa-recipe [p]
+  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" p))
+
 (defimpl
   :archive/melpa
-  (get-recipe [p] (let [f (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa" "/recipes/" p)]
-                    (when (file-exists? f)
-                      (parse-melpa-recipe (edn/read-string (slurp f)))))))
+  (has-recipe [p] (file-exists? (melpa-recipe p)))
+  (get-recipe [p] (parse-melpa-recipe
+                   (edn/read-string
+                    (slurp (melpa-recipe p))))))
 
 (def archive-priority [:archive/melpa
                        :archive/elpa])
