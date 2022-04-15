@@ -2681,7 +2681,7 @@ Extremely WIP, basically just a scratchpad
     `(do
        ~@(map create methods))))
 
-(defmacro defimpl [k & methods]
+(defmacro defpolymethods [k & methods]
   (let [register
         (fn [[name argslist & body]]
           `(defmethod ~name ~k ~(vec (cons '_ argslist)) ~@body))]
@@ -2740,7 +2740,7 @@ Extremely WIP, basically just a scratchpad
 (defn melpa-recipe [p]
   (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" p))
 
-(defimpl
+(defpolymethods
   :archive/melpa
   (has-recipe [p] (file-exists? (melpa-recipe p)))
   (get-recipe [p] (parse-melpa-recipe
