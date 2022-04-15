@@ -2824,7 +2824,7 @@ Extremely WIP, basically just a scratchpad
 ;; TODO here and in parse-single
 ;; (use-modules (ice-9 regex))
 
-(defn parse-single [name dir]
+(defn parse-simple-epkg [name dir]
   ["dash"]
   ;; (let [f (str dir "/" name ".el")]
   ;;   (when (file-exists? f)
@@ -2838,7 +2838,7 @@ Extremely WIP, basically just a scratchpad
   ;;       (parse-deps $))))
   )
 
-(defn parse-multi [name dir]
+(defn parse-multifile-epkg [name dir]
   (let [f (str dir "/" name "-pkg.el")]
     (when (file-exists? f)
       (as-> (slurp f) $
@@ -2848,8 +2848,8 @@ Extremely WIP, basically just a scratchpad
         (parse-deps $)))))
 
 (defn package-deps [name dir]
-  (or (seq (parse-multi name dir))
-      (parse-single name dir)))
+  (or (seq (parse-multifile-epkg name dir))
+      (parse-simple-epkg name dir)))
 
 ;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
 ;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
