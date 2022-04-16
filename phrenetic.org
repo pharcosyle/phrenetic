@@ -2108,6 +2108,8 @@ index 000000000..c710f766c
   https://github.com/hlissner/doom-emacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
 ******* Lokke
 TODO move me
+- TODO [[(lokke-moving)][moving ouput files]]
+  move modules (scheme files), compiled go files, and extensions. Maybe patch the `load-extensions' calls too.
 - TODO maybe: clj files aren't compiled to =.go= files ahead of time, maybe do this
   Minor optimization but it impacts startup time after clearing =~/.cache/guile/ccache=
 #+begin_src scheme :tangle (meta-in-dir "guile-xyz.scm")
@@ -2151,8 +2153,7 @@ TODO move me
                          (module-dir (string-append #$output "/share/guile/site/" effective))
                          (go-dir (string-append #$output "/lib/guile/" effective "/site-ccache"))
                          (extensions-dir (string-append #$output "/lib/guile/" effective "/extensions")))
-                    ;; TODO move modules (scheme files), compiled go files, and extensions. Maybe patch the `load-extensions' calls too.
-                    (display "Do stuff...")))))))))))
+                    (display "Do stuff..."))))))))))) ; (ref:lokke-moving)
 #+end_src
 ******* packaging doom WIP
 Extremely WIP, basically just a scratchpad
@@ -2706,6 +2707,7 @@ Extremely WIP, basically just a scratchpad
 ;; - elisp "parseclj"/"parseedn" are nice but they don't solve the 0x0 problem
 ;;   Are they worth the additional overhead of running them on the elisp side? Again, with melpa there might not /be/ an elisp side
 ;;   - nice to have but maybe not necessary: handling dotted pairs, t/nil become true/nil
+;; - don't use the 0x0 package
 (defn icky [x]
   (if (= x "0")
     "0x0" x))
@@ -2914,6 +2916,7 @@ Extremely WIP, basically just a scratchpad
 ;;     (license ,license)))
 
 
+;; TODO probably do this with spec, but wait until a bit later / the end
 ;; (if-let [unsupported (seq (filter (fn [p]
 ;;                                       (or (let [type (get p :doom/type)]
 ;;                                             (some (hash-set type) (vector :doom.type/local :doom.type/built-in)))
