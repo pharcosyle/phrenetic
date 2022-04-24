@@ -1324,8 +1324,8 @@ nix-env --upgrade
        home-profile-service-type
        (lambda (config)
          (list (-> (get config #:emacs)
-                   emacs-with-findable-C-source
-                   emacs-with-zstd))))
+                   with-findable-C-source
+                   with-zstd))))
       (service-extension
        he-login-shell-service-type
        (lambda (config)
@@ -1377,9 +1377,24 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
 #+end_src
-****** With C source
+****** Emacs 29 with pgtk + native comp :package:version:
 #+begin_src scheme
-(define-public (emacs-with-findable-C-source emacs)
+(define from-git (@@ (flat packages emacs) emacs-from-git))
+(define with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
+
+(define-public emacs-29-pgtk+native-comp
+  (from-git
+   (with-native-comp emacs-next-pgtk gcc-11 'full-aot)
+   #:pkg-name "emacs-29-pgtk+native-comp"
+   #:pkg-version "29.0.50"
+   #:pkg-revision "0"
+   #:git-repo "https://github.com/emacs-mirror/emacs" ; https://git.savannah.gnu.org/git/emacs.git is the canonical repo but it doesn't allow shallow fetches.
+   #:git-commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0"
+   #:checksum "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
+#+end_src
+****** With findable C source
+#+begin_src scheme
+(define-public (with-findable-C-source emacs)
   (package
     (inherit emacs)
     (arguments
@@ -1395,27 +1410,12 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 ****** With =zstd=
 Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 #+begin_src scheme
-(define-public (emacs-with-zstd emacs)
+(define-public (with-zstd emacs)
   (package
     (inherit emacs)
     (propagated-inputs
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
-#+end_src
-****** Emacs 29 with pgtk + native comp :package:version:
-#+begin_src scheme
-(define emacs-from-git (@@ (flat packages emacs) emacs-from-git))
-(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
-
-(define-public emacs-29-pgtk+native-comp
-  (emacs-from-git
-   (emacs-with-native-comp emacs-next-pgtk gcc-11 'full-aot)
-   #:pkg-name "emacs-29-pgtk+native-comp"
-   #:pkg-version "29.0.50"
-   #:pkg-revision "0"
-   #:git-repo "https://github.com/emacs-mirror/emacs" ; https://git.savannah.gnu.org/git/emacs.git is the canonical repo but it doesn't allow shallow fetches.
-   #:git-commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0"
-   #:checksum "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
 #+end_src
 ***** Doom
 #+begin_src scheme
