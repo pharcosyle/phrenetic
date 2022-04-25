@@ -3595,11 +3595,11 @@ guix time-machine \
     (name "python-awscrt")
     (version "0.12.4")
     (source
-      (origin
-        (method url-fetch)
-        (uri (pypi-uri "awscrt" version))
-        (sha256
-          (base32 "1cmfkcv2zzirxsb989vx1hvna9nv24pghcvypl0zaxsjphv97mka"))))
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "awscrt" version))
+       (sha256
+        (base32 "1cmfkcv2zzirxsb989vx1hvna9nv24pghcvypl0zaxsjphv97mka"))))
     (build-system python-build-system)
     (native-inputs
      (list
@@ -3615,45 +3615,49 @@ guix time-machine \
   (package
     (inherit python-crypto:python-cryptography)
     (version "3.3.2")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "cryptography" version))
-              (sha256
-               (base32
-                "1vcvw4lkw1spiq322pm1256kail8nck6bbgpdxx3pqa905wd6q2s"))))))
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "cryptography" version))
+       (sha256
+        (base32
+         "1vcvw4lkw1spiq322pm1256kail8nck6bbgpdxx3pqa905wd6q2s"))))))
 
 (define python-ruamel.yaml-0.15
   (package
     (inherit python-ruamel.yaml)
     (version "0.15.100")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "ruamel.yaml" version))
-              (sha256
-               (base32
-                "1r5j9n2jdq48z0k4bdia1f7krn8f2x3y49i9ba9iks2rg83g6hlf"))))))
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "ruamel.yaml" version))
+       (sha256
+        (base32
+         "1r5j9n2jdq48z0k4bdia1f7krn8f2x3y49i9ba9iks2rg83g6hlf"))))))
 
 (define python-prompt-toolkit
   (package
     (inherit python:python-prompt-toolkit)
     (version "3.0.28")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "prompt_toolkit" version))
-              (sha256
-               (base32
-                "0l0nnm9fvs8lklk2qq8mylb9jrlxvlqzpmqr4n7rdhl63rmx274z"))))))
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "prompt_toolkit" version))
+       (sha256
+        (base32
+         "0l0nnm9fvs8lklk2qq8mylb9jrlxvlqzpmqr4n7rdhl63rmx274z"))))))
 
 (define python-distro-1.5
   (package
     (inherit python-distro)
     (version "1.5.0")
-    (source (origin
-              (method url-fetch)
-              (uri (pypi-uri "distro" version))
-              (sha256
-               (base32
-                "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
+    (source
+     (origin
+       (method url-fetch)
+       (uri (pypi-uri "distro" version))
+       (sha256
+        (base32
+         "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
 #+end_src
 *** Datomic CLI tools :package:version:
 - TODO =bin/datomic= introduces a dependency (~com.datomic/tools.ops~)
