@@ -996,6 +996,7 @@ sudo guix time-machine \
   #:use-module (gnu home-services ssh)
   #:use-module (gnu home-services version-control)
   ;; #:use-module ((gnu packages bash) #:select (bash))
+  #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-fira-code))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
@@ -1008,7 +1009,6 @@ sudo guix time-machine \
   #:use-module (gnu services shepherd)
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
-  #:use-module ((ebullient home emacs) #:select (emacs-29-pgtk+native-comp))
   #:use-module (mendicant utils)
   #:export (he-shells
             he-extra-profiles
@@ -1323,9 +1323,7 @@ nix-env --upgrade
       (service-extension
        home-profile-service-type
        (lambda (config)
-         (list (-> (get config #:emacs)
-                   with-findable-C-source
-                   with-zstd))))
+         (list (get config #:emacs))))
       (service-extension
        he-login-shell-service-type
        (lambda (config)
@@ -1340,7 +1338,7 @@ nix-env --upgrade
                   (local-file "zsh-vterm")))))))))
    (default-value
      (or config
-         (kvm #:emacs emacs-29-pgtk+native-comp)))))
+         (kvm #:emacs emacs)))))
 #+end_src
 ***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
@@ -1376,21 +1374,42 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11)))
-#+end_src
-****** Emacs 29 with pgtk + native comp :package:version:
-#+begin_src scheme
-(define from-git (@@ (flat packages emacs) emacs-from-git))
-(define with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 
-(define-public emacs-29-pgtk+native-comp
-  (from-git
-   (with-native-comp emacs-next-pgtk gcc-11 'full-aot)
-   #:pkg-name "emacs-29-pgtk+native-comp"
-   #:pkg-version "29.0.50"
-   #:pkg-revision "0"
-   #:git-repo "https://github.com/emacs-mirror/emacs" ; https://git.savannah.gnu.org/git/emacs.git is the canonical repo but it doesn't allow shallow fetches.
-   #:git-commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0"
-   #:checksum "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
+(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
+#+end_src
+****** Emacs fully loaded :package:
+#+begin_src scheme
+(define-public emacs-fully-loaded
+  (-> emacs-next-pgtk
+      with-native-comp
+      with-emacs-29
+      with-findable-C-source
+      with-zstd))
+#+end_src
+****** With Emacs 29 :version:
+#+begin_src scheme
+(define-public (with-emacs-29 emacs)
+  (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
+        (revision "0"))
+    (package
+      (inherit emacs)
+      (version (git-version "29.0.50" revision commit))
+      (source
+       (origin
+         (inherit (package-source emacs))
+         (method git-fetch)
+         (uri (git-reference
+               (url "https://github.com/emacs-mirror/emacs") ; https://git.savannah.gnu.org/git/emacs.git is the canonical repo but it doesn't allow shallow fetches.
+               (commit commit)))
+         (sha256
+          (base32
+           "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
+         (file-name (git-file-name (package-name emacs) version)))))))
+#+end_src
+****** With native comp
+#+begin_src scheme
+(define-public (with-native-comp emacs)
+  (emacs-with-native-comp emacs gcc-11 'full-aot))
 #+end_src
 ****** With findable C source
 #+begin_src scheme
@@ -3347,6 +3366,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (gnu home)
   #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient)
+  #:use-module ((ebullient home emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
   #:use-module (mendicant utils)
   #:export (base-he))
@@ -3384,8 +3404,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (if developer?
                 (-> $
                     (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
+                              ;; TODO
                               ;; #:config (kvm #:emacs ...)
-                              )
+                              #:config (kvm #:emacs emacs-fully-loaded))
                     he-doom
                     (he-direnv #:shell interactive-shell)))
             (if desktop?
