@@ -1366,25 +1366,30 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs.scm")
 :END:
+- REVIEW Emacs 28 was released recently so Guix upstream emacs packages will probably be updated soon: review references to ~emacs-next~ and ~emacs-next-pgtk~.
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
-  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (gcc-11)))
+  #:use-module ((gnu packages emacs) #:select (emacs-next emacs-next-pgtk))
+  #:use-module ((gnu packages gcc) #:select (gcc-11))
+  #:export (emacs-fully-loaded))
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
 ****** Emacs fully loaded :package:
 #+begin_src scheme
-(define-public emacs-fully-loaded
-  (-> emacs-next-pgtk
-      with-native-comp
-      with-emacs-29
-      with-findable-C-source
-      with-zstd))
+(define* (emacs-fully-loaded #:key pgtk?)
+  (as-> (if pgtk?
+            emacs-next-pgtk
+            emacs-next) $
+    (with-native-comp $)
+    (if pgtk?
+        (with-emacs-29 $) $)
+    (with-findable-C-source $)
+    (with-zstd $)))
 #+end_src
 ****** With Emacs 29 :version:
 #+begin_src scheme
@@ -3406,7 +3411,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
                               ;; TODO
                               ;; #:config (kvm #:emacs ...)
-                              #:config (kvm #:emacs emacs-fully-loaded))
+                              #:config (kvm #:emacs (emacs-fully-loaded #:pgtk? #t)))
                     he-doom
                     (he-direnv #:shell interactive-shell)))
             (if desktop?
