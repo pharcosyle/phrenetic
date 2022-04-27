@@ -1427,7 +1427,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 #+end_src
 ****** With =zstd=
-Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
+- REVIEW Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 #+begin_src scheme
 (define-public (with-zstd emacs)
   (package
