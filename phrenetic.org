@@ -2658,7 +2658,7 @@ Extremely WIP, basically just a scratchpad
   (.exists (io/file f)))
 
 
-(s/defop novalidate [_]
+(s/defop nospec [_]
   any?)
 
 
@@ -2679,24 +2679,28 @@ Extremely WIP, basically just a scratchpad
            xs))))
 
 
+(s/def :elisp/form any?)
 (s/def :elisp/t #{t})
 (s/defop elisp-list [spec]
   (s/coll-of spec :kind list?))
-;; "Artifact" of `edn/read-string`.
-(s/def :elisp/quoted-form
+(s/defop elisp-quoted-form [form-spec]
   (s/cat
-   :quote #(= (symbol (str \')) %)
-   :form any?))
-;; (s/def :elisp/car (s/conformer first)) ; TODO remove if not needed
-(s/def :elisp/cdr (s/conformer next))
+   :quote #(= (symbol (str \')) %) ; "Artifact" of `edn/read-string`.
+   :form form-spec))
+(s/defop elisp-pair [car-spec cdr-spec]
+  (s/cat :car car-spec
+         :dot #{.}
+         :cdr cdr-spec))
+;; (s/def :elisp/list->car (s/conformer first)) ; TODO remove if not needed
+(s/def :elisp/list->cdr (s/conformer next))
 (s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
-(s/def :elisp/nil-or-non-nil any?) ; TODO think this (perhaps just the name) through more?
+(s/def :elisp/nil-or-non-nil :elisp/form) ; TODO think this (perhaps just the name) through more?
 
 
 (s/def :epkg.dep/name symbol?)
-(s/def :epkg.dep/version (novalidate string?))
+(s/def :epkg.dep/version (nospec string?))
 (s/def :epkg.dep/name+ver (s/cat :name :epkg.dep/name
-                                 :_version (s/? (novalidate :epkg.dep/version))))
+                                 :_version (s/? (nospec :epkg.dep/version))))
 (s/def :epkg.dep/name+ver->name
   (s/conformer (fn [[form x]]
                  (case form
@@ -2706,7 +2710,7 @@ Extremely WIP, basically just a scratchpad
                        :name+ver :epkg.dep/name+ver))
 
 (s/def :epkg/deps (elisp-list :epkg/dep))
-(s/def :epkg/deps->string-names
+(s/def :epkg/deps->name-strs
   (s/coll-of (s/and
               :epkg.dep/name+ver->name
               (s/conformer str))))
@@ -2719,7 +2723,7 @@ Extremely WIP, basically just a scratchpad
 ;; (s/conform
 ;;  (s/and
 ;;   :epkg/deps
-;;   :epkg/deps->string-names)
+;;   :epkg/deps->name-strs)
 ;;  test-deps)
 
 ;; TODO ideally do this better / more flexibly / maybe faster
@@ -2753,15 +2757,12 @@ Extremely WIP, basically just a scratchpad
 ;; (s/explain-str :epkg.simple/reqs test-pkgrequires-line)
 
 (s/def :epkg.multifile/reqs
-  (s/and
-   (s/cat :_define-package #{define-package}
-          :_name (novalidate string?)
-          :_version (novalidate :epkg.dep/version)
-          :_docstring (s/? (novalidate string?))
-          :requirements (s/? :elisp/quoted-form)
-          :_extra (s/* (novalidate nil)))
-   (s/conformer #(get-in % [:requirements :form]))
-   :epkg/deps))
+  (s/cat :_define-package #{define-package}
+         :_name (nospec string?)
+         :_version (nospec :epkg.dep/version)
+         :_docstring (s/? (nospec string?))
+         :requirements (s/? (elisp-quoted-form :epkg/deps))
+         :_extra (s/* (nospec nil))))
 
 ;; Testing
 ;; (s/conform :epkg.multifile/reqs {:pname "magit" :dir "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp"})
@@ -2773,7 +2774,7 @@ Extremely WIP, basically just a scratchpad
 ;; TODO Might not need to test if file-exists for simple packages, is there always a packagename.el file? Or should always be one if there's no -pkg.el so its find to have it as a fallthrough case?
 ;; TODO maybe do coeffects if it's easy
 ;; Maybe see my now-deleted cofx attempts
-(s/def :epkg/reqs
+(s/def :epkg/reqs->deps
   (s/or :multifile
         (s/and
          (s/conformer
@@ -2782,7 +2783,8 @@ Extremely WIP, basically just a scratchpad
               (if (file-exists? f)
                 (-> f slurp edn/read-string)
                 :clojure.alpha.spec/invalid))))
-         :epkg.multifile/reqs)
+         :epkg.multifile/reqs
+         (s/conformer #(get-in % [:requirements :form])))
         :simple
         (s/and
          (s/conformer
@@ -2797,9 +2799,9 @@ Extremely WIP, basically just a scratchpad
   (let [deps
         (s/conform
          (s/and
-          :epkg/reqs
+          :epkg/reqs->deps
           (s/conformer (fn [[_ reqs]] reqs))
-          :parse.epkg/deps)
+          :epkg/deps->name-strs)
          {:pname name :dir dir})]
     (when-not (s/invalid? deps)
       deps)))
@@ -2839,6 +2841,20 @@ Extremely WIP, basically just a scratchpad
 (s/def :git/sha string?)
 (s/def :git/ref string?)
 
+(s/def :melpa.recipe.files/glob string?)
+(s/def :melpa.recipe.files/subdirective (s/alt :subdir string?
+                                               :exclude #{:exclude}))
+(s/def :melpa.recipe.files/elements
+  (s/cat
+   :element (s/alt :glob :melpa.recipe.files/glob
+                   :sublist (s/nest
+                             (s/cat :subdirective :melpa.recipe.files/subdirective
+                                    :elements (s/+ :melpa.recipe.files/elements))))))
+(s/def :melpa.recipe/files
+  (s/cat
+   :defaults (s/? #{:defaults})
+   :elements (s/* :melpa.recipe.files/elements)))
+
 (s/def :melpa.recipe/name symbol?)
 (s/def :melpa.recipe/fetcher #{git hg github gitlab})
 (s/def :melpa.recipe.vc/url string?)
@@ -2846,8 +2862,8 @@ Extremely WIP, basically just a scratchpad
 ;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
 (s/def :melpa.recipe.vc.git/commit (s/or :git/sha
                                          :git/ref))
-(s/def :melpa.recipe/branch string?) ; do better spec? I can be a git or hg branch, right?
-(s/def :melpa.recipe/files list?) ; TODO read the melpa README and straight's expand-files-directive to suss this out. Call the spec ":melpa/files"?
+(s/def :melpa.recipe/branch string?) ; TODO do better spec? I can be a git or hg branch, right?
+;; -- originial position of :melpa.recipe/files before I moved it up --
 ;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them?
 
 (s/def :melpa.recipe/schema
@@ -2939,7 +2955,16 @@ Extremely WIP, basically just a scratchpad
 
 (s/def :straight.recipe/name symbol?) ; Maybe spec this so I can accept the argument to `straight-use-package` (for other users who use straight): doom doesn't take this just the rest of the recipe plist. Update: also need it for :includes.
 (s/def :straight.recipe/local-repo string?)
-(s/def :straight.recipe/files list?) ; TODO read straight's straight-default-files-directive and  straight-expand-files-directive to suss this out
+;; TODO maybe some of the sub-stuff in :straight.recipe/files should be `nospec` or have leading keywork underscores.
+;; TODO not doing testing for `list?` as in `elisp-list` here (or melpa recipe files). I might be getting rid of that anyway.
+(s/def :straight.recipe/files
+  (s/cat
+   :element (s/alt :glob :melpa.recipe.files/glob
+                   :pair (elisp-pair string? string?)
+                   :sublist (s/nest
+                             (s/cat :subdirective :melpa.recipe.files/subdirective
+                                    :elements (s/+ :straight.recipe/files)))
+                   :defaults #{:defaults})))
 (s/def :straight.recipe/flavor #{melpa})
 (s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
 (s/def :straight.recipe/pre-build any?) ; TODO
@@ -3009,7 +3034,6 @@ Extremely WIP, basically just a scratchpad
      ;; TODO might need :build and :local-repo for donnager
      ;; - update: local-repo is /also/ the dir name that straight assigns for a package (if it's not a full path). I can probably ignore this use case.
      ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
-     ;; : "There are consistency and feature improvements to edge cases of the :files keyword as documented in straight-expand-files-directive"
      ;; TODO at end: ensure an empty map isn't added / the map doesn't have any empty values
      (let [r (apply hash-map (:recipe p))
            recipe
@@ -3158,6 +3182,7 @@ Extremely WIP, basically just a scratchpad
 ;; TODO always include *pkg.el like straight.el::3168 says?
 ;; Is that just about making sure that dependencies get resolved? It says "linked over" though. But then why wouldn't the other `straight-recipes-REPO-retrieve' methods have it? For
 ;; the elpa one at least it could be because it includes everything (=:files "*"=)
+;; - also see the github melpa readme: "For multi-file packages, the file <NAME>-pkg.el is automatically generated..."
 ;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
 
