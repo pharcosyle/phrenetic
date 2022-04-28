@@ -3249,7 +3249,7 @@ Extremely WIP, basically just a scratchpad
 
 (defmacro defkmultis [& methods]
   (let [create (fn [name]
-                 `(defmulti ~name first))]
+                 `(defmulti ~name ~(fn [k & _] k)))]
     `(do
        ~@(map create methods))))
 
