@@ -2646,8 +2646,19 @@ Extremely WIP, basically just a scratchpad
 #+end_src
 ******** third attempt
 #+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
-(ns ebullient.home.packaging-wip)
+(ns ebullient.home.packaging-wip
+  (:require [guile.guix.store :refer [with-store]]
+            [guile.guix.git :refer [latest-repository-commit]]))
 
+(defn- download-git-repo [url ref]
+  (with-store store
+    (latest-repository-commit store url :ref ref)))
+
+;; (println
+;;  (download-git-repo "https://github.com/raxod502/straight.el.git" (guile/cons 'branch "develop")))
+
+(println
+ (download-git-repo "https://github.com/minad/consult.git" '()))
 #+end_src
 ********* packaging runner
 #+begin_src scheme :tangle (meta-in-dir "packaging-runner.scm")
