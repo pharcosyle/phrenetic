@@ -2654,20 +2654,6 @@ Extremely WIP, basically just a scratchpad
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-;; (defn greet
-;;   "Callable entry point to the application."
-;;   [data]
-;;   (println (str "Hello, " (or (:name data) "World") "!")))
-
-;; (defn -main
-;;   "I don't do a whole lot ... yet."
-;;   [& args]
-;;   (greet {:name (first args)}))
-
-
-
-
-
 (require '[clojure.set :refer [rename-keys]])
 (defn select-and-rename-keys [m kmap]
   (as-> m $
@@ -2675,62 +2661,51 @@ Extremely WIP, basically just a scratchpad
     (rename-keys $ kmap)))
 
 
-;; TODO hack
-;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
-;; Ideas:
-;; - hack scm/edn.scm somehow?
-;; - convert `doom-packages` (and melpa recipes) package names to strings on the elisp side
-;;   Would be messy with melpa recipes since there's no "elisp-reading phase"
-;; - elisp "parseclj"/"parseedn" are nice but they don't solve the 0x0 problem
-;;   Are they worth the additional overhead of running them on the elisp side? Again, with melpa there might not /be/ an elisp side
-;;   - nice to have but maybe not necessary: handling dotted pairs, t/nil become true/nil
-;; - don't use the 0x0 package
-(defn icky [x]
-  (if (= x "0")
-    "0x0" x))
+(s/defop novalidate [_]
+  any?)
 
 
+(s/def :elisp/t #{t})
+(s/def :elisp/symbol symbol?)
+(s/def :elisp/string string?)
+(s/defop elisp-list [spec]
+  (s/coll-of spec :kind list?))
+;; "Artifact" of `edn/read-string`.
+(s/def :elisp/quoted-form
+  (s/cat
+   :quote #(= (symbol (str \')) %)
+   :form any?))
+;; (s/def :elisp/car (s/conformer first)) ; TODO remove if not needed
+(s/def :elisp/cdr (s/conformer next))
+(s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
+(s/def :elisp/nil-or-non-nil any?) ; TODO think this (perhaps just the name) through more?
 
-(def test-deps '((emacs "24.1") another (seq) (cl-lib "0.5")))
 
-
-;; Old
-
-;; (s/def :epkg.req/name symbol?)
-;; (s/def :epkg.req/tuple->name (s/conformer (fn [x]
-;;                                             (if (list? x)
-;;                                               (first x) x))))
-;; (s/def :epkg/req (s/and :epkg.req/tuple->name
-;;                         :epkg.req/name))
-;; (s/def :epkg/reqs (s/coll-of :epkg/req :kind list?))
-
-
-
-(s/def :epkg.dep/name symbol?)
-(s/def :epkg.dep/tuple list?)
-(s/def :epkg/dep (s/or :name :epkg.dep/name
-                       :tuple :epkg.dep/tuple))
-(s/def :epkg/deps (s/coll-of :epkg/dep))
-
-(s/valid? :epkg/deps test-deps)
-;; (s/explain-str :epkg/deps test-deps)
-;; (s/conform :epkg/deps test-deps)
-
-(s/def :epkg.dep/->name
+(s/def :epkg.dep/name :elisp/symbol)
+(s/def :epkg.dep/name+ver (s/cat :name :epkg.dep/name
+                                 :_version (s/? (novalidate :elisp/string))))
+(s/def :epkg.dep/name+ver->name
   (s/conformer (fn [[form x]]
                  (case form
                    :name x
-                   :tuple (first x)))))
+                   :name+ver (:name x)))))
+(s/def :epkg/dep (s/or :name :epkg.dep/name
+                       :name+ver :epkg.dep/name+ver))
 
-(s/def :parse.epkg/deps
+(s/def :epkg/deps (elisp-list :epkg/dep))
+(s/def :epkg/deps->string-names
   (s/coll-of (s/and
-              :epkg.dep/->name
+              :epkg.dep/name+ver->name
               (s/conformer str))))
 
+;; (def test-deps '((emacs "24.1") another (seq) (cl-lib "0.5")))
+;; (s/valid? :epkg/deps test-deps)
+;; (s/explain-str :epkg/deps test-deps)
+;; (s/conform :epkg/deps test-deps)
 ;; (s/conform
 ;;  (s/and
 ;;   :epkg/deps
-;;   :parse.epkg/deps)
+;;   :epkg/deps->string-names)
 ;;  test-deps)
 
 
@@ -2770,9 +2745,6 @@ Extremely WIP, basically just a scratchpad
                                    :fetcher github
                                    :files ("yasnippet.el" "snippets")))
 
-;; (s/def :elisp/car (s/conformer first))
-(s/def :elisp/cdr (s/conformer rest)) ; TODO should this be `next`?
-(s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
 ;; (s/def :elisp/something (s/and
 ;;                          :elisp/cdr
 ;;                          :elisp/plist->map))
@@ -2922,12 +2894,6 @@ Extremely WIP, basically just a scratchpad
 ;;   )
 
 
-;; TODO can I make this optional? Or parameterize its inclusion (only check for it if read with edn/read-string)?
-;; "Artifact" of `edn/read-string`.
-(s/def :elisp/quoted-form
-  (s/cat
-   :quote #(= (symbol (str \')) %)
-   :form any?))
 
 ;; TODO just maybe don't underscore-"ignore" parts and have real specs (not just `any?`) for the other bits? I don't care about them but maybe I want to document the shape of the data?
 (s/def :epkg.multifile/reqs
@@ -3084,8 +3050,6 @@ Extremely WIP, basically just a scratchpad
   '(:repo :host :branch :remote :nonrecursive
           :upstream :fork :depth :protocol))
 
-(s/def :elisp/t #{t})
-(s/def :elisp/nil-or-non-nil any?)
 
 (s/def :straight.recipe-repo/name symbol?)
 (s/def :straight/username+repo
@@ -3105,9 +3069,9 @@ Extremely WIP, basically just a scratchpad
 (s/def :straight.recipe/post-build any?) ; TODO
 (s/def :straight.recipe/type #{git built-in})
 (s/def :straight.recipe/source (s/or :one :straight.recipe-repo/name
-                                     :many (coll-of :straight.recipe-repo/name)))
+                                     :many (elisp-list :straight.recipe-repo/name)))
 (s/def :straight.recipe/includes (s/or :one :straight.recipe/name
-                                       :many (coll-of :straight.recipe/name)))
+                                       :many (elisp-list :straight.recipe/name)))
 (s/def :straight.recipe/inherit :elisp/nil-or-non-nil)
 ;; TODO ick, the value straight.recipe.vc/repo can have is conditional on :host, which is a pattern clojure spec (I think) doesn't support
 (s/def :straight.recipe.git/repo (s/or :u+r :straight/username+repo
@@ -3317,6 +3281,19 @@ Extremely WIP, basically just a scratchpad
 ;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
 
+;; TODO hack
+;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
+;; Ideas:
+;; - hack scm/edn.scm somehow?
+;; - convert `doom-packages` (and melpa recipes) package names to strings on the elisp side
+;;   Would be messy with melpa recipes since there's no "elisp-reading phase"
+;; - elisp "parseclj"/"parseedn" are nice but they don't solve the 0x0 problem
+;;   Are they worth the additional overhead of running them on the elisp side? Again, with melpa there might not /be/ an elisp side
+;;   - nice to have but maybe not necessary: handling dotted pairs, t/nil become true/nil
+;; - don't use the 0x0 package
+(defn icky [x]
+  (if (= x "0")
+    "0x0" x))
 
 ;; TODO probably do this with spec, but wait until a bit later / the end
 ;; (if-let [unsupported (seq (filter (fn [p]
