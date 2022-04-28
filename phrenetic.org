@@ -2645,6 +2645,718 @@ Extremely WIP, basically just a scratchpad
 ;; (write-hashes (doom-ps))
 #+end_src
 ******** third attempt
+********* clojure part
+********** clj file
+#+begin_src clojure :tangle ebullient/src/protostar/hickeyland.clj :comments link
+(ns protostar.hickeyland
+  (:require [clojure.alpha.spec :as s]
+            [clojure.edn :as edn]
+            [clojure.java.io :as io]
+            [clojure.string :as str])
+  (:gen-class))
+
+;; (defn greet
+;;   "Callable entry point to the application."
+;;   [data]
+;;   (println (str "Hello, " (or (:name data) "World") "!")))
+
+;; (defn -main
+;;   "I don't do a whole lot ... yet."
+;;   [& args]
+;;   (greet {:name (first args)}))
+
+
+
+
+
+(require '[clojure.set :refer [rename-keys]])
+(defn select-and-rename-keys [m kmap]
+  (as-> m $
+    (select-keys $ (keys kmap))
+    (rename-keys $ kmap)))
+
+
+;; TODO hack
+;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
+;; Ideas:
+;; - hack scm/edn.scm somehow?
+;; - convert `doom-packages` (and melpa recipes) package names to strings on the elisp side
+;;   Would be messy with melpa recipes since there's no "elisp-reading phase"
+;; - elisp "parseclj"/"parseedn" are nice but they don't solve the 0x0 problem
+;;   Are they worth the additional overhead of running them on the elisp side? Again, with melpa there might not /be/ an elisp side
+;;   - nice to have but maybe not necessary: handling dotted pairs, t/nil become true/nil
+;; - don't use the 0x0 package
+(defn icky [x]
+  (if (= x "0")
+    "0x0" x))
+
+
+
+(def test-deps '((emacs "24.1") another (seq) (cl-lib "0.5")))
+
+
+;; Old
+
+;; (s/def :epkg.req/name symbol?)
+;; (s/def :epkg.req/tuple->name (s/conformer (fn [x]
+;;                                             (if (list? x)
+;;                                               (first x) x))))
+;; (s/def :epkg/req (s/and :epkg.req/tuple->name
+;;                         :epkg.req/name))
+;; (s/def :epkg/reqs (s/coll-of :epkg/req :kind list?))
+
+
+
+(s/def :epkg.dep/name symbol?)
+(s/def :epkg.dep/tuple list?)
+(s/def :epkg/dep (s/or :name :epkg.dep/name
+                       :tuple :epkg.dep/tuple))
+(s/def :epkg/deps (s/coll-of :epkg/dep))
+
+(s/valid? :epkg/deps test-deps)
+;; (s/explain-str :epkg/deps test-deps)
+;; (s/conform :epkg/deps test-deps)
+
+(s/def :epkg.dep/->name
+  (s/conformer (fn [[form x]]
+                 (case form
+                   :name x
+                   :tuple (first x)))))
+
+(s/def :parse.epkg/deps
+  (s/coll-of (s/and
+              :epkg.dep/->name
+              (s/conformer str))))
+
+;; (s/conform
+;;  (s/and
+;;   :epkg/deps
+;;   :parse.epkg/deps)
+;;  test-deps)
+
+
+
+;; (s/def ::f string?)
+;; (s/def ::l (s/conformer (partial str "asdf")))
+;; (s/def ::s (s/schema [::f ::l]))
+;; (s/conform ::s {::f "Bugs" ::l "Bunny" ::x 10})
+
+;; (s/def ::f string?)
+;; (s/def ::l (s/conformer (partial str "asdf")))
+;; (s/def ::s (s/schema {:f ::f :l ::l}))
+;; (s/conform ::s {:f "Bugs" :l "Bunny" :x 10})
+
+#_(defn parse-melpa-recipe [r*]
+  (let [r (apply hash-map (rest r*))
+        recipe
+        (merge
+         {:recipe/flavor :recipe.flavor/melpa} ; TODO putting this here for completion for now, donno if I'll need it
+         (let [fetcher (:fetcher r)]
+           (condp some #{fetcher}
+             #{'git 'hg} {:recipe/vc (case fetcher
+                                       git :recipe.vc/git
+                                       hg :recipe.vc/hg)
+                          :recipe/repo (:url r)}
+             #{'github 'gitlab} {:recipe/vc :recipe.vc/git
+                                 :recipe/host fetcher
+                                 :recipe/repo (:repo r)}))
+         (select-and-rename-keys
+          r {:branch :recipe/branch
+             :files :recipe/files}))]
+    (when-not (empty? recipe)
+      recipe)))
+
+
+(def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
+                                   :fetcher github
+                                   :files ("yasnippet.el" "snippets")))
+
+;; (s/def :elisp/car (s/conformer first))
+(s/def :elisp/cdr (s/conformer rest)) ; TODO should this be `next`?
+(s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
+;; (s/def :elisp/something (s/and
+;;                          :elisp/cdr
+;;                          :elisp/plist->map))
+
+;; (s/def :melpa/rc
+;;   (s/and
+;;    :elisp/something
+;;    (s/schema {:fetcher #{git hg github gitlab}})))
+
+;; (s/valid? :melpa/rc test-melpa-recipe)
+;; (s/explain-str :melpa/rc test-melpa-recipe)
+;; (s/conform :melpa/rc test-melpa-recipe)
+
+;; (s/def :parsed.melpa/rc
+;;   (s/and
+;;    :elisp/something
+;;    ))
+
+
+
+;; (defmacro match-seq [s]
+;;   (let [ks (mapv keyword (repeatedly (count s) gensym))
+;;         cat-kvs (mapcat vector ks (map hash-set s))]
+;;     `(s/&
+;;       (s/cat ~@cat-kvs)
+;;       (s/conformer
+;;        (juxt ~@ks)))))
+
+;; (defmacro match-seq* [s]
+;;   (let [key-preds (mapcat vector
+;;                           (map keyword (repeatedly gensym))
+;;                           (map hash-set s))]
+;;     `(s/cat ~@key-preds)))
+
+;; (s/defop match-seq [s]
+;;  ~(match-seq* s))
+
+;; (macroexpand '(match-seq "asdf"))
+;; (match-seq "asdf")
+;; (mapcat vector
+;;         (map keyword (repeatedly gensym))
+;;         (map hash-set "asd"))
+
+;; (s/defop match-seq [s]
+;;   (s/& (s/+ any?) (partial = (seq s))))
+
+(s/def :char/blank #{\space \tab})
+(s/def :char/newline #{\newline})
+
+(s/def :epkg.simple/req-header-name
+  (s/& (s/+ any?) #(= (seq "Package-Requires:") %)))
+
+;; (s/defop match-t [a]
+;;   (s/and string?
+;;          a))
+
+;; (s/def ::asdf (match-t (s/conformer parse-double)))
+
+;; (s/conform ::asdf "3")
+
+;; (s/defop bounded-string
+;;   "Specs a string with bounded size (<= min (count string) max)"
+;;   [min max]
+;;   (s/and string? #(<= min (count %) max)))
+
+;; (s/def ::first-name (bounded-string 1 20))
+
+;; (s/conform ::first-name "asdfa")
+
+
+;; (s/def :text/lines (s/and
+;;                     ;; (s/conformer seq)
+;;                     (s/*
+;;                      (s/alt
+;;                       :line (s/cat (s/* any?))
+;;                       ;; :line any?
+;;                       ;; :newline (s/? :char/newline)
+;;                       :newline :char/newline
+;;                       ))
+;;                     ;; (s/conformer (fn [[line _]] line))
+;;                     ))
+
+(require '[clojure.string :as str])
+
+(s/def :text/lines (s/conformer str/split-lines))
+
+;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
+(s/defop s-filter [spec]
+  (s/conformer
+   (fn [xs]
+     (keep (fn [x]
+             (let [conformed (s/conform spec x)]
+               (when-not (s/invalid? conformed)
+                 conformed)))
+           xs))))
+
+;; (s/def ::asdf (s-filter :epkg.dep/name))
+;; (s/conform ::asdf ["a" 'asdf])
+;; (s/conform :text/lines "asdf\ndfdf\n")
+
+;; TODO "elegance": maybe re-conform matches to strings here. Maybe make spec that wraps such string-regex operations with the necessary `seq`/`apply-str` at the beginning/end.
+(s/def :epkg.simple/req-header-line
+  (s/and
+   (s/conformer seq)
+   (s/cat :_comment (s/+ #{\;})
+          :_ws (s/* :char/blank)
+          :_req-header :epkg.simple/req-header
+          :_ws (s/* :char/blank)
+          :deps (s/* char?))))
+
+(s/def :epkg.simple/reqs
+  (s/and
+   :text/lines
+   (s-filter :epkg.simple/req-header-line)
+   (s/conformer first)
+   ;; (s/conformer (fn [xs]
+   ;;                (or (first xs) :clojure.alpha.spec/invalid)))
+   (s/conformer #(->> % :deps (apply str) edn/read-string))
+   :epkg/deps))
+
+(def test-pkgrequires-line ";; Package-Requires: ((emacs \"24.1\") (cl-lib \"0.5\"))")
+
+;; (s/conform :epkg.simple/reqs (str "asdf\n" test-pkgrequires-line))
+;; (s/explain-str :epkg.simple/reqs test-pkgrequires-line)
+
+
+
+
+;; Coeffects
+
+(require '[clojure.java.io :as io])
+
+(defn file-exists? [f]
+  (.exists (io/file f)))
+
+;; (defn epkg-reqs-files [name dir]
+;;   (if (file-exists? (str dir "/" name "-pkg.el"))))
+
+;; (some #{"/home/pharcosyle/projects/hickeyland/src/protostar/hickeyland.clj"}
+;;       (map str (file-seq (io/file "/home/pharcosyle/projects/hickeyland"))))
+
+;; (s/defop cofx [f]
+;;   (s/conformer ))
+
+;; (s/def :cofx/file-exists?
+;;   (s/conformer (fn [f]))
+;;   )
+
+
+;; TODO can I make this optional? Or parameterize its inclusion (only check for it if read with edn/read-string)?
+;; "Artifact" of `edn/read-string`.
+(s/def :elisp/quoted-form
+  (s/cat
+   :quote #(= (symbol (str \')) %)
+   :form any?))
+
+;; TODO just maybe don't underscore-"ignore" parts and have real specs (not just `any?`) for the other bits? I don't care about them but maybe I want to document the shape of the data?
+(s/def :epkg.multifile/reqs
+  (s/and
+   (s/cat :_function #{define-package}
+          :_name any?
+          :_version any?
+          :_docstring (s/? any?)
+          :requirements (s/? :elisp/quoted-form)
+          :_extra (s/* any?))
+   (s/conformer #(get-in % [:requirements :form]))
+   :epkg/deps))
+
+;; (s/conform :epkg.multifile/reqs {:pname "magit" :dir "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp"})
+;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
+;; (s/explain-str :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
+;; (s/conform :epkg.multifile/reqs "asdf")
+;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el/drag-stuff-pkg.el")))
+
+;; (defmulti epkg-type :epkg/type)
+;; (defmethod epkg-type :epkg.type/simple [_]
+;;   :epkg.simple/reqs)
+;; (defmethod epkg-type :epkg.type/multifile [_]
+;;   (s/conformer )
+;;   :epkg.multifile/reqs)
+;; (s/def ::epkg (s/multi-spec epkg-type :epkg/type))
+
+;; TODO Might not need to test if file-exists for simple packages, is there always a packagename.el file? Or should always be one if there's no -pkg.el so its find to have it as a fallthrough case?
+(s/def :epkg/reqs
+  (s/or :multifile
+        (s/and
+         (s/conformer
+          (fn [{:keys [pname dir]}]
+            (let [f (str dir "/" pname "-pkg.el")]
+              (if (file-exists? f)
+                (-> f slurp edn/read-string)
+                :clojure.alpha.spec/invalid))))
+         :epkg.multifile/reqs)
+        :simple
+        (s/and
+         (s/conformer
+          (fn [{:keys [pname dir]}]
+            (let [f (str dir "/" pname ".el")]
+              (if (file-exists? f)
+                (-> f slurp edn/read-string)
+                :clojure.alpha.spec/invalid))))
+         :epkg.simple/reqs)))
+
+(defn epkg-requirements [name dir]
+  (let [deps
+        (s/conform
+         (s/and
+          :epkg/reqs
+          (s/conformer (fn [[_ reqs]] reqs))
+          :parse.epkg/deps)
+         {:pname name :dir dir})]
+    (when-not (s/invalid? deps)
+      deps)))
+
+;; (epkg-requirements
+;;  "magit"
+;;  "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp")
+;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
+;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
+;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
+;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
+;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
+
+; TODO better sha and ref specs
+(s/def :git/sha string?)
+(s/def :git/ref string?)
+
+(s/def :melpa.recipe/name symbol?)
+(s/def :melpa.recipe/fetcher #{git hg github gitlab})
+(s/def :melpa.recipe.vc/url string?)
+(s/def :melpa.recipe.forge/repo string?)
+;; nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
+(s/def :melpa.recipe.vc.git/commit (s/or :git/sha
+                                         :git/ref))
+(s/def :melpa.recipe/branch string?) ; do better spec? I can be a git or hg branch, right?
+(s/def :melpa.recipe/files list?) ; TODO read the melpa README and straight's expand-files-directive to suss this out. Call the spec ":melpa/files"?
+;; nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them?
+
+(s/def :melpa.recipe/schema
+  (s/schema [:melpa.recipe/name
+             :melpa.recipe/fetcher
+             :melpa.recipe.vc/url
+             :melpa.recipe.forge/repo
+             :melpa.recipe.vc.git/commit
+             :melpa.recipe/branch
+             :melpa.recipe/files]))
+
+(defmulti melpa-recipe-fetcher-type :melpa.recipe/fetcher)
+
+(defmethod melpa-recipe-fetcher-type 'git [_]
+  (s/select :melpa.recipe/schema [:melpa.recipe.vc/url]))
+(defmethod melpa-recipe-fetcher-type 'hg [_]
+  (s/select :melpa.recipe/schema [:melpa.recipe.vc/url]))
+(defmethod melpa-recipe-fetcher-type 'github [_]
+  (s/select :melpa.recipe/schema [:melpa.recipe.forge/repo]))
+(defmethod melpa-recipe-fetcher-type 'gitlab [_]
+  (s/select :melpa.recipe/schema [:melpa.recipe.forge/repo]))
+
+(s/def :melpa/recipe
+  (s/and- ; TODO why did this have to be `and-` again? I know the test conform I was doing below fails without it.
+   :melpa.recipe/schema
+   (s/multi-spec melpa-recipe-fetcher-type :melpa.recipe/fetcher)))
+
+;; (s/conform
+;;  :melpa/recipe
+;;  {:melpa.recipe/branch "aaa"
+;;   :melpa.recipe.vc.git/commit "asdf"
+;;   :melpa.recipe/fetcher 'git
+;;   :melpa.recipe.vc/url "http..."
+;;   ;; :epkg.dep/name 'what
+;;   })
+
+
+#_(let [r (apply hash-map (:recipe p))
+      recipe
+      (merge
+       (when-let [type (:type r)]
+         {:recipe/vc (case type
+                       git :recipe.vc/git
+                       built-in :recipe.vc/built-in)})
+       (when-let [flavor (:flavor r)]
+         {:recipe/flavor (case flavor
+                           melpa :recipe.flavor/melpa)})
+       (select-and-rename-keys
+        r {:host :recipe/host
+           :repo :recipe/repo
+           :branch :recipe/branch
+           :files :recipe/files
+           :nonrecursive :recipe.straight/nonrecursive
+           :build :recipe.straight/build
+           :pre-build :recipe.straight/pre-build
+           :post-build :recipe.straight/post-build
+           :local-repo :recipe.straight/local-repo
+           :protocol :recipe.straight/protocol
+           :source :recipe.straight/source
+           :fork :recipe.straight/fork
+           :upstream :recipe.straight/upstream
+           :includes :recipe.straight/includes}))]
+  (when-not (empty? recipe)
+    {:package/recipe recipe}))
+
+#_(&key local-repo _files _flavor
+      _build _pre-build _post-build _includes
+      _type _repo _host _branch
+      _remote _nonrecursive _fork _depth)
+
+#_(defun straight-vc-git-keywords ()
+  "Return a list of keywords used by the VC backend for Git."
+  '(:repo :host :branch :remote :nonrecursive
+          :upstream :fork :depth :protocol))
+
+(s/def :elisp/t #{t})
+(s/def :elisp/nil-or-non-nil any?)
+
+(s/def :straight.recipe-repo/name symbol?)
+(s/def :straight/username+repo
+  (s/and
+   (s/conformer seq)
+   (s/cat :username (s/+ char?)
+          :slash #{\/}
+          :repo (s/+ char?))))
+(s/def :straight/repository-url string?)
+
+(s/def :straight.recipe/name symbol?) ; Maybe spec this so I can accept the argument to `straight-use-package` (for other users who use straight): doom doesn't take this just the rest of the recipe plist. Update: also need it for :includes.
+(s/def :straight.recipe/local-repo string?)
+(s/def :straight.recipe/files list?) ; TODO read straight's straight-default-files-directive and  straight-expand-files-directive to suss this out
+(s/def :straight.recipe/flavor #{melpa})
+(s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
+(s/def :straight.recipe/pre-build any?) ; TODO
+(s/def :straight.recipe/post-build any?) ; TODO
+(s/def :straight.recipe/type #{git built-in})
+(s/def :straight.recipe/source (s/or :one :straight.recipe-repo/name
+                                     :many (coll-of :straight.recipe-repo/name)))
+(s/def :straight.recipe/includes (s/or :one :straight.recipe/name
+                                       :many (coll-of :straight.recipe/name)))
+(s/def :straight.recipe/inherit :elisp/nil-or-non-nil)
+;; TODO ick, the value straight.recipe.vc/repo can have is conditional on :host, which is a pattern clojure spec (I think) doesn't support
+(s/def :straight.recipe.git/repo (s/or :u+r :straight/username+repo
+                                       :url :straight/repository-url))
+(s/def :straight.recipe.git/host #{nil github gitlab bitbucket})
+(s/def :straight.recipe.git/branch string?)
+(s/def :straight.recipe.git/remote string?)
+(s/def :straight.recipe.git/nonrecursive :elisp/nil-or-non-nil)
+(s/def :straight.recipe.git/fork any?) ; TODO
+(s/def :straight.recipe.git/depth (s/or :full #{full}
+                                        :n integer?))
+(s/def :straight.recipe.git/protocol #{https ssh})
+(s/def :straight.recipe.git/upstream any?) ; TODO
+
+(s/def :straight.recipe/schema
+  (s/schema [:straight.recipe/name
+             :straight.recipe/local-repo
+             :straight.recipe/files
+             :straight.recipe/flavor
+             :straight.recipe/built
+             :straight.recipe/pre-build
+             :straight.recipe/post-build
+             :straight.recipe/type
+             :straight.recipe/source
+             :straight.recipe/includes
+             :straight.recipe/inherit
+             :straight.recipe.git/repo
+             :straight.recipe.git/host
+             :straight.recipe.git/branch
+             :straight.recipe.git/remote
+             :straight.recipe.git/nonrecursive
+             :straight.recipe.git/fork
+             :straight.recipe.git/depth
+             :straight.recipe.git/protocol
+             :straight.recipe.git/upstream]))
+
+(s/def :straight/recipe
+  (s/and-
+   :straight.recipe/schema
+   ;; TODO do the repo-host constraint described here: https://github.com/raxod502/straight.el#git-backend
+   ))
+
+
+#_(defn parse-doom-package [p*]
+  (let [p (apply hash-map (rest p*))]
+    (merge
+     {:package/name (icky (str (first p*)))}
+     (let [type (:type p)]
+       (when (some #{type} ['local 'built-in])
+         {:doom.package/type (case type
+                       local :doom.package.type/local
+                       built-in :doom.package.type/built-in)}))
+     ;; TODO read https://github.com/melpa/melpa#recipe-format
+     ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
+     ;; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported
+     ;; TODO protocol can be "ssh" in straight, handle or make unsupported.
+     ;; - update: I already have a check for it in my "error-reporting" thing below but I should make sure that's it's not an /invalid/ value ("https" is fine if its stated explicitly)
+     ;; TODO might need :build and :local-repo for donnager
+     ;; - update: local-repo is /also/ the dir name that straight assigns for a package (if it's not a full path). I can probably ignore this use case.
+     ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
+     ;; : "There are consistency and feature improvements to edge cases of the :files keyword as documented in straight-expand-files-directive"
+     ;; TODO at end: ensure an empty map isn't added / the map doesn't have any empty values
+     (let [r (apply hash-map (:recipe p))
+           recipe
+           (merge
+            (when-let [type (:type r)]
+              {:recipe/vc (case type
+                            git :recipe.vc/git
+                            built-in :recipe.vc/built-in)})
+            (when-let [flavor (:flavor r)]
+              {:recipe/flavor (case flavor
+                                melpa :recipe.flavor/melpa)})
+            (select-and-rename-keys
+             r {:host :recipe/host
+                :repo :recipe/repo
+                :branch :recipe/branch
+                :files :recipe/files
+                :nonrecursive :recipe.straight/nonrecursive
+                :build :recipe.straight/build
+                :pre-build :recipe.straight/pre-build
+                :post-build :recipe.straight/post-build
+                :local-repo :recipe.straight/local-repo
+                :protocol :recipe.straight/protocol
+                :source :recipe.straight/source
+                :fork :recipe.straight/fork
+                :upstream :recipe.straight/upstream
+                :includes :recipe.straight/includes}))]
+       (when-not (empty? recipe)
+         {:package/recipe recipe}))
+     (select-and-rename-keys
+      p {:pin :doom.package/pin})
+     (when (or (:disable p)
+               (:ignore p))
+       {:package/deactivated? true}))))
+
+
+(s/def :doom.package/type #{core local built-in virtual}) ; Depending on where I'm doing "checking for stuff I explicitly don't support" either remove local/built-in/(maybe)virtual here or check for them elsewhere
+(s/def :doom.package/recipe :straight/recipe) ; perhaps minus the straight recipe :name
+(s/def :doom.package/disable :elisp/t)
+(s/def :doom.package/ignore :elisp/t)
+(s/def :doom.package/pin :git/sha)
+;; nb: not speccing :modules (for now?)
+
+(s/def :doom/package
+  (s/schema [:doom.package/type
+             :doom.package/recipe
+             :doom.package/disable
+             :doom.package/ignore
+             :doom.package/pin]))
+
+
+#_(defn parse-doom-packages []
+  (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
+    (edn/read-string $)
+    (map parse-doom-package $)
+    ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
+    (remove #(= (:package/name %) "straight") $)
+    (remove :package/deactivated? $)))
+
+(s/def :my/packages
+  (s/and
+   (s/conformer edn/read-string)
+   (coll-of :doom/package)
+   ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
+   ;; (remove :doom.package/deactivated?)
+   ;; TODO donno if I'm doing this yet
+   ;; (remove #(= (:package/name %) "straight"))
+   ))
+
+;; (s/conform :my/packages (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el"))
+
+
+
+
+
+
+
+
+(defmacro defkmultis [& methods]
+  (let [create (fn [name]
+                 `(defmulti ~name first))]
+    `(do
+       ~@(map create methods))))
+
+(defmacro defkmethods [k & methods]
+  (let [register
+        (fn [[name argslist & body]]
+          `(defmethod ~name ~k ~(vec (cons '_ argslist)) ~@body))]
+    `(do
+       ~@(map register methods))))
+
+
+
+
+
+;; Archives
+(defkmultis
+  has-recipe
+  get-recipe)
+
+(defn melpa-recipe [p]
+  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" "/" p))
+
+(defkmethods
+  :archive/melpa
+  (has-recipe [p] (file-exists? (melpa-recipe p)))
+  ;; Uncomment once I do `parse-melpa-recipe`
+  ;; (get-recipe [p] (parse-melpa-recipe
+  ;;                  (edn/read-string
+  ;;                   (slurp (melpa-recipe p)))))
+  )
+
+;; TODO probably add emacsmirror, etc archives but make all of the methods throw an exception stating that they're not implemented "yet".
+
+(def archive-priority [:archive/melpa
+                       :archive/elpa])
+
+
+
+
+
+(def straight-allow-recipe-inheritance? true)
+
+(def defaults {:recipe/protocol "https"})
+;; maybe?:
+;; :files '("*.el" "*.el.in" "dir"
+;;          "*.info" "*.texi" "*.texinfo"
+;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
+;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el")
+
+;; TODO downloading to a cache like the elpa importer does would speed up successive/reattempted runs, no?
+;; - assuming that is what it's doing (check). Do those repo caches stick around forever though? Will adding my own interfere with anything?
+;; - if it's /really/ fast maybe I could get rid of the later-to-come bump "scripts"'s need to read an existing list of generated packges at all! I wouldn't even have to save it to disk, just the lockfile!
+;;   - even if the guix git repositories cache thing is untenable maybe there's some other cache I could write the repos or the generated packages-with-hashes to, even just ~./cache. I'd like to not have to manage a generated packages file if I don't have to
+;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
+;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
+;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'?
+;; - Straight claims to be able to "deal with built-in packages" even without this variable. How? Something like hlissner does when :built-in is set to 'prefer? Use one
+;;   of these approaches instead of making a (brittle) list of built-in pseudo packages?
+;; - Remember, sometimes even if a package is built-in it should still be installed (like org)
+;; - unrelated: are there any built-in dependencies with newer upstream/external versions? Do I want them?
+;;   Perhaps not even proper versions just newer commits in a git repo
+;; - what's `straight-recipes-gnu-elpa-ignored-packages' all about?
+;; TODO always include *pkg.el like straight.el::3168 says?
+;; Is that just about making sure that dependencies get resolved? It says "linked over" though. But then why wouldn't the other `straight-recipes-REPO-retrieve' methods have it? For
+;; the elpa one at least it could be because it includes everything (=:files "*"=)
+;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
+;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
+
+
+;; TODO probably do this with spec, but wait until a bit later / the end
+;; (if-let [unsupported (seq (filter (fn [p]
+;;                                       (or (let [type (get p :doom.package/type)]
+;;                                             (some (hash-set type) (vector :doom.package.type/local :doom.package.type/built-in)))
+;;                                           (let [vc (get-in p (vector :package/recipe :recipe/vc))]
+;;                                             (and vc (not= vc :vc/git)))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/protocol))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/source))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/fork))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/upstream))
+;;                                           (get-in p (vector :package/recipe :straight.recipe/includes))))
+;;                                   $))]
+;;         (throw (ex-info "Package(s) with unsupported configuration" {:packages unsupported}))
+;;         $)
+#+end_src
+********** deps
+#+begin_src clojure :tangle ebullient/deps.edn :comments link
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/alpha.spec {:git/url "https://github.com/clojure/spec-alpha2.git"
+                                :sha "99456b1856a6fd934e2c30b17920bd790dd81775"}}
+ :aliases
+ {:run-m {:main-opts ["-m" "protostar.hickeyland"]}
+  :run-x {:ns-default protostar.hickeyland
+          :exec-fn greet
+          :exec-args {:name "Clojure"}}
+  :build {:deps {io.github.seancorfield/build-clj
+                 {:git/tag "v0.6.3" :git/sha "9b8e09b"
+                  ;; since we're building an app uberjar, we do not
+                  ;; need deps-deploy for clojars.org deployment:
+                  :deps/root "slim"}}
+          :ns-default build}
+  :test {:extra-paths ["test"]
+         :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+                      io.github.cognitect-labs/test-runner
+                      {:git/tag "v0.5.0" :git/sha "48c3c67"}}}}}
+#+end_src
+********* guix part
 #+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
 (ns ebullient.home.packaging-wip
   (:require [guile.guix.store :refer [with-store]]
