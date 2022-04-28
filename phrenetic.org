@@ -2654,20 +2654,32 @@ Extremely WIP, basically just a scratchpad
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(require '[clojure.set :refer [rename-keys]])
-(defn select-and-rename-keys [m kmap]
-  (as-> m $
-    (select-keys $ (keys kmap))
-    (rename-keys $ kmap)))
+(defn file-exists? [f]
+  (.exists (io/file f)))
 
 
 (s/defop novalidate [_]
   any?)
 
 
+(s/def :char/blank #{\space \tab})
+;; (s/def :char/newline #{\newline}) ; TODO remvoe if not needed
+
+(s/def :text/lines (s/conformer str/split-lines))
+
+
+;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
+(s/defop s-filter [spec]
+  (s/conformer
+   (fn [xs]
+     (keep (fn [x]
+             (let [conformed (s/conform spec x)]
+               (when-not (s/invalid? conformed)
+                 conformed)))
+           xs))))
+
+
 (s/def :elisp/t #{t})
-(s/def :elisp/symbol symbol?)
-(s/def :elisp/string string?)
 (s/defop elisp-list [spec]
   (s/coll-of spec :kind list?))
 ;; "Artifact" of `edn/read-string`.
@@ -2681,9 +2693,10 @@ Extremely WIP, basically just a scratchpad
 (s/def :elisp/nil-or-non-nil any?) ; TODO think this (perhaps just the name) through more?
 
 
-(s/def :epkg.dep/name :elisp/symbol)
+(s/def :epkg.dep/name symbol?)
+(s/def :epkg.dep/version (novalidate string?))
 (s/def :epkg.dep/name+ver (s/cat :name :epkg.dep/name
-                                 :_version (s/? (novalidate :elisp/string))))
+                                 :_version (s/? (novalidate :epkg.dep/version))))
 (s/def :epkg.dep/name+ver->name
   (s/conformer (fn [[form x]]
                  (case form
@@ -2698,6 +2711,7 @@ Extremely WIP, basically just a scratchpad
               :epkg.dep/name+ver->name
               (s/conformer str))))
 
+;; Testing
 ;; (def test-deps '((emacs "24.1") another (seq) (cl-lib "0.5")))
 ;; (s/valid? :epkg/deps test-deps)
 ;; (s/explain-str :epkg/deps test-deps)
@@ -2708,17 +2722,98 @@ Extremely WIP, basically just a scratchpad
 ;;   :epkg/deps->string-names)
 ;;  test-deps)
 
+;; TODO ideally do this better / more flexibly / maybe faster
+(s/def :epkg.simple/req-header-name
+  (s/& (s/+ any?) #(= (seq "Package-Requires:") %)))
+
+;; TODO "elegance": maybe re-conform matches to strings here. Maybe make spec that wraps such string-regex operations with the necessary `seq`/`apply-str` at the beginning/end.
+(s/def :epkg.simple/req-header-line
+  (s/and
+   (s/conformer seq)
+   (s/cat :_comment (s/+ #{\;})
+          :_ws (s/* :char/blank)
+          :_req-header :epkg.simple/req-header
+          :_ws2 (s/* :char/blank)
+          :deps (s/* char?))))
+
+(s/def :epkg.simple/reqs
+  (s/and
+   :text/lines
+   (s-filter :epkg.simple/req-header-line)
+   (s/conformer first)
+   ;; TODO what was I trying here?
+   ;; (s/conformer (fn [xs]
+   ;;                (or (first xs) :clojure.alpha.spec/invalid)))
+   (s/conformer #(->> % :deps (apply str) edn/read-string))
+   :epkg/deps))
+
+;; Testing
+;; (def test-pkgrequires-line ";; Package-Requires: ((emacs \"24.1\") (cl-lib \"0.5\"))")
+;; (s/conform :epkg.simple/reqs (str "asdf\n" test-pkgrequires-line))
+;; (s/explain-str :epkg.simple/reqs test-pkgrequires-line)
+
+(s/def :epkg.multifile/reqs
+  (s/and
+   (s/cat :_define-package #{define-package}
+          :_name (novalidate string?)
+          :_version (novalidate :epkg.dep/version)
+          :_docstring (s/? (novalidate string?))
+          :requirements (s/? :elisp/quoted-form)
+          :_extra (s/* (novalidate nil)))
+   (s/conformer #(get-in % [:requirements :form]))
+   :epkg/deps))
+
+;; Testing
+;; (s/conform :epkg.multifile/reqs {:pname "magit" :dir "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp"})
+;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
+;; (s/explain-str :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
+;; (s/conform :epkg.multifile/reqs "asdf")
+;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el/drag-stuff-pkg.el")))
+
+;; TODO Might not need to test if file-exists for simple packages, is there always a packagename.el file? Or should always be one if there's no -pkg.el so its find to have it as a fallthrough case?
+;; TODO maybe do coeffects if it's easy
+;; Maybe see my now-deleted cofx attempts
+(s/def :epkg/reqs
+  (s/or :multifile
+        (s/and
+         (s/conformer
+          (fn [{:keys [pname dir]}]
+            (let [f (str dir "/" pname "-pkg.el")]
+              (if (file-exists? f)
+                (-> f slurp edn/read-string)
+                :clojure.alpha.spec/invalid))))
+         :epkg.multifile/reqs)
+        :simple
+        (s/and
+         (s/conformer
+          (fn [{:keys [pname dir]}]
+            (let [f (str dir "/" pname ".el")]
+              (if (file-exists? f)
+                (-> f slurp edn/read-string)
+                :clojure.alpha.spec/invalid))))
+         :epkg.simple/reqs)))
+
+(defn epkg-dependencies [name dir]
+  (let [deps
+        (s/conform
+         (s/and
+          :epkg/reqs
+          (s/conformer (fn [[_ reqs]] reqs))
+          :parse.epkg/deps)
+         {:pname name :dir dir})]
+    (when-not (s/invalid? deps)
+      deps)))
+
+;; Testing
+;; (epkg-dependencies "magit" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp")
+;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
+;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
+;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
+;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
+;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
 
 
-;; (s/def ::f string?)
-;; (s/def ::l (s/conformer (partial str "asdf")))
-;; (s/def ::s (s/schema [::f ::l]))
-;; (s/conform ::s {::f "Bugs" ::l "Bunny" ::x 10})
 
-;; (s/def ::f string?)
-;; (s/def ::l (s/conformer (partial str "asdf")))
-;; (s/def ::s (s/schema {:f ::f :l ::l}))
-;; (s/conform ::s {:f "Bugs" :l "Bunny" :x 10})
 
 #_(defn parse-melpa-recipe [r*]
   (let [r (apply hash-map (rest r*))
@@ -2740,228 +2835,6 @@ Extremely WIP, basically just a scratchpad
     (when-not (empty? recipe)
       recipe)))
 
-
-(def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
-                                   :fetcher github
-                                   :files ("yasnippet.el" "snippets")))
-
-;; (s/def :elisp/something (s/and
-;;                          :elisp/cdr
-;;                          :elisp/plist->map))
-
-;; (s/def :melpa/rc
-;;   (s/and
-;;    :elisp/something
-;;    (s/schema {:fetcher #{git hg github gitlab}})))
-
-;; (s/valid? :melpa/rc test-melpa-recipe)
-;; (s/explain-str :melpa/rc test-melpa-recipe)
-;; (s/conform :melpa/rc test-melpa-recipe)
-
-;; (s/def :parsed.melpa/rc
-;;   (s/and
-;;    :elisp/something
-;;    ))
-
-
-
-;; (defmacro match-seq [s]
-;;   (let [ks (mapv keyword (repeatedly (count s) gensym))
-;;         cat-kvs (mapcat vector ks (map hash-set s))]
-;;     `(s/&
-;;       (s/cat ~@cat-kvs)
-;;       (s/conformer
-;;        (juxt ~@ks)))))
-
-;; (defmacro match-seq* [s]
-;;   (let [key-preds (mapcat vector
-;;                           (map keyword (repeatedly gensym))
-;;                           (map hash-set s))]
-;;     `(s/cat ~@key-preds)))
-
-;; (s/defop match-seq [s]
-;;  ~(match-seq* s))
-
-;; (macroexpand '(match-seq "asdf"))
-;; (match-seq "asdf")
-;; (mapcat vector
-;;         (map keyword (repeatedly gensym))
-;;         (map hash-set "asd"))
-
-;; (s/defop match-seq [s]
-;;   (s/& (s/+ any?) (partial = (seq s))))
-
-(s/def :char/blank #{\space \tab})
-(s/def :char/newline #{\newline})
-
-(s/def :epkg.simple/req-header-name
-  (s/& (s/+ any?) #(= (seq "Package-Requires:") %)))
-
-;; (s/defop match-t [a]
-;;   (s/and string?
-;;          a))
-
-;; (s/def ::asdf (match-t (s/conformer parse-double)))
-
-;; (s/conform ::asdf "3")
-
-;; (s/defop bounded-string
-;;   "Specs a string with bounded size (<= min (count string) max)"
-;;   [min max]
-;;   (s/and string? #(<= min (count %) max)))
-
-;; (s/def ::first-name (bounded-string 1 20))
-
-;; (s/conform ::first-name "asdfa")
-
-
-;; (s/def :text/lines (s/and
-;;                     ;; (s/conformer seq)
-;;                     (s/*
-;;                      (s/alt
-;;                       :line (s/cat (s/* any?))
-;;                       ;; :line any?
-;;                       ;; :newline (s/? :char/newline)
-;;                       :newline :char/newline
-;;                       ))
-;;                     ;; (s/conformer (fn [[line _]] line))
-;;                     ))
-
-(require '[clojure.string :as str])
-
-(s/def :text/lines (s/conformer str/split-lines))
-
-;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
-(s/defop s-filter [spec]
-  (s/conformer
-   (fn [xs]
-     (keep (fn [x]
-             (let [conformed (s/conform spec x)]
-               (when-not (s/invalid? conformed)
-                 conformed)))
-           xs))))
-
-;; (s/def ::asdf (s-filter :epkg.dep/name))
-;; (s/conform ::asdf ["a" 'asdf])
-;; (s/conform :text/lines "asdf\ndfdf\n")
-
-;; TODO "elegance": maybe re-conform matches to strings here. Maybe make spec that wraps such string-regex operations with the necessary `seq`/`apply-str` at the beginning/end.
-(s/def :epkg.simple/req-header-line
-  (s/and
-   (s/conformer seq)
-   (s/cat :_comment (s/+ #{\;})
-          :_ws (s/* :char/blank)
-          :_req-header :epkg.simple/req-header
-          :_ws (s/* :char/blank)
-          :deps (s/* char?))))
-
-(s/def :epkg.simple/reqs
-  (s/and
-   :text/lines
-   (s-filter :epkg.simple/req-header-line)
-   (s/conformer first)
-   ;; (s/conformer (fn [xs]
-   ;;                (or (first xs) :clojure.alpha.spec/invalid)))
-   (s/conformer #(->> % :deps (apply str) edn/read-string))
-   :epkg/deps))
-
-(def test-pkgrequires-line ";; Package-Requires: ((emacs \"24.1\") (cl-lib \"0.5\"))")
-
-;; (s/conform :epkg.simple/reqs (str "asdf\n" test-pkgrequires-line))
-;; (s/explain-str :epkg.simple/reqs test-pkgrequires-line)
-
-
-
-
-;; Coeffects
-
-(require '[clojure.java.io :as io])
-
-(defn file-exists? [f]
-  (.exists (io/file f)))
-
-;; (defn epkg-reqs-files [name dir]
-;;   (if (file-exists? (str dir "/" name "-pkg.el"))))
-
-;; (some #{"/home/pharcosyle/projects/hickeyland/src/protostar/hickeyland.clj"}
-;;       (map str (file-seq (io/file "/home/pharcosyle/projects/hickeyland"))))
-
-;; (s/defop cofx [f]
-;;   (s/conformer ))
-
-;; (s/def :cofx/file-exists?
-;;   (s/conformer (fn [f]))
-;;   )
-
-
-
-;; TODO just maybe don't underscore-"ignore" parts and have real specs (not just `any?`) for the other bits? I don't care about them but maybe I want to document the shape of the data?
-(s/def :epkg.multifile/reqs
-  (s/and
-   (s/cat :_function #{define-package}
-          :_name any?
-          :_version any?
-          :_docstring (s/? any?)
-          :requirements (s/? :elisp/quoted-form)
-          :_extra (s/* any?))
-   (s/conformer #(get-in % [:requirements :form]))
-   :epkg/deps))
-
-;; (s/conform :epkg.multifile/reqs {:pname "magit" :dir "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp"})
-;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
-;; (s/explain-str :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp/magit-pkg.el")))
-;; (s/conform :epkg.multifile/reqs "asdf")
-;; (s/conform :epkg.multifile/reqs (edn/read-string (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el/drag-stuff-pkg.el")))
-
-;; (defmulti epkg-type :epkg/type)
-;; (defmethod epkg-type :epkg.type/simple [_]
-;;   :epkg.simple/reqs)
-;; (defmethod epkg-type :epkg.type/multifile [_]
-;;   (s/conformer )
-;;   :epkg.multifile/reqs)
-;; (s/def ::epkg (s/multi-spec epkg-type :epkg/type))
-
-;; TODO Might not need to test if file-exists for simple packages, is there always a packagename.el file? Or should always be one if there's no -pkg.el so its find to have it as a fallthrough case?
-(s/def :epkg/reqs
-  (s/or :multifile
-        (s/and
-         (s/conformer
-          (fn [{:keys [pname dir]}]
-            (let [f (str dir "/" pname "-pkg.el")]
-              (if (file-exists? f)
-                (-> f slurp edn/read-string)
-                :clojure.alpha.spec/invalid))))
-         :epkg.multifile/reqs)
-        :simple
-        (s/and
-         (s/conformer
-          (fn [{:keys [pname dir]}]
-            (let [f (str dir "/" pname ".el")]
-              (if (file-exists? f)
-                (-> f slurp edn/read-string)
-                :clojure.alpha.spec/invalid))))
-         :epkg.simple/reqs)))
-
-(defn epkg-requirements [name dir]
-  (let [deps
-        (s/conform
-         (s/and
-          :epkg/reqs
-          (s/conformer (fn [[_ reqs]] reqs))
-          :parse.epkg/deps)
-         {:pname name :dir dir})]
-    (when-not (s/invalid? deps)
-      deps)))
-
-;; (epkg-requirements
-;;  "magit"
-;;  "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp")
-;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
-;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
-;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
-;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
-;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
-
 ; TODO better sha and ref specs
 (s/def :git/sha string?)
 (s/def :git/ref string?)
@@ -2970,12 +2843,12 @@ Extremely WIP, basically just a scratchpad
 (s/def :melpa.recipe/fetcher #{git hg github gitlab})
 (s/def :melpa.recipe.vc/url string?)
 (s/def :melpa.recipe.forge/repo string?)
-;; nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
+;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
 (s/def :melpa.recipe.vc.git/commit (s/or :git/sha
                                          :git/ref))
 (s/def :melpa.recipe/branch string?) ; do better spec? I can be a git or hg branch, right?
 (s/def :melpa.recipe/files list?) ; TODO read the melpa README and straight's expand-files-directive to suss this out. Call the spec ":melpa/files"?
-;; nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them?
+;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them?
 
 (s/def :melpa.recipe/schema
   (s/schema [:melpa.recipe/name
@@ -3002,6 +2875,10 @@ Extremely WIP, basically just a scratchpad
    :melpa.recipe/schema
    (s/multi-spec melpa-recipe-fetcher-type :melpa.recipe/fetcher)))
 
+;; Testing
+;; (def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
+;;                                    :fetcher github
+;;                                    :files ("yasnippet.el" "snippets")))
 ;; (s/conform
 ;;  :melpa/recipe
 ;;  {:melpa.recipe/branch "aaa"
@@ -3173,7 +3050,7 @@ Extremely WIP, basically just a scratchpad
 (s/def :doom.package/disable :elisp/t)
 (s/def :doom.package/ignore :elisp/t)
 (s/def :doom.package/pin :git/sha)
-;; nb: not speccing :modules (for now?)
+;; TODO nb: not speccing :modules (for now?)
 
 (s/def :doom/package
   (s/schema [:doom.package/type
@@ -3255,6 +3132,9 @@ Extremely WIP, basically just a scratchpad
 
 (def straight-allow-recipe-inheritance? true)
 
+;; TODO Ideally I think I want to grab any pertinent straight settings from Doom Emacs
+;; By serializing them "in the same run" as when I grab e.g `doom-packages`.
+;; - default protocol, allow inheritance, the recipe repos Doom sets up, etc
 (def defaults {:recipe/protocol "https"})
 ;; maybe?:
 ;; :files '("*.el" "*.el.in" "dir"
