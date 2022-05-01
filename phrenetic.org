@@ -2654,7 +2654,7 @@ Extremely WIP, basically just a scratchpad
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(defn file-exists? [f]
+(defn- file-exists? [f]
   (.exists (io/file f)))
 
 
@@ -2691,8 +2691,8 @@ Extremely WIP, basically just a scratchpad
   (s/cat :car car-spec
          :dot #{.}
          :cdr cdr-spec))
-;; (s/def :elisp/list->car (s/conformer first)) ; TODO remove if not needed
-(s/def :elisp/list->cdr (s/conformer next))
+(s/def :elisp/list->car (s/conformer first)) ; TODO remove if not needed
+(s/def :elisp/list->cdr (s/conformer next)) ; TODO remove if not needed
 (s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
 (s/def :elisp/nil-or-non-nil :elisp/form) ; TODO think this (perhaps just the name) through more?
 
@@ -2844,16 +2844,16 @@ Extremely WIP, basically just a scratchpad
 (s/def :melpa.recipe.files/glob string?)
 (s/def :melpa.recipe.files/subdirective (s/alt :subdir string?
                                                :exclude #{:exclude}))
-(s/def :melpa.recipe.files/elements
-  (s/cat
-   :element (s/alt :glob :melpa.recipe.files/glob
-                   :sublist (s/nest
-                             (s/cat :subdirective :melpa.recipe.files/subdirective
-                                    :elements (s/+ :melpa.recipe.files/elements))))))
+(s/def :melpa.recipe.files/element
+  (s/alt :glob :melpa.recipe.files/glob
+         :sublist (s/nest
+                   (s/cat :subdirective :melpa.recipe.files/subdirective
+                          :element (s/+ :melpa.recipe.files/element)))))
+(s/def :melpa.recipe.files/defaults #{:defaults})
 (s/def :melpa.recipe/files
   (s/cat
-   :defaults (s/? #{:defaults})
-   :elements (s/* :melpa.recipe.files/elements)))
+   :defaults (s/? :melpa.recipe.files/defaults)
+   :elements (s/* :melpa.recipe.files/element)))
 
 (s/def :melpa.recipe/name symbol?)
 (s/def :melpa.recipe/fetcher #{git hg github gitlab})
@@ -2864,45 +2864,41 @@ Extremely WIP, basically just a scratchpad
                                          :git/ref))
 (s/def :melpa.recipe/branch string?) ; TODO do better spec? I can be a git or hg branch, right?
 ;; -- originial position of :melpa.recipe/files before I moved it up --
-;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them?
+;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them (or use `nospec`)? Remember to add them to :melpa.recipe/schema.
 
-(s/def :melpa.recipe/schema
-  (s/schema [:melpa.recipe/name
-             :melpa.recipe/fetcher
-             :melpa.recipe.vc/url
-             :melpa.recipe.forge/repo
-             :melpa.recipe.vc.git/commit
-             :melpa.recipe/branch
-             :melpa.recipe/files]))
+(s/def :melpa.recipe/props
+  (s/schema {;; :melpa.recipe/name
+             :fetcher :melpa.recipe/fetcher
+             :url :melpa.recipe.vc/url
+             :repo :melpa.recipe.forge/repo
+             :commit :melpa.recipe.vc.git/commit
+             :branch :melpa.recipe/branch
+             :files :melpa.recipe/files}))
 
-(defmulti melpa-recipe-fetcher-type :melpa.recipe/fetcher)
+(defmulti melpa-recipe-fetcher-type :fetcher)
 
 (defmethod melpa-recipe-fetcher-type 'git [_]
-  (s/select :melpa.recipe/schema [:melpa.recipe.vc/url]))
+  (s/select :melpa.recipe/props [:url]))
 (defmethod melpa-recipe-fetcher-type 'hg [_]
-  (s/select :melpa.recipe/schema [:melpa.recipe.vc/url]))
+  (s/select :melpa.recipe/props [:url]))
 (defmethod melpa-recipe-fetcher-type 'github [_]
-  (s/select :melpa.recipe/schema [:melpa.recipe.forge/repo]))
+  (s/select :melpa.recipe/props [:repo]))
 (defmethod melpa-recipe-fetcher-type 'gitlab [_]
-  (s/select :melpa.recipe/schema [:melpa.recipe.forge/repo]))
+  (s/select :melpa.recipe/props [:repo]))
 
 (s/def :melpa/recipe
-  (s/and- ; TODO why did this have to be `and-` again? I know the test conform I was doing below fails without it.
-   :melpa.recipe/schema
-   (s/multi-spec melpa-recipe-fetcher-type :melpa.recipe/fetcher)))
+  (s/cat
+   :name (nospec :melpa.recipe/name)
+   :props (s/*
+           (s/and
+            :elisp/plist->map
+            (s/multi-spec melpa-recipe-fetcher-type :fetcher)))))
 
 ;; Testing
-;; (def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
-;;                                    :fetcher github
-;;                                    :files ("yasnippet.el" "snippets")))
-;; (s/conform
-;;  :melpa/recipe
-;;  {:melpa.recipe/branch "aaa"
-;;   :melpa.recipe.vc.git/commit "asdf"
-;;   :melpa.recipe/fetcher 'git
-;;   :melpa.recipe.vc/url "http..."
-;;   ;; :epkg.dep/name 'what
-;;   })
+(def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
+                                   :fetcher github
+                                   :files ("yasnippet.el" "snippets")))
+(s/conform :melpa/recipe test-melpa-recipe)
 
 
 #_(let [r (apply hash-map (:recipe p))
@@ -2958,13 +2954,13 @@ Extremely WIP, basically just a scratchpad
 ;; TODO maybe some of the sub-stuff in :straight.recipe/files should be `nospec` or have leading keywork underscores.
 ;; TODO not doing testing for `list?` as in `elisp-list` here (or melpa recipe files). I might be getting rid of that anyway.
 (s/def :straight.recipe/files
-  (s/cat
-   :element (s/alt :glob :melpa.recipe.files/glob
-                   :pair (elisp-pair string? string?)
-                   :sublist (s/nest
-                             (s/cat :subdirective :melpa.recipe.files/subdirective
-                                    :elements (s/+ :straight.recipe/files)))
-                   :defaults #{:defaults})))
+  (s/*
+   (s/alt :glob :melpa.recipe.files/glob
+          :pair (elisp-pair string? string?)
+          :sublist (s/nest
+                    (s/cat :subdirective :melpa.recipe.files/subdirective
+                           :elements (s/+ :straight.recipe/files)))
+          :defaults :melpa.recipe.files/defaults)))
 (s/def :straight.recipe/flavor #{melpa})
 (s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
 (s/def :straight.recipe/pre-build any?) ; TODO
@@ -3095,7 +3091,7 @@ Extremely WIP, basically just a scratchpad
 (s/def :my/packages
   (s/and
    (s/conformer edn/read-string)
-   (coll-of :doom/package)
+   (s/coll-of :doom/package)
    ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
    ;; (remove :doom.package/deactivated?)
    ;; TODO donno if I'm doing this yet
@@ -3149,6 +3145,33 @@ Extremely WIP, basically just a scratchpad
 
 (def archive-priority [:archive/melpa
                        :archive/elpa])
+
+
+
+
+(require '[clojure.java.shell :refer [sh]])
+(def eb-dir "/home/pharcosyle/projects/phrenetic/ebullient")
+(def guix-repl-cmd ["guix" "repl" "-L" "." "--" "ebullient/home/packaging-runner.scm"])
+(defn sh-call [f & args]
+  (apply sh (concat guix-repl-cmd
+                    [(name f)]
+                    (map pr-str args)
+                    [:dir eb-dir])))
+;; (sh-call :guix/asdf 6)
+(def get-origin-data (partial sh-call :guix/get-origin-data))
+
+
+(def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
+
+(defn test []
+  (let [text (-> my-doom-packages-test
+                 slurp
+                 edn/read-string)]
+    ;; (s/assert (s/coll-of :doom/package) text)
+
+    ))
+
+;; (test)
 
 
 
@@ -3240,18 +3263,58 @@ Extremely WIP, basically just a scratchpad
 ********* guix part
 #+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
 (ns ebullient.home.packaging-wip
-  (:require [guile.guix.store :refer [with-store]]
-            [guile.guix.git :refer [latest-repository-commit]]))
+  (:require [guile :refer [command-line]]
+            [guile.guix.base32 :refer [bytevector->nix-base32-string]]
+            [guile.guix.git :refer [latest-repository-commit]]
+            [guile.guix.hash :refer [file-hash*]]
+            [guile.guix.store :refer [with-store]]
+            [guile.srfi.srfi-11 :refer [let-values]]))
 
-(defn- download-git-repo [url ref]
-  (with-store store
-    (latest-repository-commit store url :ref ref)))
+(defn- ->pair [a b]
+  (guile/cons a b))
+
+(defn- download-git-repo! [url [ref' ref''] recursive?]
+  (let-values
+   (((dir commit)
+     (with-store store
+       (latest-repository-commit store url
+                                 :ref (->pair (symbol ref') ref'')
+                                 :recursive? recursive?))))
+   {:dir dir :commit commit}))
 
 ;; (println
-;;  (download-git-repo "https://github.com/raxod502/straight.el.git" (guile/cons 'branch "develop")))
+;;  (download-git-repo! "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
+;; (println
+;;  (download-git-repo! "https://github.com/minad/consult.git" '()))
 
-(println
- (download-git-repo "https://github.com/minad/consult.git" '()))
+(defn get-origin-data [url ref recursive?]
+  (let [{:keys [dir commit]} (download-git-repo! url ref recursive?)]
+   {:commit commit
+    :hash (bytevector->nix-base32-string
+           (file-hash* dir))}))
+
+;; (println
+;;  (get-origin-data "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
+
+
+
+
+
+;; (defn call [nm & args]
+;;   (let [f (ns-resolve *ns* (symbol nm))]
+;;     (apply f args)))
+
+(defn asdf [n]
+  (+ 1 n))
+
+(when (< (count (command-line)) 1) ; temporarily let me run this file manually
+  (let [f (-> (command-line) second)
+        args (-> (command-line) next next)]
+    (println
+     (let [func
+           (case f
+             "asdf" asdf)]
+       (apply func (map read-string args))))))
 #+end_src
 ********* packaging runner
 #+begin_src scheme :tangle (meta-in-dir "packaging-runner.scm")
