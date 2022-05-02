@@ -2669,6 +2669,7 @@ Extremely WIP, basically just a scratchpad
 
 
 ;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
+;; TODO s/defop works currently but might not be the idiomatic way to do this
 (s/defop s-filter [spec]
   (s/conformer
    (fn [xs]
@@ -2681,16 +2682,6 @@ Extremely WIP, basically just a scratchpad
 
 (s/def :elisp/form any?)
 (s/def :elisp/t #{t})
-(s/defop elisp-list [spec]
-  (s/coll-of spec :kind list?))
-(s/defop elisp-quoted-form [form-spec]
-  (s/cat
-   :quote #(= (symbol (str \')) %) ; "Artifact" of `edn/read-string`.
-   :form form-spec))
-(s/defop elisp-pair [car-spec cdr-spec]
-  (s/cat :car car-spec
-         :dot #{.}
-         :cdr cdr-spec))
 (s/def :elisp/list->car (s/conformer first)) ; TODO remove if not needed
 (s/def :elisp/list->cdr (s/conformer next)) ; TODO remove if not needed
 (s/def :elisp/plist->map (s/conformer (partial apply hash-map))) ; TODO remove if not needed
@@ -2712,7 +2703,7 @@ Extremely WIP, basically just a scratchpad
 (s/def :epkg/dep (s/or :name :epkg.dep/name
                        :name+ver :epkg.dep/name+ver))
 
-(s/def :epkg/deps (elisp-list :epkg/dep))
+(s/def :epkg/deps (s/coll-of :epkg/dep))
 (s/def :epkg/deps->name-strs
   (s/coll-of (s/and
               :epkg.dep/name+ver->name
@@ -2764,7 +2755,9 @@ Extremely WIP, basically just a scratchpad
          :_name (nospec string?)
          :_version (nospec :epkg.dep/version)
          :_docstring (s/? (nospec string?))
-         :requirements (s/? (elisp-quoted-form :epkg/deps))
+         :requirements (s/? (s/cat
+                             :quote #(= (symbol (str \')) %) ; "Artifact" of `edn/read-string`.
+                             :form :epkg/deps))
          :_extra (s/* (nospec nil))))
 
 ;; Testing
@@ -2811,10 +2804,10 @@ Extremely WIP, basically just a scratchpad
 
 ;; Testing
 ;; (epkg-dependencies "magit" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/magit/lisp")
-;; (println (package-deps "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
-;; (println (package-deps "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
-;; (println (package-deps "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
-;; (println (package-deps "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
+;; (println (epkg-dependencies "dash" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/dash"))
+;; (println (epkg-dependencies "helpful" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/helpful"))
+;; (println (epkg-dependencies "evil" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil"))
+;; (println (epkg-dependencies "drag-stuff" "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/drag-stuff.el"))
 ;; (println (slurp "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/evil/evil-pkg.el"))
 
 
@@ -2948,11 +2941,12 @@ Extremely WIP, basically just a scratchpad
 (s/def :straight.recipe/name symbol?) ; Maybe spec this so I can accept the argument to `straight-use-package` (for other users who use straight): doom doesn't take this just the rest of the recipe plist. Update: also need it for :includes.
 (s/def :straight.recipe/local-repo string?)
 ;; TODO maybe some of the sub-stuff in :straight.recipe/files should be `nospec` or have leading keywork underscores.
-;; TODO not doing testing for `list?` as in `elisp-list` here (or melpa recipe files). I might be getting rid of that anyway.
 (s/def :straight.recipe/files
   (s/*
    (s/alt :glob ::glob
-          :pair (elisp-pair string? string?)
+          :pair (s/cat :car string?
+                       :dot #{.}
+                       :cdr string?)
           :sublist (s/nest
                     (s/cat :subdirective ::recipe-subdirective
                            :elements (s/+ :straight.recipe/files)))
@@ -2963,9 +2957,9 @@ Extremely WIP, basically just a scratchpad
 (s/def :straight.recipe/post-build any?) ; TODO
 (s/def :straight.recipe/type #{git built-in})
 (s/def :straight.recipe/source (s/or :one :straight.recipe-repo/name
-                                     :many (elisp-list :straight.recipe-repo/name)))
+                                     :many (s/coll-of :straight.recipe-repo/name)))
 (s/def :straight.recipe/includes (s/or :one :straight.recipe/name
-                                       :many (elisp-list :straight.recipe/name)))
+                                       :many (s/coll-of :straight.recipe/name)))
 (s/def :straight.recipe/inherit :elisp/nil-or-non-nil)
 (s/def :straight.recipe.git/host #{nil github gitlab bitbucket})
 (s/def :straight.recipe.git/branch string?)
@@ -3063,15 +3057,17 @@ Extremely WIP, basically just a scratchpad
       _type _repo _host _branch
       _remote _nonrecursive _fork _depth)
 
+(s/def :straight.recipe/props-asdf
+  (s/&
+   (s/* :elisp/form)
+   #(even? (count %))
+   :elisp/plist->map
+   (s/multi-spec straight-recipe-type :type)))
+
 (s/def :straight/recipe
   (s/cat
    :name (nospec :straight.recipe/name)
-   :props
-   (s/&
-    (s/* :elisp/form)
-    #(even? (count %))
-    :elisp/plist->map
-    (s/multi-spec straight-recipe-type :type))))
+   :props :straight.recipe/props-asdf))
 
 
 #_(defn parse-doom-package [p*]
@@ -3127,19 +3123,30 @@ Extremely WIP, basically just a scratchpad
        {:package/deactivated? true}))))
 
 
+(s/def :doom.package/name symbol?)
 (s/def :doom.package/type #{core local built-in virtual}) ; Depending on where I'm doing "checking for stuff I explicitly don't support" either remove local/built-in/(maybe)virtual here or check for them elsewhere
-(s/def :doom.package/recipe :straight/recipe) ; perhaps minus the straight recipe :name
+(s/def :doom.package/recipe :straight.recipe/props-asdf)
 (s/def :doom.package/disable :elisp/t)
 (s/def :doom.package/ignore :elisp/t)
 (s/def :doom.package/pin :git/sha)
 ;; TODO nb: not speccing :modules (for now?)
 
+(s/def :doom.package/props
+  (s/schema {:type :doom.package/type
+             :recipe :doom.package/recipe
+             :disable :doom.package/disable
+             :ignore :doom.package/ignore
+             :pin :doom.package/pin}))
+
 (s/def :doom/package
-  (s/schema [:doom.package/type
-             :doom.package/recipe
-             :doom.package/disable
-             :doom.package/ignore
-             :doom.package/pin]))
+  (s/cat
+   :name :doom.package/name
+   :props
+   (s/&
+    (s/* :elisp/form)
+    #(even? (count %))
+    :elisp/plist->map
+    :doom.package/props)))
 
 
 #_(defn parse-doom-packages []
@@ -3149,20 +3156,6 @@ Extremely WIP, basically just a scratchpad
     ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
     (remove #(= (:package/name %) "straight") $)
     (remove :package/deactivated? $)))
-
-(s/def :my/packages
-  (s/and
-   (s/conformer edn/read-string)
-   (s/coll-of :doom/package)
-   ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
-   ;; (remove :doom.package/deactivated?)
-   ;; TODO donno if I'm doing this yet
-   ;; (remove #(= (:package/name %) "straight"))
-   ))
-
-;; (s/conform :my/packages (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el"))
-
-
 
 
 
@@ -3225,15 +3218,15 @@ Extremely WIP, basically just a scratchpad
 
 (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
 
-(defn test []
-  (let [text (-> my-doom-packages-test
+(defn test-packages []
+  (let [data (-> my-doom-packages-test
                  slurp
                  edn/read-string)]
-    ;; (s/assert (s/coll-of :doom/package) text)
-
+    (s/explain (s/coll-of :doom/package) data)
+    (s/conform (s/coll-of :doom/package) data)
     ))
 
-;; (test)
+;; (test-packages)
 
 
 
