@@ -2662,10 +2662,18 @@ Extremely WIP, basically just a scratchpad
   any?)
 
 
+
+(s/def ::str->edn (s/conformer edn/read-string)) ; TODO donno if I want to use this or just do it in clojure code (is that more idiomatic then writing a spec/conformer for everything?)
+
+
 (s/def :char/blank #{\space \tab})
 ;; (s/def :char/newline #{\newline}) ; TODO remvoe if not needed
 
 (s/def ::text->lines (s/conformer str/split-lines)) ; TODO donno if I want to use this or just do it in clojure code (is that more idiomatic then writing a spec/conformer for everything?)
+
+(s/def ::str->chars (s/conformer seq))
+(s/def ::chars->str (s/conformer (partial apply str)))
+
 
 
 ;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
@@ -2686,9 +2694,6 @@ Extremely WIP, basically just a scratchpad
 (s/def :elisp/list->cdr (s/conformer next)) ; TODO remove if not needed
 (s/def :elisp/plist->map (s/conformer (partial apply hash-map))) ; TODO remove if not needed
 (s/def :elisp/nil-or-non-nil :elisp/form) ; TODO think this (perhaps just the name) through more?
-
-
-(s/def ::str->edn (s/conformer edn/read-string)) ; TODO donno if I want to use this or just do it in clojure code (is that more idiomatic then writing a spec/conformer for everything?)
 
 
 (s/def :epkg.dep/name symbol?)
@@ -2722,28 +2727,40 @@ Extremely WIP, basically just a scratchpad
 
 ;; TODO ideally do this better / more flexibly / maybe faster
 (s/def :epkg.simple/req-header-name
-  (s/& (s/+ any?) #(= (seq "Package-Requires:") %)))
+  (s/&
+   (s/+ char?)
+   ::chars->str
+   #(= "Package-Requires:" %))) ; TODO (if keeping things this way) could this just be a literal set predicate?
 
-;; TODO "elegance": maybe re-conform matches to strings here. Maybe make spec that wraps such string-regex operations with the necessary `seq`/`apply-str` at the beginning/end.
 (s/def :epkg.simple/req-header-line
   (s/and
-   (s/conformer seq)
-   (s/cat :_comment (s/+ #{\;})
-          :_ws (s/* :char/blank)
+   ::str->chars
+   (s/cat :_comment (s/&
+                     (s/+ #{\;})
+                     ::chars->str)
+          :_ws (s/&
+                (s/* :char/blank)
+                ::chars->str)
           :_req-header :epkg.simple/req-header
-          :_ws2 (s/* :char/blank)
-          :deps (s/* char?))))
+          :_ws2 (s/&
+                 (s/* :char/blank)
+                 ::chars->str)
+          :deps (s/&
+                 (s/* char?)
+                 ::chars->str
+                 ::str->edn
+                 :epkg/deps))))
 
 (s/def :epkg.simple/reqs
   (s/and
    ::text->lines
    (s-filter :epkg.simple/req-header-line)
+   ;; TODO spec that there should be exactly :count 1?
    (s/conformer first)
    ;; TODO what was I trying here?
    ;; (s/conformer (fn [xs]
    ;;                (or (first xs) :clojure.alpha.spec/invalid)))
-   (s/conformer #(->> % :deps (apply str) edn/read-string))
-   :epkg/deps))
+   ))
 
 ;; Testing
 ;; (def test-pkgrequires-line ";; Package-Requires: ((emacs \"24.1\") (cl-lib \"0.5\"))")
@@ -2789,7 +2806,8 @@ Extremely WIP, basically just a scratchpad
               (if (file-exists? f)
                 (-> f slurp edn/read-string)
                 :clojure.alpha.spec/invalid))))
-         :epkg.simple/reqs)))
+         :epkg.simple/reqs
+         (s/conformer :deps))))
 
 (defn epkg-dependencies [name dir]
   (let [deps
@@ -2815,10 +2833,14 @@ Extremely WIP, basically just a scratchpad
 
 (s/def ::forge-repo
   (s/and
-   (s/conformer seq)
-   (s/cat :username (s/+ char?)
+   ::str->chars
+   (s/cat :username (s/&
+                     (s/+ char?)
+                     ::chars->str)
           :slash #{\/}
-          :repo (s/+ char?))))
+          :repo (s/&
+                 (s/+ char?)
+                 ::chars->str))))
 
 (s/def ::glob string?)
 
