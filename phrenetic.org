@@ -2665,7 +2665,7 @@ Extremely WIP, basically just a scratchpad
 (s/def :char/blank #{\space \tab})
 ;; (s/def :char/newline #{\newline}) ; TODO remvoe if not needed
 
-(s/def :text/lines (s/conformer str/split-lines))
+(s/def ::text->lines (s/conformer str/split-lines)) ; TODO donno if I want to use this or just do it in clojure code (is that more idiomatic then writing a spec/conformer for everything?)
 
 
 ;; TODO would this be better / more flexible if I made it check validity (`valid?`) and then did conforming in a separate step?
@@ -2693,8 +2693,11 @@ Extremely WIP, basically just a scratchpad
          :cdr cdr-spec))
 (s/def :elisp/list->car (s/conformer first)) ; TODO remove if not needed
 (s/def :elisp/list->cdr (s/conformer next)) ; TODO remove if not needed
-(s/def :elisp/plist->map (s/conformer (partial apply hash-map)))
+(s/def :elisp/plist->map (s/conformer (partial apply hash-map))) ; TODO remove if not needed
 (s/def :elisp/nil-or-non-nil :elisp/form) ; TODO think this (perhaps just the name) through more?
+
+
+(s/def ::str->edn (s/conformer edn/read-string)) ; TODO donno if I want to use this or just do it in clojure code (is that more idiomatic then writing a spec/conformer for everything?)
 
 
 (s/def :epkg.dep/name symbol?)
@@ -2742,7 +2745,7 @@ Extremely WIP, basically just a scratchpad
 
 (s/def :epkg.simple/reqs
   (s/and
-   :text/lines
+   ::text->lines
    (s-filter :epkg.simple/req-header-line)
    (s/conformer first)
    ;; TODO what was I trying here?
@@ -2817,11 +2820,95 @@ Extremely WIP, basically just a scratchpad
 
 
 
+(s/def ::forge-repo
+  (s/and
+   (s/conformer seq)
+   (s/cat :username (s/+ char?)
+          :slash #{\/}
+          :repo (s/+ char?))))
+
+(s/def ::glob string?)
+
+(s/def ::recipe-subdirective
+  (s/alt :subdir string?
+         :exclude #{:exclude}))
+
+(s/def ::recipe-defaults #{:defaults})
+
+
+
+
+; TODO better sha and ref specs
+(s/def :git/sha string?)
+(s/def :git/ref string?)
+
+(s/def :melpa.recipe.files/element
+  (s/alt :glob ::glob
+         :sublist (s/nest
+                   (s/cat :subdirective ::recipe-subdirective
+                          :element (s/+ :melpa.recipe.files/element)))))
+(s/def :melpa.recipe/files
+  (s/cat
+   :defaults (s/? ::recipe-defaults)
+   :elements (s/* :melpa.recipe.files/element)))
+
+(s/def :melpa.recipe/name symbol?)
+(s/def :melpa.recipe/fetcher #{git hg github gitlab})
+(s/def :melpa.recipe.vc/url string?)
+(s/def :melpa.recipe.forge/repo ::forge-repo
+  )
+;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
+(s/def :melpa.recipe.git/commit (s/or :git/sha
+                                      :git/ref))
+(s/def :melpa.recipe.git/branch string?) ; TODO do better spec? I can be a git or hg branch, right?
+;; -- originial position of :melpa.recipe/files before I moved it up --
+;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them (or use `nospec`)? Remember to add them to :melpa.recipe/schema.
+
+(s/def :melpa.recipe/props
+  (s/schema {;; :melpa.recipe/name
+             :fetcher :melpa.recipe/fetcher
+             :files :melpa.recipe/files}))
+
+(s/def :melpa.recipe/vc-props
+  (s/schema {:url :melpa.recipe.vc/url}))
+
+(s/def :melpa.recipe/forge-props
+  (s/schema {:repo :melpa.recipe.forge/repo}))
+
+(s/def :melpa.recipe/git-props
+  (s/schema {:commit :melpa.recipe.git/commit
+             :branch :melpa.recipe.git/branch}))
+
+(defmulti melpa-recipe-fetcher :fetcher)
+
+(defmethod melpa-recipe-fetcher 'git [_]
+  (s/select
+   (s/union :melpa.recipe/props
+            :melpa.recipe/vc-props
+            :melpa.recipe/git-props)
+   [:url]))
+(defmethod melpa-recipe-fetcher 'hg [_]
+  (s/select
+   (s/union :melpa.recipe/props
+            :melpa.recipe/vc-props)
+   [:url]))
+(defmethod melpa-recipe-fetcher 'github [_]
+  (s/select
+   (s/union :melpa.recipe/props
+            :melpa.recipe/forge-props
+            :melpa.recipe/git-props)
+   [:repo]))
+(defmethod melpa-recipe-fetcher 'gitlab [_]
+  (s/select
+   (s/union :melpa.recipe/props
+            :melpa.recipe/forge-props
+            :melpa.recipe/git-props)
+   [:repo]))
+
 #_(defn parse-melpa-recipe [r*]
   (let [r (apply hash-map (rest r*))
         recipe
         (merge
-         {:recipe/flavor :recipe.flavor/melpa} ; TODO putting this here for completion for now, donno if I'll need it
          (let [fetcher (:fetcher r)]
            (condp some #{fetcher}
              #{'git 'hg} {:recipe/vc (case fetcher
@@ -2837,68 +2924,110 @@ Extremely WIP, basically just a scratchpad
     (when-not (empty? recipe)
       recipe)))
 
-; TODO better sha and ref specs
-(s/def :git/sha string?)
-(s/def :git/ref string?)
-
-(s/def :melpa.recipe.files/glob string?)
-(s/def :melpa.recipe.files/subdirective (s/alt :subdir string?
-                                               :exclude #{:exclude}))
-(s/def :melpa.recipe.files/element
-  (s/alt :glob :melpa.recipe.files/glob
-         :sublist (s/nest
-                   (s/cat :subdirective :melpa.recipe.files/subdirective
-                          :element (s/+ :melpa.recipe.files/element)))))
-(s/def :melpa.recipe.files/defaults #{:defaults})
-(s/def :melpa.recipe/files
-  (s/cat
-   :defaults (s/? :melpa.recipe.files/defaults)
-   :elements (s/* :melpa.recipe.files/element)))
-
-(s/def :melpa.recipe/name symbol?)
-(s/def :melpa.recipe/fetcher #{git hg github gitlab})
-(s/def :melpa.recipe.vc/url string?)
-(s/def :melpa.recipe.forge/repo string?)
-;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
-(s/def :melpa.recipe.vc.git/commit (s/or :git/sha
-                                         :git/ref))
-(s/def :melpa.recipe/branch string?) ; TODO do better spec? I can be a git or hg branch, right?
-;; -- originial position of :melpa.recipe/files before I moved it up --
-;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them (or use `nospec`)? Remember to add them to :melpa.recipe/schema.
-
-(s/def :melpa.recipe/props
-  (s/schema {;; :melpa.recipe/name
-             :fetcher :melpa.recipe/fetcher
-             :url :melpa.recipe.vc/url
-             :repo :melpa.recipe.forge/repo
-             :commit :melpa.recipe.vc.git/commit
-             :branch :melpa.recipe/branch
-             :files :melpa.recipe/files}))
-
-(defmulti melpa-recipe-fetcher-type :fetcher)
-
-(defmethod melpa-recipe-fetcher-type 'git [_]
-  (s/select :melpa.recipe/props [:url]))
-(defmethod melpa-recipe-fetcher-type 'hg [_]
-  (s/select :melpa.recipe/props [:url]))
-(defmethod melpa-recipe-fetcher-type 'github [_]
-  (s/select :melpa.recipe/props [:repo]))
-(defmethod melpa-recipe-fetcher-type 'gitlab [_]
-  (s/select :melpa.recipe/props [:repo]))
-
 (s/def :melpa/recipe
   (s/cat
    :name (nospec :melpa.recipe/name)
-   :props (s/*
-           (s/and
-            :elisp/plist->map
-            (s/multi-spec melpa-recipe-fetcher-type :fetcher)))))
+   :props
+   (s/&
+    (s/* :elisp/form)
+    #(even? (count %))
+    :elisp/plist->map
+    (s/multi-spec melpa-recipe-fetcher :fetcher))))
 
 ;; Testing
-(def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
-                                   :fetcher github
-                                   :files ("yasnippet.el" "snippets")))
-(s/conform :melpa/recipe test-melpa-recipe)
+;; (def test-melpa-recipe '(yasnippet :repo "joaotavora/yasnippet"
+;;                                    :fetcher github
+;;                                    :files ("yasnippet.el" "snippets")))
+;; (s/conform :melpa/recipe test-melpa-recipe)
+;; (s/explain-str :melpa/recipe test-melpa-recipe)
+
+
+
+(s/def :straight.recipe-repo/name symbol?)
+
+(s/def :straight.recipe/name symbol?) ; Maybe spec this so I can accept the argument to `straight-use-package` (for other users who use straight): doom doesn't take this just the rest of the recipe plist. Update: also need it for :includes.
+(s/def :straight.recipe/local-repo string?)
+;; TODO maybe some of the sub-stuff in :straight.recipe/files should be `nospec` or have leading keywork underscores.
+;; TODO not doing testing for `list?` as in `elisp-list` here (or melpa recipe files). I might be getting rid of that anyway.
+(s/def :straight.recipe/files
+  (s/*
+   (s/alt :glob ::glob
+          :pair (elisp-pair string? string?)
+          :sublist (s/nest
+                    (s/cat :subdirective ::recipe-subdirective
+                           :elements (s/+ :straight.recipe/files)))
+          :defaults ::recipe-defaults)))
+(s/def :straight.recipe/flavor #{melpa})
+(s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
+(s/def :straight.recipe/pre-build any?) ; TODO
+(s/def :straight.recipe/post-build any?) ; TODO
+(s/def :straight.recipe/type #{git built-in})
+(s/def :straight.recipe/source (s/or :one :straight.recipe-repo/name
+                                     :many (elisp-list :straight.recipe-repo/name)))
+(s/def :straight.recipe/includes (s/or :one :straight.recipe/name
+                                       :many (elisp-list :straight.recipe/name)))
+(s/def :straight.recipe/inherit :elisp/nil-or-non-nil)
+(s/def :straight.recipe.git/host #{nil github gitlab bitbucket})
+(s/def :straight.recipe.git/branch string?)
+(s/def :straight.recipe.git/remote string?)
+(s/def :straight.recipe.git/nonrecursive :elisp/nil-or-non-nil)
+(s/def :straight.recipe.git/fork any?) ; TODO
+(s/def :straight.recipe.git/depth (s/or :full #{full}
+                                        :n integer?))
+(s/def :straight.recipe.git/protocol #{https ssh})
+(s/def :straight.recipe.git/upstream any?) ; TODO
+
+
+(s/def :straight.recipe/props
+  (s/schema {;; :straight.recipe/name
+             :local-repo :straight.recipe/local-repo
+             :files :straight.recipe/files
+             :flavor :straight.recipe/flavor
+             :built :straight.recipe/built
+             :pre-build :straight.recipe/pre-build
+             :post-build :straight.recipe/post-build
+             :type :straight.recipe/type
+             :source :straight.recipe/source
+             :includes :straight.recipe/includes
+             :inherit :straight.recipe/inherit}))
+
+(s/def :straight.recipe/git-props
+  (s/schema {;; :repo :straight.recipe.git/repo
+             :host :straight.recipe.git/host
+             :branch :straight.recipe.git/branch
+             :remote :straight.recipe.git/remote
+             :nonrecursive :straight.recipe.git/nonrecursive
+             :fork :straight.recipe.git/fork
+             :depth :straight.recipe.git/depth
+             :protocol :straight.recipe.git/protocol
+             :upstream :straight.recipe.git/upstream}))
+
+
+(s/def :straight/repository-url string?)
+
+(defmulti straight-recipe-git-host :host)
+
+(defmethod straight-recipe-git-host nil [_]
+  (s/select {:repo :straight/repository-url} [:repo]))
+(defmethod straight-recipe-git-host 'github [_]
+  (s/select {:repo ::forge-repo} [:repo]))
+(defmethod straight-recipe-git-host 'gitlab [_]
+  (s/select {:repo ::forge-repo} [:repo]))
+(defmethod straight-recipe-git-host 'bitbucket [_]
+  (s/select {:repo ::forge-repo} [:repo]))
+
+
+(def straight-default-vc 'git)
+
+(defmulti straight-recipe-type #(get % :type straight-default-vc))
+
+(defmethod straight-recipe-type 'git [_]
+  (s/and
+   (s/union :straight.recipe/props
+            :straight.recipe/git-props)
+   (s/multi-spec straight-recipe-git-host :host)))
+(defmethod straight-recipe-type 'built-in [_]
+  (s/schema {}))
 
 
 #_(let [r (apply hash-map (:recipe p))
@@ -2934,83 +3063,15 @@ Extremely WIP, basically just a scratchpad
       _type _repo _host _branch
       _remote _nonrecursive _fork _depth)
 
-#_(defun straight-vc-git-keywords ()
-  "Return a list of keywords used by the VC backend for Git."
-  '(:repo :host :branch :remote :nonrecursive
-          :upstream :fork :depth :protocol))
-
-
-(s/def :straight.recipe-repo/name symbol?)
-(s/def :straight/username+repo
-  (s/and
-   (s/conformer seq)
-   (s/cat :username (s/+ char?)
-          :slash #{\/}
-          :repo (s/+ char?))))
-(s/def :straight/repository-url string?)
-
-(s/def :straight.recipe/name symbol?) ; Maybe spec this so I can accept the argument to `straight-use-package` (for other users who use straight): doom doesn't take this just the rest of the recipe plist. Update: also need it for :includes.
-(s/def :straight.recipe/local-repo string?)
-;; TODO maybe some of the sub-stuff in :straight.recipe/files should be `nospec` or have leading keywork underscores.
-;; TODO not doing testing for `list?` as in `elisp-list` here (or melpa recipe files). I might be getting rid of that anyway.
-(s/def :straight.recipe/files
-  (s/*
-   (s/alt :glob :melpa.recipe.files/glob
-          :pair (elisp-pair string? string?)
-          :sublist (s/nest
-                    (s/cat :subdirective :melpa.recipe.files/subdirective
-                           :elements (s/+ :straight.recipe/files)))
-          :defaults :melpa.recipe.files/defaults)))
-(s/def :straight.recipe/flavor #{melpa})
-(s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
-(s/def :straight.recipe/pre-build any?) ; TODO
-(s/def :straight.recipe/post-build any?) ; TODO
-(s/def :straight.recipe/type #{git built-in})
-(s/def :straight.recipe/source (s/or :one :straight.recipe-repo/name
-                                     :many (elisp-list :straight.recipe-repo/name)))
-(s/def :straight.recipe/includes (s/or :one :straight.recipe/name
-                                       :many (elisp-list :straight.recipe/name)))
-(s/def :straight.recipe/inherit :elisp/nil-or-non-nil)
-;; TODO ick, the value straight.recipe.vc/repo can have is conditional on :host, which is a pattern clojure spec (I think) doesn't support
-(s/def :straight.recipe.git/repo (s/or :u+r :straight/username+repo
-                                       :url :straight/repository-url))
-(s/def :straight.recipe.git/host #{nil github gitlab bitbucket})
-(s/def :straight.recipe.git/branch string?)
-(s/def :straight.recipe.git/remote string?)
-(s/def :straight.recipe.git/nonrecursive :elisp/nil-or-non-nil)
-(s/def :straight.recipe.git/fork any?) ; TODO
-(s/def :straight.recipe.git/depth (s/or :full #{full}
-                                        :n integer?))
-(s/def :straight.recipe.git/protocol #{https ssh})
-(s/def :straight.recipe.git/upstream any?) ; TODO
-
-(s/def :straight.recipe/schema
-  (s/schema [:straight.recipe/name
-             :straight.recipe/local-repo
-             :straight.recipe/files
-             :straight.recipe/flavor
-             :straight.recipe/built
-             :straight.recipe/pre-build
-             :straight.recipe/post-build
-             :straight.recipe/type
-             :straight.recipe/source
-             :straight.recipe/includes
-             :straight.recipe/inherit
-             :straight.recipe.git/repo
-             :straight.recipe.git/host
-             :straight.recipe.git/branch
-             :straight.recipe.git/remote
-             :straight.recipe.git/nonrecursive
-             :straight.recipe.git/fork
-             :straight.recipe.git/depth
-             :straight.recipe.git/protocol
-             :straight.recipe.git/upstream]))
-
 (s/def :straight/recipe
-  (s/and-
-   :straight.recipe/schema
-   ;; TODO do the repo-host constraint described here: https://github.com/raxod502/straight.el#git-backend
-   ))
+  (s/cat
+   :name (nospec :straight.recipe/name)
+   :props
+   (s/&
+    (s/* :elisp/form)
+    #(even? (count %))
+    :elisp/plist->map
+    (s/multi-spec straight-recipe-type :type))))
 
 
 #_(defn parse-doom-package [p*]
@@ -3030,6 +3091,7 @@ Extremely WIP, basically just a scratchpad
      ;; TODO might need :build and :local-repo for donnager
      ;; - update: local-repo is /also/ the dir name that straight assigns for a package (if it's not a full path). I can probably ignore this use case.
      ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
+     ;; - :melpa/recipe shouldn't have a flavor, right? Just straight recipes?
      ;; TODO at end: ensure an empty map isn't added / the map doesn't have any empty values
      (let [r (apply hash-map (:recipe p))
            recipe
@@ -3182,6 +3244,7 @@ Extremely WIP, basically just a scratchpad
 ;; TODO Ideally I think I want to grab any pertinent straight settings from Doom Emacs
 ;; By serializing them "in the same run" as when I grab e.g `doom-packages`.
 ;; - default protocol, allow inheritance, the recipe repos Doom sets up, etc
+;; - straight-default-vc
 (def defaults {:recipe/protocol "https"})
 ;; maybe?:
 ;; :files '("*.el" "*.el.in" "dir"
@@ -3208,6 +3271,8 @@ Extremely WIP, basically just a scratchpad
 ;; - also see the github melpa readme: "For multi-file packages, the file <NAME>-pkg.el is automatically generated..."
 ;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
+;; TODO consider `straight--convert-recipe'
+;; TODO consider how straight.el recipe inheritance works`
 
 ;; TODO hack
 ;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
