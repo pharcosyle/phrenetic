@@ -3238,6 +3238,8 @@ Extremely WIP, basically just a scratchpad
 (def get-origin-data (partial sh-call :guix/get-origin-data))
 
 
+;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el")
+;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-edited.el")
 (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
 
 (defn test-packages []
@@ -3245,10 +3247,7 @@ Extremely WIP, basically just a scratchpad
                  slurp
                  edn/read-string)]
     (s/explain (s/coll-of :doom/package) data)
-    (s/conform (s/coll-of :doom/package) data)
-    ))
-
-;; (test-packages)
+    (s/conform (s/coll-of :doom/package) data)))
 
 
 
@@ -3287,7 +3286,10 @@ Extremely WIP, basically just a scratchpad
 ;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
 ;; TODO consider `straight--convert-recipe'
-;; TODO consider how straight.el recipe inheritance works`
+;; TODO consider straight-built-in-pseudo-packages
+;; esp. in straight--convert-recipe
+;; TODO consider how straight.el recipe inheritance works
+;; esp. in straight--convert-recipe
 
 ;; TODO hack
 ;; Wait to do this until the end when I have a concrete idea of all the stuff I'll have to read (doom packages, melpa recipes...) and how I want to do it.
@@ -3348,22 +3350,32 @@ Extremely WIP, basically just a scratchpad
             [guile.guix.git :refer [latest-repository-commit]]
             [guile.guix.hash :refer [file-hash*]]
             [guile.guix.store :refer [with-store]]
-            [guile.srfi.srfi-11 :refer [let-values]]))
+            [guile.srfi.srfi-11 :as srfi-11]))
 
 (defn- ->pair [a b]
   (guile/cons a b))
 
+(defmacro let-values [bindings & body]
+  (let [bindings*
+        (->> bindings
+             (partition 2)
+             (map (fn [[names expr]]
+                    (list
+                     (apply list names) expr))))]
+    `(srfi-11/let-values ~bindings*
+       ~@body)))
+
 (defn- download-git-repo! [url [ref' ref''] recursive?]
   (let-values
-   (((dir commit)
-     (with-store store
-       (latest-repository-commit store url
-                                 :ref (->pair (symbol ref') ref'')
-                                 :recursive? recursive?))))
+   [[dir commit]
+    (with-store store
+      (latest-repository-commit store url
+                                :ref (->pair (symbol ref') ref'')
+                                :recursive? recursive?))]
    {:dir dir :commit commit}))
 
-;; (println
-;;  (download-git-repo! "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
+(println
+ (download-git-repo! "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
 ;; (println
 ;;  (download-git-repo! "https://github.com/minad/consult.git" '()))
 
