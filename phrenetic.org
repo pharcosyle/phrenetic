@@ -2654,6 +2654,7 @@ Extremely WIP, basically just a scratchpad
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
+;; At end: just maybe try doing this, slurp, any anything else impure as some sort of "coeffects"
 (defn- file-exists? [f]
   (.exists (io/file f)))
 
@@ -2834,13 +2835,13 @@ Extremely WIP, basically just a scratchpad
 (s/def ::forge-repo
   (s/and
    ::str->chars
-   (s/cat :username (s/&
-                     (s/+ char?)
-                     ::chars->str)
+   (s/cat :user-name (s/&
+                      (s/+ char?)
+                      ::chars->str)
           :slash #{\/}
-          :repo (s/&
-                 (s/+ char?)
-                 ::chars->str))))
+          :repo-name (s/&
+                      (s/+ char?)
+                      ::chars->str))))
 
 (s/def ::glob string?)
 
@@ -2870,8 +2871,7 @@ Extremely WIP, basically just a scratchpad
 (s/def :melpa.recipe/name symbol?)
 (s/def :melpa.recipe/fetcher #{git hg github gitlab})
 (s/def :melpa.recipe.vc/url string?)
-(s/def :melpa.recipe.forge/repo ::forge-repo
-  )
+(s/def :melpa.recipe.forge/repo ::forge-repo)
 ;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
 (s/def :melpa.recipe.git/commit (s/or :git/sha
                                       :git/ref))
@@ -2919,25 +2919,6 @@ Extremely WIP, basically just a scratchpad
             :melpa.recipe/forge-props
             :melpa.recipe/git-props)
    [:repo]))
-
-#_(defn parse-melpa-recipe [r*]
-  (let [r (apply hash-map (rest r*))
-        recipe
-        (merge
-         (let [fetcher (:fetcher r)]
-           (condp some #{fetcher}
-             #{'git 'hg} {:recipe/vc (case fetcher
-                                       git :recipe.vc/git
-                                       hg :recipe.vc/hg)
-                          :recipe/repo (:url r)}
-             #{'github 'gitlab} {:recipe/vc :recipe.vc/git
-                                 :recipe/host fetcher
-                                 :recipe/repo (:repo r)}))
-         (select-and-rename-keys
-          r {:branch :recipe/branch
-             :files :recipe/files}))]
-    (when-not (empty? recipe)
-      recipe)))
 
 (s/def :melpa/recipe
   (s/cat
@@ -3181,6 +3162,32 @@ Extremely WIP, basically just a scratchpad
 
 
 
+(s/def ::todo any?)
+
+;; (s/def :fex.repo/user-name ::todo)
+;; (s/def :fex.repo/repo-name ::todo)
+;; (s/def :fex/repo
+;;   (s/schema [:fex.repo/user-name
+;;              :fex.repo/repo-name]))
+
+(s/def :fex.package/url ::todo)
+;; (s/def :fex.package/forge #{:forge/github
+;;                             :forge/gitlab
+;;                             ;; :forge/bitbucket
+;;                             })
+;; (s/def :fex.package.forge/repo :fex/repo) ; TODO maybe just use :fex/repo or ::forge-repo (and make the current ::forge-repo be ::forge-repo-str or something)
+(s/def :fex.package/branch ::todo)
+(s/def :fex.package/files :melpa.recipe/files) ; TODO This is "inheritance", maybe make this a "shared" spec like ::recipe-defaults or just allow :melpa.recipe/files as a key in :fex/package (maybe even rename it to ::melpa-style-files or something)
+
+(s/def :fex/package
+  (s/schema [:fex.package/url
+             ;; :fex.package/forge
+             ;; :fex.package.forge/repo
+             :fex.package/branch
+             :fex.package/files]))
+
+
+
 
 
 
@@ -3203,25 +3210,95 @@ Extremely WIP, basically just a scratchpad
 
 ;; Archives
 (defkmultis
-  has-recipe
+  ;; has-recipe
   get-recipe)
 
-(defn melpa-recipe [p]
+(defn melpa-recipe-filename [p]
   (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" "/" p))
+
+(def ^:private forge-domains
+  {'github "github.com"
+   'gitlab "gitlab.com"
+   ;; 'bitbucket "bitbucket.com"
+   })
+
+(defn forge-repo->url [forge user-name repo-name]
+  (str "https://" (get forge-domains forge) "/" user-name "/" repo-name ".git"))
+
+(require '[clojure.set :refer [rename-keys]])
+(defn select-and-rename-keys [m kmap]
+  (as-> m $
+    (select-keys $ (keys kmap))
+    (rename-keys $ kmap)))
 
 (defkmethods
   :archive/melpa
-  (has-recipe [p] (file-exists? (melpa-recipe p)))
-  ;; Uncomment once I do `parse-melpa-recipe`
-  ;; (get-recipe [p] (parse-melpa-recipe
-  ;;                  (edn/read-string
-  ;;                   (slurp (melpa-recipe p)))))
-  )
+  ;; (has-recipe [p] (file-exists? (melpa-recipe-filename p)))
+  (get-recipe [p] (let [f (melpa-recipe-filename p)]
+                    (when (file-exists? f)
+                      (let [text (slurp f)
+                            parsed
+                            (s/conform (s/and
+                                        ::str->edn
+                                        :melpa/recipe
+                                        (s/conformer :props))
+                                       text)]
+                        ;; TODO check that `parsed` is not invalid?
+                        ;; TODO "supported"-ness: this might be the place to check that the melpa recipe fetcher isn't 'hg. Alternatively, or perhaps preferably (it would match straight's behavior) just report there's no package if the fetcher is 'hg (or isn't 'git, 'github, or 'gitlab)
+                        ;; TODO additional things straight does for this archive: adds -pkg.el to :files and sets flavor to melpa. Donno if I need these. There are other todos/notes on these already
+                        (merge
+                         {:fex.package/url (let [fetcher (:fetcher parsed)]
+                                             (condp some #{fetcher}
+                                               #{'git} (:url parsed)
+                                               #{'github 'gitlab} (let [repo (:reop parsed)]
+                                                                    (forge-repo->url
+                                                                     fetcher
+                                                                     (:user-name repo)
+                                                                     (:repo-name repo)))))}
+                         (select-and-rename-keys
+                          parsed {:branch :fex.package/branch
+                                  :files :fex.package/files})
+                         ;; TODO not using, remove
+                         ;; (when-let [files (:files parsed)]
+                         ;;   {:fex.package/files (s/unform :melpa.recipe/files files)})
+                         ))))))
+
+;; Testing
+(get-recipe :archive/melpa "yasnippet")
+
+(defn gnu-elpa-mirror-recipe-filename [p]
+  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/gnu-elpa-mirror" "/" p))
+
+(defkmethods
+  :archive/gnu-elpa-mirror
+  (get-recipe [p] (let [f (gnu-elpa-mirror-recipe-filename p)]
+                    ;; TODO straight checks against straight-recipes-gnu-elpa-ignored-packages for this archive, I might need to do that too. There are other notes on this already.
+                    (when (file-exists? f)
+                      {:fex.package/url (forge-repo->url
+                                         (symbol :github) "emacs-straight" p)
+                       :fex.package/files {:elements [[:glob "*"]]}})))) ; TODO straight also has ~(:exclude ".git")~ here but I don't think I need that.
 
 ;; TODO probably add emacsmirror, etc archives but make all of the methods throw an exception stating that they're not implemented "yet".
+;; (def archive-priority [:archive/melpa
+;;                        :archive/gnu-elpa-mirror])
 
-(def archive-priority [:archive/melpa
-                       :archive/elpa])
+;; TODO maybe a way to get these from Doom programatically is to advise `straight-use-recipes` but then I'd have to run `doom--ensure-straight` as well
+;; (def doom-recipe-repos
+;;   '((org-elpa :local-repo nil)
+;;     (melpa              :type git :host github
+;;                         :repo "melpa/melpa"
+;;                         :build nil)
+;;     (gnu-elpa-mirror    :type git :host github
+;;                         :repo "emacs-straight/gnu-elpa-mirror"
+;;                         :build nil)
+;;     (el-get             :type git :host github
+;;                         :repo "dimitri/el-get"
+;;                         :build nil)
+;;     (emacsmirror-mirror :type git :host github
+;;                         :repo "emacs-straight/emacsmirror-mirror"
+;;                         :build nil)))
+;; (def doom-straight-recipe-repositories
+;;   '(org-elpa melpa gnu-elpa-mirror el-get emacsmirror-mirror))
 
 
 
@@ -3256,9 +3333,10 @@ Extremely WIP, basically just a scratchpad
 (def straight-allow-recipe-inheritance? true)
 
 ;; TODO Ideally I think I want to grab any pertinent straight settings from Doom Emacs
-;; By serializing them "in the same run" as when I grab e.g `doom-packages`.
+;; By serializing them "in the same run" as when I grab e.g `doom-packages`. Update: but wait I won't have straight installed when I do this, perhaps scrape the straight code for sexps or maybe it'll be enough to just get the ones that Doom sets itself (see core-packages.el line 78-97)
 ;; - default protocol, allow inheritance, the recipe repos Doom sets up, etc
 ;; - straight-default-vc
+;; - look through straight's ~defcustom~s
 (def defaults {:recipe/protocol "https"})
 ;; maybe?:
 ;; :files '("*.el" "*.el.in" "dir"
@@ -3272,17 +3350,18 @@ Extremely WIP, basically just a scratchpad
 ;;   - even if the guix git repositories cache thing is untenable maybe there's some other cache I could write the repos or the generated packages-with-hashes to, even just ~./cache. I'd like to not have to manage a generated packages file if I don't have to
 ;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
 ;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
-;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'?
+;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'? What about `straight-recipes-gnu-elpa-ignored-packages'? What about straight--package-built-in-p and package--builtins (read its doc)?
 ;; - Straight claims to be able to "deal with built-in packages" even without this variable. How? Something like hlissner does when :built-in is set to 'prefer? Use one
 ;;   of these approaches instead of making a (brittle) list of built-in pseudo packages?
 ;; - Remember, sometimes even if a package is built-in it should still be installed (like org)
 ;; - unrelated: are there any built-in dependencies with newer upstream/external versions? Do I want them?
 ;;   Perhaps not even proper versions just newer commits in a git repo
-;; - what's `straight-recipes-gnu-elpa-ignored-packages' all about?
 ;; TODO always include *pkg.el like straight.el::3168 says?
 ;; Is that just about making sure that dependencies get resolved? It says "linked over" though. But then why wouldn't the other `straight-recipes-REPO-retrieve' methods have it? For
 ;; the elpa one at least it could be because it includes everything (=:files "*"=)
 ;; - also see the github melpa readme: "For multi-file packages, the file <NAME>-pkg.el is automatically generated..."
+;; - update: shit is the /built/ package (after the :files directive has been "applied", among other things) used for determining dependencies? That's the way straight does it, I was just going to use the "raw" cloned repo to find dependencies. Note that e.g. ghub, magit-secion have their -pkg.el files in a subfolder so assuming -pkg.el lives in the root of the unbuilt repo isn't going to work the way I have it now. Conceivably the same could be true of a regular packagename.el file: it could be in a subdirectory.
+;;   - I'll probably have to build the package before I get dependencies like straight does. Is there anything else about building the package, besides doing the :files copying/linking, that could affect the packagename.el and packagename-pkg.el files and thus dependency resolution?
 ;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
 ;; TODO consider `straight--convert-recipe'
@@ -3374,8 +3453,8 @@ Extremely WIP, basically just a scratchpad
                                 :recursive? recursive?))]
    {:dir dir :commit commit}))
 
-(println
- (download-git-repo! "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
+;; (println
+;;  (download-git-repo! "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
 ;; (println
 ;;  (download-git-repo! "https://github.com/minad/consult.git" '()))
 
