@@ -1390,7 +1390,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
     (with-findable-C-source $)
     (with-zstd $)))
 #+end_src
-****** With Emacs latest :version:
+****** Emacs latest :version:
 #+begin_src scheme
 (define-public (with-emacs-latest emacs)
   (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
@@ -1409,12 +1409,12 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
            "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
          (file-name (git-file-name (package-name emacs) version)))))))
 #+end_src
-****** With native comp
+****** Native comp
 #+begin_src scheme
 (define-public (with-native-comp emacs)
   (emacs-with-native-comp emacs gcc-11 'full-aot))
 #+end_src
-****** With findable C source
+****** Findable C source
 #+begin_src scheme
 (define-public (with-findable-C-source emacs)
   (package
@@ -1429,7 +1429,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                   (("\\(expand-file-name \"src\" source-directory\\)")
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 #+end_src
-****** With =zstd=
+****** =zstd=
 - REVIEW Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 #+begin_src scheme
 (define-public (with-zstd emacs)
