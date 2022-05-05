@@ -2912,7 +2912,7 @@ Extremely WIP, basically just a scratchpad
   (s/alt :glob ::glob
          :sublist (s/nest
                    (s/cat :subdirective ::recipe-subdirective
-                          :element (s/+ :melpa.recipe.files/element)))))
+                          :elements (s/+ :melpa.recipe.files/element)))))
 (s/def :melpa.recipe/files
   (s/cat
    :defaults (s/? ::recipe-defaults)
@@ -3263,16 +3263,13 @@ Extremely WIP, basically just a scratchpad
   ;; has-recipe
   get-recipe)
 
-(defn melpa-recipe-filename [p]
-  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" "/" p))
-
 (def ^:private forge-domains
   {'github "github.com"
    'gitlab "gitlab.com"
    ;; 'bitbucket "bitbucket.com"
    })
 
-(defn forge-repo->url [forge user-name repo-name]
+(defn forge-repo-url [forge user-name repo-name]
   (str "https://" (get forge-domains forge) "/" user-name "/" repo-name ".git"))
 
 (require '[clojure.set :refer [rename-keys]])
@@ -3280,6 +3277,22 @@ Extremely WIP, basically just a scratchpad
   (as-> m $
     (select-keys $ (keys kmap))
     (rename-keys $ kmap)))
+
+
+(defn gnu-elpa-mirror-recipe-filename [p]
+  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/gnu-elpa-mirror" "/" p))
+
+(defkmethods
+  :archive/gnu-elpa-mirror
+  (get-recipe [p] (let [f (gnu-elpa-mirror-recipe-filename p)]
+                    ;; TODO straight checks against straight-recipes-gnu-elpa-ignored-packages for this archive, I might need to do that too. There are other notes on this already.
+                    (when (file-exists? f)
+                      {:fex.package/url (forge-repo-url
+                                         (symbol :github) "emacs-straight" p)
+                       :fex.package/files {:elements [[:glob "*"]]}})))) ; TODO straight also has ~(:exclude ".git")~ here but I don't think I need that.
+
+(defn melpa-recipe-filename [p]
+  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/melpa/recipes" "/" p))
 
 (defkmethods
   :archive/melpa
@@ -3301,7 +3314,7 @@ Extremely WIP, basically just a scratchpad
                                              (condp some #{fetcher}
                                                #{'git} (:url parsed)
                                                #{'github 'gitlab} (let [repo (:reop parsed)]
-                                                                    (forge-repo->url
+                                                                    (forge-repo-url
                                                                      fetcher
                                                                      (:user-name repo)
                                                                      (:repo-name repo)))))}
@@ -3314,22 +3327,29 @@ Extremely WIP, basically just a scratchpad
                          ))))))
 
 ;; Testing
-(get-recipe :archive/melpa "yasnippet")
+;; (get-recipe :archive/melpa "yasnippet")
 
-(defn gnu-elpa-mirror-recipe-filename [p]
-  (str "/home/pharcosyle/.local/var/lib/doom-local/straight/repos/gnu-elpa-mirror" "/" p))
-
+;; TODO I don't think the lisp/* bits are necessary since these already have :defaults but for now I've copied the :files over just like they are in straight.
 (defkmethods
-  :archive/gnu-elpa-mirror
-  (get-recipe [p] (let [f (gnu-elpa-mirror-recipe-filename p)]
-                    ;; TODO straight checks against straight-recipes-gnu-elpa-ignored-packages for this archive, I might need to do that too. There are other notes on this already.
-                    (when (file-exists? f)
-                      {:fex.package/url (forge-repo->url
-                                         (symbol :github) "emacs-straight" p)
-                       :fex.package/files {:elements [[:glob "*"]]}})))) ; TODO straight also has ~(:exclude ".git")~ here but I don't think I need that.
+  :archive/org-elpa
+  (get-recipe [p] (case p
+                    "org"
+                    {:fex.package/url "https://git.savannah.gnu.org/git/emacs/org-mode.git"
+                     :fex.package/files {:defaults :defaults
+                                         :elements [[:glob "lisp/*.el"]
+                                                    [:sublist
+                                                     {:subdirective [:subdir "etc/styles/"]
+                                                      :elements [[:glob "etc/styles/*"]]}]]}}
+                    "org-contrib"
+                    {:fex.package/url "https://git.sr.ht/~bzg/org-contrib"
+                     :fex.package/files {:defaults :defaults
+                                         :elements [[:glob "lisp/*.el"]]}}
+                    nil)))
+
 
 ;; TODO probably add emacsmirror, etc archives but make all of the methods throw an exception stating that they're not implemented "yet".
-;; (def archive-priority [:archive/melpa
+;; (def archive-priority [:archive/org-elpa
+;;                        :archive/melpa
 ;;                        :archive/gnu-elpa-mirror])
 
 ;; TODO maybe a way to get these from Doom programatically is to advise `straight-use-recipes` but then I'd have to run `doom--ensure-straight` as well
@@ -3412,8 +3432,9 @@ Extremely WIP, basically just a scratchpad
 ;; - also see the github melpa readme: "For multi-file packages, the file <NAME>-pkg.el is automatically generated..."
 ;; - update: shit is the /built/ package (after the :files directive has been "applied", among other things) used for determining dependencies? That's the way straight does it, I was just going to use the "raw" cloned repo to find dependencies. Note that e.g. ghub, magit-secion have their -pkg.el files in a subfolder so assuming -pkg.el lives in the root of the unbuilt repo isn't going to work the way I have it now. Conceivably the same could be true of a regular packagename.el file: it could be in a subdirectory.
 ;;   - I'll probably have to build the package before I get dependencies like straight does. Is there anything else about building the package, besides doing the :files copying/linking, that could affect the packagename.el and packagename-pkg.el files and thus dependency resolution?
-;; TODO do I actually need :include / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
+;; TODO do I actually need :includes / consider the org-elpa pseudo repository (look at straight-recipes-org-elpa-retrieve in particular)
 ;; I think the Doom package declarations of org/org-contrib are inheriting from org-elpa and all that stuff it does with :includes and maybe other stuff /does/ matter?
+;; - how does Guix handle org? One package, multiple?
 ;; TODO consider `straight--convert-recipe'
 ;; TODO consider straight-built-in-pseudo-packages
 ;; esp. in straight--convert-recipe
