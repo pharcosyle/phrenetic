@@ -1367,13 +1367,14 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 :header-args+: :tangle (meta-in-dir "emacs.scm")
 :END:
 - REVIEW Emacs 28 was released recently so Guix upstream emacs packages will probably be updated soon: review references to ~emacs-next~ and ~emacs-next-pgtk~, check flatwhatson's channel to see how it changes in response.
+  - update: watch the =emacs-28= guix branch. I've updated this code in accordance with it up through d25054f. Still need to see how flatwhatson responds.
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
-  #:use-module ((gnu packages emacs) #:select (emacs-next emacs-next-pgtk))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11))
   #:export (emacs-fully-loaded))
 
@@ -1383,17 +1384,15 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+begin_src scheme
 (define* (emacs-fully-loaded #:key pgtk?)
   (as-> (if pgtk?
-            emacs-next-pgtk
-            emacs-next) $
+            (with-emacs-latest emacs-next-pgtk)
+            emacs) $
     (with-native-comp $)
-    (if pgtk?
-        (with-emacs-29 $) $)
     (with-findable-C-source $)
     (with-zstd $)))
 #+end_src
-****** With Emacs 29 :version:
+****** With Emacs latest :version:
 #+begin_src scheme
-(define-public (with-emacs-29 emacs)
+(define-public (with-emacs-latest emacs)
   (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
         (revision "0"))
     (package
