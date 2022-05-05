@@ -1376,6 +1376,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-11))
+  #:use-module ((srfi srfi-1) #:select (take drop))
+  #:use-module (mendicant utils)
   #:export (emacs-fully-loaded))
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
@@ -1388,7 +1390,9 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
             emacs) $
     (with-native-comp $)
     (with-findable-C-source $)
-    (with-zstd $)))
+    (with-zstd $)
+    (with-tramp-path-fix $)
+    (with-path-integration-improvements $)))
 #+end_src
 ****** Emacs latest :version:
 #+begin_src scheme
@@ -1438,6 +1442,58 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
     (propagated-inputs
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
+#+end_src
+****** Tramp path fix
+The ~tramp-remote-path~ definition was moved in [[https://github.com/emacs-mirror/emacs/commit/695f6792f1524a446d276bf5c5e53bbb4c200909][Remove ;;;###tramp-autoload cookie from Tramp defcustoms (Bug#47063) · emacs-...]].
+This fix should be upstreamed.
+#+begin_src scheme
+;; FIXME I haven't tested this /at all/. I didn't bother yet because I might be rewriting everything in lokke or clojure (and getting rid of mendicant utils).
+;; In particular I don't know if equality between those two lists works.
+(define (with-tramp-path-fix emacs)
+  (package
+    (inherit emacs)
+    (source
+     (origin
+       (inherit (package-source emacs))
+       (snippet
+        (update-list
+         (origin-snippet (package-source emacs))
+         (lambda (x)
+           (and (list? x)
+                (equal? '(substitute* "net/tramp-sh.el")
+                        (take x 2))))
+         (lambda (x)
+           (append '(substitute* "net/tramp.el") (drop x 2)))))))))
+#+end_src
+****** Path integration improvements
+#+begin_src scheme
+(define-public (with-path-integration-improvements emacs)
+  (package
+    (inherit emacs)
+    (source
+     (origin
+       (inherit (package-source emacs))
+       (snippet
+        `(begin
+           ,(origin-snippet (package-source emacs))
+           (let ((wrap-in-quotes (lambda (s)
+                                   (string-append "\"" s "\""))))
+             (with-directory-excursion "lisp"
+               (substitute* "net/tramp.el"
+                 (("\\(tramp-default-remote-path" start-of-list)
+                  (string-join
+                   (cons start-of-list
+                         (map wrap-in-quotes
+                              (list "~/.config/guix/current/bin"
+                                    "~/.guix-home/profile")))
+                   " ")))
+               (substitute* "man.el"
+                 (("\"/usr/local/include\"" last-item)
+                  (string-join
+                   (cons last-item
+                         (wrap-in-quotes
+                          "~/.guix-home/profile/include"))
+                   " ")))))))))))
 #+end_src
 ***** Doom
 #+begin_src scheme
