@@ -2704,7 +2704,7 @@ Extremely WIP, basically just a scratchpad
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-;; At end: just maybe try doing this, slurp, any anything else impure as some sort of "coeffects"
+;; TODO At end: just maybe try doing this, slurp, any anything else impure as some sort of "coeffects"
 (defn- file-exists? [f]
   (.exists (io/file f)))
 
@@ -2925,7 +2925,7 @@ Extremely WIP, basically just a scratchpad
 ;; TODO nb: "commit" is used only once in all of the melpa recipes. Do doom/straight even consider it?
 (s/def :melpa.recipe.git/commit (s/or :git/sha
                                       :git/ref))
-(s/def :melpa.recipe.git/branch string?) ; TODO do better spec? I can be a git or hg branch, right?
+(s/def :melpa.recipe.git/branch string?) ; TODO do better spec? It can be a git or hg branch, right?
 ;; -- originial position of :melpa.recipe/files before I moved it up --
 ;; TODO nb: ignoring :version-regexp and :old-names, I don't care about them, right (straight doesn't seem to)? And I'm excluding from even this validation spec stuff I don't care about, right? Or just maybe spec them but do a `s/select` that doesn't include them (or use `nospec`)? Remember to add them to :melpa.recipe/schema.
 
@@ -3005,7 +3005,7 @@ Extremely WIP, basically just a scratchpad
                            :elements (s/+ :straight.recipe/files)))
           :defaults ::recipe-defaults)))
 (s/def :straight.recipe/flavor #{melpa})
-(s/def :straight.recipe/built any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
+(s/def :straight.recipe/build any?) ; TODO. Had #{nil t}, it would be better to use :elisp/t but set specs take literal, not spec, values
 (s/def :straight.recipe/pre-build any?) ; TODO
 (s/def :straight.recipe/post-build any?) ; TODO
 (s/def :straight.recipe/type #{git built-in})
@@ -3030,7 +3030,7 @@ Extremely WIP, basically just a scratchpad
              :local-repo :straight.recipe/local-repo
              :files :straight.recipe/files
              :flavor :straight.recipe/flavor
-             :built :straight.recipe/built
+             :build :straight.recipe/build
              :pre-build :straight.recipe/pre-build
              :post-build :straight.recipe/post-build
              :type :straight.recipe/type
@@ -3077,39 +3077,6 @@ Extremely WIP, basically just a scratchpad
   (s/schema {}))
 
 
-#_(let [r (apply hash-map (:recipe p))
-      recipe
-      (merge
-       (when-let [type (:type r)]
-         {:recipe/vc (case type
-                       git :recipe.vc/git
-                       built-in :recipe.vc/built-in)})
-       (when-let [flavor (:flavor r)]
-         {:recipe/flavor (case flavor
-                           melpa :recipe.flavor/melpa)})
-       (select-and-rename-keys
-        r {:host :recipe/host
-           :repo :recipe/repo
-           :branch :recipe/branch
-           :files :recipe/files
-           :nonrecursive :recipe.straight/nonrecursive
-           :build :recipe.straight/build
-           :pre-build :recipe.straight/pre-build
-           :post-build :recipe.straight/post-build
-           :local-repo :recipe.straight/local-repo
-           :protocol :recipe.straight/protocol
-           :source :recipe.straight/source
-           :fork :recipe.straight/fork
-           :upstream :recipe.straight/upstream
-           :includes :recipe.straight/includes}))]
-  (when-not (empty? recipe)
-    {:package/recipe recipe}))
-
-#_(&key local-repo _files _flavor
-      _build _pre-build _post-build _includes
-      _type _repo _host _branch
-      _remote _nonrecursive _fork _depth)
-
 (s/def :straight.recipe/props-asdf
   (s/&
    (s/* :elisp/form)
@@ -3117,63 +3084,11 @@ Extremely WIP, basically just a scratchpad
    :elisp/plist->map
    (s/multi-spec straight-recipe-type :type)))
 
+;; TODO I don't think I need this for anything
 (s/def :straight/recipe
   (s/cat
    :name (nospec :straight.recipe/name)
    :props :straight.recipe/props-asdf))
-
-
-#_(defn parse-doom-package [p*]
-  (let [p (apply hash-map (rest p*))]
-    (merge
-     {:package/name (icky (str (first p*)))}
-     (let [type (:type p)]
-       (when (some #{type} ['local 'built-in])
-         {:doom.package/type (case type
-                       local :doom.package.type/local
-                       built-in :doom.package.type/built-in)}))
-     ;; TODO read https://github.com/melpa/melpa#recipe-format
-     ;; TODO read `straight-recipes-melpa-retrieve', particularly the big comment inside
-     ;; TODO pre-build/post-build can take a bunch of forms, handle them or make them unsupported
-     ;; TODO protocol can be "ssh" in straight, handle or make unsupported.
-     ;; - update: I already have a check for it in my "error-reporting" thing below but I should make sure that's it's not an /invalid/ value ("https" is fine if its stated explicitly)
-     ;; TODO might need :build and :local-repo for donnager
-     ;; - update: local-repo is /also/ the dir name that straight assigns for a package (if it's not a full path). I can probably ignore this use case.
-     ;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
-     ;; - :melpa/recipe shouldn't have a flavor, right? Just straight recipes?
-     ;; TODO at end: ensure an empty map isn't added / the map doesn't have any empty values
-     (let [r (apply hash-map (:recipe p))
-           recipe
-           (merge
-            (when-let [type (:type r)]
-              {:recipe/vc (case type
-                            git :recipe.vc/git
-                            built-in :recipe.vc/built-in)})
-            (when-let [flavor (:flavor r)]
-              {:recipe/flavor (case flavor
-                                melpa :recipe.flavor/melpa)})
-            (select-and-rename-keys
-             r {:host :recipe/host
-                :repo :recipe/repo
-                :branch :recipe/branch
-                :files :recipe/files
-                :nonrecursive :recipe.straight/nonrecursive
-                :build :recipe.straight/build
-                :pre-build :recipe.straight/pre-build
-                :post-build :recipe.straight/post-build
-                :local-repo :recipe.straight/local-repo
-                :protocol :recipe.straight/protocol
-                :source :recipe.straight/source
-                :fork :recipe.straight/fork
-                :upstream :recipe.straight/upstream
-                :includes :recipe.straight/includes}))]
-       (when-not (empty? recipe)
-         {:package/recipe recipe}))
-     (select-and-rename-keys
-      p {:pin :doom.package/pin})
-     (when (or (:disable p)
-               (:ignore p))
-       {:package/deactivated? true}))))
 
 
 (s/def :doom.package/name symbol?)
@@ -3227,6 +3142,7 @@ Extremely WIP, basically just a scratchpad
 ;;                             })
 ;; (s/def :fex.package.forge/repo :fex/repo) ; TODO maybe just use :fex/repo or ::forge-repo (and make the current ::forge-repo be ::forge-repo-str or something)
 (s/def :fex.package/branch ::todo)
+(s/def :fex.package/nonrecursive? #{true})
 (s/def :fex.package/files :melpa.recipe/files) ; TODO This is "inheritance", maybe make this a "shared" spec like ::recipe-defaults or just allow :melpa.recipe/files as a key in :fex/package (maybe even rename it to ::melpa-style-files or something)
 
 (s/def :fex/package
@@ -3234,7 +3150,27 @@ Extremely WIP, basically just a scratchpad
              ;; :fex.package/forge
              ;; :fex.package.forge/repo
              :fex.package/branch
+             :fex.package/nonrecursive?
              :fex.package/files]))
+
+
+
+
+
+(def ^:private forge-domains
+  {'github "github.com"
+   'gitlab "gitlab.com"
+   'bitbucket "bitbucket.com"})
+
+(defn forge-repo-url [forge user-name repo-name]
+  (str "https://" (get forge-domains forge) "/" user-name "/" repo-name ".git"))
+
+
+(require '[clojure.set :refer [rename-keys]])
+(defn select-and-rename-keys [m kmap]
+  (as-> m $
+    (select-keys $ (keys kmap))
+    (rename-keys $ kmap)))
 
 
 
@@ -3261,22 +3197,7 @@ Extremely WIP, basically just a scratchpad
 ;; Archives
 (defkmultis
   ;; has-recipe
-  get-recipe)
-
-(def ^:private forge-domains
-  {'github "github.com"
-   'gitlab "gitlab.com"
-   ;; 'bitbucket "bitbucket.com"
-   })
-
-(defn forge-repo-url [forge user-name repo-name]
-  (str "https://" (get forge-domains forge) "/" user-name "/" repo-name ".git"))
-
-(require '[clojure.set :refer [rename-keys]])
-(defn select-and-rename-keys [m kmap]
-  (as-> m $
-    (select-keys $ (keys kmap))
-    (rename-keys $ kmap)))
+  get-recipe) ; TODO maybe rename this get-package or something, I'm returning fex packages, not straight/melpa recipes
 
 
 (defn gnu-elpa-mirror-recipe-filename [p]
@@ -3313,7 +3234,7 @@ Extremely WIP, basically just a scratchpad
                          {:fex.package/url (let [fetcher (:fetcher parsed)]
                                              (condp some #{fetcher}
                                                #{'git} (:url parsed)
-                                               #{'github 'gitlab} (let [repo (:reop parsed)]
+                                               #{'github 'gitlab} (let [repo (:repo parsed)]
                                                                     (forge-repo-url
                                                                      fetcher
                                                                      (:user-name repo)
@@ -3346,6 +3267,11 @@ Extremely WIP, basically just a scratchpad
                                          :elements [[:glob "lisp/*.el"]]}}
                     nil)))
 
+
+;; TODO make this configurable (of course) and probably not global
+(def archives [:archive/org-elpa
+               :archive/melpa
+               :archive/gnu-elpa-mirror])
 
 ;; TODO probably add emacsmirror, etc archives but make all of the methods throw an exception stating that they're not implemented "yet".
 ;; (def archive-priority [:archive/org-elpa
@@ -3400,6 +3326,52 @@ Extremely WIP, basically just a scratchpad
 
 
 
+
+
+(defn get-archive-package [archives package-name]
+  (first (map #(get-recipe % package-name) archives)))
+
+(defn package-with-inheritance [package-name package]
+  (merge
+   (get-archive-package package-name)
+   package))
+
+
+
+
+
+
+(defn convert-straight-recipe-props-to-package [props]
+  (let [parsed (s/conform :straight.recipe/props-asdf props)]
+    ;; TODO check that `parsed` is not invalid?
+    ;; TODO "supported"-ness: is this the place to check that there aren't unsupported keys and provided keys have supported values (including that the :files is a valid /melpa/ :files)?
+    (merge
+     {:fex.package/url
+      (let [{:keys [host repo]} parsed]
+        (if host
+          (forge-repo-url
+           host
+           (:user-name repo)
+           (:repo-name repo))
+          repo))}
+     (select-and-rename-keys
+      parsed {:branch :fex.package/branch})
+     (when (:nonrecursive parsed)
+       {:fex.package/nonrecursive? true})
+     (when-let [files (:files parsed)]
+       ;; TODO donno why I want to do it this convoluted way, maybe because I don't want to use the "raw" props?
+       {:fex.package/files
+        ;; (s/conform :melpa.recipe/files props)
+        (->> files
+             (s/unform :straight.recipe/files)
+             (s/conform :melpa.recipe/files))}))))
+
+
+
+
+
+
+
 (def straight-allow-recipe-inheritance? true)
 
 ;; TODO Ideally I think I want to grab any pertinent straight settings from Doom Emacs
@@ -3414,6 +3386,14 @@ Extremely WIP, basically just a scratchpad
 ;;          "doc/dir" "doc/*.info" "doc/*.texi" "doc/*.texinfo" "lisp/*.el"
 ;;          (:exclude ".dir-locals.el" "test.el" "tests.el" "*-test.el" "*-tests.el")
 
+;; TODO regarding :flavor: read `straight-expand-files-directive' and see if I need this / what I should do about :files. Also read the melpa readme about the rules it has for expanding its :files property
+;; - :melpa/recipe shouldn't have a flavor, right? Just straight recipes?
+;; - new thoughts
+;;   - I might need it to make sure template files are copied over "before build", does that make sense I can't be fucked to think through the ordering at present
+;;   - If I do need to consider .el.in files perhaps I can prepreocess the :fex.package/files returned from the melpa archive (but that might not be feasable, the .el.in logic is deep in the melpa/straight files expansion logic)
+;;   - The Guix elpa importer doesn't even consider .el.in files, maybe they're super rare
+;;   - nb: straight recipe inheritance logic includes :flavor and I'm not presently doing that
+;;   - reconcile the Guix elpa importer's file expansion logc with melpa's to make sure it's thorough (not straight's, it's different, but do look it over afterwards anyway)
 ;; TODO downloading to a cache like the elpa importer does would speed up successive/reattempted runs, no?
 ;; - assuming that is what it's doing (check). Do those repo caches stick around forever though? Will adding my own interfere with anything?
 ;; - if it's /really/ fast maybe I could get rid of the later-to-come bump "scripts"'s need to read an existing list of generated packges at all! I wouldn't even have to save it to disk, just the lockfile!
@@ -3469,6 +3449,25 @@ Extremely WIP, basically just a scratchpad
 ;;                                   $))]
 ;;         (throw (ex-info "Package(s) with unsupported configuration" {:packages unsupported}))
 ;;         $)
+;; TODO NEW stuff I've decided I'm /definitely/ not supporting: fork, source
+;; - don't support :build. (At leat for values other than 't, which is harmless and which Doom's org package declaration uses. Maybe just override the Doom org package like I'm going to do for its :pre-build)
+;; - don't support :pre-build/:post-build (Doom's org and notmuch packages use :pre-build though, so find probably override those recipes to not have :pre-build steps and make sure the Guix packages for them do what the :pre-build steps would have done).
+;; - probably not supporting manually-set inherit property (and straight-allow-recipe-inheritance must be true)
+;; - list of straight package props Doom actually uses
+;;   host
+;;   repo
+;;   files
+;;   nonrecursive
+;;   branch
+;;   local-repo
+;;   - Only straight has this and it doesn't matter for me
+;;   build
+;;   - only org (:build t)
+;;   pre-build
+;;   - only org and notmuch
+;;   depth
+;;   - only org (:depth 1)
+;; - spec that both host and repo must be specified so in inheritance one isn't overridden without the other?
 #+end_src
 ********** deps
 #+begin_src clojure :tangle ebullient/deps.edn :comments link
