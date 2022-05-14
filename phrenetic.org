@@ -1364,6 +1364,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 :END:
 - REVIEW Emacs 28 was released recently so Guix upstream emacs packages will probably be updated soon: review references to ~emacs-next~ and ~emacs-next-pgtk~, check flatwhatson's channel to see how it changes in response.
   - update: watch the =emacs-28= guix branch. I've updated this code in accordance with it up through d25054f. Still need to see how flatwhatson responds.
+  - [2022-05-14 Sat] =emacs-28= is mered into master
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
@@ -1439,9 +1440,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
 #+end_src
-****** Tramp path fix
+****** Tramp path fix :upstream:
 The ~tramp-remote-path~ definition was moved in [[https://github.com/emacs-mirror/emacs/commit/695f6792f1524a446d276bf5c5e53bbb4c200909][Remove ;;;###tramp-autoload cookie from Tramp defcustoms (Bug#47063) · emacs-...]].
-This fix should be upstreamed.
 #+begin_src scheme
 ;; FIXME I haven't tested this /at all/. I didn't bother yet because I might be rewriting everything in lokke or clojure (and getting rid of mendicant utils).
 ;; In particular I don't know if equality between those two lists works.
@@ -4685,14 +4685,14 @@ guix time-machine \
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
-*** Clojure
+*** Clojure :package:version:
 - REVIEW
   - source
     Do I have access to any clojure/java source code so that e.g. cider jump-to-definition works right?
   - the =docs= output of the jdk
     Is is useful/necessary, e.g. would any tooling, like cider, take advantage of it?
 
-A =clojure-tools= package that mirrors the clojure.org install script and thus uses prebuilt resources instead of bootstrapping everything the way the Guix =clojure-tools= package does. I don't see any advantages to bootstrapping and I'm leery that the various split-out dependencies (like =clojure-tools-deps-alpha= which in turn requires =clojure-data-xml=, etc) aren't the same ones the prebuilt clojure uses.
+A =clojure-tools= package that mirrors the clojure.org install script and thus uses prebuilt resources instead of bootstrapping everything the way the Guix package does. I don't see any advantages to bootstrapping and I'm leery that the various split-out dependencies (like =clojure-tools-deps-alpha= which in turn requires =clojure-data-xml=, etc) aren't the same ones the prebuilt clojure uses or the same versions.
 
 Some considerations if I want to switch to the Guix =clojure-tools= package:
 - bumping
