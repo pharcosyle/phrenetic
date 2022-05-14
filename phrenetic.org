@@ -3268,7 +3268,7 @@ Extremely WIP, basically just a scratchpad
                     nil)))
 
 
-;; TODO make this configurable (of course) and probably not global
+;; TODO make this configurable (of course) and probably not global (pass it as an argument to functions that use it)
 (def archives [:archive/org-elpa
                :archive/melpa
                :archive/gnu-elpa-mirror])
@@ -3311,18 +3311,6 @@ Extremely WIP, basically just a scratchpad
 (def get-origin-data (partial sh-call :guix/get-origin-data))
 
 
-;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el")
-;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-edited.el")
-(def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
-
-(defn test-packages []
-  (let [data (-> my-doom-packages-test
-                 slurp
-                 edn/read-string)]
-    (s/explain (s/coll-of :doom/package) data)
-    (s/conform (s/coll-of :doom/package) data)))
-
-
 
 
 
@@ -3342,7 +3330,8 @@ Extremely WIP, basically just a scratchpad
 
 
 (defn convert-straight-recipe-props-to-package [props]
-  (let [parsed (s/conform :straight.recipe/props-asdf props)]
+  (let [; parsed (s/conform :straight.recipe/props-asdf props)
+        parsed props]
     ;; TODO check that `parsed` is not invalid?
     ;; TODO "supported"-ness: is this the place to check that there aren't unsupported keys and provided keys have supported values (including that the :files is a valid /melpa/ :files)?
     (merge
@@ -3367,6 +3356,23 @@ Extremely WIP, basically just a scratchpad
              (s/conform :melpa.recipe/files))}))))
 
 
+
+
+;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el")
+;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-edited.el")
+(def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
+
+(defn test-packages []
+  (let [data (-> my-doom-packages-test
+                 slurp
+                 edn/read-string)
+        conformed (s/conform (s/coll-of :doom/package) data)]
+    ;; (s/explain (s/coll-of :doom/package) data)
+    (as-> conformed $
+      (map #(get-in % [:props :recipe]) $)
+      (map convert-straight-recipe-props-to-package $))))
+
+;; (test-packages)
 
 
 
@@ -3399,7 +3405,6 @@ Extremely WIP, basically just a scratchpad
 ;; - if it's /really/ fast maybe I could get rid of the later-to-come bump "scripts"'s need to read an existing list of generated packges at all! I wouldn't even have to save it to disk, just the lockfile!
 ;;   - even if the guix git repositories cache thing is untenable maybe there's some other cache I could write the repos or the generated packages-with-hashes to, even just ~./cache. I'd like to not have to manage a generated packages file if I don't have to
 ;; TODO handle :host: search "bitbucket" in straight to see stuff that affects hosts. If necessary add a check to make sure a supported host is provided.
-;; TODO if :host is nil then :repo should be a string which is the full URL of the target repository. Handle this.
 ;; TODO use value of `straight-built-in-pseudo-packages' (let-alist emacs nadvice python) in addition to elpa.scm's `emacs-standard-library?'? What about `straight-recipes-gnu-elpa-ignored-packages'? What about straight--package-built-in-p and package--builtins (read its doc)?
 ;; - Straight claims to be able to "deal with built-in packages" even without this variable. How? Something like hlissner does when :built-in is set to 'prefer? Use one
 ;;   of these approaches instead of making a (brittle) list of built-in pseudo packages?
@@ -3474,7 +3479,8 @@ Extremely WIP, basically just a scratchpad
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/alpha.spec {:git/url "https://github.com/clojure/spec-alpha2.git"
-                                :sha "99456b1856a6fd934e2c30b17920bd790dd81775"}}
+                                :sha "99456b1856a6fd934e2c30b17920bd790dd81775"}
+        babashka/fs {:mvn/version "0.1.6"}}
  :aliases
  {:run-m {:main-opts ["-m" "protostar.hickeyland"]}
   :run-x {:ns-default protostar.hickeyland
@@ -3499,9 +3505,13 @@ Extremely WIP, basically just a scratchpad
             [guile.guix.git :refer [latest-repository-commit]]
             [guile.guix.hash :refer [file-hash*]]
             [guile.guix.store :refer [with-store]]
-            [guile.srfi.srfi-11 :as srfi-11]))
+            [guile.srfi.srfi-11 :as srfi-11]
 
-(defn- ->pair [a b]
+            [guile.guix.build-system.emacs :refer [emacs-build-system]]
+            [guile.guix.git-download :refer [git-fetch git-reference git-file-name]]
+            [guile.guix.packages :refer [package origin content-hash]]))
+
+(defn- pair [a b]
   (guile/cons a b))
 
 (defmacro let-values [bindings & body]
@@ -3519,7 +3529,7 @@ Extremely WIP, basically just a scratchpad
    [[dir commit]
     (with-store store
       (latest-repository-commit store url
-                                :ref (->pair (symbol ref') ref'')
+                                :ref (pair (symbol ref') ref'')
                                 :recursive? recursive?))]
    {:dir dir :commit commit}))
 
@@ -3537,6 +3547,47 @@ Extremely WIP, basically just a scratchpad
 ;; (println
 ;;  (get-origin-data "https://github.com/raxod502/straight.el.git" [:branch "develop"] false))
 
+
+
+
+
+(defn fex-package [package-name url commit recursive? hash]
+  (package
+   (name (str "emacs-" package-name))
+   (version "0.0.1")
+   (source
+    (origin
+     (method git-fetch)
+     (uri (git-reference
+           (url url)
+           (commit commit)
+           (recursive? recursive?)))
+     (file-name (git-file-name name version))
+     (hash
+      (content-hash hash))))
+   (build-system emacs-build-system)
+   ;; (arguments
+   ;;  `(#:phases
+   ;;    (modify-phases %standard-phases
+   ;;      (add-after 'unpack 'move-source-files
+   ;;        (lambda _
+   ;;          (let ((el-files (find-files "./extensions" ".*\\.el$")))
+   ;;            (for-each (lambda (f)
+   ;;                        (rename-file f (basename f)))
+   ;;                      el-files)))))))
+   ;; (native-inputs
+   ;;  (list texinfo))
+   (home-page nil)
+   (synopsis nil)
+   (description nil)
+   (license nil)))
+
+;; (println
+;;  (fex-package "tldr"
+;;               "https://github.com/kuanyui/tldr.el"
+;;               "7203d1be3dcbf12131846ffe06601933fa874d74"
+;;               nil
+;;               "1bw6la463l2yfm7rp76ga4makfy4kpxgwi7ni5gxk31w11g26ryk"))
 
 
 
