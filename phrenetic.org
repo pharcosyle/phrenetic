@@ -1591,18 +1591,8 @@ performance of a hand rolled config (or better).")
   #:use-module (guix packages)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-dash emacs-tldr) #:prefix emacs-xyz:)
+  #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
   #:use-module ((gnu packages compression) #:select (unzip)))
-#+end_src
-******** dash
-Tests fail in Emacs 28+ (see [[https://github.com/magnars/dash.el/issues/389][magnars/dash.el#389 Byte-compile fails with Emacs 28]]) so disable them until this is resolved upstream.
-#+begin_src scheme
-(define-public emacs-dash
-  (package
-    (inherit emacs-xyz:emacs-dash)
-    (arguments
-     (substitute-keyword-arguments (package-arguments emacs-xyz:emacs-dash)
-       ((#:tests? _) #f)))))
 #+end_src
 ******** guix-contributing
 #+begin_src scheme
