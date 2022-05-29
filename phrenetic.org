@@ -1550,17 +1550,18 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
                 (local-file "ligatures.patch")))))
       (build-system copy-build-system) ; TOOD LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
       (arguments
-       `(;; #:install-plan
-         ;; '(("." "share/doom-emacs/"))
-         ;; #:tests? #t
-         ;; #:test-command '("./bin/doom" "test")
-         #:phases
-         ,#~(modify-phases %standard-phases
-              (add-after 'install 'symlink-bin
-                (lambda _
-                  (mkdir #$output:bin)
-                  (symlink (string-append #$output "/bin")
-                           (string-append #$output:bin "/bin")))))))
+       (list
+        ;; #:install-plan
+        ;; '(("." "share/doom-emacs/"))
+        ;; #:tests? #t
+        ;; #:test-command '("./bin/doom" "test")
+        #:phases
+        #~(modify-phases %standard-phases
+            (add-after 'install 'symlink-bin
+              (lambda _
+                (mkdir #$output:bin)
+                (symlink (string-append #$output "/bin")
+                         (string-append #$output:bin "/bin")))))))
       (propagated-inputs
        (list ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
              git
@@ -1677,11 +1678,11 @@ Tests fail in Emacs 28+ (see [[https://github.com/magnars/dash.el/issues/389][ma
     (arguments
      (substitute-keyword-arguments (package-arguments emacs-xyz:emacs-tldr)
        ((#:phases phases '%standard-phases)
-        `(modify-phases ,phases
-           (add-after 'unpack 'patch-tldr-directory-path
-             (lambda* (#:key inputs #:allow-other-keys)
-               (emacs-substitute-variables "tldr.el"
-                 ("tldr-directory-path" (search-input-directory inputs "share/tldr-pages")))))))))
+        #~(modify-phases #$phases
+            (add-after 'unpack 'patch-tldr-directory-path
+              (lambda* (#:key inputs #:allow-other-keys)
+                (emacs-substitute-variables "tldr.el"
+                  ("tldr-directory-path" (search-input-directory inputs "share/tldr-pages")))))))))
     (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
               (prepend tldr-pages)))))
 #+end_src
