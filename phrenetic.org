@@ -597,6 +597,7 @@ The stateless service should come after base/desktop services (potentially other
            (operating-system-users os))))
 #+end_src
 **** Nonguix substitutes
+- TODO probably use the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] (not important, just for cleanliness)
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
@@ -1362,9 +1363,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs.scm")
 :END:
-- REVIEW Emacs 28 was released recently so Guix upstream emacs packages will probably be updated soon: review references to ~emacs-next~ and ~emacs-next-pgtk~, check flatwhatson's channel to see how it changes in response.
-  - update: watch the =emacs-28= guix branch. I've updated this code in accordance with it up through d25054f. Still need to see how flatwhatson responds.
-  - [2022-05-14 Sat] =emacs-28= is mered into master
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
@@ -5444,6 +5442,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   ;; (sendmail
                   ;;  ((annotate . #t)))
                   ))))
+     ;; [2022-06-18 Sat] TODO compare with the new home-openssh-service-type: https://guix.gnu.org/manual/devel/en/guix.html#Secure-Shell
      (service home-ssh-service-type
               ;; (home-ssh-configuration
               ;;  (extra-config
