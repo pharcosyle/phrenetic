@@ -1377,13 +1377,13 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 ****** Emacs fully loaded :package:
 #+begin_src scheme
 (define* (emacs-fully-loaded #:key pgtk?)
-  (as-> (if pgtk?
-            (with-emacs-latest emacs-pgtk-native-comp)
-            emacs-native-comp) $
-    (with-findable-C-source $)
-    (with-zstd $)
-    (with-tramp-path-fix $)
-    (with-path-integration-improvements $)))
+  (-> (if pgtk?
+          (with-emacs-latest emacs-pgtk-native-comp)
+          emacs-native-comp)
+      with-findable-C-source
+      with-zstd
+      with-tramp-path-fix
+      with-path-integration-improvements))
 #+end_src
 ****** Emacs latest :version:
 #+begin_src scheme
