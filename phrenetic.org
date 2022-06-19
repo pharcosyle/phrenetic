@@ -1420,7 +1420,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 #+end_src
 ****** =zstd=
-- REVIEW Just add a propagated input for now. Using ~wrap-program~ on the emacs executable would be better but it's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 #+begin_src scheme
 (define-public (with-zstd emacs)
   (package
@@ -1429,6 +1428,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
 #+end_src
+******* TODO [#E] Make zstd available to emacs properly
+By using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 ****** Tramp path fix :upstream:
 The ~tramp-remote-path~ definition was moved in [[https://github.com/emacs-mirror/emacs/commit/695f6792f1524a446d276bf5c5e53bbb4c200909][Remove ;;;###tramp-autoload cookie from Tramp defcustoms (Bug#47063) · emacs-...]].
 #+begin_src scheme
@@ -1634,7 +1635,7 @@ performance of a hand rolled config (or better).")
        (origin
          (method git-fetch)
          (uri (git-reference
-               (url "https://github.com/guix-mirror/guix")  ; https://git.savannah.gnu.org/git/guix.git is the canonical repo but it doesn't allow shallow fetches.
+               (url "https://github.com/guix-mirror/guix") ; https://git.savannah.gnu.org/git/guix.git is the canonical repo but it doesn't allow shallow fetches.
                (commit commit)))
          (sha256
           (base32
