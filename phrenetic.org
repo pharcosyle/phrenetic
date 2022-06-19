@@ -1369,21 +1369,17 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
-  #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (gcc-11))
+  #:use-module ((flat packages emacs) #:select (emacs-native-comp emacs-pgtk-native-comp))
   #:use-module ((srfi srfi-1) #:select (take drop))
   #:use-module (mendicant utils)
   #:export (emacs-fully-loaded))
-
-(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
 ****** Emacs fully loaded :package:
 #+begin_src scheme
 (define* (emacs-fully-loaded #:key pgtk?)
   (as-> (if pgtk?
-            (with-emacs-latest emacs-next-pgtk)
-            emacs) $
-    (with-native-comp $)
+            (with-emacs-latest emacs-pgtk-native-comp)
+            emacs-native-comp) $
     (with-findable-C-source $)
     (with-zstd $)
     (with-tramp-path-fix $)
@@ -1407,11 +1403,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
           (base32
            "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
          (file-name (git-file-name (package-name emacs) version)))))))
-#+end_src
-****** Native comp
-#+begin_src scheme
-(define-public (with-native-comp emacs)
-  (emacs-with-native-comp emacs gcc-11 'full-aot))
 #+end_src
 ****** Findable C source
 #+begin_src scheme
