@@ -1388,21 +1388,38 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 ****** Emacs latest :version:
 #+begin_src scheme
 (define-public (with-emacs-latest emacs)
-  (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
-        (revision "0"))
-    (package
-      (inherit emacs)
-      (version (git-version "29.0.50" revision commit))
-      (source
-       (origin
-         (inherit (package-source emacs))
-         (uri (git-reference
-               (url "https://github.com/emacs-mirror/emacs") ; https://git.savannah.gnu.org/git/emacs.git is the canonical repo but it doesn't allow shallow fetches.
-               (commit commit)))
-         (sha256
-          (base32
-           "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
-         (file-name (git-file-name (package-name emacs) version)))))))
+  (with-mirror
+   (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
+         (revision "0"))
+     (package
+       (inherit emacs)
+       (version (git-version "29.0.50" revision commit))
+       (source
+        (origin
+          (inherit (package-source emacs))
+          (uri (git-reference
+                (inherit (-> pkg package-source origin-uri))
+                (commit commit)))
+          (sha256
+           (base32
+            "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
+          (file-name (git-file-name (package-name emacs) version))))))))
+#+end_src
+******* Mirror
+The canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
+#+begin_src scheme
+(define (with-git-url pkg url)
+  (package
+    (inherit pkg)
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (url url)))))))
+
+(define (with-mirror emacs)
+  (with-git-url emacs "https://github.com/emacs-mirror/emacs"))
 #+end_src
 ****** Findable C source
 #+begin_src scheme
