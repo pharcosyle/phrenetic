@@ -2161,55 +2161,6 @@ index 000000000..c710f766c
 ******* \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
   https://github.com/doomemacs/doomemacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
-******* Lokke
-TODO move me
-- TODO [[(lokke-moving)][moving ouput files]]
-  move modules (scheme files), compiled go files, and extensions. Maybe patch the `load-extensions' calls too.
-- TODO maybe: clj files aren't compiled to =.go= files ahead of time, maybe do this
-  Minor optimization but it impacts startup time after clearing =~/.cache/guile/ccache=
-#+begin_src scheme :tangle (meta-in-dir "guile-xyz.scm")
-(define-module (ebullient home guile-xyz)
-  #:use-module (guix build-system gnu)
-  #:use-module (guix gexp)
-  #:use-module (guix git-download)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages guile-xyz) #:select (lokke) #:prefix guile-xyz:))
-
-(define-public lokke
-  (let ((commit "041e9a42b7579ac1af584e627c443f84962148a3")
-        (revision "0"))
-    (package
-      (inherit guile-xyz:lokke)
-      (version (git-version "0.0.1" revision commit)) ; The guix package uses "0.0.0" for the version but the lokke version.scm says "0.0.1".
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url (git-reference-url (origin-uri (package-source guile-xyz:lokke))))
-               (commit commit)))
-         (sha256
-          (base32
-           "0ff4fw9fwm92wzrqxb56g0hdqi5kpb56l0ar2124dldcrpfa28cf"))))
-      (arguments
-       (substitute-keyword-arguments (package-arguments guile-xyz:lokke)
-         ((#:imported-modules imported-modules %gnu-build-system-modules)
-          `((guix build guile-build-system)
-            ,@imported-modules))
-         ((#:modules modules '((guix build gnu-build-system)
-                               (guix build utils)))
-          `(((guix build guile-build-system) #:select (target-guile-effective-version))
-            ,@modules))
-         ((#:phases phases '%standard-phases)
-          #~(modify-phases #$phases
-              (add-after 'install 'move-installed-files
-                (lambda _
-                  (let* ((effective (target-guile-effective-version))
-                         (module-dir (string-append #$output "/share/guile/site/" effective))
-                         (go-dir (string-append #$output "/lib/guile/" effective "/site-ccache"))
-                         (extensions-dir (string-append #$output "/lib/guile/" effective "/extensions")))
-                    (display "Do stuff..."))))))))))) ; (ref:lokke-moving)
-#+end_src
 ******* packaging doom WIP
 Extremely WIP, basically just a scratchpad
 ******** first attempts
