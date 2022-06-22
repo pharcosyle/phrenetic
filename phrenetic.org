@@ -1443,8 +1443,8 @@ The canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow sh
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
 #+end_src
-******* TODO [#E] Make zstd available to emacs properly
-By using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
+******* TODO [#E] Add =zstd= to emacs program wrapper
+i.e. by using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 ****** Path integration improvements
 #+begin_src scheme
 (define-public (with-path-integration-improvements emacs)
