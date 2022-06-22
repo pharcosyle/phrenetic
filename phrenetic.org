@@ -1370,7 +1370,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp emacs-pgtk-native-comp))
-  #:use-module ((srfi srfi-1) #:select (take drop))
   #:use-module (mendicant utils)
   #:export (emacs-fully-loaded))
 #+end_src
@@ -1382,7 +1381,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
           emacs-native-comp)
       with-findable-C-source
       with-zstd
-      with-tramp-path-fix
       with-path-integration-improvements))
 #+end_src
 ****** Emacs latest :version:
@@ -1447,27 +1445,6 @@ The canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow sh
 #+end_src
 ******* TODO [#E] Make zstd available to emacs properly
 By using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
-****** Tramp path fix :upstream:
-The ~tramp-remote-path~ definition was moved in [[https://github.com/emacs-mirror/emacs/commit/695f6792f1524a446d276bf5c5e53bbb4c200909][Remove ;;;###tramp-autoload cookie from Tramp defcustoms (Bug#47063) · emacs-...]].
-#+begin_src scheme
-;; FIXME I haven't tested this /at all/. I didn't bother yet because I might be rewriting everything in lokke or clojure (and getting rid of mendicant utils).
-;; In particular I don't know if equality between those two lists works.
-(define (with-tramp-path-fix emacs)
-  (package
-    (inherit emacs)
-    (source
-     (origin
-       (inherit (package-source emacs))
-       (snippet
-        (update-list
-         (origin-snippet (package-source emacs))
-         (lambda (x)
-           (and (list? x)
-                (equal? '(substitute* "net/tramp-sh.el")
-                        (take x 2))))
-         (lambda (x)
-           (append '(substitute* "net/tramp.el") (drop x 2)))))))))
-#+end_src
 ****** Path integration improvements
 #+begin_src scheme
 (define-public (with-path-integration-improvements emacs)
