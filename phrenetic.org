@@ -1591,8 +1591,9 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
 (provide 'guix-contributing)
 #+end_src
 ********* Guix's Emacs development code
+Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+begin_src scheme
-(define guix-emacs-development
+(define guix-emacs-development*
   (let ((commit "bf0389a3806509650b7a8425973ac5aac722901a")
         (revision "0"))
     (package
@@ -1602,7 +1603,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
        (origin
          (method git-fetch)
          (uri (git-reference
-               (url "https://github.com/guix-mirror/guix") ; https://git.savannah.gnu.org/git/guix.git is the canonical repo but it doesn't allow shallow fetches.
+               (url "https://git.savannah.gnu.org/git/guix.git")
                (commit commit)))
          (sha256
           (base32
@@ -1616,6 +1617,9 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
       (synopsis #f)
       (description #f)
       (license #f))))
+
+(define guix-emacs-development
+  (with-git-url guix-emacs-development "https://github.com/guix-mirror/guix"))
 #+end_src
 ******** tldr
 #+begin_src scheme
