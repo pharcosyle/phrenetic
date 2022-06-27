@@ -5040,7 +5040,11 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
             merge
             keyvals
             update-services*
-            update-services))
+            update-services
+            get-inferior-package
+            with-git-version
+            with-git-commit
+            with-git-url))
 
 (define (update-list l pred f)
   (map (lambda (x)
@@ -5168,15 +5172,17 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
       (lookup-inferior-packages package)
       first))
 
-(define (with-git-commit pkg
-                         #:key
-                         (upstream-version (package-version pkg))
-                         (revision "0")
-                         commit
-                         hash)
+(define (with-git* pkg
+                   #:key
+                   (upstream-version (package-version pkg))
+                   revision
+                   commit
+                   hash)
   (package
     (inherit pkg)
-    (version (git-version upstream-version revision commit))
+    (version (if revision
+                 (git-version upstream-version revision commit)
+                 upstream-version))
     (source
      (origin
        (inherit (package-source pkg))
@@ -5187,6 +5193,19 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
+
+(define (with-git-version pkg #:key version commit hash)
+  (with-git* pkg
+             #:upstream-version version
+             #:commit commit
+             #:hash hash))
+
+(define (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
+  (with-git* pkg
+             #:upstream-version upstream-version
+             #:revision revision
+             #:commit commit
+             #:hash hash))
 
 (define (with-git-url pkg url)
   (package
