@@ -1366,7 +1366,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
-  #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
@@ -1385,40 +1384,14 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
       with-path-integration-improvements))
 #+end_src
 ****** Emacs latest :version:
+Use bleeding edge Emacs since development of the pgtk feature is ongoing. Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
 #+begin_src scheme
 (define-public (with-emacs-latest emacs)
-  (with-mirror
-   (let ((commit "7865b516c8dbff0e7872c746c7afca968ee2348a")
-         (revision "0"))
-     (package
-       (inherit emacs)
-       (version (git-version "29.0.50" revision commit))
-       (source
-        (origin
-          (inherit (package-source emacs))
-          (uri (git-reference
-                (inherit (-> emacs package-source origin-uri))
-                (commit commit)))
-          (sha256
-           (base32
-            "1kiiwdr8lgmnb1mbfn8v0zlpy20nyiqsdx6fixd2fyqwaynk9asv"))
-          (file-name (git-file-name (package-name emacs) version))))))))
-#+end_src
-******* Mirror
-The canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
-#+begin_src scheme
-(define (with-git-url pkg url)
-  (package
-    (inherit pkg)
-    (source
-     (origin
-       (inherit (package-source pkg))
-       (uri (git-reference
-             (inherit (-> pkg package-source origin-uri))
-             (url url)))))))
-
-(define (with-mirror emacs)
-  (with-git-url emacs "https://github.com/emacs-mirror/emacs"))
+  (-> emacs
+      (with-git-commit #:upstream-version "29.0.50"
+                       #:commit "7865b516c8dbff0e7872c746c7afca968ee2348a"
+                       #:hash "1kiiwdr8lgmnb1mbfn8v0zlpy20nyiqsdx6fixd2fyqwaynk9asv")
+      (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
 ****** Findable C source
 #+begin_src scheme
@@ -5042,6 +5015,7 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 :END:
 #+begin_src scheme
 (define-module (mendicant utils)
+  #:use-module (guix git-download)
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -5189,6 +5163,36 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
   (-> (inferior-for-channels channels)
       (lookup-inferior-packages package)
       first))
+
+(define (with-git-commit pkg
+                         #:key
+                         (upstream-version (package-version pkg))
+                         (revision "0")
+                         (commit upstream-version)
+                         hash)
+  (package
+    (inherit pkg)
+    (version (git-version upstream-version revision commit))
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> emacs package-source origin-uri))
+             (commit commit)))
+       (sha256
+        (base32
+         hash))
+       (file-name (git-file-name (package-name pkg) version))))))
+
+(define (with-git-url pkg url)
+  (package
+    (inherit pkg)
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (url url)))))))
 #+end_src
 *** Dev
 **** Git ignore
