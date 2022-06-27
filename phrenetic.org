@@ -1682,9 +1682,9 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (version (git-version (package-version emacs-all-the-icons) revision commit))
       (source
        (origin
-         (method git-fetch)
+         (inherit (package-source emacs-all-the-icons))
          (uri (git-reference
-               (url (-> emacs-all-the-icons package-source origin-uri git-reference-url))
+               (inherit (-> emacs-all-the-icons package-source origin-uri))
                (commit commit)))
          (sha256
           (base32
