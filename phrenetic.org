@@ -1498,7 +1498,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                (commit commit)))
          (sha256
           (base32
-           "1fmgwdrkny9i4sfm0pz6hmpk11pvbfvd6zvy3vg4xpyip674zalp"))
+           "17xns3y3cjpmccdzpzab81770v8v4ivhn7iwvpf1ap8g5x41inav"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "change-paths.patch")
@@ -1688,7 +1688,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
                (commit commit)))
          (sha256
           (base32
-           "1gn5nyyhrvz8w1y5m8lg2khwfir0czjizmdzinr70gd7n8g1xqk9"))
+           "1mwh493312xgfra3grgnqncf2ihf7rr6rpwfx8234d46xplf0879"))
          (file-name (git-file-name name version))))
       (build-system font-build-system)
       (arguments
@@ -1719,7 +1719,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
        (arguments '()))
      #:version version
      #:commit version
-     #:hash "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8")))
+     #:hash "01y8ys9k9cmf1pz4xqya4280yf942dm2h378qsvgip1pla2fms5f")))
 #+end_src
 ******* Patches
 ******** Change paths
@@ -5014,6 +5014,7 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 (define-module (mendicant utils)
   #:use-module (guix git-download)
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+  #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
@@ -5165,7 +5166,7 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
       (lookup-inferior-packages package)
       first))
 
-(define (with-git* pkg
+(define* (with-git* pkg
                    #:key
                    (upstream-version (package-version pkg))
                    revision
@@ -5180,20 +5181,20 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
      (origin
        (inherit (package-source pkg))
        (uri (git-reference
-             (inherit (-> emacs package-source origin-uri))
+             (inherit (-> pkg package-source origin-uri))
              (commit commit)))
        (sha256
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
 
-(define (with-git-version pkg #:key version commit hash)
+(define* (with-git-version pkg #:key version commit hash)
   (with-git* pkg
              #:upstream-version version
              #:commit commit
              #:hash hash))
 
-(define (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
+(define* (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
   (with-git* pkg
              #:upstream-version upstream-version
              #:revision revision
