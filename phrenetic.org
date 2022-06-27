@@ -1709,7 +1709,8 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
 #+begin_src scheme
 (define-public font-awesome
   (let ((base-pkg fonts:font-awesome))
-    (package (inherit base-pkg)
+    (package
+      (inherit base-pkg)
       (version "6.0.0")
       (source
        (origin
