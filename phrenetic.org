@@ -1711,22 +1711,15 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 ******** Font Awesome :package:version:
 #+begin_src scheme
 (define-public font-awesome
-  (let ((base-pkg fonts:font-awesome))
-    (package
-      (inherit base-pkg)
-      (version "6.0.0")
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url (-> base-pkg package-source origin-uri git-reference-url))
-               (commit version)))
-         (file-name (git-file-name (package-name base-pkg) version))
-         (sha256
-          (base32
-           "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8"))))
-      (build-system font-build-system)
-      (arguments '()))))
+  (let ((version "6.0.0"))
+    (with-git-version
+     (package
+       (inherit fonts:font-awesome)
+       (build-system font-build-system)
+       (arguments '()))
+     #:version version
+     #:commit version
+     #:hash "1zc4dzzcqg0xmykb4bbzcz4dxzr369k9lcx34s8yny0iakxg1xb8")))
 #+end_src
 ******* Patches
 ******** Change paths
