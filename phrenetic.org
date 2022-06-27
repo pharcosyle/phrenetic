@@ -1388,7 +1388,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+begin_src scheme
 (define-public (with-emacs-latest emacs)
   (with-mirror
-   (let ((commit "aeb25f9d3d12a18ef3881e23b32a34615355d4d0")
+   (let ((commit "7865b516c8dbff0e7872c746c7afca968ee2348a")
          (revision "0"))
      (package
        (inherit emacs)
@@ -1401,7 +1401,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
                 (commit commit)))
           (sha256
            (base32
-            "1mikbbibngk60klr1q7d543rbg5a1lz0rg2acvy125zjczvr7pww"))
+            "1kiiwdr8lgmnb1mbfn8v0zlpy20nyiqsdx6fixd2fyqwaynk9asv"))
           (file-name (git-file-name (package-name emacs) version))))))))
 #+end_src
 ******* Mirror
