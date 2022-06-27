@@ -1485,7 +1485,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module ((ebullient home fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "d7ad4daf32df749a468f97cdd94e6f9715204e8c")
+  (let ((commit "a570ffe16c24aaaf6b4f8f1761bb037c992de877")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -1675,7 +1675,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
   #:use-module (mendicant utils))
 
 (define-public all-the-icons-fonts
-  (let ((commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
+  (let ((commit "7193403b47ad8b65347f9bafc939a152f0fe448a")
         (revision "0"))
     (package
       (name "all-the-icons-fonts")
@@ -1711,7 +1711,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 ******** Font Awesome :package:version:
 #+begin_src scheme
 (define-public font-awesome
-  (let ((version "6.0.0"))
+  (let ((version "6.1.1"))
     (with-git-version
      (package
        (inherit fonts:font-awesome)
