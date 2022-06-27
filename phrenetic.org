@@ -1366,6 +1366,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
 #+begin_src scheme
 (define-module (ebullient home emacs)
   #:use-module (guix gexp)
+  #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
@@ -1396,7 +1397,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
         (origin
           (inherit (package-source emacs))
           (uri (git-reference
-                (inherit (-> pkg package-source origin-uri))
+                (inherit (-> emacs package-source origin-uri))
                 (commit commit)))
           (sha256
            (base32
@@ -1470,9 +1471,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                (substitute* "man.el"
                  (("\"/usr/local/include\"" last-item)
                   (string-join
-                   (cons last-item
-                         (wrap-in-quotes
-                          "~/.guix-home/profile/include"))
+                   (list last-item
+                         (wrap-in-quotes "~/.guix-home/profile/include"))
                    " ")))))))))))
 #+end_src
 ***** Doom
