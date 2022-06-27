@@ -1675,17 +1675,16 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
   #:use-module (mendicant utils))
 
 (define-public all-the-icons-fonts
-  (let ((base-pkg emacs-all-the-icons)
-        (commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
+  (let ((commit "2c963ebb75f211d2f7ac3d2db5f4a9ee2f3e27da")
         (revision "0"))
     (package
       (name "all-the-icons-fonts")
-      (version (git-version (package-version base-pkg) revision commit))
+      (version (git-version (package-version emacs-all-the-icons) revision commit))
       (source
        (origin
          (method git-fetch)
          (uri (git-reference
-               (url (-> base-pkg package-source origin-uri git-reference-url))
+               (url (-> emacs-all-the-icons package-source origin-uri git-reference-url))
                (commit commit)))
          (sha256
           (base32
@@ -1704,10 +1703,10 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (propagated-inputs
        (list font-awesome
              fonts:font-google-material-design-icons))
-      (home-page (package-home-page base-pkg))
-      (synopsis (package-synopsis base-pkg))
-      (description (package-description base-pkg))
-      (license (package-license base-pkg)))))
+      (home-page (package-home-page emacs-all-the-icons))
+      (synopsis (package-synopsis emacs-all-the-icons))
+      (description (package-description emacs-all-the-icons))
+      (license (package-license emacs-all-the-icons)))))
 #+end_src
 ******** Font Awesome :package:version:
 #+begin_src scheme
