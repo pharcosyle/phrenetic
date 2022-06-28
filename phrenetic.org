@@ -1729,10 +1729,10 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 ********* Core
 #+begin_src diff
 diff --git a/core/core.el b/core/core.el
-index 493e9c0e6..344111bde 100644
+index 07254e602..3df3ce53b 100644
 --- a/core/core.el
 +++ b/core/core.el
-@@ -76,7 +76,9 @@ envvar will enable this at startup.")
+@@ -143,7 +143,9 @@ envvar will enable this at startup.")
  (defconst doom-local-dir
    (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
        (expand-file-name (file-name-as-directory localdir))
@@ -1743,11 +1743,10 @@ index 493e9c0e6..344111bde 100644
    "Root directory for local storage.
  
  Use this as a storage location for this system's installation of Doom Emacs.
-@@ -84,13 +86,20 @@ Use this as a storage location for this system's installation of Doom Emacs.
+@@ -151,15 +153,22 @@ Use this as a storage location for this system's installation of Doom Emacs.
  These files should not be shared across systems. By default, it is used by
  `doom-etc-dir' and `doom-cache-dir'. Must end with a slash.")
  
--(defconst doom-etc-dir (concat doom-local-dir "etc/")
 +(defconst doom-state-dir
 +  (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
 +      (concat (expand-file-name (file-name-as-directory localdir)) "state/")
@@ -1755,35 +1754,38 @@ index 493e9c0e6..344111bde 100644
 +                      (or (getenv-internal "XDG_STATE_HOME")
 +                          "~/.local/state"))))
 +
+ ;; DEPRECATED
+-(defconst doom-etc-dir (concat doom-local-dir "etc/")
 +(defconst doom-etc-dir (concat doom-state-dir "etc/")
    "Directory for non-volatile local storage.
  
  Use this for files that don't change much, like server binaries, external
  dependencies or long-term shared data. Must end with a slash.")
  
+ ;; DEPRECATED
 -(defconst doom-cache-dir (concat doom-local-dir "cache/")
 +(defconst doom-cache-dir (concat doom-state-dir "cache/")
    "Directory for volatile local storage.
  
  Use this for files that change often, like cache files. Must end with a slash.")
-@@ -167,7 +176,7 @@ users).")
+@@ -237,7 +246,7 @@ users).")
  (when NATIVECOMP
-   ;; Don't store eln files in ~/.emacs.d/eln-cache (they are likely to be purged
-   ;; when upgrading Doom).
+   ;; Don't store eln files in ~/.emacs.d/eln-cache (where they can easily be
+   ;; deleted by 'doom upgrade').
 -  (add-to-list 'native-comp-eln-load-path (concat doom-cache-dir "eln/"))
 +  (add-to-list 'native-comp-eln-load-path (concat doom-local-dir "eln/"))
  
    (with-eval-after-load 'comp
      ;; HACK Disable native-compilation for some troublesome packages
-@@ -183,7 +192,7 @@ users).")
+@@ -271,7 +280,7 @@ users).")
  
- ;; We avoid `no-littering' because it's a mote too opinionated for our needs.
- (setq async-byte-compile-log-file  (concat doom-etc-dir "async-bytecomp.log")
--      custom-file                  (concat doom-private-dir "custom.el")
-+      custom-file                  (concat doom-state-dir "custom.el")
-       desktop-dirname              (concat doom-etc-dir "desktop")
-       desktop-base-file-name       "autosave"
-       desktop-base-lock-name       "autosave-lock"
+ ;; Allow the user to store custom.el-saved settings and themes in their Doom
+ ;; config (e.g. ~/.doom.d/).
+-(setq custom-file (expand-file-name "custom.el" doom-private-dir))
++(setq custom-file (expand-file-name "custom.el" doom-state-dir))
+ 
+ (define-advice en/disable-command (:around (fn &rest args) write-to-data-dir)
+   "Write saved safe-local-variables to `custom-file' instead.
 #+end_src
 ********* RSS module
 #+begin_src diff
