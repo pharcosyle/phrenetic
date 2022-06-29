@@ -1416,8 +1416,8 @@ Once either:
 #+begin_src diff :tangle (meta-in-dir "wayland-super-fix.patch")
 diff --git src/pgtkterm.c src/pgtkterm.c
 index 566fc1f03d..1cb4d5dac0 100644
---- src/pgtkterm.c
-+++ src/pgtkterm.c
+--- a/src/pgtkterm.c
++++ b/src/pgtkterm.c
 @@ -5207,7 +5207,7 @@ pgtk_gtk_to_emacs_modifiers (struct pgtk_display_info *dpyinfo, int state)
      mod |= mod_ctrl;
    if (state & GDK_META_MASK || state & GDK_MOD1_MASK)
