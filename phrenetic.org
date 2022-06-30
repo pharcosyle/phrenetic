@@ -6061,8 +6061,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 (use-package! geiser
   :defer t
   :init
-  (setq geiser-repl-current-project-function #'ignore) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
-  (setq geiser-repl-history-filename (concat doom-cache-dir "geiser-history")))
+  (setq geiser-repl-current-project-function #'ignore)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
 #+end_src
 ******** App
 ********* Calendar
