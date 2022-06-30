@@ -6272,7 +6272,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 ;;
 ;;; Commentary:
 ;;
-;; Inspired by Atom's One Dark color scheme.
+;; This themepack's flagship theme.
 ;;
 ;;; Code:
 
@@ -6511,10 +6511,10 @@ Can be an integer to determine the exact padding."
         (funcall match-face "variables") 'red
         (funcall match-face "numbers") 'violet
         (funcall match-face "line-number-current-line" '(+? anything) ":foreground") 'violet))))
-   (dt--replace $ (rx ";; Copyright" (*? anything) "\n") "")
+   (dt--replace $ (rx ";; Added" (*? anything) "\n") "")
    (dt--replace $ (rx ";; Author" (*? anything) "\n") "")
    (dt--replace $ (rx ";; Maintainer" (*? anything) "\n") "")
-   (dt--replace $ (rx ";; Created" (*? anything) "\n") "")))
+   (dt--replace $ (rx ";; Source" (*? anything) "\n") "")))
 
 ;; REVIEW do this better (don't hardcode it?). Add a :path: tag to this org header if necessary. Perhaps it would be best to have the doom-themes repo be an explicit dependency in some way and manage like I do other Guix or Doom/straight dependencies.
 (dt--gen-doom-theme "~/.config/emacs/.local/straight/repos/themes/themes/doom-one-theme.el")
