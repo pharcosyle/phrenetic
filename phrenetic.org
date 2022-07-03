@@ -5649,6 +5649,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
        rgb
        taskrunner
+       tree-sitter
        ;; upload ; TODO dependency of massrealty/phucnet
 
        :lang
@@ -5657,15 +5658,15 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        data
        emacs-lisp
        ;; graphql ; TODO dependency of krush/hyperdrive
-       json
-       javascript
+       (json +tree-sitter)
+       (javascript +tree-sitter)
        markdown
-       nix ; TODO this should be gated by Nix inclusion like system components do.
+       (nix +tree-sitter) ; TODO this should be gated by Nix inclusion like system components do.
        (org +journal)
        rest
        (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
-       sh
-       web
+       (sh +tree-sitter)
+       (web +tree-sitter)
        yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
 
        :app
