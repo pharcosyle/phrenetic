@@ -69,47 +69,6 @@
 
 (define-public default-login-shell #:shell/bash)
 #+end_src
-** Common
-*** Channels
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ebullient/channels.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient channels)
-  #:use-module (guix channels)
-  #:use-module ((srfi srfi-1) #:select (remove))
-  #:use-module (mendicant utils)
-  #:export (get-channels
-            guix
-            nonguix
-            channel-map))
-
-(define* (get-channels #:rest cs)
-  (append
-   cs
-   (remove (lambda (c)
-             (member (channel-name c)
-                     (map channel-name cs)))
-           %default-channels)))
-#+end_src
-**** Definitions
-#+begin_src scheme
-(define guix %default-guix-channel)
-
-(define nonguix
-  (channel
-   (name 'nonguix)
-   (url "https://gitlab.com/nonguix/nonguix")
-   (introduction
-    (make-channel-introduction
-     "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
-     (openpgp-fingerprint
-      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-
-(define channel-map
-  (kvm #:channel/guix guix
-       #:channel/nonguix nonguix))
-#+end_src
 ** Installation WIP
 *** Create bootable USB
 Download (or create) a Guix installation ISO
@@ -259,25 +218,6 @@ guix pull
 |--------------+------------------|
 | :user/admin? | :db.type/boolean |
 
-*** Channels
-#+begin_src scheme :tangle (meta-in-dir "channels.scm")
-(define-module (ebullient system channels)
-  #:use-module ((donnager client) #:prefix d:)
-  #:use-module (ebullient channels)
-  #:use-module (mendicant utils)
-  #:export (get-system-channels
-            system-channel-deps))
-
-(define (get-system-channels cs)
-  (apply get-channels cs))
-
-(define (system-channel-deps system)
-  (as-> system $
-        (d:q $ '(#:system/features #:entity/channel-deps))
-        (map (partial get system-channel-map) $)))
-
-(define system-channel-map channel-map)
-#+end_src
 *** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -922,61 +862,6 @@ sudo guix time-machine \
 #+name: guix-extra-profiles-path
 #+begin_src sh
 ~/.guix-extra-profiles
-#+end_src
-*** Channels
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "channels.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient home channels)
-  #:use-module (guix channels)
-  #:use-module ((donnager client) #:prefix d:)
-  #:use-module (ebullient channels)
-  #:use-module (mendicant utils)
-  #:export (get-home-channels
-            user-channel-deps
-            rde
-            flat)
-  #:re-export (guix
-               nonguix))
-
-(define (get-home-channels cs)
-  (apply get-channels (if (member rde cs)
-                          cs (cons rde cs))))
-
-(define (user-channel-deps user)
-  (as-> user $
-        (get (d:pull '(#:entity/channel-deps) $) #:entity/channel-deps)
-        (map (partial get home-channel-map) $)))
-#+end_src
-**** Definitions
-#+begin_src scheme
-(define rde
-  (channel
-   (name 'rde)
-   (url "https://git.sr.ht/~abcdw/rde")
-   (introduction
-    (make-channel-introduction
-     "257cebd587b66e4d865b3537a9a88cccd7107c95"
-     (openpgp-fingerprint
-      "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0")))))
-
-(define flat
-  (channel
-   (name 'flat)
-   (url "https://github.com/flatwhatson/guix-channel.git")
-   (introduction
-    (make-channel-introduction
-     "33f86a4b48205c0dc19d7c036c85393f0766f806"
-     (openpgp-fingerprint
-      "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490")))))
-#+end_src
-**** \
-#+begin_src scheme
-(define home-channel-map
-  (merge channel-map
-         (kvm #:channel/rde rde
-              #:channel/flat flat)))
 #+end_src
 *** Components
 :PROPERTIES:
@@ -4431,6 +4316,37 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
+** Channel
+#+begin_src scheme (meta-in-dir ".guix-channel")
+(channel
+ (version 0)
+ ;; (directory "ebullient") ; TODO might need this
+ (dependencies
+  (channel
+   (name flat)
+   (url "https://github.com/flatwhatson/guix-channel.git")
+   (introduction
+    (make-channel-introduction
+     "33f86a4b48205c0dc19d7c036c85393f0766f806"
+     (openpgp-fingerprint
+      "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
+  (channel
+   (name rde)
+   (url "https://git.sr.ht/~abcdw/rde")
+   (introduction
+    (make-channel-introduction
+     "257cebd587b66e4d865b3537a9a88cccd7107c95"
+     (openpgp-fingerprint
+      "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+  (channel
+   (name nonguix)
+   (url "https://gitlab.com/nonguix/nonguix")
+   (introduction
+    (make-channel-introduction
+     "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+     (openpgp-fingerprint
+      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
+#+end_src
 ** \
 #+begin_src sh :var name="" dir=""
 guix time-machine \
@@ -5346,12 +5262,12 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
            #:laptop? #t
            #:bluetooth? #t))
 #+end_src
-**** Channel deps
+**** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
-(use-modules (ebullient system channels))
-
-(get-system-channels
- (system-channel-deps #:system/frostfire))
+(cons* (channel
+        (name 'ebullient) ; TODO rename this? To phrenetic?
+        (url "file:///home/pharcosyle/projects/phrenetic"))
+       %default-channels)
 #+end_src
 **** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
@@ -5487,12 +5403,12 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      ;;                       "git@git.sr.ht:~abcdw/rde"))))
      ))))
 #+end_src
-**** Channel deps
+**** Channels
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
-(use-modules (ebullient home channels))
-
-(get-home-channels
- (user-channel-deps #:user/primary))
+(cons* (channel
+        (name 'ebullient) ; TODO rename this? To phrenetic?
+        (url "file:///home/pharcosyle/projects/phrenetic"))
+       %default-channels)
 #+end_src
 **** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
