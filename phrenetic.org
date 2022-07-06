@@ -480,14 +480,14 @@ The stateless service should come after base/desktop services (potentially other
 
 (define* (btrfs-subvols #:key stateless? persist-dir nix?)
   (append
-   `(("root-blank" . "/")
+   '(("root-blank" . "/")
      ("boot" . "/boot")
      ("guix-store" . "/gnu/store")
      ("guix-var" . "/var/guix")
      ("log" . "/var/log")
      ("home" . "/home"))
    (if stateless?
-       `(("persist" . ,persist-dir)))
+       `(("persist" . ,persist-dir)) '())
    (if nix?
        '(("nix" . "/nix")) '())))
 #+end_src
@@ -705,6 +705,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                   auto-login
                   disk-encryption?
                   luks-uuid
+                  stateless?
                   nix?
                   console?
                   desktop?
@@ -740,18 +741,16 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                                   #:bluetooth? bluetooth?)
                 (gdm #:auto-login (if disk-encryption?
                                       auto-login #f))
-                (let (session? (lambda (s)
-                                 (member s sessions)))
-                  (as-> $
-                    (if (session? #:session/gnome)
-                        (gnome-desktop $) $)
-                    (if (session? #:session/sway)
-                        (sway-wm $ #:laptop? laptop?) $))))
+                (as-> $
+                  (if (member #:session/gnome sessions)
+                      (gnome-desktop $) $)
+                  (if (member #:session/sway sessions)
+                      (sway-wm $ #:laptop? laptop?) $)))
             $)
         (if macbook?
             (macbook-wireless $ #:bluetooth? bluetooth?) $)
         (let* ((persist-dir stateless-persist-dir)
-               (subvols (btrfs-subvols #:statless? stateless?
+               (subvols (btrfs-subvols #:stateless? stateless?
                                        #:persist-dir persist-dir
                                        #:nix? nix?)))
           (-> $
@@ -760,10 +759,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                 (if disk-encryption?
                     (disk-encryption $ #:source-uuid luks-uuid
                                      #:encrypted-mount-points (map cdr subvols))
-                    $))
-              (as-> $
+                    $)
                 (if stateless?
-                    (stateless #:persist-dir persist-dir
+                    (stateless $ #:persist-dir persist-dir
                                #:bluetooth? bluetooth?)
                     $)))))))
 #+end_src
@@ -837,7 +835,7 @@ sudo guix time-machine \
     (filter
      service?
      (let ((setup-shell? (lambda (shell)
-                           (memq shell (list login-shell interactive shell)))))
+                           (memq shell (list login-shell interactive-shell)))))
        (list
         (when (setup-shell? #:shell/bash)
           (service home-bash-service-type
@@ -4124,15 +4122,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (he-direnv #:shell interactive-shell)))
           (if desktop?
               (-> $
-                  (as->$
+                  (as-> $
                     (if pipewire?
                         (he-pipewire $) $))
                   he-flatpak
-                  (let (session? (lambda (s)
-                                   (member s sessions)))
-                    (as-> $
-                      (if (session? #:session/sway)
-                          (he-sway $) $)))
+                  (as-> $
+                    (if (member #:session/sway sessions)
+                        (he-sway $) $))
               $)))))))
 #+end_src
 *** \
@@ -4783,6 +4779,7 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
            ;; #:auto-login "pharcosyle" ; REVIEW Enable this later.
            #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
+           #:stateless #t
            #:nix? #t
            #:console? #t
            #:desktop? #t
@@ -5109,7 +5106,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (use-package! s)
 #+end_src
 ******* Personal Info :user:
-#+begin_src elisp :noweb yes
+#+begin_src elisp
 (setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>>
       user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
 #+end_src
