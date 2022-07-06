@@ -36,18 +36,6 @@
 :PROPERTIES:
 :meta-dir+: /ebullient
 :END:
-#+name: db/schema-common
-| =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
-|----------------------+------------------+----------------------|
-| :system/features     | :db.type/keyword | :db.cardinality/many |
-| :user/login-shell    | :db.type/keyword |                      |
-| :user/sessions       | :db.type/keyword | :db.cardinality/many |
-
-#+begin_src scheme :tangle (meta-in-dir "ebullient.scm")
-(define-module (ebullient))
-
-(define-public default-login-shell #:shell/bash)
-#+end_src
 ** Installation WIP
 *** Create bootable USB
 Download (or create) a Guix installation ISO
@@ -192,11 +180,6 @@ guix pull
 :PROPERTIES:
 :meta-dir+: /ebullient/system
 :END:
-#+name: db/schema-whatever
-| =:db/id=     | =:db/valueType=  |
-|--------------+------------------|
-| :user/admin? | :db.type/boolean |
-
 *** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -231,7 +214,6 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
-  #:use-module (ebullient)
   #:use-module (mendicant utils)
   #:export (barebones-os
             host-info
@@ -487,7 +469,7 @@ The stateless service should come after base/desktop services (potentially other
   (file-systems
    (append
     (map (match-lambda
-           ((subvol mount-point)
+           ((subvol . mount-point)
             (file-system
               (device (file-system-label label))
               (mount-point mount-point)
@@ -498,16 +480,16 @@ The stateless service should come after base/desktop services (potentially other
 
 (define* (btrfs-subvols #:key stateless? persist-dir nix?)
   (append
-   `(("root-blank" "/")
-     ("boot" "/boot")
-     ("guix-store" "/gnu/store")
-     ("guix-var" "/var/guix")
-     ("log" "/var/log")
-     ("home" "/home"))
+   `(("root-blank" . "/")
+     ("boot" . "/boot")
+     ("guix-store" . "/gnu/store")
+     ("guix-var" . "/var/guix")
+     ("log" . "/var/log")
+     ("home" . "/home"))
    (if stateless?
-       '(("persist" ,persist-dir)))
+       `(("persist" . ,persist-dir)))
    (if nix?
-       '(("nix" "/nix")) '())))
+       '(("nix" . "/nix")) '())))
 #+end_src
 **** Users
 #+begin_src scheme
@@ -519,12 +501,10 @@ The stateless service should come after base/desktop services (potentially other
    (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())
                                  (if bluetooth? '("lp") '())))
-   (shell (if (eq? shell default-login-shell)
-              (default-shell)
-              ;; (case shell
-              ;;   ((#:shell/bash) (file-append bash "/bin/bash"))
-              ;;   ((#:shell/zsh) (file-append zsh "/bin/zsh")))
-              ))
+   (shell (case shell
+            ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+            ;; ((#:shell/zsh) (file-append zsh "/bin/zsh"))
+            (else (default-shell))))
    (password (if password
                  (crypt password salt)
                  #f))))
@@ -631,7 +611,9 @@ The stateless service should come after base/desktop services (potentially other
 ***** Display managers
 ****** GDM
 #+begin_src scheme
-(define-system-comp (gdm #:key wayland? auto-login)
+(define-system-comp (gdm #:key
+                         (wayland? #t)
+                         auto-login)
   (services
    (cons* (service gdm-service-type
                    (gdm-configuration
@@ -711,9 +693,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 *** Base OS
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
-  #:use-module ((donnager client) #:prefix d:)
   #:use-module (ebullient system components)
-  #:use-module (ebullient)
   #:use-module (mendicant utils)
   #:export (base-os))
 
@@ -722,103 +702,70 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                   timezone
                   locale
                   accounts
+                  auto-login
+                  disk-encryption?
                   luks-uuid
-                  auto-login-account
-                  kbl
+                  nix?
                   console?
+                  desktop?
+                  pipewire?
+                  bluetooth?
+                  sessions
                   laptop?
-                  bluetooth?)
-  (let* ((feature?
-          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
-            (lambda (feat)
-              (member feat features))))
-         (disk-encryption? (feature? #:feature/disk-encryption))
-         (stateless? (feature? #:feature/stateless))
-         (nix? (feature? #:feature/nix))
-         (desktop? (feature? #:feature/desktop))
-         (laptop? (and desktop? laptop?))
-         (macbook? (and laptop? (feature? #:feature/macbook)))
-         (pipewire? (and desktop? (feature? #:feature/pipewire)))
-         (bluetooth? (and desktop? bluetooth?))
-         (kbl (or kbl
-                  (if macbook?
-                      macbook-kbl #f)))
-         (auto-login (if disk-encryption?
-                         (get (d:pull '(#:user/username) auto-login-account) #:user/username) #f))
-         (who
-          (->> accounts
-               (apply d:pull-many '(*))
-               (map (lambda (user)
-                      (merge
-                       (kvm #:name (get user #:user/username)
-                            #:comment (get user #:user/full-name)
-                            #:shell (let ((shell (get user #:user/login-shell)))
-                                      (if (equal? shell #:shell/default)
-                                          default-login-shell shell))
-                            #:admin? (get user #:user/admin?))
-                       (let ((admin? (get user #:user/admin?))
-                             (password (get user #:user/password)))
-                         (if (and password (not admin?))
-                             (kvm #:password password)
-                             (kvm))))))))
-         (session?
-          (let ((sessions
-                 (->> accounts
-                      (map (rpartial get #:user/sessions) (d:pull-many '(#:user/sessions)))
-                      (apply append))))
-            (lambda (s)
-              (member s sessions))))
-         gnome? (session? #:session/gnome)
-         sway? (session? #:session/sway))
-    (-> barebones-os
-        (host-info #:host-name host-name
-                   #:timezone timezone
-                   #:locale locale)
-        grub-efi
-        base-services
-        nss
-        (users #:who who
-               #:bluetooth? bluetooth?)
-        nonguix-substitutes
-        linux-nonfree
-        (as-> $
-          (if nix?
-              (nix $) $)
-          (if console?
-              (-> $
-                  (console-keyboard-layouts #:keyboard-layout kbl)
-                  hidpi-console-font)
-              $)
-          (if desktop?
-              (-> $
-                  (desktop-services #:pipewire? pipewire?
-                                    #:bluetooth? bluetooth?)
-                  (gdm #:wayland? #t
-                       #:auto-login auto-login)
-                  (as-> $
-                    (if gnome?
-                        (gnome-desktop $) $)
-                    (if sway?
-                        (sway-wm $ #:laptop? laptop?) $)))
-              $)
-          (if macbook?
-              (macbook-wireless $ #:bluetooth? bluetooth?) $)
-          (let* ((persist-dir stateless-persist-dir)
-                 (subvols (btrfs-subvols #:statless? stateless?
-                                         #:persist-dir persist-dir
-                                         #:nix? nix?)))
+                  macbook?
+                  (kbl (if macbook?
+                           macbook-kbl #f)))
+  (-> barebones-os
+      (host-info #:host-name host-name
+                 #:timezone timezone
+                 #:locale locale)
+      grub-efi
+      base-services
+      nss
+      (users #:who accounts
+             #:bluetooth? bluetooth?)
+      nonguix-substitutes
+      linux-nonfree
+      (as-> $
+        (if nix?
+            (nix $) $)
+        (if console?
             (-> $
-                (btrfs #:subvols subvols)
-                (as-> $
-                  (if disk-encryption?
-                      (disk-encryption $ #:source-uuid luks-uuid
-                                       #:encrypted-mount-points (map cadr subvols))
-                      $))
-                (as-> $
-                  (if stateless?
-                      (stateless #:persist-dir persist-dir
-                                 #:bluetooth? bluetooth?)
-                      $))))))))
+                (console-keyboard-layouts #:keyboard-layout kbl)
+                hidpi-console-font)
+            $)
+        (if desktop?
+            (-> $
+                (desktop-services #:pipewire? pipewire?
+                                  #:bluetooth? bluetooth?)
+                (gdm #:auto-login (if disk-encryption?
+                                      auto-login #f))
+                (let (session? (lambda (s)
+                                 (member s sessions)))
+                  (as-> $
+                    (if (session? #:session/gnome)
+                        (gnome-desktop $) $)
+                    (if (session? #:session/sway)
+                        (sway-wm $ #:laptop? laptop?) $))))
+            $)
+        (if macbook?
+            (macbook-wireless $ #:bluetooth? bluetooth?) $)
+        (let* ((persist-dir stateless-persist-dir)
+               (subvols (btrfs-subvols #:statless? stateless?
+                                       #:persist-dir persist-dir
+                                       #:nix? nix?)))
+          (-> $
+              (btrfs #:subvols subvols)
+              (as-> $
+                (if disk-encryption?
+                    (disk-encryption $ #:source-uuid luks-uuid
+                                     #:encrypted-mount-points (map cdr subvols))
+                    $))
+              (as-> $
+                (if stateless?
+                    (stateless #:persist-dir persist-dir
+                               #:bluetooth? bluetooth?)
+                    $)))))))
 #+end_src
 *** \
 - TODO expression shouldn't reference "exhuberant"
@@ -4144,61 +4091,49 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
-  #:use-module ((donnager client) #:prefix d:)
-  #:use-module (ebullient)
   #:use-module ((ebullient home emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
   #:use-module (mendicant utils)
   #:export (base-he))
 
 (define* (base-he #:key
-                  system
-                  account
-                  developer?)
-  (let* ((login-shell
-          (let ((shell (get (d:pull '(#:user/login-shell) user) #:user/login-shell)))
-            (if (equal? shell #:shell/default)
-                default-login-shell shell)))
-         (interactive-shell (if developer?
-                                #:shell/zsh login-shell))
-         (feature?
-          (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
-            (lambda (feat)
-              (member feat features))))
-         (nix? (feature? #:feature/nix))
-         (desktop? (feature? #:feature/desktop))
-         (pipewire? (feature? #:feature/pipewire))
-         (session?
-          (lambda (s)
-            (member s (get (d:pull '(#:user/sessions) account) #:user/sessions))))
-         (sway? (session? :session/sway)))
-    (home-environment
-     (services
-      (-> '()
-          (he-shells #:login-shell login-shell
-                     #:interactive-shell interactive-shell)
-          he-extra-profiles
-          (as-> $
-            (if nix?
-                (he-nix $) $)
-            (if developer?
-                (-> $
-                    (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
-                              ;; TODO
-                              ;; #:config (kvm #:emacs ...)
-                              #:config (kvm #:emacs (emacs-fully-loaded #:pgtk? #t)))
-                    he-doom
-                    (he-direnv #:shell interactive-shell)))
-            (if desktop?
-                (-> $
-                    (as->$
-                      (if pipewire?
-                          (he-pipewire $) $))
-                    he-flatpak
-                    (as->$
-                      (if sway?
+                  (login-shell #:shell/bash)
+                  developer?
+                  (interactive-shell (if developer?
+                                         #:shell/zsh login-shell))
+                  nix?
+                  desktop?
+                  pipewire?
+                  sessions)
+  (home-environment
+   (services
+    (-> '()
+        (he-shells #:login-shell login-shell
+                   #:interactive-shell interactive-shell)
+        he-extra-profiles
+        (as-> $
+          (if nix?
+              (he-nix $) $)
+          (if developer?
+              (-> $
+                  (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
+                            ;; TODO
+                            ;; #:config (kvm #:emacs ...)
+                            #:config (kvm #:emacs (emacs-fully-loaded #:pgtk? #t)))
+                  he-doom
+                  (he-direnv #:shell interactive-shell)))
+          (if desktop?
+              (-> $
+                  (as->$
+                    (if pipewire?
+                        (he-pipewire $) $))
+                  he-flatpak
+                  (let (session? (lambda (s)
+                                   (member s sessions)))
+                    (as-> $
+                      (if (session? #:session/sway)
                           (he-sway $) $)))
-                $)))))))
+              $)))))))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
@@ -5192,35 +5127,11 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 :PROPERTIES:
 :meta-dir+: /exuberant
 :END:
-#+name: db/systems-common
-| =:db/id=          | =:system/features=                              |
-|-------------------+-------------------------------------------------|
-| :system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
-
-#+name: db/users-common
-| =:db/id=      | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|---------------+------------------------+---------------------+------------------------------|
-| :user/primary | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :user/aux     | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :user/guest   | Speak Friend and Enter | :shell/default      | :session/gnome               |
-
 ** Operating systems
 :PROPERTIES:
 :meta-dir+: /exuberant/os
 :END:
-#+name: db/users-system
-| =:db/id=      | =:user/username= | =:user/admin?= | =:user/password= |
-|---------------+------------------+----------------+------------------|
-| :user/primary | pharcosyle       | true           |                  |
-| :user/aux     | pcoulson         | true           |                  |
-| :user/guest   | gandalf          |                | mellon           |
-
 *** Frostfire
-#+name: db/systems-frostfire
-| =:db/id=          | =:system/features=                                           |
-|-------------------+--------------------------------------------------------------|
-| :system/frostfire | :feature/disk-encryption :feature/stateless :feature/macbook |
-
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant os frostfire)
   #:use-module (ebullient system base-os))
@@ -5228,14 +5139,27 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 (define-public os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
-           #:accounts '(#:user/primary
-                        #:user/aux
-                        #:user/guest)
+           #:accounts '((#:name . "pharcosyle"
+                         #:comment . "Krzysztof Baranowski"
+                         #:admin? . #t)
+                        (#:name . "pcoulson"
+                         #:comment . "Phil Coulson"
+                         #:admin? . #t)
+                        (#:name . "gandalf"
+                         #:comment . "Speak Friend and Enter"
+                         #:password . "mellon"))
+           ;; #:auto-login "pharcosyle" ; REVIEW Enable this later.
+           #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
-           ;; #:auto-login-account #:user/primary ; REVIEW Enable this later.
+           #:nix? #t
            #:console? #t
+           #:desktop? #t
+           #:pipewire? #t
+           #:bluetooth? #t
+           #:sessions '(#:session/gnome
+                        #:session/sway)
            #:laptop? #t
-           #:bluetooth? #t))
+           #:macbook? #t))
 #+end_src
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
@@ -5285,9 +5209,11 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (he))
 
 (define-public he
-  (base-he #:system #:system/frostfire
-           #:account #:user/primary
-           #:developer? #t))
+  (base-he #:developer? #t
+           #:nix? #t
+           #:desktop? #t
+           #:pipewire? #t
+           #:sessions '(#:sesion/sway)))
 #+end_src
 **** Solitude old WIP
 #+begin_src scheme
