@@ -241,7 +241,9 @@ guix pull
             linux-nonfree
             disk-encryption
             stateless
+            stateless-persist-dir
             btrfs
+            btrfs-subvols
             users
             nonguix-substitutes
             nix
@@ -281,7 +283,10 @@ guix pull
 #+end_src
 **** Host info
 #+begin_src scheme
-(define-system-comp (host-info #:key host-name timezone locale)
+(define-system-comp (host-info #:key
+                               host-name
+                               timezone
+                               (locale "en_US.utf8"))
   (host-name host-name)
   (timezone timezone)
   (locale locale))
@@ -291,7 +296,9 @@ guix pull
 ...
 ***** Grub EFI
 #+begin_src scheme
-(define-system-comp (grub-efi #:key label target)
+(define-system-comp (grub-efi #:key
+                              (label "genesis")
+                              (target "/boot/efi"))
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
                (targets (list target))
@@ -327,7 +334,11 @@ guix pull
 #+end_src
 **** Disk encryption
 #+begin_src scheme
-(define* (disk-encryption os #:key source-uuid target encrypted-mount-points)
+(define* (disk-encryption os
+                          #:key
+                          source-uuid
+                          (target "ciphered")
+                          encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
                            (targets (list target))
@@ -381,6 +392,8 @@ The stateless service should come after base/desktop services (potentially other
                             "/etc/guix/signing-key.sec")
                           (if bluetooth?
                               (list "/var/lib/bluetooth") '()))))))))
+
+(define stateless-persist-dir "/.persist")
 #+end_src
 ***** Service
 #+begin_src scheme
@@ -468,7 +481,9 @@ The stateless service should come after base/desktop services (potentially other
 ...
 ***** Btrfs
 #+begin_src scheme
-(define-system-comp (btrfs #:key label subvols)
+(define-system-comp (btrfs #:key
+                           (label "firmament")
+                           subvols)
   (file-systems
    (append
     (map (match-lambda
@@ -480,10 +495,23 @@ The stateless service should come after base/desktop services (potentially other
               (options (string-append "subvol=" subvol ",compress=zstd,autodefrag")))))
          subvols)
     (operating-system-file-systems os))))
+
+(define* (btrfs-subvols #:key stateless? persist-dir nix?)
+  (append
+   `(("root-blank" "/")
+     ("boot" "/boot")
+     ("guix-store" "/gnu/store")
+     ("guix-var" "/var/guix")
+     ("log" "/var/log")
+     ("home" "/home"))
+   (if stateless?
+       '(("persist" ,persist-dir)))
+   (if nix?
+       '(("nix" "/nix")) '())))
 #+end_src
 **** Users
 #+begin_src scheme
-(define* (account #:key name comment shell admin? password salt bluetooth?)
+(define* (account #:key name comment shell admin? password (salt "toosimple") bluetooth?)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -692,7 +720,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define* (base-os #:key
                   host-name
                   timezone
-                  (locale "en_US.utf8")
+                  locale
                   accounts
                   luks-uuid
                   auto-login-account
@@ -731,8 +759,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                        (let ((admin? (get user #:user/admin?))
                              (password (get user #:user/password)))
                          (if (and password (not admin?))
-                             (kvm #:password password
-                                  #:salt "toosimple")
+                             (kvm #:password password)
                              (kvm))))))))
          (session?
           (let ((sessions
@@ -747,8 +774,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         (host-info #:host-name host-name
                    #:timezone timezone
                    #:locale locale)
-        (grub-efi #:label "genesis"
-                  #:target "/boot/efi")
+        grub-efi
         base-services
         nss
         (users #:who who
@@ -777,24 +803,15 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
               $)
           (if macbook?
               (macbook-wireless $ #:bluetooth? bluetooth?) $)
-          (let* ((persist-dir "/.persist")
-                 (subvols
-                  (append
-                   `(("root-blank" "/")
-                     ("boot" "/boot")
-                     ("guix-store" "/gnu/store")
-                     ("guix-var" "/var/guix")
-                     ("log" "/var/log")
-                     ("home" "/home")
-                     ("persist" ,persist-dir))
-                   (if nix? '(("nix" "/nix")) '()))))
+          (let* ((persist-dir stateless-persist-dir)
+                 (subvols (btrfs-subvols #:statless? stateless?
+                                         #:persist-dir persist-dir
+                                         #:nix? nix?)))
             (-> $
-                (btrfs #:label "firmament"
-                       #:subvols subvols)
+                (btrfs #:subvols subvols)
                 (as-> $
                   (if disk-encryption?
                       (disk-encryption $ #:source-uuid luks-uuid
-                                       #:target "ciphered"
                                        #:encrypted-mount-points (map cadr subvols))
                       $))
                 (as-> $
