@@ -14,13 +14,11 @@
 ;;; -*- lexical-binding: t; -*-
 
 (require 'dash)
-;; FIXME
-;; (require 'donnager-org)
-
-(setq meta--base-dir ".")
 #+end_src
 ** Path hierarchy
 #+begin_src elisp
+(setq meta--base-dir ".")
+
 (defun meta-get-dir ()
   (concat meta--base-dir
           (when-let ((dirs (org-entry-get (point) "meta-dir" 'inherit)))
@@ -28,24 +26,6 @@
 
 (defun meta-in-dir (sub-path)
   (concat (meta-get-dir) "/" sub-path))
-#+end_src
-** DB
-#+begin_src elisp
-(setq meta--table-refs
-      '("db/schema-common"
-        "db/systems-common"
-        "db/feature-linux-nonfree"
-        "db/feature-macbook"
-        "db/systems-frostfire"
-        "db/schema-whatever"
-        "db/users-common"
-        "db/users-system"
-        "db/users-home"
-        "db/palette"))
-
-;; FIXME
-;; (setq meta--database
-;;       (db--load meta--table-refs))
 #+end_src
 ** Dev
 *** Git ignore
@@ -59,7 +39,6 @@
 #+name: db/schema-common
 | =:db/id=             | =:db/valueType=  | =:db/cardinality=    |
 |----------------------+------------------+----------------------|
-| :entity/channel-deps | :db.type/keyword | :db.cardinality/many |
 | :system/features     | :db.type/keyword | :db.cardinality/many |
 | :user/login-shell    | :db.type/keyword |                      |
 | :user/sessions       | :db.type/keyword | :db.cardinality/many |
@@ -339,11 +318,6 @@ guix pull
           (operating-system-packages os))))
 #+end_src
 **** Linux nonfree
-#+name: db/feature-linux-nonfree
-| =:db/id=               | =:entity/channel-deps= |
-|------------------------+------------------------|
-| :feature/linux-nonfree | :channel/nonguix       |
-
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
   (kernel linux)
@@ -680,12 +654,6 @@ The stateless service should come after base/desktop services (potentially other
 **** Macbook
 ***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
-
-#+name: db/feature-macbook
-| =:db/id=         | =:entity/channel-deps= |
-|------------------+------------------------|
-| :feature/macbook | :channel/nonguix       |
-
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
@@ -722,7 +690,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:export (base-os))
 
 (define* (base-os #:key
-                  system
                   host-name
                   timezone
                   (locale "en_US.utf8")
@@ -737,7 +704,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
           (let ((features (get (d:pull '(#:system/features) system) #:system/features)))
             (lambda (feat)
               (member feat features))))
-         (linux-nonfree? (feature? #:feature/linux-nonfree))
          (disk-encryption? (feature? #:feature/disk-encryption))
          (stateless? (feature? #:feature/stateless))
          (nix? (feature? #:feature/nix))
@@ -768,11 +734,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                              (kvm #:password password
                                   #:salt "toosimple")
                              (kvm))))))))
-         (nonguix-substitutes?
-          (let ((channel-deps (append
-                               (d:q $ '(#:system/features #:entity/channel-deps) system)
-                               (d:q-many $ '(#:entity/channel-deps) accounts))))
-            (member #:channel/nonguix channel-deps)))
          (session?
           (let ((sessions
                  (->> accounts
@@ -792,11 +753,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         nss
         (users #:who who
                #:bluetooth? bluetooth?)
+        nonguix-substitutes
+        linux-nonfree
         (as-> $
-          (if nonguix-substitutes?
-              (nonguix-substitutes $) $)
-          (if linux-nonfree?
-              (linux-nonfree $) $)
           (if nix?
               (nix $) $)
           (if console?
@@ -5222,11 +5181,11 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 | :system/frostfire | :feature/nix :feature/desktop :feature/pipewire |
 
 #+name: db/users-common
-| =:db/id=      | =:entity/channel-deps= | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
-|---------------+------------------------+------------------------+---------------------+------------------------------|
-| :user/primary | :channel/nonguix       | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
-| :user/aux     | :channel/nonguix       | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
-| :user/guest   | :channel/nonguix       | Speak Friend and Enter | :shell/default      | :session/gnome               |
+| =:db/id=      | =:user/full-name=      | =:user/login-shell= | =:user/sessions=             |
+|---------------+------------------------+---------------------+------------------------------|
+| :user/primary | Krzysztof Baranowski   | :shell/default      | :session/gnome :session/sway |
+| :user/aux     | Phil Coulson           | :shell/default      | :session/gnome :session/sway |
+| :user/guest   | Speak Friend and Enter | :shell/default      | :session/gnome               |
 
 ** Operating systems
 :PROPERTIES:
@@ -5241,17 +5200,16 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 
 *** Frostfire
 #+name: db/systems-frostfire
-| =:db/id=          | =:system/features=                                                                  |
-|-------------------+-------------------------------------------------------------------------------------|
-| :system/frostfire | :feature/linux-nonfree :feature/disk-encryption :feature/stateless :feature/macbook |
+| =:db/id=          | =:system/features=                                           |
+|-------------------+--------------------------------------------------------------|
+| :system/frostfire | :feature/disk-encryption :feature/stateless :feature/macbook |
 
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant os frostfire)
   #:use-module (ebullient system base-os))
 
 (define-public os
-  (base-os #:system #:system/frostfire
-           #:host-name "frostfire"
+  (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
            #:accounts '(#:user/primary
                         #:user/aux
@@ -5303,12 +5261,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 :PROPERTIES:
 :meta-dir+: /exuberant/he
 :END:
-#+name: db/users-home
-| =:db/id=      | =:entity/channel-deps= | =:user/email=            |
-|---------------+------------------------+--------------------------|
-| :user/primary | :channel/flat          | pharcosyle@gmail.com     |
-| :user/aux     | :channel/flat          | pharcosyle+aux@gmail.com |
-
 *** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
 (define-module (exuberant he solitude)
@@ -5460,26 +5412,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 **** Dotfiles
 - TODO move the "Dotfiles" headline somewhere better later?
 
-#+name: db/palette
-| =:db/id=                 | =:color/hex= |
-|--------------------------+--------------|
-| :color/fg                | #dee2f8      |
-| :color/highlight         | #8496ff      |
-| :color/comments          | #63677f      |
-| :color/comment-delimiter | #939abd      |
-| :color/red               | #fb8578      |
-| :color/orange            | #fdce5f      |
-| :color/green             | #9fed9c      |
-| :color/yellow            | #eddc91      |
-| :color/blue              | #7db9fe      |
-| :color/dark-blue         | #5f68de      |
-| :color/magenta           | #e29bf7      |
-| :color/violet            | #aeb9f3      |
-| :color/cyan              | #75e0f9      |
-| :color/gold              | #fdd94a      |
-| :color/pink              | #ff9999      |
-
-- FIXME remove this
 #+name: palette
 | Name              | Color   |
 |-------------------+---------|
