@@ -214,7 +214,7 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
-  #:use-module (mendicant utils)
+  #:use-module (ebullient utils)
   #:export (barebones-os
             host-info
             grub-efi
@@ -694,7 +694,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (ebullient system base-os)
   #:use-module (ebullient system components)
-  #:use-module (mendicant utils)
+  #:use-module (ebullient utils)
   #:export (base-os))
 
 (define* (base-os #:key
@@ -814,7 +814,7 @@ sudo guix time-machine \
   #:use-module (gnu services shepherd)
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
-  #:use-module (mendicant utils)
+  #:use-module (ebullient utils)
   #:export (he-shells
             he-extra-profiles
             he-nix
@@ -1178,7 +1178,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((flat packages emacs) #:select (emacs-native-comp emacs-pgtk-native-comp))
-  #:use-module (mendicant utils)
+  #:use-module (ebullient utils)
   #:export (emacs-fully-loaded))
 #+end_src
 ****** Emacs fully loaded :package:
@@ -1536,7 +1536,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
   #:use-module ((gnu packages fonts) #:select (font-awesome font-google-material-design-icons) #:prefix fonts:)
-  #:use-module (mendicant utils))
+  #:use-module (ebullient utils))
 
 (define-public all-the-icons-fonts
   (let ((commit "7193403b47ad8b65347f9bafc939a152f0fe448a")
@@ -2319,7 +2319,7 @@ Extremely WIP, basically just a scratchpad
 (use-modules (gnu packages)
              (guix profiles)
              ;; ((srfi srfi-1) #:select (remove))
-             ;; (mendicant utils)
+             ;; (ebullient utils)
              )
 
 ;; (define (doom-ps)
@@ -4093,7 +4093,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (gnu home)
   #:use-module ((ebullient home emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
-  #:use-module (mendicant utils)
+  #:use-module (ebullient utils)
   #:export (base-he))
 
 (define* (base-he #:key
@@ -4227,6 +4227,211 @@ for profile in $profiles; do
 done
 #+end_src
 #+call: upgrade-profiles[:cmdline ...]()
+** Utils
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient utils)
+  #:use-module (guix git-download)
+  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
+  #:use-module (guix packages)
+  #:use-module (gnu services)
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
+  #:export (update-list
+            when-let
+            if-let
+            when-not
+            if-not
+            partial
+            ->
+            ->>
+            as->
+            kvm
+            get
+            keys
+            massoc
+            merge
+            keyvals
+            update-services*
+            update-services
+            get-inferior-package
+            with-git-version
+            with-git-commit
+            with-git-url))
+
+(define (update-list l pred f)
+  (map (lambda (x)
+         (if (pred x) (f x) x))
+       l))
+#+end_src
+*** Branching
+#+begin_src scheme
+(define-syntax when-let
+  (syntax-rules ()
+    ((_ ((var expr)) body ...)
+     (let ((var expr))
+       (when var body ...)))))
+
+(define-syntax if-let
+  (syntax-rules ()
+    ((_ ((var expr)) then else)
+     (let ((var expr))
+       (if var then else)))))
+
+(define-syntax when-not
+  (syntax-rules ()
+    ((_ test body ...)
+     (when (not test) body ...))))
+
+(define-syntax if-not
+  (syntax-rules ()
+    ((_ test then else)
+     (if (not test) then else))))
+#+end_src
+*** Functions
+#+begin_src scheme
+(define* (partial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append args more))))
+
+(define* (rpartial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append more args))))
+
+(define-syntax ->
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f . body) next ...) (-> (f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
+
+(define (thread-last-helper f value . body)
+  (apply f (append body (list value))))
+
+(define-syntax ->>
+  (syntax-rules ()
+    ((_ value) value)
+    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
+    ((_ value f next ...) (-> (f value) next ...))))
+
+(define-syntax as->
+  (syntax-rules ()
+    ((_ expr name) expr)
+    ((_ expr name form form* ...)
+     (let ((name expr))
+       (as-> form name form* ...)))))
+#+end_src
+*** Maps
+#+begin_src scheme
+(define* (kvm #:rest keyvals)
+  (let loop ((m '())
+             (more keyvals))
+    (if (null? more)
+        m
+        (loop (cons (as-> more $
+                          (take $ 2)
+                          (apply cons $))
+                    m)
+              (drop more 2)))))
+
+(define get assoc-ref)
+
+(define (keys m)
+  (map car m))
+
+(define (massoc m k v)
+  (->> m
+       (remove (match-lambda
+                 ((k1 . _)
+                  (equal? k k1))))
+       (cons '(k . v))))
+
+(define* (merge #:rest maps)
+  (fold
+   (lambda (m1 m2)
+     (fold
+      (match-lambda
+        (((k . v) res)
+         (massoc res k v)))
+      m1 m2))
+   (kvm)
+   maps))
+
+(define (keyvals m)
+  (->> m
+       (map (match-lambda
+              ((k . v)
+               (list k v))))
+       (apply append)))
+#+end_src
+*** Guix
+#+begin_src scheme
+(define (update-services* services pred update-fn)
+  (update-list
+   services
+   pred
+   (lambda (svc)
+     (service (service-kind svc)
+              (update-fn (service-value svc))))))
+
+(define (update-services services kind update-fn)
+  (update-services*
+   services
+   (lambda (svc)
+     (eq? (service-kind svc) kind))
+   update-fn))
+
+(define (get-inferior-package channels package)
+  (-> (inferior-for-channels channels)
+      (lookup-inferior-packages package)
+      first))
+
+(define* (with-git pkg
+                   #:key
+                   (upstream-version (package-version pkg))
+                   revision
+                   commit
+                   hash)
+  (package
+    (inherit pkg)
+    (version (if revision
+                 (git-version upstream-version revision commit)
+                 upstream-version))
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (commit commit)))
+       (sha256
+        (base32
+         hash))
+       (file-name (git-file-name (package-name pkg) version))))))
+
+(define* (with-git-version pkg #:key version commit hash)
+  (with-git pkg
+            #:upstream-version version
+            #:commit commit
+            #:hash hash))
+
+(define* (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
+  (with-git pkg
+            #:upstream-version upstream-version
+            #:revision revision
+            #:commit commit
+            #:hash hash))
+
+(define (with-git-url pkg url)
+  (package
+    (inherit pkg)
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (url url)))))))
+#+end_src
 ** Channel
 #+begin_src scheme (meta-in-dir ".guix-channel")
 (channel
@@ -4883,243 +5088,6 @@ Some considerations if I want to switch to the Guix =clojure-tools= package:
 #+end_src
 ** Dev
 *** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-,*
-#+end_src
-* Utils
-** Scheme
-:PROPERTIES:
-:meta-dir+: /mendicant
-:END:
-*** Utils
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "mendicant/utils.scm")
-:END:
-#+begin_src scheme
-(define-module (mendicant utils)
-  #:use-module (guix git-download)
-  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
-  #:use-module (guix packages)
-  #:use-module (gnu services)
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
-  #:export (update-list
-            when-let
-            if-let
-            when-not
-            if-not
-            partial
-            ->
-            ->>
-            as->
-            kvm
-            get
-            keys
-            massoc
-            merge
-            keyvals
-            update-services*
-            update-services
-            get-inferior-package
-            with-git-version
-            with-git-commit
-            with-git-url))
-
-(define (update-list l pred f)
-  (map (lambda (x)
-         (if (pred x) (f x) x))
-       l))
-#+end_src
-**** Branching
-#+begin_src scheme
-(define-syntax when-let
-  (syntax-rules ()
-    ((_ ((var expr)) body ...)
-     (let ((var expr))
-       (when var body ...)))))
-
-(define-syntax if-let
-  (syntax-rules ()
-    ((_ ((var expr)) then else)
-     (let ((var expr))
-       (if var then else)))))
-
-(define-syntax when-not
-  (syntax-rules ()
-    ((_ test body ...)
-     (when (not test) body ...))))
-
-(define-syntax if-not
-  (syntax-rules ()
-    ((_ test then else)
-     (if (not test) then else))))
-#+end_src
-**** Functions
-#+begin_src scheme
-(define* (partial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append args more))))
-
-(define* (rpartial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append more args))))
-
-(define-syntax ->
-  (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (-> (f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
-
-(define (thread-last-helper f value . body)
-  (apply f (append body (list value))))
-
-(define-syntax ->>
-  (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
-
-(define-syntax as->
-  (syntax-rules ()
-    ((_ expr name) expr)
-    ((_ expr name form form* ...)
-     (let ((name expr))
-       (as-> form name form* ...)))))
-#+end_src
-**** Maps
-#+begin_src scheme
-(define* (kvm #:rest keyvals)
-  (let loop ((m '())
-             (more keyvals))
-    (if (null? more)
-        m
-        (loop (cons (as-> more $
-                          (take $ 2)
-                          (apply cons $))
-                    m)
-              (drop more 2)))))
-
-(define get assoc-ref)
-
-(define (keys m)
-  (map car m))
-
-(define (massoc m k v)
-  (->> m
-       (remove (match-lambda
-                 ((k1 . _)
-                  (equal? k k1))))
-       (cons '(k . v))))
-
-(define* (merge #:rest maps)
-  (fold
-   (lambda (m1 m2)
-     (fold
-      (match-lambda
-        (((k . v) res)
-         (massoc res k v)))
-      m1 m2))
-   (kvm)
-   maps))
-
-(define (keyvals m)
-  (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
-       (apply append)))
-#+end_src
-**** Guix
-#+begin_src scheme
-(define (update-services* services pred update-fn)
-  (update-list
-   services
-   pred
-   (lambda (svc)
-     (service (service-kind svc)
-              (update-fn (service-value svc))))))
-
-(define (update-services services kind update-fn)
-  (update-services*
-   services
-   (lambda (svc)
-     (eq? (service-kind svc) kind))
-   update-fn))
-
-(define (get-inferior-package channels package)
-  (-> (inferior-for-channels channels)
-      (lookup-inferior-packages package)
-      first))
-
-(define* (with-git pkg
-                   #:key
-                   (upstream-version (package-version pkg))
-                   revision
-                   commit
-                   hash)
-  (package
-    (inherit pkg)
-    (version (if revision
-                 (git-version upstream-version revision commit)
-                 upstream-version))
-    (source
-     (origin
-       (inherit (package-source pkg))
-       (uri (git-reference
-             (inherit (-> pkg package-source origin-uri))
-             (commit commit)))
-       (sha256
-        (base32
-         hash))
-       (file-name (git-file-name (package-name pkg) version))))))
-
-(define* (with-git-version pkg #:key version commit hash)
-  (with-git pkg
-            #:upstream-version version
-            #:commit commit
-            #:hash hash))
-
-(define* (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
-  (with-git pkg
-            #:upstream-version upstream-version
-            #:revision revision
-            #:commit commit
-            #:hash hash))
-
-(define (with-git-url pkg url)
-  (package
-    (inherit pkg)
-    (source
-     (origin
-       (inherit (package-source pkg))
-       (uri (git-reference
-             (inherit (-> pkg package-source origin-uri))
-             (url url)))))))
-#+end_src
-*** Dev
-**** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-,*
-#+end_src
-** Emacs Lisp
-:PROPERTIES:
-:meta-dir+: /tangential
-:END:
-*** Utils
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "utils.el")
-:END:
-#+begin_src elisp
-(defun kvm (&rest keyvals)
-  (->> keyvals
-       (-partition 2)
-       (-map (-lambda ((a b))
-               (cons a b)))))
-
-(provide 'tangential)
-#+end_src
-*** Dev
-**** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 ,*
 #+end_src
