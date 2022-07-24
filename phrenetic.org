@@ -1175,18 +1175,22 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
-  #:use-module ((flat packages emacs) #:select (emacs-native-comp emacs-pgtk-native-comp))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
+  #:use-module ((gnu packages gcc) #:select (gcc-12))
   #:use-module (ebullient utils)
   #:export (emacs-fully-loaded))
+
+(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
 ****** Emacs fully loaded :package:
 #+begin_src scheme
 (define* (emacs-fully-loaded #:key pgtk?)
   (-> (if pgtk?
-          (-> emacs-pgtk-native-comp
+          (-> emacs-next-pgtk
               with-emacs-latest
               with-wayland-super-fix)
-          emacs-native-comp)
+          emacs)
+      with-native-comp
       with-findable-C-source
       with-zstd
       with-path-integration-improvements))
@@ -1254,6 +1258,11 @@ index 566fc1f03d..1cb4d5dac0 100644
 
        nbytes = event->key.length;
        if (nbytes > copy_bufsiz)
+#+end_src
+****** Native comp
+#+begin_src scheme
+(define-public (with-native-comp emacs)
+  (emacs-with-native-comp emacs gcc-12 'full-aot))
 #+end_src
 ****** Findable C source
 #+begin_src scheme
