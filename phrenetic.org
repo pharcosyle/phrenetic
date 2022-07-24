@@ -3530,7 +3530,7 @@ Extremely WIP, basically just a scratchpad
            (stop  #~(make-kill-destructor))
            (auto-start? #f))
           (shepherd-service
-           (provision '(pipewire-pulse))
+           (provision '(pipewire-pulse pulseaudio))
            (requirement '(pipewire pipewire-media-session))
            (start #~(make-forkexec-constructor
                      (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
