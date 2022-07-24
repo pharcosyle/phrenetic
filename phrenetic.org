@@ -4668,71 +4668,10 @@ guix time-machine \
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
-*** Clojure :package:version:
+*** Clojure
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "clojure.scm")
 :END:
-**** Non-bootstrapped clojure tools
-- REVIEW
-  - source
-    Do I have access to any clojure/java source code so that e.g. cider jump-to-definition works right?
-  - the =docs= output of the jdk
-    Is is useful/necessary, e.g. would any tooling, like cider, take advantage of it?
-
-A =clojure-tools= package that mirrors the clojure.org install script and thus uses prebuilt resources instead of bootstrapping everything the way the Guix package does. I don't see any advantages to bootstrapping and I'm leery that the various split-out dependencies (like =clojure-tools-deps-alpha= which in turn requires =clojure-data-xml=, etc) aren't the same ones the prebuilt clojure uses or the same versions.
-
-Some considerations if I want to switch to the Guix =clojure-tools= package:
-- bumping
-  I'm interested in using the latest versions of =clojure-tools= / =clojure=, how would I suss out the dependency chain to bump all of the transitive deps?
-
-#+begin_src scheme
-(define-module (penitent packages clojure)
-  #:use-module (guix build-system copy)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:)
-  #:use-module ((gnu packages readline) #:select (rlwrap)))
-
-(define-public clojure-tools
-  (with-man-pages
-   (package
-     (name "clojure-tools")
-     (version "1.11.1.1105")
-     (source
-      (origin
-        (method url-fetch)
-        (uri (string-append "https://download.clojure.org/install/clojure-tools-" version ".tar.gz"))
-        (sha256
-         (base32
-          "0rq5wk59h9r69jv598knhpnmhm0lw8rq57rc4b29sidcl81as74r"))))
-     (build-system copy-build-system)
-     (arguments
-      `(#:install-plan
-        '(("deps.edn" "lib/clojure/")
-          ("example-deps.edn" "lib/clojure/")
-          ("tools.edn" "lib/clojure/")
-          ("exec.jar" "lib/clojure/libexec/")
-          (,(string-append "clojure-tools-" version ".jar") "lib/clojure/libexec/")
-          ("clojure" "bin/")
-          ("clj" "bin/"))
-        #:phases
-        (modify-phases %standard-phases
-          (add-after 'unpack 'fix-paths
-            (lambda* (#:key outputs #:allow-other-keys)
-              (substitute* "clojure"
-                (("PREFIX") (string-append (assoc-ref outputs "out") "/lib/clojure")))
-              (substitute* "clj"
-                (("BINDIR") (string-append (assoc-ref outputs "out") "/bin"))
-                (("rlwrap") (which "rlwrap"))))))))
-     (inputs
-      (list rlwrap))
-     (home-page (package-home-page clojure:clojure-tools))
-     (synopsis (package-synopsis clojure:clojure-tools))
-     (description (package-description clojure:clojure-tools))
-     (license (package-license clojure:clojure-tools)))))
-#+end_src
 **** =man= pages :upstream:
 #+begin_src scheme
 (define-public (with-man-pages clojure-tools)
