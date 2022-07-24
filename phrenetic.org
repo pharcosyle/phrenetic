@@ -4684,8 +4684,6 @@ A =clojure-tools= package that mirrors the clojure.org install script and thus u
 Some considerations if I want to switch to the Guix =clojure-tools= package:
 - bumping
   I'm interested in using the latest versions of =clojure-tools= / =clojure=, how would I suss out the dependency chain to bump all of the transitive deps?
-- clojure and jdk deps
-  The ~clojure-build-system~ specifies versions of clojure and java to use ("It adds clojure, icedtea and zip to the set of inputs...") and the ~clojure~ package specifies a java input. Should I make them use newer versions / specifically the versions I have installed; does it matter?
 
 #+begin_src scheme
 (define-module (penitent packages clojure)
