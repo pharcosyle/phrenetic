@@ -3522,32 +3522,32 @@ Extremely WIP, basically just a scratchpad
          (list
           (shepherd-service
            (provision '(pipewire))
-           (stop  #~(make-kill-destructor))
            (start #~(make-forkexec-constructor
                      (list #$(file-append pipewire-0.3 "/bin/pipewire"))
                      #:environment-variables
                      (append (list "DISABLE_RTKIT=1")
                              (default-environment-variables))))
+           (stop  #~(make-kill-destructor))
            (auto-start? #f))
           (shepherd-service
-           (requirement '(pipewire))
            (provision '(wireplumber))
-           (stop  #~(make-kill-destructor))
+           (requirement '(pipewire))
            (start #~(make-forkexec-constructor
                      (list #$(file-append wireplumber "/bin/wireplumber"))
                      #:environment-variables
                      (append (list "DISABLE_RTKIT=1")
                              (default-environment-variables))))
+           (stop  #~(make-kill-destructor))
            (auto-start? #f))
           (shepherd-service
-           (requirement '(pipewire))
            (provision '(pipewire-pulse))
-           (stop  #~(make-kill-destructor))
+           (requirement '(pipewire))
            (start #~(make-forkexec-constructor
                      (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
                      #:environment-variables
                      (append (list "DISABLE_RTKIT=1")
                              (default-environment-variables))))
+           (stop  #~(make-kill-destructor))
            (auto-start? #f)))))
        (service-extension
         home-xdg-configuration-files-service-type
@@ -4024,6 +4024,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (list
    (shepherd-service
     (provision '(gammastep))
+    (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
                  (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")
@@ -4031,7 +4032,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
                  (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
-    (respawn? #f)
     (auto-start? #f))))
 
 (define gammastep-service-type
@@ -4048,6 +4048,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (list
    (shepherd-service
     (provision '(nm))
+    (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
                  (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
@@ -4055,7 +4056,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
                  (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
-    (respawn? #f)
     (auto-start? #f))))
 
 (define network-manager-service-type
@@ -4072,6 +4072,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (list
    (shepherd-service
     (provision '(udiskie))
+    (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
                  (list #$(file-append udiskie "/bin/udiskie")
@@ -4083,7 +4084,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
                  (call-with-input-file "/tmp/env-for-applets" read)))))
     (stop #~(make-kill-destructor))
-    (respawn? #f)
     (auto-start? #f))))
 
 (define udiskie-service-type
