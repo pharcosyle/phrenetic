@@ -821,6 +821,7 @@ sudo guix time-machine \
             he-direnv
             he-pipewire
             he-flatpak
+            he-wireplumber
             he-sway
             gammastep-service-type
             network-manager-service-type
@@ -3514,8 +3515,7 @@ Extremely WIP, basically just a scratchpad
       (list
        (service-extension
         home-profile-service-type
-        (const (list pipewire-0.3
-                     wireplumber)))
+        (const (list pipewire-0.3)))
        (service-extension
         home-shepherd-service-type
         (const
@@ -3530,18 +3530,8 @@ Extremely WIP, basically just a scratchpad
            (stop  #~(make-kill-destructor))
            (auto-start? #f))
           (shepherd-service
-           (provision '(wireplumber))
-           (requirement '(pipewire))
-           (start #~(make-forkexec-constructor
-                     (list #$(file-append wireplumber "/bin/wireplumber"))
-                     #:environment-variables
-                     (append (list "DISABLE_RTKIT=1")
-                             (default-environment-variables))))
-           (stop  #~(make-kill-destructor))
-           (auto-start? #f))
-          (shepherd-service
            (provision '(pipewire-pulse))
-           (requirement '(pipewire))
+           (requirement '(pipewire pipewire-media-session))
            (start #~(make-forkexec-constructor
                      (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
                      #:environment-variables
@@ -3566,6 +3556,35 @@ Extremely WIP, basically just a scratchpad
                  "ctl_type.pipewire {" "\n"
                  "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
                  "}" "\n"))))))))
+     (default-value #f)))
+   svcs))
+#+end_src
+****** Wireplumber
+#+begin_src scheme
+(define (he-wireplumber svcs)
+  (cons*
+   (service
+    (service-type
+     (name 'he-wireplumber)
+     (extensions
+      (list
+       (service-extension
+        home-profile-service-type
+        (const (list wireplumber)))
+       (service-extension
+        home-shepherd-service-type
+        (const
+         (list
+          (shepherd-service
+           (provision '(wireplumber pipewire-media-session))
+           (requirement '(pipewire))
+           (start #~(make-forkexec-constructor
+                     (list #$(file-append wireplumber "/bin/wireplumber"))
+                     #:environment-variables
+                     (append (list "DISABLE_RTKIT=1")
+                             (default-environment-variables))))
+           (stop  #~(make-kill-destructor))
+           (auto-start? #f)))))))
      (default-value #f)))
    svcs))
 #+end_src
@@ -4133,7 +4152,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               (-> $
                   (as-> $
                     (if pipewire?
-                        (he-pipewire $) $))
+                        (-> $
+                            he-pipewire
+                            he-wireplumber)
+                        $))
                   he-flatpak
                   (as-> $
                     (if (member #:session/sway sessions)
