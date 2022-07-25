@@ -3638,26 +3638,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-;;; rde --- Reproducible development environment.
-;;;
-;;; Copyright © 2021, 2022 Andrew Tropin <andrew@trop.in>
-;;; Copyright © 2022 Samuel Culpepper <samuel@samuelculpepper.com>
-;;;
-;;; This file is part of rde.
-;;;
-;;; rde is free software; you can redistribute it and/or modify it
-;;; under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or (at
-;;; your option) any later version.
-;;;
-;;; rde is distributed in the hope that it will be useful, but
-;;; WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with rde.  If not, see <http://www.gnu.org/licenses/>.
-
 (define-module (rde features wm)
   #:use-module (rde features)
   #:use-module (rde features predicates)
@@ -3689,7 +3669,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (srfi srfi-1)
 
   #:export (feature-sway
-	    feature-sway-run-on-tty
+            feature-sway-run-on-tty
             feature-sway-screenshot
 
             feature-sway-statusbar
@@ -3706,7 +3686,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             feature-swayidle
             feature-swaylock))
 
-
+
 ;;;
 ;;; Sway.
 ;;;
@@ -3717,23 +3697,23 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define (keyboard-layout-to-sway-config keyboard-layout)
   (let ((kb-options (string-join
-		     (keyboard-layout-options keyboard-layout) ",")))
+                     (keyboard-layout-options keyboard-layout) ",")))
     `((input *
-	     ((xkb_layout  ,(keyboard-layout-name keyboard-layout))
-	      (xkb_variant ,(keyboard-layout-variant keyboard-layout))
-	      (xkb_options ,kb-options))))))
+             ((xkb_layout  ,(keyboard-layout-name keyboard-layout))
+              (xkb_variant ,(keyboard-layout-variant keyboard-layout))
+              (xkb_options ,kb-options))))))
 
 (define* (feature-sway
-	  #:key
-	  (extra-config '())
-	  (sway sway)
+          #:key
+          (extra-config '())
+          (sway sway)
           (foot foot)
           (bemenu bemenu)
           (xdg-desktop-portal xdg-desktop-portal)
           (xdg-desktop-portal-wlr xdg-desktop-portal-wlr)
           ;; Logo key. Use Mod1 for Alt.
           (sway-mod 'Mod4)
-	  (add-keyboard-layout-to-config? #t)
+          (add-keyboard-layout-to-config? #t)
           (xwayland? #f))
   "Setup and configure sway."
   (ensure-pred sway-config? extra-config)
@@ -3748,9 +3728,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (define (sway-home-services config)
     "Returns home services related to sway."
     (let* ((kb-layout      (get-value 'keyboard-layout config))
-	   (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
-			       (keyboard-layout-to-sway-config kb-layout)
-			       '()))
+           (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
+                               (keyboard-layout-to-sway-config kb-layout)
+                               '()))
 
            (lock-cmd
             (get-value 'default-screen-locker config "loginctl lock-session"))
@@ -3766,15 +3746,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         (file-append bemenu "/bin/bemenu-run -l 20 -p run:"))))
       (list
        (service
-	home-sway-service-type
-	(home-sway-configuration
-	 (package sway)
-	 (config
-	  `((xwayland ,(if xwayland? 'enable 'disable))
+        home-sway-service-type
+        (home-sway-configuration
+         (package sway)
+         (config
+          `((xwayland ,(if xwayland? 'enable 'disable))
             (,#~"")
             ,@layout-config
 
-            (,#~"\n\n# General settings:")
+            (,#~"\n\n# General settings:")
             (set $mod ,sway-mod)
             (set $term ,default-terminal)
             (set $backup-term ,backup-terminal)
@@ -3786,21 +3766,21 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (bindsym --to-code $mod+Shift+r reload)
 
             ,@(if (get-value 'dbus config)
-                  `((,#~"\n\n# Update dbus environment variables:")
+                  `((,#~"\n\n# Update dbus environment variables:")
                     (exec ,(file-append
                             (get-value 'dbus config)
                             "/bin/dbus-update-activation-environment")
                           WAYLAND_DISPLAY XDG_CURRENT_DESKTOP))
                   '())
 
-            (,#~"\n\n# Launching external applications:")
+            (,#~"\n\n# Launching external applications:")
             (bindsym $mod+Control+Shift+Return exec $backup-term)
             (bindsym $mod+Return exec $term)
 
             (bindsym --to-code $mod+Shift+d exec $menu)
             (bindsym --to-code $mod+Shift+l exec $lock)
 
-            (,#~"\n\n# Manipulating windows:")
+            (,#~"\n\n# Manipulating windows:")
             (bindsym --to-code $mod+Shift+c kill)
             (bindsym --to-code $mod+Shift+f fullscreen)
             (bindsym $mod+Shift+space floating toggle)
@@ -3816,7 +3796,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (bindsym $mod+Shift+Up move up)
             (bindsym $mod+Shift+Right move right)
 
-            (,#~"\n\n# Moving around workspaces:")
+            (,#~"\n\n# Moving around workspaces:")
             (bindsym $mod+tab workspace back_and_forth)
             ,@(append-map
                (lambda (x)
@@ -3826,21 +3806,21 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             move container to workspace number ,x)))
                (iota 10 1))
 
-            (,#~"\n\n# Scratchpad settings:")
+            (,#~"\n\n# Scratchpad settings:")
             (bindsym --to-code $mod+Shift+minus move scratchpad)
             (bindsym --to-code $mod+minus scratchpad show)
 
-	    (,#~"")
+            (,#~"")
             (default_border pixel)
             (default_floating_border pixel)
             (gaps inner ,(get-value 'emacs-margin config 8))))))
 
        (when (get-value 'swayidle-cmd config)
          (simple-service
-	  'sway-enable-swayidle
-	  home-sway-service-type
+          'sway-enable-swayidle
+          home-sway-service-type
           `((,#~"")
-	    (exec ,(get-value 'swayidle-cmd config)))))
+            (exec ,(get-value 'swayidle-cmd config)))))
 
        (when (get-value 'swayidle config)
          (let* ((swaymsg (file-append sway "/bin/swaymsg"))
@@ -3854,10 +3834,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                resume                ,(swaymsg-cmd "output * dpms on"))))))
 
        (simple-service
-	'sway-configuration
-	home-sway-service-type
+        'sway-configuration
+        home-sway-service-type
         `(,@extra-config
-	  (,#~"")))
+          (,#~"")))
 
        (simple-service
         'sway-reload-config-on-change
@@ -3866,8 +3846,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
        (simple-service
-	'xdg-desktop-portal-wlr-configuration
-	home-xdg-configuration-files-service-type
+        'xdg-desktop-portal-wlr-configuration
+        home-xdg-configuration-files-service-type
         `(("xdg-desktop-portal-wlr/config"
            ,(mixed-text-file
              "xdg-desktop-portal-wlr-config"
@@ -3881,18 +3861,18 @@ chooser_type=simple"
 
        (simple-service
         'packages-for-sway
-	home-profile-service-type
+        home-profile-service-type
         (append
          (if (and (get-value 'default-terminal config)
                   (get-value 'backup-terminal config))
              '() (list foot))
          (if (get-value 'default-application-launcher config) '() (list bemenu))
-	 (list qtwayland swayhide
+         (list qtwayland swayhide
                xdg-desktop-portal xdg-desktop-portal-wlr)))
        (simple-service 'set-wayland-specific-env-vars
-		       home-environment-variables-service-type
-		       ;; export NO_AT_BRIDGE=1
-		       '(("XDG_CURRENT_DESKTOP" . "sway")
+                       home-environment-variables-service-type
+                       ;; export NO_AT_BRIDGE=1
+                       '(("XDG_CURRENT_DESKTOP" . "sway")
                          ("XDG_SESSION_TYPE" . "wayland")
                          ;; FIXME: Should be in feature-pipewire
                          ("RTC_USE_PIPEWIRE" . "true")
@@ -3902,17 +3882,16 @@ chooser_type=simple"
                          ("ELM_ENGINE" . "wayland_egl")
                          ("ECORE_EVAS_ENGINE" . "wayland-egl")
                          ("QT_QPA_PLATFORM" . "wayland-egl")
-			 ("_JAVA_AWT_WM_NONREPARENTING" . "1"))))))
+                         ("_JAVA_AWT_WM_NONREPARENTING" . "1"))))))
 
   (feature
    (name 'sway)
    (values `((sway . ,sway)
              (wl-clipboard . ,wl-clipboard)
-	     (wayland . #t)
+             (wayland . #t)
              (xwayland? . ,xwayland?)))
    (home-services-getter sway-home-services)))
 
-
 ;;;
 ;;; sway-run-on-tty.
 ;;;
@@ -3947,8 +3926,8 @@ automatically switch to SWAY-TTY-NUMBER on boot."
              (provision '(switch-to-sway-tty))
              (requirement '(virtual-terminal))
              (start #~(lambda ()
-			(invoke #$(file-append kbd "/bin/chvt")
-				#$(format #f "~a" sway-tty-number))))
+                        (invoke #$(file-append kbd "/bin/chvt")
+                                #$(format #f "~a" sway-tty-number))))
              (one-shot? #t))))))
 
   (feature
@@ -3957,7 +3936,6 @@ automatically switch to SWAY-TTY-NUMBER on boot."
    (home-services-getter sway-run-on-tty-home-services)
    (system-services-getter sway-run-on-tty-system-services)))
 
-
 ;;;
 ;;; sway-screenshot.
 ;;;
@@ -4023,7 +4001,6 @@ is sway dependent, because it relies on swaymsg."
    (values `((,f-name . #t)))
    (home-services-getter get-home-services)))
 
-
 ;;;
 ;;; sway-statusbar.
 ;;;
@@ -4064,7 +4041,6 @@ $(date +'%Y-%m-%d %l:%M:%S %p'); do sleep 5; done" battery))
    (values `((,f-name . #t)))
    (home-services-getter get-home-services)))
 
-
 ;;;
 ;;; waybar.
 ;;;
@@ -4344,7 +4320,6 @@ animation."
              (sway-statusbar . #t)))
    (home-services-getter get-home-services)))
 
-
 ;;;
 ;;; swayidle.
 ;;;
@@ -4383,7 +4358,7 @@ animation."
              (lock-timeout . ,lock-timeout)))
    (home-services-getter get-home-services)))
 
-
+
 ;;;
 ;;; swaylock.
 ;;;
