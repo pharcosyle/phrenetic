@@ -3485,23 +3485,24 @@ Extremely WIP, basically just a scratchpad
        (service-extension
         home-profile-service-type
         (const (list direnv)))
-       (case shell
-         ;; ((#:shell/bash)
-         ;;  (service-extension
-         ;;   home-bash-service-type
-         ;;   (const (home-bash-extension
-         ;;           (bashrc
-         ;;            (list (mixed-text-file
-         ;;                   "direnv-hook"
-         ;;                   "eval \"$(" (file-append direnv "/bin/direnv") " hook bash)\"")))))))
-         ((#:shell/zsh)
-          (service-extension
-           home-zsh-service-type
-           (const (home-zsh-extension
-                   (zshrc
-                    (list (mixed-text-file
-                           "direnv-hook"
-                           "eval \"$(" (file-append direnv "/bin/direnv") " hook zsh)\""))))))))))
+       (let ((direnv-hook (lambda (shell)
+                            (let ((direnv-bin (file-append direnv "/bin/direnv")))
+                              (mixed-text-file
+                               "direnv-hook"
+                               "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell ")\"")))))
+         (case shell
+           ;; ((#:shell/bash)
+           ;;  (service-extension
+           ;;   home-bash-service-type
+           ;;   (const (home-bash-extension
+           ;;           (bashrc
+           ;;            (list (direnv-hook "bash")))))))
+           ((#:shell/zsh)
+            (service-extension
+             home-zsh-service-type
+             (const (home-zsh-extension
+                     (zshrc
+                      (list (direnv-hook "zsh")))))))))))
      (default-value #f)))
    svcs))
 #+end_src
