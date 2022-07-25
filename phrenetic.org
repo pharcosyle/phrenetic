@@ -3493,7 +3493,7 @@ Extremely WIP, basically just a scratchpad
          ;;           (bashrc
          ;;            (list (mixed-text-file
          ;;                   "direnv-hook"
-         ;;                   "eval \"$(" (file-append direnv "/bin/direnv") "hook bash)\"")))))))
+         ;;                   "eval \"$(" (file-append direnv "/bin/direnv") " hook bash)\"")))))))
          ((#:shell/zsh)
           (service-extension
            home-zsh-service-type
@@ -3501,7 +3501,7 @@ Extremely WIP, basically just a scratchpad
                    (zshrc
                     (list (mixed-text-file
                            "direnv-hook"
-                           "eval \"$(" (file-append direnv "/bin/direnv") "hook zsh)\""))))))))))
+                           "eval \"$(" (file-append direnv "/bin/direnv") " hook zsh)\""))))))))))
      (default-value #f)))
    svcs))
 #+end_src
