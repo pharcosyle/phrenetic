@@ -3668,7 +3668,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (srfi srfi-1)
 
   #:export (feature-sway
-            feature-sway-run-on-tty
             feature-sway-screenshot
 
             feature-sway-statusbar
@@ -3689,10 +3688,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;;
 ;;; Sway.
 ;;;
-
-;; https://github.com/jjquin/dotfiles/tree/master/sway/.config/sway/config.d
-;; https://nixos.wiki/wiki/Sway
-;; https://github.com/swaywm/sway/wiki/Useful-add-ons-for-sway
 
 (define (keyboard-layout-to-sway-config keyboard-layout)
   (let ((kb-options (string-join
@@ -3725,7 +3720,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (ensure-pred any-package? xdg-desktop-portal-wlr)
 
   (define (sway-home-services config)
-    "Returns home services related to sway."
     (let* ((kb-layout      (get-value 'keyboard-layout config))
            (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
                                (keyboard-layout-to-sway-config kb-layout)
@@ -3738,8 +3732,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
              (get-value-eval 'default-terminal config
                              (file-append foot "/bin/foot")))
            (backup-terminal
-             (get-value 'backup-terminal config
-                        (file-append foot "/bin/foot")))
+            (get-value 'backup-terminal config
+                       (file-append foot "/bin/foot")))
            (default-application-launcher
              (get-value 'default-application-launcher config
                         (file-append bemenu "/bin/bemenu-run -l 20 -p run:"))))
@@ -3866,8 +3860,10 @@ chooser_type=simple"
                   (get-value 'backup-terminal config))
              '() (list foot))
          (if (get-value 'default-application-launcher config) '() (list bemenu))
-         (list qtwayland swayhide
-               xdg-desktop-portal xdg-desktop-portal-wlr)))
+         (list qtwayland
+               swayhide
+               xdg-desktop-portal
+               xdg-desktop-portal-wlr)))
        (simple-service 'set-wayland-specific-env-vars
                        home-environment-variables-service-type
                        ;; export NO_AT_BRIDGE=1
@@ -3891,49 +3887,6 @@ chooser_type=simple"
              (xwayland? . ,xwayland?)))
    (home-services-getter sway-home-services)))
 
-;;;
-;;; sway-run-on-tty.
-;;;
-
-(define* (feature-sway-run-on-tty
-          #:key
-          (sway-tty-number 2)
-          (launch-arguments ""))
-  "Launch Sway on specified tty upon user login.  Also,
-automatically switch to SWAY-TTY-NUMBER on boot."
-  (ensure-pred tty-number? sway-tty-number)
-  (ensure-pred string? launch-arguments)
-
-  (define (sway-run-on-tty-home-services config)
-    (require-value 'sway config)
-    (list
-     (simple-service
-      'run-sway-on-login-to-sway-tty
-      home-shell-profile-service-type
-      (list
-       #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a~a~a"
-                 #$sway-tty-number
-                 #$(file-append (get-value 'sway config) "/bin/sway")
-                 #$(if (positive? (string-length launch-arguments)) " " "")
-                 #$launch-arguments)))))
-
-  (define (sway-run-on-tty-system-services _)
-    (list
-     (simple-service
-      'switch-to-sway-tty-after-boot shepherd-root-service-type
-      (list (shepherd-service
-             (provision '(switch-to-sway-tty))
-             (requirement '(virtual-terminal))
-             (start #~(lambda ()
-                        (invoke #$(file-append kbd "/bin/chvt")
-                                #$(format #f "~a" sway-tty-number))))
-             (one-shot? #t))))))
-
-  (feature
-   (name 'sway-run-on-tty)
-   (values (make-feature-values sway-tty-number))
-   (home-services-getter sway-run-on-tty-home-services)
-   (system-services-getter sway-run-on-tty-system-services)))
 
 ;;;
 ;;; sway-screenshot.
@@ -4000,45 +3953,6 @@ is sway dependent, because it relies on swaymsg."
    (values `((,f-name . #t)))
    (home-services-getter get-home-services)))
 
-;;;
-;;; sway-statusbar.
-;;;
-
-;; <https://www.reddit.com/r/unixporn/comments/a2c9kl/sway_in_the_wild/>
-(define* (feature-sway-statusbar
-          #:key
-          (battery "BAT0")
-          (use-global-fonts? #f))
-  "Configure statusbar."
-
-  (define sway-f-name 'statusbar)
-  (define f-name (symbol-append 'sway- sway-f-name))
-
-  (define (get-home-services config)
-    (require-value 'sway config)
-    (when use-global-fonts?
-      (require-value 'font-monospace config))
-    (define font-mono (get-value 'font-monospace config))
-    (define (get-status-command)
-      (format #f
-              "while echo $(cat /sys/class/power_supply/~a/capacity)% \
-$(date +'%Y-%m-%d %l:%M:%S %p'); do sleep 5; done" battery))
-    (list
-     (simple-service
-      'sway-statusbar
-      home-sway-service-type
-      `((bar ((position top)
-              ,@(if use-global-fonts?
-                    `((font ,(font-name font-mono)))
-                    '())
-              (colors ((statusline "#ffffff")
-                       (background "#323232")))
-              (status_command ,(get-status-command))))))))
-
-  (feature
-   (name f-name)
-   (values `((,f-name . #t)))
-   (home-services-getter get-home-services)))
 
 ;;;
 ;;; waybar.
@@ -4248,70 +4162,70 @@ animation."
     (append
      (list
       (service
-        home-waybar-service-type
-        (home-waybar-configuration
-         (waybar waybar)
-         (config #(((position . top)
-                    (name . main))))
-         ;; TODO: fix tray menu styles.
-         (style-css
-          `(,#~(format #f "@import \"~a\";\n" #$base16-css)
-            (*
-             ((font-family . #(,@(if font-mono (list font-mono) '())
-                               ;; TODO: Add icon-font argument
-                               FontAwesome))
-              ,@(if transitions? '() '((transition . none)))
-              (box-shadow . none)
-              (text-shadow . none)
-              (min-height . 0)))
+       home-waybar-service-type
+       (home-waybar-configuration
+        (waybar waybar)
+        (config #(((position . top)
+                   (name . main))))
+        ;; TODO: fix tray menu styles.
+        (style-css
+         `(,#~(format #f "@import \"~a\";\n" #$base16-css)
+              (*
+               ((font-family . #(,@(if font-mono (list font-mono) '())
+                                 ;; TODO: Add icon-font argument
+                                 FontAwesome))
+                ,@(if transitions? '() '((transition . none)))
+                (box-shadow . none)
+                (text-shadow . none)
+                (min-height . 0)))
 
-            (tooltip
-             ((border . (solid @base02))
-              (background . @base01)
-              (opacity . 0.9)))
+              (tooltip
+               ((border . (solid @base02))
+                (background . @base01)
+                (opacity . 0.9)))
 
-            ((tooltip label)
-             ((color . @base05)
-              (padding . 0)))
+              ((tooltip label)
+               ((color . @base05)
+                (padding . 0)))
 
-            (#{#waybar}#
-             ((color . @base04)
-              (background . @base01)))
+              (#{#waybar}#
+               ((color . @base04)
+                (background . @base01)))
 
-            (#((.modules-right label)
-               (.modules-right image))
-             ((margin . (0.4em 0.2em))
-              (padding . (0 0.4em))
-              (background . @base02)
-              (border-radius . 0.2em)))
+              (#((.modules-right label)
+                 (.modules-right image))
+               ((margin . (0.4em 0.2em))
+                (padding . (0 0.4em))
+                (background . @base02)
+                (border-radius . 0.2em)))
 
-            (.modules-left
-             ((margin-left . 0.2em)))
+              (.modules-left
+               ((margin-left . 0.2em)))
 
-            (.modules-right
-             ((margin-right . 0.2em))))))))
+              (.modules-right
+               ((margin-right . 0.2em))))))))
 
-      (map (lambda (x) (if (procedure? x) (x config) x)) waybar-modules)
+     (map (lambda (x) (if (procedure? x) (x config) x)) waybar-modules)
 
-      (list
-       (simple-service
-        'waybar-add-font-package
-        home-profile-service-type
-        (list font-awesome))
+     (list
+      (simple-service
+       'waybar-add-font-package
+       home-profile-service-type
+       (list font-awesome))
 
-       (simple-service
-        'waybar-reload-config-on-change
-        home-run-on-change-service-type
-        `(("files/.config/waybar/style.css"
-           ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
-          ("files/.config/waybar/config"
-           ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+      (simple-service
+       'waybar-reload-config-on-change
+       home-run-on-change-service-type
+       `(("files/.config/waybar/style.css"
+          ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
+         ("files/.config/waybar/config"
+          ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
 
-       (when (get-value 'sway config)
-         (simple-service
-          'sway-waybar
-          home-sway-service-type
-          `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
+      (when (get-value 'sway config)
+        (simple-service
+         'sway-waybar
+         home-sway-service-type
+         `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
 
   (feature
    (name 'waybar)
@@ -4328,8 +4242,6 @@ animation."
           (swayidle swayidle)
           (lock-timeout 240)
           (extra-config '()))
-  "Configure swayidle."
-  (ensure-pred any-package? swayidle)
 
   (define swayidle-cmd (file-append swayidle "/bin/swayidle -w"))
 
@@ -4370,8 +4282,6 @@ animation."
           (daemonize? #t)
           (extra-config '())
           (default-screen-locker? #t))
-  "Configure swaylock."
-  (ensure-pred any-package? swaylock)
 
   (define (get-home-services config)
     (list
@@ -4414,22 +4324,6 @@ animation."
                    '())))
    (home-services-getter get-home-services)
    (system-services-getter get-system-services)))
-
-;; [X] feature-sway-run-on-tty
-;; [X] feature-sway-screenshot
-;; [X] feature-sway-lock-idle-sleep
-;; [ ] feature-sway-input
-;; [ ] feature-sway-keybindings
-;; [ ] feature-sway-media-keys
-;; [ ] feature-sway-outputs (kanshi, workspaces, displays)
-
-;; [ ] feature-wayland-appearance (sway, gtk, qt themes)
-;; [ ] feature-wayland-statusbar
-;; [ ] feature-wayland-notifications
-;; [ ] feature-wayland-clipboard
-
-
-;; window rules will configured on app's feature basis
 #+end_src
 ******* Sway old WIP
 #+begin_src scheme
