@@ -3638,6 +3638,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ****** Sway
 #+begin_src scheme
 (define-module (rde features wm)
+  ;; TODO clean these up
   #:use-module (rde features)
   #:use-module (rde features predicates)
   #:use-module (rde features fontutils)
@@ -3666,6 +3667,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (guix packages)
 
   #:use-module (srfi srfi-1)
+
+
+
+
+  #:use-module ((gnu packages glib) #:select (dbus))
+
+
+
 
   #:export (feature-sway
             feature-sway-screenshot
@@ -3699,72 +3708,48 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define* (feature-sway
           #:key
-          (extra-config '())
-          (sway sway)
-          (foot foot)
-          (bemenu bemenu)
-          (xdg-desktop-portal xdg-desktop-portal)
-          (xdg-desktop-portal-wlr xdg-desktop-portal-wlr)
-          ;; Logo key. Use Mod1 for Alt.
+          pipewire?
+          extra-config
           (sway-mod 'Mod4)
           (add-keyboard-layout-to-config? #t)
-          (xwayland? #f))
-  "Setup and configure sway."
-  (ensure-pred sway-config? extra-config)
-  (ensure-pred boolean? add-keyboard-layout-to-config?)
-  (ensure-pred boolean? xwayland?)
-  (ensure-pred any-package? sway)
-  (ensure-pred any-package? foot)
-  (ensure-pred any-package? bemenu)
-  (ensure-pred any-package? xdg-desktop-portal)
-  (ensure-pred any-package? xdg-desktop-portal-wlr)
+          (xwayland? #t)
+          (screen-locker "loginctl lock-session")
+          idle-manager
+          application-launcher
+          default-terminal
+          backup-terminal)
 
+  ;; TODO maybe some of the simple services can be combined? The ones in he-sway and he-swayidle, maybe others.
   (define (sway-home-services config)
-    (let* ((kb-layout      (get-value 'keyboard-layout config))
+    (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
+                      )
            (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
                                (keyboard-layout-to-sway-config kb-layout)
-                               '()))
-
-           (lock-cmd
-            (get-value 'default-screen-locker config "loginctl lock-session"))
-
-           (default-terminal
-             (get-value-eval 'default-terminal config
-                             (file-append foot "/bin/foot")))
-           (backup-terminal
-            (get-value 'backup-terminal config
-                       (file-append foot "/bin/foot")))
-           (default-application-launcher
-             (get-value 'default-application-launcher config
-                        (file-append bemenu "/bin/bemenu-run -l 20 -p run:"))))
+                               '())))
       (list
        (service
         home-sway-service-type
         (home-sway-configuration
-         (package sway)
          (config
           `((xwayland ,(if xwayland? 'enable 'disable))
             (,#~"")
-            ,@layout-config
+            ;; ,@layout-config ; TODO
 
             (,#~"\n\n# General settings:")
             (set $mod ,sway-mod)
             (set $term ,default-terminal)
             (set $backup-term ,backup-terminal)
-            (set $menu ,default-application-launcher)
-            (set $lock ,lock-cmd)
+            (set $menu ,application-launcher)
+            (set $lock ,screen-locker)
 
             (floating_modifier $mod normal)
 
             (bindsym --to-code $mod+Shift+r reload)
 
-            ,@(if (get-value 'dbus config)
-                  `((,#~"\n\n# Update dbus environment variables:")
-                    (exec ,(file-append
-                            (get-value 'dbus config)
-                            "/bin/dbus-update-activation-environment")
-                          WAYLAND_DISPLAY XDG_CURRENT_DESKTOP))
-                  '())
+            ;; TODO I think I need to do gexp/ungexp with `dbus'
+            ;; (,#~"\n\n# Update dbus environment variables:")
+            ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+            ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
 
             (,#~"\n\n# Launching external applications:")
             (bindsym $mod+Control+Shift+Return exec $backup-term)
@@ -3808,29 +3793,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (default_floating_border pixel)
             (gaps inner ,(get-value 'emacs-margin config 8))))))
 
-       (when (get-value 'swayidle-cmd config)
+       (when idle-manager
          (simple-service
-          'sway-enable-swayidle
+          'sway-enable-idle-manager
           home-sway-service-type
           `((,#~"")
-            (exec ,(get-value 'swayidle-cmd config)))))
+            (exec ,idle-manager))))
 
-       (when (get-value 'swayidle config)
-         (let* ((swaymsg (file-append sway "/bin/swaymsg"))
-                (swaymsg-cmd (lambda (cmd)
-                               #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-                (idle-timeout (+ 30 (get-value 'lock-timeout config 120))))
-           (simple-service
-            'sway-add-dpms-to-swayidle
-            home-swayidle-service-type
-            `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off")
-               resume                ,(swaymsg-cmd "output * dpms on"))))))
-
-       (simple-service
-        'sway-configuration
-        home-sway-service-type
-        `(,@extra-config
-          (,#~"")))
+       (when extra-config
+         (simple-service
+          'sway-configuration
+          home-sway-service-type
+          `(,@extra-config
+            (,#~""))))
 
        (simple-service
         'sway-reload-config-on-change
@@ -3844,6 +3819,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         `(("xdg-desktop-portal-wlr/config"
            ,(mixed-text-file
              "xdg-desktop-portal-wlr-config"
+             ;; TODO do with newlines, then comment this entire simple-service out.
              #~(format #f "[screencast]
 output_name=
 max_fps=30
@@ -3855,37 +3831,27 @@ chooser_type=simple"
        (simple-service
         'packages-for-sway
         home-profile-service-type
-        (append
-         (if (and (get-value 'default-terminal config)
-                  (get-value 'backup-terminal config))
-             '() (list foot))
-         (if (get-value 'default-application-launcher config) '() (list bemenu))
-         (list qtwayland
-               swayhide
-               xdg-desktop-portal
-               xdg-desktop-portal-wlr)))
-       (simple-service 'set-wayland-specific-env-vars
-                       home-environment-variables-service-type
-                       ;; export NO_AT_BRIDGE=1
-                       '(("XDG_CURRENT_DESKTOP" . "sway")
-                         ("XDG_SESSION_TYPE" . "wayland")
-                         ;; FIXME: Should be in feature-pipewire
-                         ("RTC_USE_PIPEWIRE" . "true")
-                         ("SDL_VIDEODRIVER" . "wayland")
-                         ("MOZ_ENABLE_WAYLAND" . "1")
-                         ("CLUTTER_BACKEND" . "wayland")
-                         ("ELM_ENGINE" . "wayland_egl")
-                         ("ECORE_EVAS_ENGINE" . "wayland-egl")
-                         ("QT_QPA_PLATFORM" . "wayland-egl")
-                         ("_JAVA_AWT_WM_NONREPARENTING" . "1"))))))
+        (list qtwayland ; Copied from RDE: I don't know what this is for.
+              swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
+              xdg-desktop-portal
+              xdg-desktop-portal-wlr))
 
-  (feature
-   (name 'sway)
-   (values `((sway . ,sway)
-             (wl-clipboard . ,wl-clipboard)
-             (wayland . #t)
-             (xwayland? . ,xwayland?)))
-   (home-services-getter sway-home-services)))
+       (simple-service
+        'set-wayland-specific-env-vars
+        home-environment-variables-service-type
+        ;; Copied from RDE: I don't know what all of these do.
+        (append
+         '(("XDG_CURRENT_DESKTOP" . "sway")
+           ("XDG_SESSION_TYPE" . "wayland")
+           ("SDL_VIDEODRIVER" . "wayland")
+           ("MOZ_ENABLE_WAYLAND" . "1")
+           ("CLUTTER_BACKEND" . "wayland")
+           ("ELM_ENGINE" . "wayland_egl")
+           ("ECORE_EVAS_ENGINE" . "wayland-egl")
+           ("QT_QPA_PLATFORM" . "wayland-egl")
+           ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+         (if pipewire?
+             '(("RTC_USE_PIPEWIRE" . "true")) '())))))))
 
 
 ;;;
@@ -3924,8 +3890,7 @@ is sway dependent, because it relies on swaymsg."
                   #$(if output #~(string-append "-o \"$(" #$output ")\" ") "")
                   #$(if geom #~(string-append "-g \"$(" #$geom ")\" ") "")
                   #$file
-                  #$(file-append (get-value 'wl-clipboard config)
-                                 "/bin/wl-copy")))))
+                  #$(file-append wl-clipboard "/bin/wl-copy")))))
 
     (define shot-output
       (shot-script "output" #:output subject-output))
@@ -3936,8 +3901,7 @@ is sway dependent, because it relies on swaymsg."
        "sway-swappy-clipboard"
        #~(system
           (format #f "~a | ~a -f -"
-                  #$(file-append (get-value 'wl-clipboard config wl-clipboard)
-                                 "/bin/wl-paste")
+                  #$(file-append wl-clipboard "/bin/wl-paste")
                   #$(file-append (get-value 'swappy config swappy)
                                  "/bin/swappy")))))
     (list
@@ -4233,97 +4197,72 @@ animation."
              (sway-statusbar . #t)))
    (home-services-getter get-home-services)))
 
-;;;
-;;; swayidle.
-;;;
 
-(define* (feature-swayidle
-          #:key
-          (swayidle swayidle)
-          (lock-timeout 240)
-          (extra-config '()))
 
-  (define swayidle-cmd (file-append swayidle "/bin/swayidle -w"))
 
-  (define (get-home-services config)
-    (define lock-cmd (get-value 'default-screen-locker config))
 
-    (list
-     (service
+(define* (he-swayidle #:key
+                      sway? ; TODO maybe have this default to true
+                      screen-locker
+                      (lock-timeout 240)
+                      extra-config)
+  (list
+   (service
+    home-swayidle-service-type
+    (home-swayidle-configuration
+     (swayidle swayidle)
+     (config
+      `(,@(if screen-locker
+              (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
+                `((lock ,lock-cmd-quoted)
+                  (before-sleep ,lock-cmd-quoted)
+                  (timeout ,lock-timeout ,lock-cmd-quoted)))
+              '())
+        ,@(if extra-config
+              extra-config '())))))
+   (let* ((swaymsg (file-append sway "/bin/swaymsg"))
+          (swaymsg-cmd (lambda (cmd)
+                         #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
+          (idle-timeout (+ lock-timeout 30)))
+     (simple-service
+      'add-dpms-to-swayidle
       home-swayidle-service-type
-      (home-swayidle-configuration
-       (swayidle swayidle)
-       (config
-        `(,@(if lock-cmd
-                (let ((lock-cmd-quoted (format #f "'~a'" lock-cmd)))
-                  `((lock ,lock-cmd-quoted)
-                    (before-sleep ,lock-cmd-quoted)
-                    (timeout ,lock-timeout ,lock-cmd-quoted)))
-                '())
-          ,@extra-config))))))
+      `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on")))))))
 
-  (feature
-   (name 'swayidle)
-   (values `((swayidle . ,swayidle)
-             (swayidle-cmd . ,swayidle-cmd)
-             (lock-timeout . ,lock-timeout)))
-   (home-services-getter get-home-services)))
+(define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
 
 
-;;;
-;;; swaylock.
-;;;
 
-(define* (feature-swaylock
-          #:key
-          (swaylock swaylock)
-          (show-failed-attempts? #t)
-          (show-keyboard-layout? #f)
-          (daemonize? #t)
-          (extra-config '())
-          (default-screen-locker? #t))
 
-  (define (get-home-services config)
-    (list
-     (service
-      home-swaylock-service-type
-      (home-swaylock-configuration
-       (swaylock swaylock)
-       (config
-        `((show-failed-attempts . ,show-failed-attempts?)
-          (daemonize . ,daemonize?)
-          (show-keyboard-layout . ,show-keyboard-layout?)
-          ;; TODO: Source color from colorscheme
-          (color . 3e3e3e)
-          (indicator-caps-lock)
-          ,@extra-config))))))
 
-  (define (get-system-services _)
-    (list
-     (screen-locker-service swaylock "swaylock")
-     ;; (simple-service
-     ;;  'setuid-chkpwd
-     ;;  setuid-program-service-type
-     ;;  (list (file-like->setuid-program
-     ;;         (file-append linux-pam "/sbin/unix_chkpwd"))))
 
-     ;; (simple-service
-     ;;  'sway-add-swaylock-pam
-     ;;  pam-root-service-type
-     ;;  (list
-     ;;   (unix-pam-service "swaylock")))
-     ))
+(define* (he-swaylock #:key
+                      (effects? #t)
+                      extra-config)
+  (service
+   home-swaylock-service-type
+   (home-swaylock-configuration
+    (swaylock (if effects?
+                  swaylock-effects
+                  swaylock))
+    (config
+     `((show-failed-attempts . #t)
+       (daemonize . #t)
+       ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO
+       ;; TODO: Source color from colorscheme
+       (color . 3e3e3e)
+       (indicator-caps-lock)
+       ,@(if extra-config
+             extra-config '()))))))
 
-  (feature
-   (name 'swaylock)
-   (values `((swaylock . ,swaylock)
-             ,@(if default-screen-locker?
-                   ;; TODO: Change it to path in the store, once
-                   ;; https://issues.guix.gnu.org/53468 is resolved
-                   `((default-screen-locker . "/run/setuid-programs/swaylock"))
-                   '())))
-   (home-services-getter get-home-services)
-   (system-services-getter get-system-services)))
+(define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
+
+
+;; TODO
+;; (let ((screen-locker swaylock-screen-locker))
+;;   (he-sway $ #:screen-locker screen-locker
+;;            #:idle-manager swayidle-idle-manager)
+;;   (he-swayidle $ #:screen-locker screen-locker))
 #+end_src
 ******* Sway old WIP
 #+begin_src scheme
@@ -4367,6 +4306,8 @@ animation."
 ****** Swayidle
 ***** Status bars
 ****** Waybar
+***** Application launchers
+****** Rofi
 ***** Applets
 ****** Gammastep
 - TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
