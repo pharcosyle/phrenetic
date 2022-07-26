@@ -4195,42 +4195,6 @@ chooser_type=simple"
 ;;            #:idle-manager swayidle-idle-manager)
 ;;   (he-swayidle $ #:screen-locker screen-locker))
 #+end_src
-******* Sway old WIP
-#+begin_src scheme
-(define (sway-env-vars env-vars)
-  (simple-service 'set-sway-env-vars
-                  home-bash-service-type
-                  (home-bash-extension
-                   (bash-profile
-                    (list (mixed-text-file
-                           "sway-env-vars"
-                           "if [[ \"$DESKTOP_SESSION\" = \"\" || \"$DESKTOP_SESSION\" = \"sway\" ]] ; then\n"
-                           (serialize-posix-env-vars #f env-vars)
-                           "fi"))))))
-
-(define (conditionalize-sway-env-vars services)
-  (define env-vars)
-  (as-> services $
-    (update-services*
-     $
-     (lambda (svc)
-       (eq? (-> svc service-kind service-type-name) 'set-wayland-specific-env-vars))
-     (lambda (vars)
-       (set! env-vars vars)
-       '()))
-    (cons* (sway-env-vars env-vars) $)))
-
-(define sway-services
-  (conditionalize-sway-env-vars
-   ((feature-home-services-getter
-     (feature-sway #:xwayland? #t
-                   #:sway-mod 'Mod1
-                   #:extra-config
-                   ;; `((include ,(file-append (@ (gnu packages wm) sway) "/etc/sway/config")))
-                   ;; `((include ,(local-file "./config/sway/config")))
-                   `((include "/home/pharcosyle/projects/phrenetic/config"))))
-    (rde-config))))
-#+end_src
 ***** Screen lockers
 ****** Swaylock
 ***** Idle management
