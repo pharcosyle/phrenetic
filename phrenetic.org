@@ -3720,138 +3720,137 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           backup-terminal)
 
   ;; TODO maybe some of the simple services can be combined? The ones in he-sway and he-swayidle, maybe others.
-  (define (sway-home-services config)
-    (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
-                      )
-           (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
-                               (keyboard-layout-to-sway-config kb-layout)
-                               '())))
-      (list
-       (service
+  (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
+                    )
+         (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
+                             (keyboard-layout-to-sway-config kb-layout)
+                             '())))
+    (list
+     (service
+      home-sway-service-type
+      (home-sway-configuration
+       (config
+        `((xwayland ,(if xwayland? 'enable 'disable))
+          (,#~"")
+          ;; ,@layout-config ; TODO
+
+          (,#~"\n\n# General settings:")
+          (set $mod ,sway-mod)
+          (set $term ,default-terminal)
+          (set $backup-term ,backup-terminal)
+          (set $menu ,application-launcher)
+          (set $lock ,screen-locker)
+
+          (floating_modifier $mod normal)
+
+          (bindsym --to-code $mod+Shift+r reload)
+
+          ;; TODO I think I need to do gexp/ungexp with `dbus'
+          ;; (,#~"\n\n# Update dbus environment variables:")
+          ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+          ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
+
+          (,#~"\n\n# Launching external applications:")
+          (bindsym $mod+Control+Shift+Return exec $backup-term)
+          (bindsym $mod+Return exec $term)
+
+          (bindsym --to-code $mod+Shift+d exec $menu)
+          (bindsym --to-code $mod+Shift+l exec $lock)
+
+          (,#~"\n\n# Manipulating windows:")
+          (bindsym --to-code $mod+Shift+c kill)
+          (bindsym --to-code $mod+Shift+f fullscreen)
+          (bindsym $mod+Shift+space floating toggle)
+          (bindsym $mod+Ctrl+space focus mode_toggle)
+
+          (bindsym $mod+Left focus left)
+          (bindsym $mod+Down focus down)
+          (bindsym $mod+Up focus up)
+          (bindsym $mod+Right focus right)
+
+          (bindsym $mod+Shift+Left move left)
+          (bindsym $mod+Shift+Down move down)
+          (bindsym $mod+Shift+Up move up)
+          (bindsym $mod+Shift+Right move right)
+
+          (,#~"\n\n# Moving around workspaces:")
+          (bindsym $mod+tab workspace back_and_forth)
+          ,@(append-map
+             (lambda (x)
+               `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+                          workspace number ,x)
+                 (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                          move container to workspace number ,x)))
+             (iota 10 1))
+
+          (,#~"\n\n# Scratchpad settings:")
+          (bindsym --to-code $mod+Shift+minus move scratchpad)
+          (bindsym --to-code $mod+minus scratchpad show)
+
+          (,#~"")
+          (default_border pixel)
+          (default_floating_border pixel)
+          (gaps inner ,(get-value 'emacs-margin config 8))))))
+
+     (when idle-manager
+       (simple-service
+        'sway-enable-idle-manager
         home-sway-service-type
-        (home-sway-configuration
-         (config
-          `((xwayland ,(if xwayland? 'enable 'disable))
-            (,#~"")
-            ;; ,@layout-config ; TODO
+        `((,#~"")
+          (exec ,idle-manager))))
 
-            (,#~"\n\n# General settings:")
-            (set $mod ,sway-mod)
-            (set $term ,default-terminal)
-            (set $backup-term ,backup-terminal)
-            (set $menu ,application-launcher)
-            (set $lock ,screen-locker)
-
-            (floating_modifier $mod normal)
-
-            (bindsym --to-code $mod+Shift+r reload)
-
-            ;; TODO I think I need to do gexp/ungexp with `dbus'
-            ;; (,#~"\n\n# Update dbus environment variables:")
-            ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-            ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
-
-            (,#~"\n\n# Launching external applications:")
-            (bindsym $mod+Control+Shift+Return exec $backup-term)
-            (bindsym $mod+Return exec $term)
-
-            (bindsym --to-code $mod+Shift+d exec $menu)
-            (bindsym --to-code $mod+Shift+l exec $lock)
-
-            (,#~"\n\n# Manipulating windows:")
-            (bindsym --to-code $mod+Shift+c kill)
-            (bindsym --to-code $mod+Shift+f fullscreen)
-            (bindsym $mod+Shift+space floating toggle)
-            (bindsym $mod+Ctrl+space focus mode_toggle)
-
-            (bindsym $mod+Left focus left)
-            (bindsym $mod+Down focus down)
-            (bindsym $mod+Up focus up)
-            (bindsym $mod+Right focus right)
-
-            (bindsym $mod+Shift+Left move left)
-            (bindsym $mod+Shift+Down move down)
-            (bindsym $mod+Shift+Up move up)
-            (bindsym $mod+Shift+Right move right)
-
-            (,#~"\n\n# Moving around workspaces:")
-            (bindsym $mod+tab workspace back_and_forth)
-            ,@(append-map
-               (lambda (x)
-                 `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                            workspace number ,x)
-                   (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                            move container to workspace number ,x)))
-               (iota 10 1))
-
-            (,#~"\n\n# Scratchpad settings:")
-            (bindsym --to-code $mod+Shift+minus move scratchpad)
-            (bindsym --to-code $mod+minus scratchpad show)
-
-            (,#~"")
-            (default_border pixel)
-            (default_floating_border pixel)
-            (gaps inner ,(get-value 'emacs-margin config 8))))))
-
-       (when idle-manager
-         (simple-service
-          'sway-enable-idle-manager
-          home-sway-service-type
-          `((,#~"")
-            (exec ,idle-manager))))
-
-       (when extra-config
-         (simple-service
-          'sway-configuration
-          home-sway-service-type
-          `(,@extra-config
-            (,#~""))))
-
+     (when extra-config
        (simple-service
-        'sway-reload-config-on-change
-        home-run-on-change-service-type
-        `(("files/.config/sway/config"
-           ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
+        'sway-configuration
+        home-sway-service-type
+        `(,@extra-config
+          (,#~""))))
 
-       (simple-service
-        'xdg-desktop-portal-wlr-configuration
-        home-xdg-configuration-files-service-type
-        `(("xdg-desktop-portal-wlr/config"
-           ,(mixed-text-file
-             "xdg-desktop-portal-wlr-config"
-             ;; TODO do with newlines, then comment this entire simple-service out.
-             #~(format #f "[screencast]
+     (simple-service
+      'sway-reload-config-on-change
+      home-run-on-change-service-type
+      `(("files/.config/sway/config"
+         ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
+
+     (simple-service
+      'xdg-desktop-portal-wlr-configuration
+      home-xdg-configuration-files-service-type
+      `(("xdg-desktop-portal-wlr/config"
+         ,(mixed-text-file
+           "xdg-desktop-portal-wlr-config"
+           ;; TODO do with newlines, then comment this entire simple-service out.
+           #~(format #f "[screencast]
 output_name=
 max_fps=30
 chooser_cmd=~a -f %o -or -c ff0000
 chooser_type=simple"
-                       #$(file-append (get-value 'slurp config slurp)
-                                      "/bin/slurp"))))))
+                     #$(file-append (get-value 'slurp config slurp)
+                                    "/bin/slurp"))))))
 
-       (simple-service
-        'packages-for-sway
-        home-profile-service-type
-        (list qtwayland ; Copied from RDE: I don't know what this is for.
-              swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
-              xdg-desktop-portal
-              xdg-desktop-portal-wlr))
+     (simple-service
+      'packages-for-sway
+      home-profile-service-type
+      (list qtwayland ; Copied from RDE: I don't know what this is for.
+            swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
+            xdg-desktop-portal
+            xdg-desktop-portal-wlr))
 
-       (simple-service
-        'set-wayland-specific-env-vars
-        home-environment-variables-service-type
-        ;; Copied from RDE: I don't know what all of these do.
-        (append
-         '(("XDG_CURRENT_DESKTOP" . "sway")
-           ("XDG_SESSION_TYPE" . "wayland")
-           ("SDL_VIDEODRIVER" . "wayland")
-           ("MOZ_ENABLE_WAYLAND" . "1")
-           ("CLUTTER_BACKEND" . "wayland")
-           ("ELM_ENGINE" . "wayland_egl")
-           ("ECORE_EVAS_ENGINE" . "wayland-egl")
-           ("QT_QPA_PLATFORM" . "wayland-egl")
-           ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
-         (if pipewire?
-             '(("RTC_USE_PIPEWIRE" . "true")) '())))))))
+     (simple-service
+      'set-wayland-specific-env-vars
+      home-environment-variables-service-type
+      ;; Copied from RDE: I don't know what all of these do.
+      (append
+       '(("XDG_CURRENT_DESKTOP" . "sway")
+         ("XDG_SESSION_TYPE" . "wayland")
+         ("SDL_VIDEODRIVER" . "wayland")
+         ("MOZ_ENABLE_WAYLAND" . "1")
+         ("CLUTTER_BACKEND" . "wayland")
+         ("ELM_ENGINE" . "wayland_egl")
+         ("ECORE_EVAS_ENGINE" . "wayland-egl")
+         ("QT_QPA_PLATFORM" . "wayland-egl")
+         ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+       (if pipewire?
+           '(("RTC_USE_PIPEWIRE" . "true")) '()))))))
 
 
 ;;;
