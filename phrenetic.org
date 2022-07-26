@@ -3666,7 +3666,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             he-waybar
 
             he-swayidle
-            he-swaylock))
+            swayidle-idle-manager
+            he-swaylock
+            swaylock-screen-locker))
 
 
 ;; #:use-module (gnu system keyboard)
@@ -3679,23 +3681,23 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;               (xkb_variant ,(keyboard-layout-variant keyboard-layout))
 ;;               (xkb_options ,kb-options))))))
 
-(define* (he-sway
-          #:key
-          pipewire?
-          extra-config
-          (sway-mod 'Mod4)
-          (add-keyboard-layout-to-config? #t)
-          (xwayland? #t)
-          (screen-locker "loginctl lock-session")
-          idle-manager
-          application-launcher
-          default-terminal
-          backup-terminal)
+(define* (he-sway #:key
+                  pipewire?
+                  extra-config
+                  (sway-mod 'Mod4)
+                  ;; (add-keyboard-layout-to-config? #t)
+                  (xwayland? #t)
+                  (screen-locker "loginctl lock-session")
+                  idle-manager
+                  application-launcher
+                  default-terminal
+                  backup-terminal)
 
   (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
                     )
-         (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
-                             #f ;; (keyboard-layout-to-sway-config kb-layout)
+         (layout-config  (if (and #f ; add-keyboard-layout-to-config?
+                                  kb-layout)
+                             #f ; (keyboard-layout-to-sway-config kb-layout)
                              '())))
     (list
      (service
@@ -4034,24 +4036,23 @@ chooser_type=simple"
              (background . @base09))
            `((color . @base09)))))))
 
-(define* (he-waybar
-          #:key
-          sway?
-          (waybar-modules
-           (list
-            ;; TODO [sway-wip] conditionalize the sway ones?
-            (waybar-sway-workspaces)
-            ;; (waybar-sway-window)
-            (waybar-tray)
-            (waybar-idle-inhibitor)
-            ;; (waybar-temperature)
-            (waybar-sway-language)
-            (waybar-battery)
-            (waybar-clock)))
-          ;; TODO [sway-wip]
-          (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
-          ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
-          transitions?)
+(define* (he-waybar #:key
+                    sway?
+                    (waybar-modules
+                     (list
+                      ;; TODO [sway-wip] conditionalize the sway ones?
+                      (waybar-sway-workspaces)
+                      ;; (waybar-sway-window)
+                      (waybar-tray)
+                      (waybar-idle-inhibitor)
+                      ;; (waybar-temperature)
+                      (waybar-sway-language)
+                      (waybar-battery)
+                      (waybar-clock)))
+                    ;; TODO [sway-wip]
+                    (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
+                    ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
+                    transitions?)
 
   ;; (when use-global-fonts?
   ;;   (require-value 'font-monospace config))
