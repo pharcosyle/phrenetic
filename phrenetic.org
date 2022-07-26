@@ -3637,76 +3637,49 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-;; TODO make sure all usages of get-value are gone and I don't require and rde modules
-;; TODO some lists of services have conditional entries, make sure falsy ones are filtered out (am I doing this already?)
-;; TODO find any arguments with #f and '() defaults and conditionalize them in the usages (persistent-workspaces, timezone...)
-;; TODO at end, after trying out waybar: I haven't done all the cleanup for the waybar code, do it.
 (define-module (rde features wm)
-  ;; TODO clean these up
-  #:use-module (rde features)
-  #:use-module (rde features predicates)
-  #:use-module (rde features fontutils)
-  #:use-module (gnu system)
-  #:use-module (gnu system keyboard)
-  #:use-module (rde packages)
-  #:use-module (gnu packages wm)
-  #:use-module (gnu packages image)
-  #:use-module (gnu packages web)
-  #:use-module (gnu packages qt)
-  #:use-module (gnu packages linux)
-  #:use-module (gnu packages xdisorg)
-  #:use-module (gnu packages freedesktop)
-  #:use-module (gnu packages terminals)
-  #:use-module (gnu packages rust-apps)
-  #:use-module (gnu packages fonts)
-  #:use-module (gnu services)
-  #:use-module (gnu services xorg)
-  #:use-module (gnu services shepherd)
-  #:use-module (gnu home services)
-  #:use-module (gnu home-services-utils)
-  #:use-module (rde home services wm)
-  #:use-module (gnu home-services shells)
-
   #:use-module (guix gexp)
-  #:use-module (guix packages)
+  #:use-module (gnu home services)
+  #:use-module ((gnu packages freedesktop) #:select (xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages glib) #:select (dbus))
+  #:use-module ((gnu packages image) #:select (grim slurp swappy))
+  #:use-module ((gnu packages linux) #:select (psmisc))
+  #:use-module ((gnu packages qt) #:select (qtwayland))
+  #:use-module ((gnu packages rust-apps) #:select (swayhide))
+  #:use-module ((gnu packages web) #:select (jq))
+  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
+  #:use-module ((gnu packages xdisorg) #:select (wl-clipboard))
+  #:use-module (rde home services wm)
 
+
+
+  ;; TODO [sway-wip] Donno if I need these
+  #:use-module (gnu system)
+  #:use-module (gnu services)
+  #:use-module (gnu home-services-utils)
+  #:use-module (guix packages)
   #:use-module (srfi srfi-1)
 
 
+  #:export (he-sway
+            he-sway-screenshot
+            he-waybar
+
+            he-swayidle
+            he-swaylock))
 
 
-  #:use-module ((gnu packages glib) #:select (dbus))
+;; #:use-module (gnu system keyboard)
+;;
+;; (define (keyboard-layout-to-sway-config keyboard-layout)
+;;   (let ((kb-options (string-join
+;;                      (keyboard-layout-options keyboard-layout) ",")))
+;;     `((input *
+;;              ((xkb_layout  ,(keyboard-layout-name keyboard-layout))
+;;               (xkb_variant ,(keyboard-layout-variant keyboard-layout))
+;;               (xkb_options ,kb-options))))))
 
-
-
-
-  #:export (feature-sway
-            feature-sway-screenshot
-
-            feature-sway-statusbar
-            feature-waybar
-            waybar-sway-language
-            waybar-sway-window
-            waybar-sway-workspaces
-            waybar-tray
-            waybar-temperature
-            waybar-idle-inhibitor
-            waybar-clock
-            waybar-battery
-
-            feature-swayidle
-            feature-swaylock))
-
-
-(define (keyboard-layout-to-sway-config keyboard-layout)
-  (let ((kb-options (string-join
-                     (keyboard-layout-options keyboard-layout) ",")))
-    `((input *
-             ((xkb_layout  ,(keyboard-layout-name keyboard-layout))
-              (xkb_variant ,(keyboard-layout-variant keyboard-layout))
-              (xkb_options ,kb-options))))))
-
-(define* (feature-sway
+(define* (he-sway
           #:key
           pipewire?
           extra-config
@@ -3719,11 +3692,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           default-terminal
           backup-terminal)
 
-  ;; TODO maybe some of the simple services can be combined? The ones in he-sway and he-swayidle, maybe others.
   (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
                     )
          (layout-config  (if (and add-keyboard-layout-to-config? kb-layout)
-                             (keyboard-layout-to-sway-config kb-layout)
+                             #f ;; (keyboard-layout-to-sway-config kb-layout)
                              '())))
     (list
      (service
@@ -3732,7 +3704,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        (config
         `((xwayland ,(if xwayland? 'enable 'disable))
           (,#~"")
-          ;; ,@layout-config ; TODO
+          ;; ,@layout-config ; TODO [sway-wip]
 
           (,#~"\n\n# General settings:")
           (set $mod ,sway-mod)
@@ -3745,7 +3717,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
           (bindsym --to-code $mod+Shift+r reload)
 
-          ;; TODO I think I need to do gexp/ungexp with `dbus'
+          ;; TODO [sway-wip] I think I need to do gexp/ungexp with `dbus'
           ;; (,#~"\n\n# Update dbus environment variables:")
           ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
           ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
@@ -3790,7 +3762,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (,#~"")
           (default_border pixel)
           (default_floating_border pixel)
-          (gaps inner ,(get-value 'emacs-margin config 8))))))
+          (gaps inner 8)))))
 
      (when idle-manager
        (simple-service
@@ -3818,8 +3790,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       `(("xdg-desktop-portal-wlr/config"
          ,(mixed-text-file
            "xdg-desktop-portal-wlr-config"
-           ;; TODO do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
-           ;; TODO then comment this entire simple-service out.
+           ;; TODO [sway-wip] do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
+           ;; TODO [sway-wip] then comment this entire simple-service out.
            #~(format #f "[screencast]
 output_name=
 max_fps=30
@@ -3856,7 +3828,7 @@ chooser_type=simple"
 
 
 
-;; TODO curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
+;; TODO [sway-wip] curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
 (define (he-sway-screenshot)
 
   (define subject-output
@@ -3898,7 +3870,7 @@ chooser_type=simple"
    (simple-service
     'sway-screenshot
     home-sway-service-type
-    ;; TODO change these keys? I don't have a Print key (or do I?)
+    ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
     `((bindsym $mod+Print exec ,shot-output)
       (bindsym $mod+Alt+Print exec ,swappy-clipboard)
       (bindsym $mod+Shift+Print exec ,shot-window-or-selection)))))
@@ -3910,8 +3882,8 @@ chooser_type=simple"
 
 (define* (waybar-module name
                         #:optional
-                        (config '())
-                        (style '())
+                        config
+                        style
                         #:key
                         (placement 'modules-right)
                         (bar-id 'main))
@@ -3921,8 +3893,10 @@ chooser_type=simple"
    (home-waybar-extension
     (config `#(((name . ,bar-id)
                 (,placement . #(,name))
-                (,name . ,config))))
-    (style-css style))))
+                (,name . ,(if config
+                              config '())))))
+    (style-css (if style
+                   style '())))))
 
 (define (waybar-sway-language)
   (waybar-module 'sway/language))
@@ -3956,7 +3930,7 @@ chooser_type=simple"
    'sway/workspaces
    `((disable-scroll . #t)
      (format . {icon})
-     ;; TODO Andrew Tropin: FIXME: Height becomes higher when icons are not used.
+     ;; TODO [sway-wip] Andrew Tropin: FIXME: Height becomes higher when icons are not used.
      (format-icons . ,format-icons)
      (persistent_workspaces . ,(if persistent-workspaces
                                    persistent-workspaces '())))
@@ -4023,7 +3997,8 @@ chooser_type=simple"
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     ,@(if timezone `((timezone . ,timezone)) '())
+     ,@(if timezone
+           `((timezone . ,timezone)) '())
      (format . ,format)
      ;; ,@(if emacsclient
      ;;       `((on-click . ,(emacsclient-cmd "world-clock"))
@@ -4049,22 +4024,22 @@ chooser_type=simple"
                       (high . )
                       (full . ))))
    `((#{#battery.discharging.empty}#
-      ,(if #f ; TODO was `intense?'
+      ,(if #f ; TODO [sway-wip] was `intense?'
            `((color . @base02)
              (background . @base08))
            `((color . @base08))))
      (#{#battery.discharging.low}#
-      ,(if #f ; TODO was `intense?'
+      ,(if #f ; TODO [sway-wip] was `intense?'
            `((color . @base02)
              (background . @base09))
            `((color . @base09)))))))
 
-(define* (feature-waybar
+(define* (he-waybar
           #:key
           sway?
           (waybar-modules
            (list
-            ;; TODO conditionalize the sway ones?
+            ;; TODO [sway-wip] conditionalize the sway ones?
             (waybar-sway-workspaces)
             ;; (waybar-sway-window)
             (waybar-tray)
@@ -4073,7 +4048,7 @@ chooser_type=simple"
             (waybar-sway-language)
             (waybar-battery)
             (waybar-clock)))
-          ;; TODO
+          ;; TODO [sway-wip]
           (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
           ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
           transitions?)
@@ -4081,7 +4056,7 @@ chooser_type=simple"
   ;; (when use-global-fonts?
   ;;   (require-value 'font-monospace config))
   (define font-mono
-    (and=> #f ; TODO was: (get-value 'font-monospace config)
+    (and=> #f ; TODO [sway-wip] was: (get-value 'font-monospace config)
            (compose string->symbol font-name)))
   (append
    (list
@@ -4091,12 +4066,12 @@ chooser_type=simple"
       (waybar waybar)
       (config #(((position . top)
                  (name . main))))
-      ;; Andrew Tropin: TODO: fix tray menu styles.
+      ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
       (style-css
        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
             (*
              ((font-family . #(,@(if font-mono (list font-mono) '())
-                               ;; Andrew Tropin: TODO: Add icon-font argument
+                               ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
                                FontAwesome))
               ,@(if transitions? '() '((transition . none)))
               (box-shadow . none)
@@ -4132,15 +4107,16 @@ chooser_type=simple"
    waybar-modules
 
    (list
-    (simple-service
-     'waybar-add-font-package
-     home-profile-service-type
-     (list font-awesome)) ; TODO use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though)
+    ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
+    ;; (simple-service
+    ;;  'waybar-add-font-package
+    ;;  home-profile-service-type
+    ;;  (list font-awesome))
 
     (simple-service
      'waybar-reload-config-on-change
      home-run-on-change-service-type
-     ;; TODO factor out the command
+     ;; TODO [sway-wip] factor out the command
      `(("files/.config/waybar/style.css"
         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
        ("files/.config/waybar/config"
@@ -4157,7 +4133,7 @@ chooser_type=simple"
 
 
 (define* (he-swayidle #:key
-                      sway? ; TODO maybe have this default to true
+                      sway? ; TODO [sway-wip] maybe have this default to true
                       screen-locker
                       (lock-timeout 240)
                       extra-config)
@@ -4203,8 +4179,8 @@ chooser_type=simple"
     (config
      `((show-failed-attempts . #t)
        (daemonize . #t)
-       ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO
-       ;; Andrew Tropin: TODO: Source color from colorscheme
+       ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO [sway-wip]
+       ;; TODO [sway-wip] Andrew Tropin: TODO: Source color from colorscheme
        (color . 3e3e3e)
        (indicator-caps-lock)
        ,@(if extra-config
@@ -4213,7 +4189,7 @@ chooser_type=simple"
 (define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
 
 
-;; TODO
+;; TODO [sway-wip]
 ;; (let ((screen-locker swaylock-screen-locker))
 ;;   (he-sway $ #:screen-locker screen-locker
 ;;            #:idle-manager swayidle-idle-manager)
