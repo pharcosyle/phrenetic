@@ -3637,6 +3637,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ***** Window managers
 ****** Sway
 #+begin_src scheme
+;; TODO make sure all usages of get-value are gone and I don't require and rde modules
+;; TODO some lists of services have conditional entries, make sure falsy ones are filtered out (am I doing this already?)
+;; TODO find any arguments with #f and '() defaults and conditionalize them in the usages (persistent-workspaces, timezone...)
+;; TODO at end, after trying out waybar: I haven't done all the cleanup for the waybar code, do it.
 (define-module (rde features wm)
   ;; TODO clean these up
   #:use-module (rde features)
@@ -3693,10 +3697,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             feature-swayidle
             feature-swaylock))
 
-
-;;;
-;;; Sway.
-;;;
 
 (define (keyboard-layout-to-sway-config keyboard-layout)
   (let ((kb-options (string-join
@@ -3818,14 +3818,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       `(("xdg-desktop-portal-wlr/config"
          ,(mixed-text-file
            "xdg-desktop-portal-wlr-config"
-           ;; TODO do with newlines, then comment this entire simple-service out.
+           ;; TODO do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
+           ;; TODO then comment this entire simple-service out.
            #~(format #f "[screencast]
 output_name=
 max_fps=30
 chooser_cmd=~a -f %o -or -c ff0000
 chooser_type=simple"
-                     #$(file-append (get-value 'slurp config slurp)
-                                    "/bin/slurp"))))))
+                     #$(file-append slurp "/bin/slurp"))))))
 
      (simple-service
       'packages-for-sway
@@ -3853,85 +3853,68 @@ chooser_type=simple"
            '(("RTC_USE_PIPEWIRE" . "true")) '()))))))
 
 
-;;;
-;;; sway-screenshot.
-;;;
 
-(define* (feature-sway-screenshot)
-  "Configure slurp, grim and other tools for screenshot capabilities.  Feature
-is sway dependent, because it relies on swaymsg."
 
-  (define sway-f-name 'screenshot)
-  (define f-name (symbol-append 'sway- sway-f-name))
 
-  (define (get-home-services config)
-    (require-value 'sway config)
-    (define subject-output
-      #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
-                #$(file-append (get-value 'sway config) "/bin/swaymsg")
-                #$(file-append jq "/bin/jq")))
-    (define subject-window-or-selection
-      #~(format #f "~a -t get_tree | ~a -r '.. | select(.pid? and .visible?) \
+;; TODO curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
+(define (he-sway-screenshot)
+
+  (define subject-output
+    #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
+              #$(file-append sway "/bin/swaymsg")
+              #$(file-append jq "/bin/jq")))
+  (define subject-window-or-selection
+    #~(format #f "~a -t get_tree | ~a -r '.. | select(.pid? and .visible?) \
 | .rect | \"\\(.x),\\(.y) \\(.width)x\\(.height)\"' | ~a -b ~a -B ~a"
-                #$(file-append (get-value 'sway config) "/bin/swaymsg")
-                #$(file-append jq "/bin/jq")
-                ;; TODO: Move to slurp-cmd
-                #$(file-append slurp "/bin/slurp")
-                "303030AA"
-                "303030AA"))
+              #$(file-append sway "/bin/swaymsg")
+              #$(file-append jq "/bin/jq")
+              #$(file-append slurp "/bin/slurp")
+              "303030AA"
+              "303030AA"))
 
-    (define* (shot-script subject #:key output geom (file "-"))
-      (program-file
-       (string-append "sway-shot-" subject)
-       #~(system
-          (format #f "~a ~a~a~a | ~a"
-                  #$(file-append grim "/bin/grim")
-                  #$(if output #~(string-append "-o \"$(" #$output ")\" ") "")
-                  #$(if geom #~(string-append "-g \"$(" #$geom ")\" ") "")
-                  #$file
-                  #$(file-append wl-clipboard "/bin/wl-copy")))))
+  (define* (shot-script subject #:key output geom (file "-"))
+    (program-file
+     (string-append "sway-shot-" subject)
+     #~(system
+        (format #f "~a ~a~a~a | ~a"
+                #$(file-append grim "/bin/grim")
+                #$(if output #~(string-append "-o \"$(" #$output ")\" ") "")
+                #$(if geom #~(string-append "-g \"$(" #$geom ")\" ") "")
+                #$file
+                #$(file-append wl-clipboard "/bin/wl-copy")))))
 
-    (define shot-output
-      (shot-script "output" #:output subject-output))
-    (define shot-window-or-selection
-      (shot-script "window-or-selection" #:geom subject-window-or-selection))
-    (define swappy-clipboard
-      (program-file
-       "sway-swappy-clipboard"
-       #~(system
-          (format #f "~a | ~a -f -"
-                  #$(file-append wl-clipboard "/bin/wl-paste")
-                  #$(file-append (get-value 'swappy config swappy)
-                                 "/bin/swappy")))))
-    (list
-     (simple-service
-      'sway-screenshot
-      home-sway-service-type
-      `((bindsym $mod+Print exec ,shot-output)
-        (bindsym $mod+Alt+Print exec ,swappy-clipboard)
-        (bindsym $mod+Shift+Print exec ,shot-window-or-selection)))))
-
-  (feature
-   (name f-name)
-   (values `((,f-name . #t)))
-   (home-services-getter get-home-services)))
+  (define shot-output
+    (shot-script "output" #:output subject-output))
+  (define shot-window-or-selection
+    (shot-script "window-or-selection" #:geom subject-window-or-selection))
+  (define swappy-clipboard
+    (program-file
+     "sway-swappy-clipboard"
+     #~(system
+        (format #f "~a | ~a -f -"
+                #$(file-append wl-clipboard "/bin/wl-paste")
+                #$(file-append swappy "/bin/swappy")))))
+  (list
+   (simple-service
+    'sway-screenshot
+    home-sway-service-type
+    ;; TODO change these keys? I don't have a Print key (or do I?)
+    `((bindsym $mod+Print exec ,shot-output)
+      (bindsym $mod+Alt+Print exec ,swappy-clipboard)
+      (bindsym $mod+Shift+Print exec ,shot-window-or-selection)))))
 
 
-;;;
-;;; waybar.
-;;;
 
-;; TODO: Move to home services?
-(define* (waybar-module
-          name
-          #:optional
-          (config '())
-          (style '())
-          #:key
-          (placement 'modules-right)
-          (bar-id 'main))
-  "Returns a service, which extends home-waybar-service-type in the way the
-module will be added to the BAR-ID."
+
+
+
+(define* (waybar-module name
+                        #:optional
+                        (config '())
+                        (style '())
+                        #:key
+                        (placement 'modules-right)
+                        (bar-id 'main))
   (simple-service
    (symbol-append 'waybar-module- name)
    home-waybar-service-type
@@ -3941,10 +3924,10 @@ module will be added to the BAR-ID."
                 (,name . ,config))))
     (style-css style))))
 
-(define* (waybar-sway-language)
+(define (waybar-sway-language)
   (waybar-module 'sway/language))
 
-(define* (waybar-sway-window)
+(define (waybar-sway-window)
   (waybar-module
    'sway/window
    `()
@@ -3955,13 +3938,13 @@ module will be added to the BAR-ID."
 
 (define* (waybar-sway-workspaces
           #:key
-          (persistent-workspaces '())
+          persistent-workspaces
           (format-icons '(("1" . )
                           ("2" . )
                           ("3" . )
                           ("4" . )
-                          ("6" . )  ; 
-                          ("7" . )  ; 
+                          ("6" . ) ; 
+                          ("7" . ) ; 
                           ("8" . )
                           ("9" . )
                           ("10" . )
@@ -3969,14 +3952,14 @@ module will be added to the BAR-ID."
                           ("urgent" . )
                           ("focused" . )
                           ("default" . ))))
-  "PERSISTENT-WORKSPACES is a list of pairs workspace and vector of outputs."
   (waybar-module
    'sway/workspaces
    `((disable-scroll . #t)
      (format . {icon})
-     ;; FIXME: Height becomes higher when icons are not used.
+     ;; TODO Andrew Tropin: FIXME: Height becomes higher when icons are not used.
      (format-icons . ,format-icons)
-     (persistent_workspaces . ,persistent-workspaces))
+     (persistent_workspaces . ,(if persistent-workspaces
+                                   persistent-workspaces '())))
    `(((#{#workspaces}# button)
       ((background . none)
        (border-radius . 0.2em)
@@ -4021,58 +4004,38 @@ module will be added to the BAR-ID."
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 
-(define* (waybar-temperature) (waybar-module 'temperature))
+(define (waybar-temperature)
+  (waybar-module 'temperature))
 
-(define* (waybar-idle-inhibitor)
+(define (waybar-idle-inhibitor)
   (waybar-module
    'idle_inhibitor
    '((format . {icon})
      (format-icons . ((activated . )
                       (deactivated . ))))))
 
-(define* (waybar-clock
-          #:key
-          (format "{:%Y-%m-%d %H:%M}")
-          (interval 60)
-          (timezone #f))
-  "Returns a function, which accepts rde config and returns waybar clock module.
-Left click on the module open world-clock in emacs client, right click opens
-calendar."
-  (lambda (config)
-    (define ec (get-value 'emacs-client config))
-    (define (ec-command command)
-      #~(format #f "\"~a --eval \\\"(~a)\\\"\"" #$ec #$command))
-    (waybar-module
-     'clock
-     `((tooltip-format
-        . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
+(define* (waybar-clock #:key
+                       (format "{:%Y-%m-%d %H:%M}")
+                       timezone)
+  ;; (define emacsclient (get-value 'emacs-client config))
+  ;; (define (emacsclient-cmd command)
+  ;;   #~(format #f "\"~a --eval \\\"(~a)\\\"\"" #$emacsclient #$command))
+  (waybar-module
+   'clock
+   `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
+     ,@(if timezone `((timezone . ,timezone)) '())
+     (format . ,format)
+     ;; ,@(if emacsclient
+     ;;       `((on-click . ,(emacsclient-cmd "world-clock"))
+     ;;         (on-click-right . ,(emacsclient-cmd "calendar")))
+     ;;       '())
+     )))
 
-       ,@(if timezone `((timezone . ,timezone)) '())
-       (format . ,format)
-       ,@(if ec
-             `((on-click . ,(ec-command "world-clock"))
-               (on-click-right . ,(ec-command "calendar")))
-             '())
-
-       (interval . ,interval)))))
-
-(define* (waybar-battery
-          #:key
-          (intense? #f)
-          (charging-icon "⚡"))
-  "When INTENSE? is #t changes background color instead of text color when the
-battery is low or nearly empty."
+(define (waybar-battery)
   (waybar-module
    'battery
    `((format . "{capacity}% {icon}")
-     (format-charging . ,(format #f "{capacity}~a {icon}" charging-icon))
-     ;; | icon |  range |
-     ;; |------+--------|
-     ;; |    0 | 0-10   |
-     ;; |   25 | 10-40  |
-     ;; |   50 | 40-60  |
-     ;; |   75 | 60-90  |
-     ;; |  100 | 90-100 |
+     (format-charging . ,(format #f "{capacity}~a {icon}" "⚡"))
      (states . ((empty . 10)
                 (low . 20)
                 (half-low . 40)
@@ -4086,115 +4049,108 @@ battery is low or nearly empty."
                       (high . )
                       (full . ))))
    `((#{#battery.discharging.empty}#
-      ,(if intense?
+      ,(if #f ; TODO was `intense?'
            `((color . @base02)
              (background . @base08))
            `((color . @base08))))
      (#{#battery.discharging.low}#
-      ,(if intense?
+      ,(if #f ; TODO was `intense?'
            `((color . @base02)
              (background . @base09))
            `((color . @base09)))))))
 
 (define* (feature-waybar
           #:key
-          (waybar waybar)
+          sway?
           (waybar-modules
            (list
+            ;; TODO conditionalize the sway ones?
             (waybar-sway-workspaces)
+            ;; (waybar-sway-window)
             (waybar-tray)
             (waybar-idle-inhibitor)
+            ;; (waybar-temperature)
             (waybar-sway-language)
-            (waybar-battery #:intense? #f)
+            (waybar-battery)
             (waybar-clock)))
-          (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
-          (transitions? #f))
-  "Configure waybar.  Each element of WAYBAR-MODULES is a home service or a
-function accepting an rde config and returning a home-service, which extends
-home-waybar-service-type.  Set TRANSITIONS? to #t if you prefer a smooth
-animation."
+          ;; TODO
+          (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
+          ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
+          transitions?)
 
-  (define f-name 'waybar)
+  ;; (when use-global-fonts?
+  ;;   (require-value 'font-monospace config))
+  (define font-mono
+    (and=> #f ; TODO was: (get-value 'font-monospace config)
+           (compose string->symbol font-name)))
+  (append
+   (list
+    (service
+     home-waybar-service-type
+     (home-waybar-configuration
+      (waybar waybar)
+      (config #(((position . top)
+                 (name . main))))
+      ;; Andrew Tropin: TODO: fix tray menu styles.
+      (style-css
+       `(,#~(format #f "@import \"~a\";\n" #$base16-css)
+            (*
+             ((font-family . #(,@(if font-mono (list font-mono) '())
+                               ;; Andrew Tropin: TODO: Add icon-font argument
+                               FontAwesome))
+              ,@(if transitions? '() '((transition . none)))
+              (box-shadow . none)
+              (text-shadow . none)
+              (min-height . 0)))
 
-  (define (get-home-services config)
-    ;; (when use-global-fonts?
-    ;;   (require-value 'font-monospace config))
-    (define font-mono
-      (and=> (get-value 'font-monospace config)
-             (compose string->symbol font-name)))
-    (append
-     (list
-      (service
-       home-waybar-service-type
-       (home-waybar-configuration
-        (waybar waybar)
-        (config #(((position . top)
-                   (name . main))))
-        ;; TODO: fix tray menu styles.
-        (style-css
-         `(,#~(format #f "@import \"~a\";\n" #$base16-css)
-              (*
-               ((font-family . #(,@(if font-mono (list font-mono) '())
-                                 ;; TODO: Add icon-font argument
-                                 FontAwesome))
-                ,@(if transitions? '() '((transition . none)))
-                (box-shadow . none)
-                (text-shadow . none)
-                (min-height . 0)))
+            (tooltip
+             ((border . (solid @base02))
+              (background . @base01)
+              (opacity . 0.9)))
 
-              (tooltip
-               ((border . (solid @base02))
-                (background . @base01)
-                (opacity . 0.9)))
+            ((tooltip label)
+             ((color . @base05)
+              (padding . 0)))
 
-              ((tooltip label)
-               ((color . @base05)
-                (padding . 0)))
+            (#{#waybar}#
+             ((color . @base04)
+              (background . @base01)))
 
-              (#{#waybar}#
-               ((color . @base04)
-                (background . @base01)))
+            (#((.modules-right label)
+               (.modules-right image))
+             ((margin . (0.4em 0.2em))
+              (padding . (0 0.4em))
+              (background . @base02)
+              (border-radius . 0.2em)))
 
-              (#((.modules-right label)
-                 (.modules-right image))
-               ((margin . (0.4em 0.2em))
-                (padding . (0 0.4em))
-                (background . @base02)
-                (border-radius . 0.2em)))
+            (.modules-left
+             ((margin-left . 0.2em)))
 
-              (.modules-left
-               ((margin-left . 0.2em)))
+            (.modules-right
+             ((margin-right . 0.2em))))))))
 
-              (.modules-right
-               ((margin-right . 0.2em))))))))
+   waybar-modules
 
-     (map (lambda (x) (if (procedure? x) (x config) x)) waybar-modules)
+   (list
+    (simple-service
+     'waybar-add-font-package
+     home-profile-service-type
+     (list font-awesome)) ; TODO use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though)
 
-     (list
+    (simple-service
+     'waybar-reload-config-on-change
+     home-run-on-change-service-type
+     ;; TODO factor out the command
+     `(("files/.config/waybar/style.css"
+        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
+       ("files/.config/waybar/config"
+        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+
+    (when sway?
       (simple-service
-       'waybar-add-font-package
-       home-profile-service-type
-       (list font-awesome))
-
-      (simple-service
-       'waybar-reload-config-on-change
-       home-run-on-change-service-type
-       `(("files/.config/waybar/style.css"
-          ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
-         ("files/.config/waybar/config"
-          ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
-
-      (when (get-value 'sway config)
-        (simple-service
-         'sway-waybar
-         home-sway-service-type
-         `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
-
-  (feature
-   (name 'waybar)
-   (values `((waybar . ,waybar)
-             (sway-statusbar . #t)))
-   (home-services-getter get-home-services)))
+       'sway-waybar
+       home-sway-service-type
+       `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
 
 
 
@@ -4248,7 +4204,7 @@ animation."
      `((show-failed-attempts . #t)
        (daemonize . #t)
        ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO
-       ;; TODO: Source color from colorscheme
+       ;; Andrew Tropin: TODO: Source color from colorscheme
        (color . 3e3e3e)
        (indicator-caps-lock)
        ,@(if extra-config
