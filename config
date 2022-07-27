@@ -1,7 +1,5 @@
 # -*- mode: i3wm-config -*-
 
-# TODO there have been updates to the example/default config since I copied this, check the Sway repo
-
 # TODO gexp and put this in a more generic location (but ideally make it run there like exec_always, that is, on every sway reload)
 # Alternatively it would make sense to have it regenerated on Guix Home reconfigure (`home-run-on-change-service-type`) since it's not Sway-specific but rather necessary for any Wayland environment but that might be annoying
 # exec_always import-gsettings
@@ -73,7 +71,6 @@ input "type:touchpad" {
 # TODO Can I add this binary file to the guix store with a gexp? At least parameterize the path to it.
 output * bg ~/projects/phrenetic/exuberant/res/alucard_bg.png fill
 
-# TODO Andrew Tropin added this to RDE recently, maybe use his version: https://github.com/abcdw/rde/commit/6b8acfc27514beff53db235352074c8eeb4054d5
 bindsym --locked XF86AudioMute exec pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym --locked XF86AudioLowerVolume exec pactl set-sink-volume @DEFAULT_SINK@ -5%
 bindsym --locked XF86AudioRaiseVolume exec pactl set-sink-volume @DEFAULT_SINK@ +5%
