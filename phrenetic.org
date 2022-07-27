@@ -797,6 +797,7 @@ sudo guix time-machine \
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services ssh)
+  #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
   ;; #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages emacs) #:select (emacs))
@@ -811,12 +812,16 @@ sudo guix time-machine \
   #:use-module ((gnu packages rust-apps) #:select (swayhide))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages shellutils) #:select (direnv))
+  #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
+  #:use-module (rde features fontutils)
   #:use-module (rde home services wm)
+  #:use-module (rde home services xdisorg)
+  #:use-module ((rde packages) #:select (rofi-wayland))
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
@@ -841,6 +846,10 @@ sudo guix time-machine \
             he-swayidle
             swayidle-idle-manager
             he-waybar
+            he-rofi
+            rofi-application-launcher
+            he-alacritty
+            alacritty-terminal
             gammastep-service-type
             network-manager-service-type
             udiskie-service-type))
@@ -3897,7 +3906,7 @@ chooser_type=simple"
 #+begin_src scheme
 (define* (he-swayidle svcs
                       #:key
-                      sway? ; TODO [sway-wip] maybe have this default to true
+                      sway?
                       screen-locker
                       (lock-timeout 240)
                       extra-config)
@@ -4188,6 +4197,68 @@ chooser_type=simple"
 #+end_src
 ***** Application launchers
 ****** Rofi
+#+begin_src scheme
+(define* (he-rofi svcs
+                  #:key
+                  wayland?
+                  (theme "Arc-Dark"))
+  (cons*
+   (service
+    home-rofi-service-type
+    (home-rofi-configuration
+     (rofi (if wayland?
+               rofi-wayland
+               rofi))
+     ;; TODO Trying out Andrew Tropin's confguration as-is for now, revisit later.
+     (config-rasi
+      `((configuration
+         ((modi . "run,ssh,drun")
+          (drun-show-actions . #t)
+          (show-icons . #t)
+          (kb-row-tab . "")
+          (kb-row-select . "Tab")
+          (kb-secondary-paste . "Control+y")
+          (kb-remove-word-forward . "Alt+d")
+          (kb-remove-word-back . "Control+w,Control+BackSpace")
+          (kb-clear-line . "Control+slash")
+          (kb-page-next . "Control+v")
+          (kb-page-prev . "Alt+v")))
+        ,#~(format #f "@theme \"~a\"" #$theme)))))
+   svcs))
+
+(define rofi-application-launcher (file-append rofi "/bin/rofi -show drun"))
+#+end_src
+***** Terminals
+****** Alacritty
+#+begin_src scheme
+(define (font-weight->style weight)
+  (string-capitalize (string-delete #\- (symbol->string weight))))
+
+(define* (he-alacritty svcs
+                       #:key
+                       font-mono
+                       config-file) ; (config-file (local-file "alacritty.yml"))
+  (cons*
+   (service
+    home-alacritty-service-type
+    (home-alacritty-configuration
+     (package package)
+     (config
+      `((window . ((padding . ((x . 10)
+                               (y . 5)))))
+        ,@(if font-mono
+              `((font . ((normal . ((style . , (font-weight->style
+                                                (font-weight font-mono)))
+                                    (family . ,(font-name font-mono))))
+                         (size . ,(font-size font-mono)))))
+              '())
+        ,@(if config-file
+              `((import . #(,config-file)))
+              '())))))
+   svcs))
+
+(define alacritty-terminal (file-append package "/bin/alacritty"))
+#+end_src
 ***** Applets
 ****** Gammastep
 - TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
@@ -4309,14 +4380,22 @@ chooser_type=simple"
                   he-flatpak
                   (as-> $
                     (if (member #:session/sway sessions)
-                        (he-sway $) $))
+                        (let ((screen-locker swaylock-screen-locker))
+                          (-> $
+                              (he-sway #:pipewire? pipewire?
+                                       #:screen-locker screen-locker
+                                       #:idle-manager swayidle-idle-manager
+                                       #:application-launcher rofi-application-launcher
+                                       #:default-terminal alacritty-terminal
+                                       #:backup-terminal alacritty-terminal)
+                              he-swaylock
+                              (he-swayidle #:sway? #t
+                                           #:screen-locker screen-locker)
+                              (he-waybar #:sway? #t)
+                              (he-rofi #:wayland? #t)
+                              he-alacritty))
+                        $))
               $)))))))
-
-;; TODO [sway-wip]
-;; (let ((screen-locker swaylock-screen-locker))
-;;   (he-sway $ #:screen-locker screen-locker
-;;            #:idle-manager swayidle-idle-manager)
-;;   (he-swayidle $ #:screen-locker screen-locker))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
