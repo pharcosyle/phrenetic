@@ -4945,10 +4945,10 @@ done
                                    ("clj.1" "/share/man/man1/"))))))))
 #+end_src
 ** Channel
-#+begin_src scheme (meta-in-dir ".guix-channel")
+#+begin_src scheme :tangle (meta-in-dir ".guix-channel")
 (channel
  (version 0)
- ;; (directory "ebullient") ; TODO might need this
+ (directory "phrenetic")
  (dependencies
   (channel
    (name flat)
@@ -5032,7 +5032,7 @@ guix time-machine \
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
-        (name 'ebullient) ; TODO rename this? To phrenetic?
+        (name 'phrenetic)
         (url "file:///home/pharcosyle/projects/phrenetic"))
        %default-channels)
 #+end_src
@@ -5169,7 +5169,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (cons* (channel
-        (name 'ebullient) ; TODO rename this? To phrenetic?
+        (name 'phrenetic)
         (url "file:///home/pharcosyle/projects/phrenetic"))
        %default-channels)
 #+end_src
