@@ -3902,28 +3902,31 @@ chooser_type=simple"
                       (lock-timeout 240)
                       extra-config)
   (append
-   (list
-    (service
-     home-swayidle-service-type
-     (home-swayidle-configuration
-      (swayidle swayidle)
-      (config
-       `(,@(if screen-locker
-               (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
-                 `((lock ,lock-cmd-quoted)
-                   (before-sleep ,lock-cmd-quoted)
-                   (timeout ,lock-timeout ,lock-cmd-quoted)))
-               '())
-         ,@(if extra-config
-               extra-config '())))))
-    (let* ((swaymsg (file-append sway "/bin/swaymsg"))
-           (swaymsg-cmd (lambda (cmd)
-                          #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-           (idle-timeout (+ lock-timeout 30)))
-      (simple-service
-       'add-dpms-to-swayidle
-       home-swayidle-service-type
-       `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))
+   (filter
+    service?
+    (list
+     (service
+      home-swayidle-service-type
+      (home-swayidle-configuration
+       (swayidle swayidle)
+       (config
+        `(,@(if screen-locker
+                (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
+                  `((lock ,lock-cmd-quoted)
+                    (before-sleep ,lock-cmd-quoted)
+                    (timeout ,lock-timeout ,lock-cmd-quoted)))
+                '())
+          ,@(if extra-config
+                extra-config '())))))
+     (when sway?
+       (let* ((swaymsg (file-append sway "/bin/swaymsg"))
+              (swaymsg-cmd (lambda (cmd)
+                             #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
+              (idle-timeout (+ lock-timeout 30)))
+         (simple-service
+          'add-sway-dpms-to-swayidle
+          home-swayidle-service-type
+          `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
    svcs))
 
 (define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
