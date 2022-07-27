@@ -4983,7 +4983,6 @@ TODO the =../.guix-channel= relative path (and temporary .guix-channel addition 
 ** \
 #+begin_src sh :var name="" dir=""
 guix time-machine \
-	--load-path=. \
 	--channels="$dir"/$name-channels \
 	-- \
 	describe --format=channels > "$dir"/$name-channels-lock
