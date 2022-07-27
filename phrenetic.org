@@ -2499,7 +2499,8 @@ Extremely WIP, basically just a scratchpad
 ******** third attempt
 ********* clojure part
 ********** clj file
-#+begin_src clojure :tangle ebullient/src/protostar/hickeyland.clj :comments link
+I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the source block options here.
+#+begin_src clojure
 (ns protostar.hickeyland
   (:require [clojure.alpha.spec :as s]
             [clojure.edn :as edn]
@@ -3277,7 +3278,8 @@ Extremely WIP, basically just a scratchpad
 ;; - spec that both host and repo must be specified so in inheritance one isn't overridden without the other?
 #+end_src
 ********** deps
-#+begin_src clojure :tangle ebullient/deps.edn :comments link
+Had =:tangle ebullient/deps.edn :comments link=
+#+begin_src clojure
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/alpha.spec {:git/url "https://github.com/clojure/spec-alpha2.git"
@@ -3300,7 +3302,8 @@ Extremely WIP, basically just a scratchpad
                       {:git/tag "v0.5.0" :git/sha "48c3c67"}}}}}
 #+end_src
 ********* guix part
-#+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link
+Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
+#+begin_src clojure
 (ns ebullient.home.packaging-wip
   (:require [guile :refer [command-line]]
             [guile.guix.base32 :refer [bytevector->nix-base32-string]]
@@ -3416,7 +3419,8 @@ Extremely WIP, basically just a scratchpad
 (require #(ebullient.home.packaging-wip))
 #+end_src
 ********* test clj
-#+begin_src clojure :tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link
+Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
+#+begin_src clojure
 (ns ebullient.home.test-clj
   (:require [guile.guix.gexp :as g]
             [guile.guix.packages :refer [package package-description]]))
