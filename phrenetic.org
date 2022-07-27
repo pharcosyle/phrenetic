@@ -780,10 +780,6 @@ sudo guix time-machine \
 :PROPERTIES:
 :meta-dir+: /ebullient/home
 :END:
-#+name: guix-extra-profiles-path
-#+begin_src sh
-~/.guix-extra-profiles
-#+end_src
 *** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -835,7 +831,6 @@ sudo guix time-machine \
   #:use-module (srfi srfi-1)
 
   #:export (he-shells
-            he-extra-profiles
             he-nix
             he-emacs
             he-doom
@@ -1040,48 +1035,6 @@ alias grep='grep --color=auto'
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
-#+end_src
-**** Extra profiles
-***** login shell profile wip
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "profile")
-:END:
-****** Use Guix extra profiles
-#+begin_src sh :noweb yes
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-for i in $GUIX_EXTRA_PROFILES/*; do
-  profile=$i/$(basename "$i")
-  if [ -f "$profile"/etc/profile ]; then
-    GUIX_PROFILE="$profile"
-    . "$GUIX_PROFILE"/etc/profile
-  fi
-
-  # Emulate guix-home setup-environment file (and thus `/etc/profile` as well). Regarding MANPATH and INFOPATH in particular, see https://guix.gnu.org/en/cookbook/en/guix-cookbook.html#Required-packages
-  case $XDG_DATA_DIRS in
-    ,*"$profile"/share*) ;;
-    ,*) export XDG_DATA_DIRS="$profile"/share:$XDG_DATA_DIRS ;;
-  esac
-  case $MANPATH in
-    ,*"$profile"/share/man*) ;;
-    ,*) export MANPATH="$profile"/share/man:$MANPATH
-  esac
-  case $INFOPATH in
-    ,*"$profile"/share/info*) ;;
-    ,*) export INFOPATH="$profile"/share/info:$INFOPATH ;;
-  esac
-  case $XDG_CONFIG_DIRS in
-    ,*"$profile"/etc/xdg*) ;;
-    ,*) export XDG_CONFIG_DIRS="$profile"/etc/xdg:$XDG_CONFIG_DIRS ;;
-  esac
-  case $XCURSOR_PATH in
-    ,*"$profile"/share/icons*) ;;
-    ,*) export XCURSOR_PATH="$profile"/share/icons:$XCURSOR_PATH ;;
-  esac
-
-  unset profile
-done
 #+end_src
 **** Nix
 #+begin_src scheme
@@ -4411,7 +4364,6 @@ chooser_type=simple"
     (-> '()
         (he-shells #:login-shell login-shell
                    #:interactive-shell interactive-shell)
-        he-extra-profiles
         (as-> $
           (if nix?
               (he-nix $) $)
@@ -4459,87 +4411,6 @@ guix home \
 	--expression="(@ (exuberant he $he_name) he)" \
 	reconfigure
 #+end_src
-*** Guix extra profiles
-:PROPERTIES:
-:meta-dir+: /manifests
-:END:
-**** Manifests
-#+name: guix-extra-profile-path
-#+begin_src sh :var profileName="" :noweb yes
-echo "<<guix-extra-profiles-path>>/$profileName/$profileName"
-#+end_src
-***** Multiverse :manifest:
-#+begin_src scheme :tangle (meta-in-dir "multiverse")
-(specifications->manifest
- '("btrfs-progs" ; TODO "depends on"/"exists because of" the stateless module. Maybe it should be in some "system administration" section of Home config
-
-   ;; "protonvpn-cli" ; REVIEW Appears to be broken after the big Guix frozen-updates upgrade.
-
-   ;; General
-   "xdg-utils"
-   "gtk+:bin" ; TODO Gate this with `desktop?`
-   "curl"
-   "zip"
-   "unzip"
-
-   ;; Nice-to-have ; TODO might get rid of these and just `guix shell' or install as-needed
-   "tree"
-   "woof"
-
-
-   ;;; Apps
-
-   ;; Nyxt
-   "nyxt"
-   "gst-libav"
-   "gst-plugins-bad"
-   "gst-plugins-base"
-   "gst-plugins-good"
-   "gst-plugins-ugly"
-
-   ;; "gimp" ; TODO maybe. Or just install as-needed with `guix shell`
-   ))
-#+end_src
-#+begin_src elisp :noweb-ref guix-extra-profiles :noweb-sep " " :noweb yes
-"<<guix-extra-profile-path("multiverse")>>"
-#+end_src
-**** \
-#+name: install-profiles
-#+begin_src sh :results output silent :dir (meta-get-dir) :noweb yes :async
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-profiles=$*
-if [[ $# -eq 0 ]]; then
-    profiles="*";
-fi
-
-for profile in $profiles; do
-  profileName=$(basename $profile .scm)
-  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
-  mkdir -p $profilePath
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
-done
-#+end_src
-#+call: install-profiles[:cmdline ...]()
-
-#+name: upgrade-profiles
-#+begin_src sh :results output silent :noweb yes :async
-gepp="<<guix-extra-profiles-path>>"
-GUIX_EXTRA_PROFILES="${gepp/#\~/$HOME}"
-
-profiles=$*
-if [[ $# -eq 0 ]]; then
-    profiles="$GUIX_EXTRA_PROFILES/*";
-fi
-
-for profile in $profiles; do
-  profileName=$(basename $profile)
-  profilePath="$GUIX_EXTRA_PROFILES/$profileName"
-  guix package --profile="$profilePath/$profileName" --manifest="$profileName"
-done
-#+end_src
-#+call: upgrade-profiles[:cmdline ...]()
 ** Utils
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
