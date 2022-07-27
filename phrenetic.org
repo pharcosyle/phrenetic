@@ -853,64 +853,35 @@ sudo guix time-machine \
 #+end_src
 **** Shells
 #+begin_src scheme
-(define* (he-shells svcs #:key login-shell interactive-shell)
+(define* (he-shells svcs
+                    #:key
+                    login-shell
+                    interactive-shell)
   (append
-   (cons*
-    (service (login-shell-service-type login-shell))
-    (filter
-     service?
-     (let ((setup-shell? (lambda (shell)
-                           (memq shell (list login-shell interactive-shell)))))
-       (list
-        (when (setup-shell? #:shell/bash)
-          (service home-bash-service-type
-                   ;; (home-bash-configuration
-                   ;;  (bash-profile
-                   ;;   (list (local-file "bashrc"))))
-                   ))
-        (when (setup-shell? #:shell/zsh)
-          (service home-zsh-service-type
-                   (home-zsh-configuration
-                    (zshrc
-                     (list (local-file "zshrc"))))))
-        (when-not (eq login-shell interactive-shell)
-          (simple-service
-           'set-shell
-           home-environment-variables-service-type
-           `(("SHELL" . ,(case interactive-shell
-                           ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                           ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
+   (filter
+    service?
+    (let ((setup-shell? (lambda (shell)
+                          (memq shell (list login-shell interactive-shell)))))
+      (list
+       (when (setup-shell? #:shell/bash)
+         (service home-bash-service-type
+                  ;; (home-bash-configuration
+                  ;;  (bash-profile
+                  ;;   (list (local-file "bashrc"))))
+                  ))
+       (when (setup-shell? #:shell/zsh)
+         (service home-zsh-service-type
+                  (home-zsh-configuration
+                   (zshrc
+                    (list (local-file "zshrc"))))))
+       (when-not (eq login-shell interactive-shell)
+         (simple-service
+          'set-shell-env-var
+          home-environment-variables-service-type
+          `(("SHELL" . ,(case interactive-shell
+                          ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                          ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))))
    svcs))
-#+end_src
-***** Login shell service
-#+begin_src scheme
-(define (he-login-shell-service-type shell)
-  (service-type
-   (name 'he-login-shell)
-   (extensions
-    (service-extension
-     (case shell
-       ((#:shell/bash) home-bash-service-type)
-       ;; ((#:shell/zsh) home-zsh-service-type)
-       )
-     identity))
-   (compose identity)
-   (extend
-    (lambda (initial extensions)
-      (let* ((config (cons* initial extensions))
-             (field (lambda (k)
-                      (append-map (rpartial k) config))))
-        (case shell
-          ((#:shell/bash)
-           (home-bash-extension
-            (environment-variables (field #:environment-variables))
-            (bash-profile (field #:profile))))
-          ;; ((#:shell/zsh)
-          ;;  (home-zsh-extension
-          ;;   (environment-variables (field #:environment-variables))
-          ;;   (zprofile (field #:profile))))
-          ))))
-   (default-value (kvm))))
 #+end_src
 ***** Bash
 ****** Bashrc
@@ -1094,37 +1065,35 @@ nix-env --upgrade
 #+end_src
 **** Emacs
 #+begin_src scheme
-(define* (he-emacs svcs #:key zsh-vterm? config)
-  (cons*
-   (service (he-emacs-service-type zsh-vterm? config))
-   svcs))
+(define* (he-emacs svcs
+                   #:key
+                   (emacs emacs)
+                   zsh-vterm?
+  (append
+   (filter
+    service?
+    (list
+     (simple-service
+      'add-emacs-package
+      home-profile-service-type
+      (list emacs))
 
-(define (he-emacs-service-type zsh-vterm? config)
-  (service-type
-   (name 'he-emacs)
-   (extensions
-    (filter
-     service-extension?
-     (list
-      (service-extension
-       home-profile-service-type
-       (lambda (config)
-         (list (get config #:emacs))))
-      (service-extension
-       he-login-shell-service-type
-       (lambda (config)
-         (kvm #:environment-variables
-              `(("VISUAL" . ,(file-append (get config #:emacs) "/bin/emacsclient"))
-                ("EDITOR" . "$VISUAL")))))
-      (when zsh-vterm?
-        (service-extension
-         home-zsh-service-type
-         (const (home-zsh-extension
-                 (zshrc
-                  (local-file "zsh-vterm")))))))))
-   (default-value
-     (or config
-         (kvm #:emacs emacs)))))
+     (simple-service
+      'emacs-set-editor-env-vars
+      home-environment-variables-service-type
+      `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
+        ("EDITOR" . "$VISUAL")))
+
+     (when zsh-vterm?
+       (simple-service
+        'emacs-zsh-vterm
+        home-zsh-service-type
+        (home-zsh-extension
+         (zshrc
+          (list #~(format #f "source ~a"
+                          #$(local-file "zsh-vterm" "setup-vterm")))))))))
+
+   svcs))
 #+end_src
 ***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
@@ -4369,10 +4338,8 @@ chooser_type=simple"
               (he-nix $) $)
           (if developer?
               (-> $
-                  (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh)
-                            ;; TODO
-                            ;; #:config (kvm #:emacs ...)
-                            #:config (kvm #:emacs (emacs-fully-loaded #:pgtk? #t)))
+                  (he-emacs #:emacs (emacs-fully-loaded #:pgtk? #t) ; TODO maybe make this the he-emacs default
+                            #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
                   he-doom
                   (he-direnv #:shell interactive-shell)))
           (if desktop?
