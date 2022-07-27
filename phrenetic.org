@@ -4949,7 +4949,8 @@ done
                                    ("clj.1" "/share/man/man1/"))))))))
 #+end_src
 ** Channel
-#+begin_src scheme :tangle (meta-in-dir ".guix-channel")
+TODO the =../.guix-channel= relative path (and temporary .guix-channel addition to the top-level gitignore file) might not be the best way (put this headline at the top-level instead?)
+#+begin_src scheme :tangle (meta-in-dir "../.guix-channel")
 (channel
  (version 0)
  (directory "phrenetic")
@@ -6465,6 +6466,8 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
+# TODO temporary
+/.guix-channel
 #+end_src
 ** Github
 *** Git config
