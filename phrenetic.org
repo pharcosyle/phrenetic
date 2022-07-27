@@ -3692,7 +3692,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   idle-manager
                   application-launcher
                   default-terminal
-                  (backup-terminal default-terminal))
+                  (backup-terminal default-terminal)
+                  (bg-image (local-file "../../res/alucard_bg.png"))) ; TODO relative path is brittle
   (append
    (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
                      )
@@ -3810,6 +3811,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
             (bindsym --locked XF86AudioPrev exec ,playerctl previous)
             (bindsym --locked XF86AudioNext exec ,playerctl next))))
+
+       (when bg-image
+         (simple-service
+          'sway-add-bg-image
+          home-sway-service-type
+          `((output * bg ,bg-image fill))))
 
        (when extra-config
          (simple-service
