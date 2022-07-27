@@ -3514,7 +3514,7 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
      (name 'he-zsh-direnv)
      (extensions
       (list
-       ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration.
+       ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration (clarification: the envrc emacs package needs to have direnv on the command line, the emacs-direnv Guix package bakes it in)
        (service-extension
         home-profile-service-type
         (const (list direnv)))
