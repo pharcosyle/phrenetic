@@ -806,8 +806,10 @@ sudo guix time-machine \
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
-  #:use-module ((gnu packages linux) #:select (psmisc pipewire-0.3 wireplumber))
+  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
+  #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages package-management) #:select (flatpak))
+  #:use-module ((gnu packages pulseaudio) #:select (pulseaudio))
   #:use-module ((gnu packages qt) #:select (qtwayland))
   #:use-module ((gnu packages rust-apps) #:select (swayhide))
   #:use-module ((gnu packages shells) #:select (zsh))
@@ -3769,6 +3771,41 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           home-sway-service-type
           `((,#~"")
             (exec ,idle-manager))))
+
+       (simple-service
+        'sway-add-brightness-control
+        home-sway-service-type
+        (let ((step 10)
+              (step->symbol (lambda (op)
+                              (symbol-append (string->symbol (number->string step)) '% op)))
+              (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
+          `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
+            (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
+
+       (simple-service
+        'sway-add-audio-control
+        home-sway-service-type
+        ;; TODO what's are the "\\\n"s about? Probably will be clear once I see the generated file.
+        ;; TODO maybe parameterize out the step value like in the brightness control code (with `step->symbol')
+        (let ((pactl (file-append pulseaudio "/bin/pactl")))
+          `((bindsym --locked XF86AudioRaiseVolume "\\\n"
+                     exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                     exec ,pactl set-sink-volume @DEFAULT_SINK@ +5%)
+            (bindsym --locked XF86AudioLowerVolume "\\\n"
+                     exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                     exec ,pactl set-sink-volume @DEFAULT_SINK@ -5%)
+            (bindsym --locked XF86AudioMute
+                     exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
+            (bindsym --locked XF86AudioMicMute
+                     exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle))))
+
+       (simple-service
+        'sway-add-player-controls
+        home-sway-service-type
+        (let ((playerctl (file-append playerctl "/bin/playerctl")))
+          `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
+            (bindsym --locked XF86AudioPrev exec ,playerctl previous)
+            (bindsym --locked XF86AudioNext exec ,playerctl next))))
 
        (when extra-config
          (simple-service
