@@ -4984,9 +4984,11 @@ guix time-machine \
 	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 ** Dev
+- REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to where they're used. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
 *** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-,*
+/*
+!res/
 #+end_src
 * Dotfiles
 :PROPERTIES:
@@ -6450,11 +6452,9 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
 ** Dev
-- REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to the dotfiles config that uses them. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
 *** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/*
-!res/
+,*
 #+end_src
 * Dev
 - TODO maybe make this a =*= with excludes later. I could then get rid of any subproject dirs' gitignores that consist solely of a =*= but I might not want to, for project isolation
