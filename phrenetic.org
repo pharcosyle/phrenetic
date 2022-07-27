@@ -802,17 +802,31 @@ sudo guix time-machine \
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-fira-code))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  #:use-module ((gnu packages linux) #:select (pipewire-0.3 wireplumber))
+  #:use-module ((gnu packages image) #:select (grim slurp swappy))
+  #:use-module ((gnu packages linux) #:select (psmisc pipewire-0.3 wireplumber))
   #:use-module ((gnu packages package-management) #:select (flatpak))
+  #:use-module ((gnu packages qt) #:select (qtwayland))
+  #:use-module ((gnu packages rust-apps) #:select (swayhide))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages shellutils) #:select (direnv))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep))
+  #:use-module ((gnu packages web) #:select (jq))
+  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
+  #:use-module (rde home services wm)
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
+
+  ;; TODO [sway-wip] Donno if I need these
+  #:use-module (gnu system)
+  #:use-module (gnu home-services-utils)
+  #:use-module (guix packages)
+  #:use-module (srfi srfi-1)
+
   #:export (he-shells
             he-extra-profiles
             he-nix
@@ -822,6 +836,11 @@ sudo guix time-machine \
             he-pipewire
             he-flatpak
             he-sway
+            he-swaylock
+            swaylock-screen-locker
+            he-swayidle
+            swayidle-idle-manager
+            he-waybar
             gammastep-service-type
             network-manager-service-type
             udiskie-service-type))
@@ -3637,40 +3656,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-(define-module (rde features wm)
-  #:use-module (guix gexp)
-  #:use-module (gnu home services)
-  #:use-module ((gnu packages freedesktop) #:select (xdg-desktop-portal xdg-desktop-portal-wlr))
-  #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages image) #:select (grim slurp swappy))
-  #:use-module ((gnu packages linux) #:select (psmisc))
-  #:use-module ((gnu packages qt) #:select (qtwayland))
-  #:use-module ((gnu packages rust-apps) #:select (swayhide))
-  #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
-  #:use-module ((gnu packages xdisorg) #:select (wl-clipboard))
-  #:use-module (rde home services wm)
-
-
-
-  ;; TODO [sway-wip] Donno if I need these
-  #:use-module (gnu system)
-  #:use-module (gnu services)
-  #:use-module (gnu home-services-utils)
-  #:use-module (guix packages)
-  #:use-module (srfi srfi-1)
-
-
-  #:export (he-sway
-            he-sway-screenshot
-            he-waybar
-
-            he-swayidle
-            swayidle-idle-manager
-            he-swaylock
-            swaylock-screen-locker))
-
-
 ;; #:use-module (gnu system keyboard)
 ;;
 ;; (define (keyboard-layout-to-sway-config keyboard-layout)
@@ -3827,14 +3812,14 @@ chooser_type=simple"
           ("QT_QPA_PLATFORM" . "wayland-egl")
           ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
         (if pipewire?
-            '(("RTC_USE_PIPEWIRE" . "true")) '())))))))
+            '(("RTC_USE_PIPEWIRE" . "true")) '())))
 
-
-
-
-
+      (sway-screenshot)))))
+#+end_src
+******* Sway screenshot
+#+begin_src scheme
 ;; TODO [sway-wip] curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
-(define (he-sway-screenshot svcs)
+(define (sway-screenshot)
 
   (define subject-output
     #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
@@ -3872,21 +3857,178 @@ chooser_type=simple"
                 #$(file-append wl-clipboard "/bin/wl-paste")
                 #$(file-append swappy "/bin/swappy")))))
 
-  (cons*
-   (simple-service
+  (simple-service
     'sway-screenshot
     home-sway-service-type
     ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
     `((bindsym $mod+Print exec ,shot-output)
       (bindsym $mod+Alt+Print exec ,swappy-clipboard)
-      (bindsym $mod+Shift+Print exec ,shot-window-or-selection)))
+      (bindsym $mod+Shift+Print exec ,shot-window-or-selection))))
+#+end_src
+***** Screen lockers
+****** Swaylock
+#+begin_src scheme
+(define* (he-swaylock svcs
+                      #:key
+                      (effects? #t)
+                      extra-config)
+  (cons*
+   (service
+    home-swaylock-service-type
+    (home-swaylock-configuration
+     (swaylock (if effects?
+                   swaylock-effects
+                   swaylock))
+     (config
+      `((show-failed-attempts . #t)
+        (daemonize . #t)
+        ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO [sway-wip]
+        ;; TODO [sway-wip] Andrew Tropin: TODO: Source color from colorscheme
+        (color . 3e3e3e)
+        (indicator-caps-lock)
+        ,@(if extra-config
+              extra-config '())))))
    svcs))
 
+(define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
+#+end_src
+***** Idle management
+****** Swayidle
+#+begin_src scheme
+(define* (he-swayidle svcs
+                      #:key
+                      sway? ; TODO [sway-wip] maybe have this default to true
+                      screen-locker
+                      (lock-timeout 240)
+                      extra-config)
+  (append
+   (list
+    (service
+     home-swayidle-service-type
+     (home-swayidle-configuration
+      (swayidle swayidle)
+      (config
+       `(,@(if screen-locker
+               (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
+                 `((lock ,lock-cmd-quoted)
+                   (before-sleep ,lock-cmd-quoted)
+                   (timeout ,lock-timeout ,lock-cmd-quoted)))
+               '())
+         ,@(if extra-config
+               extra-config '())))))
+    (let* ((swaymsg (file-append sway "/bin/swaymsg"))
+           (swaymsg-cmd (lambda (cmd)
+                          #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
+           (idle-timeout (+ lock-timeout 30)))
+      (simple-service
+       'add-dpms-to-swayidle
+       home-swayidle-service-type
+       `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))
+   svcs))
 
+(define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
+#+end_src
+***** Status bars
+****** Waybar
+#+begin_src scheme
+(define* (he-waybar svcs
+                    #:key
+                    sway?
+                    (waybar-modules
+                     (list
+                      ;; TODO [sway-wip] conditionalize the sway ones?
+                      (waybar-sway-workspaces)
+                      ;; (waybar-sway-window)
+                      (waybar-tray)
+                      (waybar-idle-inhibitor)
+                      ;; (waybar-temperature)
+                      (waybar-sway-language)
+                      (waybar-battery)
+                      (waybar-clock)))
+                    ;; TODO [sway-wip]
+                    (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
+                    ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
+                    transitions?)
 
+  ;; (when use-global-fonts?
+  ;;   (require-value 'font-monospace config))
+  (define font-mono
+    (and=> #f ; TODO [sway-wip] was: (get-value 'font-monospace config)
+           (compose string->symbol font-name)))
+  (filter
+   service?
+   (append
+    (list
+     (service
+      home-waybar-service-type
+      (home-waybar-configuration
+       (waybar waybar)
+       (config #(((position . top)
+                  (name . main))))
+       ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
+       (style-css
+        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
+             (*
+              ((font-family . #(,@(if font-mono (list font-mono) '())
+                                ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
+                                FontAwesome))
+               ,@(if transitions? '() '((transition . none)))
+               (box-shadow . none)
+               (text-shadow . none)
+               (min-height . 0)))
 
+             (tooltip
+              ((border . (solid @base02))
+               (background . @base01)
+               (opacity . 0.9)))
 
+             ((tooltip label)
+              ((color . @base05)
+               (padding . 0)))
 
+             (#{#waybar}#
+              ((color . @base04)
+               (background . @base01)))
+
+             (#((.modules-right label)
+                (.modules-right image))
+              ((margin . (0.4em 0.2em))
+               (padding . (0 0.4em))
+               (background . @base02)
+               (border-radius . 0.2em)))
+
+             (.modules-left
+              ((margin-left . 0.2em)))
+
+             (.modules-right
+              ((margin-right . 0.2em))))))))
+
+    waybar-modules
+
+    (list
+     ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
+     ;; (simple-service
+     ;;  'waybar-add-font-package
+     ;;  home-profile-service-type
+     ;;  (list font-awesome))
+
+     (simple-service
+      'waybar-reload-config-on-change
+      home-run-on-change-service-type
+      ;; TODO [sway-wip] factor out the command
+      `(("files/.config/waybar/style.css"
+         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
+        ("files/.config/waybar/config"
+         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+
+     (when sway?
+       (simple-service
+        'sway-waybar
+        home-sway-service-type
+        `((bar swaybar_command ,(file-append waybar "/bin/waybar")))))))))
+#+end_src
+******* Modules
+#+begin_src scheme
 (define* (waybar-module name
                         #:optional
                         config
@@ -4040,182 +4182,7 @@ chooser_type=simple"
            `((color . @base02)
              (background . @base09))
            `((color . @base09)))))))
-
-(define* (he-waybar svcs
-                    #:key
-                    sway?
-                    (waybar-modules
-                     (list
-                      ;; TODO [sway-wip] conditionalize the sway ones?
-                      (waybar-sway-workspaces)
-                      ;; (waybar-sway-window)
-                      (waybar-tray)
-                      (waybar-idle-inhibitor)
-                      ;; (waybar-temperature)
-                      (waybar-sway-language)
-                      (waybar-battery)
-                      (waybar-clock)))
-                    ;; TODO [sway-wip]
-                    (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
-                    ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
-                    transitions?)
-
-  ;; (when use-global-fonts?
-  ;;   (require-value 'font-monospace config))
-  (define font-mono
-    (and=> #f ; TODO [sway-wip] was: (get-value 'font-monospace config)
-           (compose string->symbol font-name)))
-  (filter
-   service?
-   (append
-    (list
-     (service
-      home-waybar-service-type
-      (home-waybar-configuration
-       (waybar waybar)
-       (config #(((position . top)
-                  (name . main))))
-       ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
-       (style-css
-        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
-             (*
-              ((font-family . #(,@(if font-mono (list font-mono) '())
-                                ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
-                                FontAwesome))
-               ,@(if transitions? '() '((transition . none)))
-               (box-shadow . none)
-               (text-shadow . none)
-               (min-height . 0)))
-
-             (tooltip
-              ((border . (solid @base02))
-               (background . @base01)
-               (opacity . 0.9)))
-
-             ((tooltip label)
-              ((color . @base05)
-               (padding . 0)))
-
-             (#{#waybar}#
-              ((color . @base04)
-               (background . @base01)))
-
-             (#((.modules-right label)
-                (.modules-right image))
-              ((margin . (0.4em 0.2em))
-               (padding . (0 0.4em))
-               (background . @base02)
-               (border-radius . 0.2em)))
-
-             (.modules-left
-              ((margin-left . 0.2em)))
-
-             (.modules-right
-              ((margin-right . 0.2em))))))))
-
-    waybar-modules
-
-    (list
-     ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
-     ;; (simple-service
-     ;;  'waybar-add-font-package
-     ;;  home-profile-service-type
-     ;;  (list font-awesome))
-
-     (simple-service
-      'waybar-reload-config-on-change
-      home-run-on-change-service-type
-      ;; TODO [sway-wip] factor out the command
-      `(("files/.config/waybar/style.css"
-         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
-        ("files/.config/waybar/config"
-         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
-
-     (when sway?
-       (simple-service
-        'sway-waybar
-        home-sway-service-type
-        `((bar swaybar_command ,(file-append waybar "/bin/waybar")))))))))
-
-
-
-
-
-(define* (he-swayidle svcs
-                      #:key
-                      sway? ; TODO [sway-wip] maybe have this default to true
-                      screen-locker
-                      (lock-timeout 240)
-                      extra-config)
-  (append
-   (list
-    (service
-     home-swayidle-service-type
-     (home-swayidle-configuration
-      (swayidle swayidle)
-      (config
-       `(,@(if screen-locker
-               (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
-                 `((lock ,lock-cmd-quoted)
-                   (before-sleep ,lock-cmd-quoted)
-                   (timeout ,lock-timeout ,lock-cmd-quoted)))
-               '())
-         ,@(if extra-config
-               extra-config '())))))
-    (let* ((swaymsg (file-append sway "/bin/swaymsg"))
-           (swaymsg-cmd (lambda (cmd)
-                          #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-           (idle-timeout (+ lock-timeout 30)))
-      (simple-service
-       'add-dpms-to-swayidle
-       home-swayidle-service-type
-       `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))
-   svcs))
-
-(define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
-
-
-
-
-
-
-(define* (he-swaylock svcs
-                      #:key
-                      (effects? #t)
-                      extra-config)
-  (cons*
-   (service
-    home-swaylock-service-type
-    (home-swaylock-configuration
-     (swaylock (if effects?
-                   swaylock-effects
-                   swaylock))
-     (config
-      `((show-failed-attempts . #t)
-        (daemonize . #t)
-        ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO [sway-wip]
-        ;; TODO [sway-wip] Andrew Tropin: TODO: Source color from colorscheme
-        (color . 3e3e3e)
-        (indicator-caps-lock)
-        ,@(if extra-config
-              extra-config '())))))
-   svcs))
-
-(define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
-
-
-;; TODO [sway-wip]
-;; (let ((screen-locker swaylock-screen-locker))
-;;   (he-sway $ #:screen-locker screen-locker
-;;            #:idle-manager swayidle-idle-manager)
-;;   (he-swayidle $ #:screen-locker screen-locker))
 #+end_src
-***** Screen lockers
-****** Swaylock
-***** Idle management
-****** Swayidle
-***** Status bars
-****** Waybar
 ***** Application launchers
 ****** Rofi
 ***** Applets
@@ -4341,6 +4308,12 @@ chooser_type=simple"
                     (if (member #:session/sway sessions)
                         (he-sway $) $))
               $)))))))
+
+;; TODO [sway-wip]
+;; (let ((screen-locker swaylock-screen-locker))
+;;   (he-sway $ #:screen-locker screen-locker
+;;            #:idle-manager swayidle-idle-manager)
+;;   (he-swayidle $ #:screen-locker screen-locker))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
