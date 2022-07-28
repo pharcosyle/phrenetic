@@ -839,7 +839,8 @@ sudo guix time-machine \
   #:use-module (guix packages)
   #:use-module (srfi srfi-1)
 
-  #:export (he-shells
+  #:export (he-packages
+            he-shells
             he-nix
             he-emacs
             he-doom
@@ -847,6 +848,7 @@ sudo guix time-machine \
             he-ssh
             he-direnv
             he-xdg
+            he-desktop-packages
             he-pipewire
             he-flatpak
             he-sway
@@ -862,6 +864,17 @@ sudo guix time-machine \
             gammastep-applet-service-type
             network-manager-applet-service-type
             udiskie-applet-service-type))
+#+end_src
+**** Packages
+#+begin_src scheme
+(define* (he-packages)
+  (list
+   (simple-service
+    'packages-add
+    home-profile-service-type
+    (list curl
+          zip
+          unzip))))
 #+end_src
 **** Shells
 #+begin_src scheme
@@ -4731,6 +4744,23 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                          (list (direnv-hook "zsh"))))))))))
 #+end_src
 **** Desktop
+***** Desktop packages
+#+begin_src scheme
+(define* (he-desktop-packages)
+  (list
+   (simple-service
+    'desktop-packages-add
+    home-profile-service-type
+    (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
+
+          ;; nyxt
+          ;; gst-libav
+          ;; gst-plugins-bad
+          ;; gst-plugins-base
+          ;; gst-plugins-good
+          ;; gst-plugins-ugly
+          ))))
+#+end_src
 ***** XDG
 #+begin_src scheme
 (define (he-xdg)
@@ -5607,6 +5637,7 @@ chooser_type=simple"
     (filter
      service?
      (append
+      (he-packages)
       (he-shells #:login-shell login-shell
                  #:interactive-shell interactive-shell)
       (if nix?
@@ -5623,6 +5654,7 @@ chooser_type=simple"
           '())
       (if desktop?
           (append
+           (he-desktop-packages)
            (he-xdg)
            (if pipewire?
                (he-pipewire) '())
