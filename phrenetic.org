@@ -804,6 +804,8 @@ sudo guix time-machine \
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
   ;; #:use-module ((gnu packages bash) #:select (bash))
+  #:use-module ((gnu packages compression) #:select (zip unzip))
+  #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-fira-code))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
