@@ -6172,43 +6172,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
            #:pipewire? #t
            #:sessions '(#:sesion/sway)))
 #+end_src
-**** Solitude old WIP
-#+begin_src scheme
-(define-module (exuberant he solitude)
-  #:use-module (ebullient home base-he)
-  #:export (he))
-
-(define he
-  (home-environment
-   (packages (list ;; (specification->package "font-adobe-source-code-pro")
-                   (specification->package "font-awesome") ; TODO for waybar, move this somewhere later
-                   (specification->package "font-google-noto") ; TODO for sway (or any non-DE probably)
-                   ))
-   (services
-    (list
-     (service gammastep-service-type)
-     (service network-manager-service-type)
-     (service udiskie-service-type)
-
-
-     ;; TODO Examples from RDE I may want to make use of.
-     ;; (service home-keyboard-service-type
-     ;;          (keyboard-layout "us,ru" "dvorak,"
-     ;;                           #:options '("grp:win_space_toggle" "ctrl:nocaps")))
-     ;; (service home-gnupg-service-type
-     ;;          (home-gnupg-configuration
-     ;;           (gpg-agent-config
-     ;;            (home-gpg-agent-configuration
-     ;;             (ssh-agent? #t)))))
-     ;; (service home-state-service-type
-     ;;          (append
-     ;;           (list
-     ;;            (state-rsync "/home/bob/tmp/example-rsync-state/"
-     ;;                         "abcdw@olorin.lan:/var/services/homes/abcdw/tmp-state/")
-     ;;            (state-git "/home/bob/tmp/talkes/"
-     ;;                       "git@git.sr.ht:~abcdw/rde"))))
-     ))))
-#+end_src
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
 (cons* (channel
