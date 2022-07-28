@@ -799,8 +799,8 @@ sudo guix time-machine \
   #:use-module (gnu home services)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
+  #:use-module (gnu home services ssh)
   #:use-module (gnu home services xdg)
-  #:use-module (gnu home-services ssh)
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
   ;; #:use-module ((gnu packages bash) #:select (bash))
@@ -844,6 +844,7 @@ sudo guix time-machine \
             he-emacs
             he-doom
             he-git
+            he-ssh
             he-direnv
             he-xdg
             he-pipewire
@@ -4693,6 +4694,12 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
         ,@(if extra-config
               extra-config '())))))))
 #+end_src
+**** SSH
+#+begin_src scheme
+(define (he-ssh)
+  (list
+   (service home-openssh-service-type)))
+#+end_src
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv #:key shell)
@@ -5611,6 +5618,7 @@ chooser_type=simple"
            (he-doom)
            (he-git #:full-name full-name
                    #:email email)
+           (he-ssh)
            (he-direnv #:shell interactive-shell))
           '())
       (if desktop?
@@ -6177,15 +6185,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (service gammastep-service-type)
      (service network-manager-service-type)
      (service udiskie-service-type)
-
-     ;; [2022-06-18 Sat] TODO compare with the new home-openssh-service-type: https://guix.gnu.org/manual/devel/en/guix.html#Secure-Shell
-     (service home-ssh-service-type
-              ;; (home-ssh-configuration
-              ;;  (extra-config
-              ;;   (list
-              ;;    (ssh-host "savannah"
-              ;;              '((compression . #f))))))
-              )
 
 
      ;; TODO Examples from RDE I may want to make use of.
