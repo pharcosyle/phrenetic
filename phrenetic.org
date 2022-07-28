@@ -268,10 +268,10 @@ guix pull
 (define-system-comp (host-info #:key
                                host-name
                                timezone
-                               (locale "en_US.utf8"))
+                               locale)
   (host-name host-name)
   (timezone timezone)
-  (locale locale))
+  (locale (or locale "en_US.utf8")))
 #+end_src
 **** Boot
 ***** Grub
@@ -824,7 +824,7 @@ sudo guix time-machine \
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
+  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
@@ -833,7 +833,7 @@ sudo guix time-machine \
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland))
   #:use-module ((srfi srfi-1) #:select (append-map))
-  #:use-module ((ebullient home doom-emacs) #:select (doom-emacs))
+  #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
 
   ;; TODO [sway-wip] Donno if I need these
@@ -898,7 +898,7 @@ sudo guix time-machine \
                  (home-zsh-configuration
                   (zshrc
                    (list (local-file "zshrc"))))))
-      (when-not (eq login-shell interactive-shell)
+      (when-not (eq? login-shell interactive-shell)
         (simple-service
          'set-shell-env-var
          home-environment-variables-service-type
@@ -1062,23 +1062,23 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 { allowUnfree = true; }
 #+end_src
 ***** Nix WIP
-TODO
+TODO and remove all the COMMENT keywords
 Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
-****** Update channels
+****** COMMENT Update channels
 #+begin_src sh :results output silent :async
 nix-channel --update
 #+end_src
-****** "Manifest"
+****** COMMENT "Manifest"
 - TODO might want to / see if I can make this a simple bulleted list I pass with :var to source block(s)
 #+name: nix-packages
 #+begin_src org
 google-chrome zoom-us
 #+end_src
-****** Install packages
+****** COMMENT Install packages
 #+begin_src sh :results output silent :async :noweb yes
 nix-env --install <<nix-packages>>
 #+end_src
-****** Upgrade packages
+****** COMMENT Upgrade packages
 #+begin_src sh :results output silent :async
 nix-env --upgrade
 #+end_src
@@ -4796,7 +4796,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 (define (he-pipewire)
   (append
    (pipewire-services)
-   (wireplumber-service)))
+   (wireplumber-services)))
 
 (define (pipewire-services)
   (list
@@ -5020,10 +5020,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (simple-service
       'sway-add-brightness-control
       home-sway-service-type
-      (let ((step 10)
-            (step->symbol (lambda (op)
-                            (symbol-append (string->symbol (number->string step)) '% op)))
-            (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
+      (let* ((step 10)
+             (step->symbol (lambda (op)
+                             (symbol-append (string->symbol (number->string step)) '% op)))
+             (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
         `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
           (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
 
@@ -5517,7 +5517,6 @@ chooser_type=simple"
    (service
     home-alacritty-service-type
     (home-alacritty-configuration
-     (package package)
      (config
       ;; TODO keeping this padding thing here for now, revisit it later
       `((window . ((padding . ((x . 10)
@@ -5535,7 +5534,7 @@ chooser_type=simple"
 (define (font-weight->style weight)
   (string-capitalize (string-delete #\- (symbol->string weight))))
 
-(define alacritty-terminal (file-append package "/bin/alacritty"))
+(define alacritty-terminal (file-append alacritty "/bin/alacritty"))
 #+end_src
 ***** Applets
 ****** Gammastep
@@ -5683,7 +5682,7 @@ chooser_type=simple"
                    (service network-manager-applet-service-type)
                    (service udiskie-applet-service-type)))
                  '())
-               '())))))))
+               '()))))))))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
