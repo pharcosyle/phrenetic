@@ -456,7 +456,8 @@ The stateless service should come after base/desktop services (potentially other
     (list (service-extension boot-service-type
                              populate-gexp)
           (service-extension activation-service-type
-                             activate-state-gexp)))))
+                             activate-state-gexp)))
+   (description "Initialize a stateless system.")))
 #+end_src
 **** File systems
 ***** Ext4
