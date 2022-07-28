@@ -4192,7 +4192,7 @@ chooser_type=simple"
 (define (gammastep-shepherd-service _)
   (list
    (shepherd-service
-    (provision '(gammastep))
+    (provision '(gammastep-applet))
     (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
@@ -4216,7 +4216,7 @@ chooser_type=simple"
 (define (network-manager-shepherd-service _)
   (list
    (shepherd-service
-    (provision '(nm))
+    (provision '(nm-applet))
     (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
@@ -4240,7 +4240,7 @@ chooser_type=simple"
 (define (udiskie-shepherd-service _)
   (list
    (shepherd-service
-    (provision '(udiskie))
+    (provision '(udiskie-applet))
     (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor

@@ -11,9 +11,9 @@ exec herd start wireplumber
 exec herd start pipewire-pulse
 
 exec guile -c '(write (environ))' >> /tmp/env-for-applets
-# exec herd start gammastep $WAYLAND_DISPLAY
-exec herd start nm $WAYLAND_DISPLAY
-exec herd start udiskie $WAYLAND_DISPLAY
+# exec herd start gammastep-applet $WAYLAND_DISPLAY
+exec herd start nm-applet $WAYLAND_DISPLAY
+exec herd start udiskie-applet $WAYLAND_DISPLAY
 
 
 
