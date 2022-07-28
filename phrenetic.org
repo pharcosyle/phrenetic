@@ -364,16 +364,16 @@ The stateless service should come after base/desktop services (potentially other
     (operating-system-user-services os)
     (list
      (service stateless-service-type
-              `(#:persist-dir ,persist-dir
-                #:paths ,(append
-                          '("/etc/machine-id"
-                            "/var/lib/random-seed"
-                            "/etc/NetworkManager/system-connections"
-                            "/var/lib/NetworkManager/secret_key"
-                            "/etc/guix/signing-key.pub"
-                            "/etc/guix/signing-key.sec")
-                          (if bluetooth?
-                              (list "/var/lib/bluetooth") '()))))))))
+              `((#:persist-dir . ,persist-dir)
+                (#:paths . ,(append
+                             '("/etc/machine-id"
+                               "/var/lib/random-seed"
+                               "/etc/NetworkManager/system-connections"
+                               "/var/lib/NetworkManager/secret_key"
+                               "/etc/guix/signing-key.pub"
+                               "/etc/guix/signing-key.sec")
+                             (if bluetooth?
+                                 '("/var/lib/bluetooth") '())))))))))
 
 (define stateless-persist-dir "/.persist")
 #+end_src
@@ -411,7 +411,7 @@ The stateless service should come after base/desktop services (potentially other
                 (delete-file system-1-path)))
             (#$save-or-restore-users+groups persist-dir #:restore))
 
-          (apply populate '#$config)))))
+          (apply populate (keyvals '#$config))))))
 
 (define (activate-state-gexp config)
   #~(begin
@@ -447,7 +447,7 @@ The stateless service should come after base/desktop services (potentially other
         (for-each install paths)
         (#$save-or-restore-users+groups persist-dir #:save))
 
-      (apply activate-state '#$config)))
+      (apply activate-state (keyvals '#$config))))
 
 (define stateless-service-type
   (service-type
@@ -521,9 +521,9 @@ The stateless service should come after base/desktop services (potentially other
                            bluetooth?)
   (users
    (append (map (lambda (user)
-                  (apply account (-> user
-                                     (massoc user #:bluetooth? bluetooth?)
-                                     keyvals)))
+                  (apply account (->> user
+                                      (acons #:bluetooth? bluetooth?)
+                                      keyvals)))
                 who)
            (operating-system-users os))))
 #+end_src
@@ -5582,6 +5582,7 @@ guix home \
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
   #:export (update-list
+            keyvals
             when-let
             if-let
             when-not
@@ -5590,12 +5591,6 @@ guix home \
             ->
             ->>
             as->
-            kvm
-            get
-            keys
-            massoc
-            merge
-            keyvals
             update-services*
             update-services
             get-inferior-package
@@ -5607,6 +5602,13 @@ guix home \
   (map (lambda (x)
          (if (pred x) (f x) x))
        l))
+
+(define (keyvals m)
+  (->> m
+       (map (match-lambda
+              ((k . v)
+               (list k v))))
+       (apply append)))
 #+end_src
 *** Branching
 #+begin_src scheme
@@ -5663,49 +5665,6 @@ guix home \
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
-#+end_src
-*** Maps
-#+begin_src scheme
-(define* (kvm #:rest keyvals)
-  (let loop ((m '())
-             (more keyvals))
-    (if (null? more)
-        m
-        (loop (cons (as-> more $
-                          (take $ 2)
-                          (apply cons $))
-                    m)
-              (drop more 2)))))
-
-(define get assoc-ref)
-
-(define (keys m)
-  (map car m))
-
-(define (massoc m k v)
-  (->> m
-       (remove (match-lambda
-                 ((k1 . _)
-                  (equal? k k1))))
-       (cons '(k . v))))
-
-(define* (merge #:rest maps)
-  (fold
-   (lambda (m1 m2)
-     (fold
-      (match-lambda
-        (((k . v) res)
-         (massoc res k v)))
-      m1 m2))
-   (kvm)
-   maps))
-
-(define (keyvals m)
-  (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
-       (apply append)))
 #+end_src
 *** Guix
 #+begin_src scheme
