@@ -1044,8 +1044,8 @@ SAVEHIST=$HISTSIZE
        ,(local-file "nixpkgs-config.nix"))))))
 #+end_src
 ***** Load Nix environment
-TODO
-#+begin_src sh
+TODO and remove "tangle no"
+#+begin_src sh :tangle no
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
 fi
@@ -4894,14 +4894,14 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
           xdg-desktop-portal-wlr))))
 #+end_src
 ****** Make Flatpak apps visible
-TODO
-#+begin_src sh
+TODO and remove "tangle no"
+#+begin_src sh :tangle no
 export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
 ****** WIP Flatpak
-TODO
+TODO and remove "tangle no"
 Ran these manually
-#+begin_src sh
+#+begin_src sh :tangle no
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
 # flatpak install --user flathub com.spotify.Client
