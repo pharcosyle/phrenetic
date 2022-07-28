@@ -1385,7 +1385,8 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
-  #:use-module ((gnu packages compression) #:select (unzip)))
+  #:use-module ((gnu packages compression) #:select (unzip))
+  #:use-module (ebullient utils))
 #+end_src
 ******* guix-contributing
 #+begin_src scheme
@@ -1455,7 +1456,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (license #f))))
 
 (define guix-emacs-development
-  (with-git-url guix-emacs-development "https://github.com/guix-mirror/guix"))
+  (with-git-url guix-emacs-development* "https://github.com/guix-mirror/guix"))
 #+end_src
 ******* tldr
 #+begin_src scheme
@@ -6126,19 +6127,19 @@ guix time-machine \
 (define-public os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
-           #:accounts '((#:name . "pharcosyle"
-                         #:comment . "Krzysztof Baranowski"
-                         #:admin? . #t)
-                        (#:name . "pcoulson"
-                         #:comment . "Phil Coulson"
-                         #:admin? . #t)
-                        (#:name . "gandalf"
-                         #:comment . "Speak Friend and Enter"
-                         #:password . "mellon"))
+           #:accounts '(((#:name . "pharcosyle")
+                         (#:comment . "Krzysztof Baranowski")
+                         (#:admin? . #t))
+                        ((#:name . "pcoulson")
+                         (#:comment . "Phil Coulson")
+                         (#:admin? . #t))
+                        ((#:name . "gandalf")
+                         (#:comment . "Speak Friend and Enter")
+                         (#:password . "mellon")))
            ;; #:auto-login "pharcosyle" ; REVIEW Enable this later.
            #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
-           #:stateless #t
+           #:stateless? #t
            #:nix? #t
            #:console? #t
            #:desktop? #t
