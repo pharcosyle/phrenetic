@@ -859,9 +859,9 @@ sudo guix time-machine \
             rofi-application-launcher
             he-alacritty
             alacritty-terminal
-            gammastep-service-type
-            network-manager-service-type
-            udiskie-service-type))
+            gammastep-applet-service-type
+            network-manager-applet-service-type
+            udiskie-applet-service-type))
 #+end_src
 **** Shells
 #+begin_src scheme
@@ -5521,8 +5521,8 @@ chooser_type=simple"
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
-(define gammastep-service-type
-  (service-type (name 'he-gammastep)
+(define gammastep-applet-service-type
+  (service-type (name 'he-gammastep-applet)
                 (extensions
                  (list (service-extension
                         home-shepherd-service-type
@@ -5545,8 +5545,8 @@ chooser_type=simple"
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
-(define network-manager-service-type
-  (service-type (name 'he-network-manager)
+(define network-manager-applet-service-type
+  (service-type (name 'he-network-manager-applet)
                 (extensions
                  (list (service-extension
                         home-shepherd-service-type
@@ -5573,8 +5573,8 @@ chooser_type=simple"
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
-(define udiskie-service-type
-  (service-type (name 'he-udiskie)
+(define udiskie-applet-service-type
+  (service-type (name 'he-udiskie-applet)
                 (extensions
                  (list (service-extension
                         home-shepherd-service-type
@@ -5641,9 +5641,13 @@ chooser_type=simple"
                                #:screen-locker screen-locker)
                   (he-waybar #:sway? #t)
                   (he-rofi #:wayland? #t)
-                  (he-alacritty)))
-               '())
-           '())))))))
+                  (he-alacritty)
+                  (list
+                   (service gammastep-applet-service-type)
+                   (service network-manager-applet-service-type)
+                   (service udiskie-applet-service-type)))
+                 '())
+               '())))))))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
