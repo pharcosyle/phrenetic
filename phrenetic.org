@@ -1016,13 +1016,13 @@ SAVEHIST=$HISTSIZE
 (define (he-nix)
   (list
    (simple-service
-    'add-nix-channels
+    'nix-add-channels
     home-files-service-type
     `((".nix-channels"
        ,(local-file "nix-channels"))))
 
    (simple-service
-    'add-nixpkgs-config
+    'nix-add-nixpkgs-config
     home-xdg-configuration-files-service-type
     `(("nixpkgs/config.nix"
        ,(local-file "nixpkgs-config.nix"))))))
