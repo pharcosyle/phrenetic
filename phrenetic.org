@@ -5601,7 +5601,7 @@ guix home \
             as->
             update-services*
             update-services
-            get-inferior-package
+            ;; get-inferior-package
             with-git-version
             with-git-commit
             with-git-url))
@@ -5683,10 +5683,10 @@ guix home \
      (eq? (service-kind svc) kind))
    update-fn))
 
-(define (get-inferior-package channels package)
-  (-> (inferior-for-channels channels)
-      (lookup-inferior-packages package)
-      first))
+;; (define (get-inferior-package channels package)
+;;   (-> (inferior-for-channels channels)
+;;       (lookup-inferior-packages package)
+;;       first))
 
 (define* (with-git pkg
                    #:key
