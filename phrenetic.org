@@ -820,6 +820,7 @@ sudo guix time-machine \
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages terminals) #:select (alacritty))
+  #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
@@ -843,6 +844,7 @@ sudo guix time-machine \
             he-nix
             he-emacs
             he-doom
+            he-git
             he-direnv
             he-xdg
             he-pipewire
@@ -4655,6 +4657,43 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
 #+end_src
+**** Git
+#+begin_src scheme
+(define* (he-git #:key
+                 full-name
+                 email
+                 sign-commits? ; TODO make this default to true once I have my gpg stuff set up and I'm passing a gpg-sign-key.
+                 gpg-sign-key
+                 ;; git-send-email?
+                 extra-config)
+  (list
+   ;; (when git-send-email?
+   ;;   (simple-service
+   ;;    'git-send-email-package
+   ;;    home-profile-service-type
+   ;;    (list (list git "send-email"))))
+   (service
+    home-git-service-type
+    (home-git-configuration
+     (config
+      `((user
+         ((name . ,full-name)
+          (email . ,email)
+          ,@(if sign-commits?
+                `((signingkey . ,gpg-sign-key)) '())))
+        (commit
+         (,@(if sign-commits?
+                '((gpgsign . #t)) '())))
+        ;; (sendemail
+        ;;  ((annotate . #t)))
+        ;;  TODO these two (http and gpg) sections were in the RDE example home environment (but notably not in the rde feature-git). Figure out what they're for after I do gpg.
+        ;; (http "https://weak.example.com"
+        ;;       ((ssl-verify . #f)))
+        ;; (gpg
+        ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+        ,@(if extra-config
+              extra-config '())))))))
+#+end_src
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv #:key shell)
@@ -5547,6 +5586,8 @@ chooser_type=simple"
   #:export (base-he))
 
 (define* (base-he #:key
+                  full-name
+                  email
                   (login-shell #:shell/bash)
                   developer?
                   (interactive-shell (if developer?
@@ -5569,6 +5610,8 @@ chooser_type=simple"
            (he-emacs #:emacs (emacs-fully-loaded #:pgtk? #t) ; TODO maybe make this the he-emacs default
                      #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
            (he-doom)
+           (he-git #:full-name full-name
+                   #:email email)
            (he-direnv #:shell interactive-shell))
           '())
       (if desktop?
@@ -6110,7 +6153,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (he))
 
 (define-public he
-  (base-he #:developer? #t
+  (base-he #:full-name "Krzysztof Baranowski"
+           #:email "pharcosyle@gmail.com"
+           #:developer? #t
            #:nix? #t
            #:desktop? #t
            #:pipewire? #t
@@ -6144,19 +6189,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                             (lambda (port)
                               (display "Output!" port))))
                         "Test mcron output")))))
-     (service home-git-service-type
-              (home-git-configuration
-               (config
-                `((user
-                   ((name . "Krzysztof Baranowski") ; FIXME <user-full-name>> ; passwd:gecos could be useful here
-                    (email . "pharcosyle@gmail.com"))) ; FIXME <user-email>>
-                  ;; (http "https://weak.example.com"
-                  ;;   ((ssl-verify . #f)))
-                  ;; (gpg
-                  ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-                  ;; (sendmail
-                  ;;  ((annotate . #t)))
-                  ))))
      ;; [2022-06-18 Sat] TODO compare with the new home-openssh-service-type: https://guix.gnu.org/manual/devel/en/guix.html#Secure-Shell
      (service home-ssh-service-type
               ;; (home-ssh-configuration
