@@ -807,7 +807,7 @@ sudo guix time-machine \
   ;; #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-fira-code))
-  #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
@@ -844,6 +844,7 @@ sudo guix time-machine \
             he-emacs
             he-doom
             he-direnv
+            he-xdg
             he-pipewire
             he-flatpak
             he-sway
@@ -4685,6 +4686,32 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                          (list (direnv-hook "zsh"))))))))))
 #+end_src
 **** Desktop
+***** XDG
+#+begin_src scheme
+(define (he-xdg)
+  (list
+   (simple-service
+    'add-xdg-packages
+    home-profile-service-type
+    (list xdg-utils
+          xdg-user-dirs ; I don't think I need this (the only reason would be if programs ever call the `xdg-user-dir' shell command and this package isn't an input to theirs).
+          desktop-file-utils)) ; I don't think I need this at all but it adds elisp code (a mode for editing .desktop files). Andrew Tropin has it, I'll keep it just in case.
+
+   (service
+    home-xdg-user-directories-service-type
+    (let* ((xdg-user-subdir "/files")
+           (xdg-dir (lambda (path)
+                      (string-append "$HOME" xdg-user-subdir path))))
+      (home-xdg-user-directories-configuration
+       (desktop "$HOME/desktop")
+       (documents (xdg-dir "/docs"))
+       (download "$HOME/dl")
+       (music (xdg-dir "/music"))
+       (pictures (xdg-dir "/pics"))
+       (publicshare (xdg-dir "/public"))
+       (templates (xdg-dir "/templates"))
+       (videos (xdg-dir "/vids")))))))
+#+end_src
 ***** Pipewire
 #+begin_src scheme
 (define (he-pipewire)
@@ -5546,6 +5573,7 @@ chooser_type=simple"
           '())
       (if desktop?
           (append
+           (he-xdg)
            (if pipewire?
                (he-pipewire) '())
            (he-flatpak)
@@ -6105,20 +6133,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (service gammastep-service-type)
      (service network-manager-service-type)
      (service udiskie-service-type)
-
-     (service home-xdg-user-directories-service-type
-              (let* ((xdg-user-subdir "/files")
-                     (xdg-dir (lambda (path)
-                                (string-append "$HOME" xdg-user-subdir path))))
-                (home-xdg-user-directories-configuration
-                 (desktop "$HOME/desktop")
-                 (documents (xdg-dir "/docs"))
-                 (download "$HOME/dl")
-                 (music (xdg-dir "/music"))
-                 (pictures (xdg-dir "/pics"))
-                 (publicshare (xdg-dir "/public"))
-                 (templates (xdg-dir "/templates"))
-                 (videos (xdg-dir "/vids")))))
 
      (service home-mcron-service-type
               (home-mcron-configuration
