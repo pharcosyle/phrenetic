@@ -1258,7 +1258,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                          (wrap-in-quotes "~/.guix-home/profile/include"))
                    " ")))))))))))
 #+end_src
-***** Doom
+**** Doom
 #+begin_src scheme
 (define (he-doom)
   (list
@@ -1277,7 +1277,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       ;;  ,(local-file "doom-private" #:recursive? #t))
       ))))
 #+end_src
-****** Doom Emacs :package:version:
+***** Doom Emacs :package:version:
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
 (define-module (ebullient home doom-emacs)
   #:use-module (guix build-system copy)
@@ -1338,9 +1338,9 @@ performance of a hand rolled config (or better).")
       (home-page "https://github.com/doomemacs/doomemacs")
       (license license:expat))))
 #+end_src
-******* WAIT Doom tests :wait_on_doom:
+****** WAIT Doom tests :wait_on_doom:
 Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
-******* Emacs packages :package:version:
+****** Emacs packages :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
 :END:
@@ -1357,7 +1357,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
   #:use-module ((gnu packages compression) #:select (unzip)))
 #+end_src
-******** guix-contributing
+******* guix-contributing
 #+begin_src scheme
 (define-public emacs-guix-contributing
   (package
@@ -1381,7 +1381,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
     (description "See https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup")
     (license license:gpl3+)))
 #+end_src
-********* Source
+******** Source
 #+begin_src elisp :tangle (meta-in-dir "guix-contributing.el")
 (defvar guix-contributing-source-path "~/src/guix")
 
@@ -1396,7 +1396,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
 
 (provide 'guix-contributing)
 #+end_src
-********* Guix's Emacs development code
+******** Guix's Emacs development code
 Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+begin_src scheme
 (define guix-emacs-development*
@@ -1427,7 +1427,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 (define guix-emacs-development
   (with-git-url guix-emacs-development "https://github.com/guix-mirror/guix"))
 #+end_src
-******** tldr
+******* tldr
 #+begin_src scheme
 (define-public emacs-tldr
   (package
@@ -1443,7 +1443,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
     (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
               (prepend tldr-pages)))))
 #+end_src
-********* tldr pages
+******** tldr pages
 #+begin_src scheme
 (define tldr-pages
   (let ((commit "7ee7ed0f4afc90ef05b1dde87f6fec5b462a0394")
@@ -1467,7 +1467,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (description synopsis)
       (license license:cc-by4.0))))
 #+end_src
-******* all-the-icons fonts :package:version:
+****** all-the-icons fonts :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "fonts.scm")
 :END:
@@ -1514,7 +1514,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (description (package-description emacs-all-the-icons))
       (license (package-license emacs-all-the-icons)))))
 #+end_src
-******** Font Awesome :package:version:
+******* Font Awesome :package:version:
 #+begin_src scheme
 (define-public font-awesome
   (let ((version "6.1.1"))
@@ -1527,12 +1527,12 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
      #:commit version
      #:hash "01y8ys9k9cmf1pz4xqya4280yf942dm2h378qsvgip1pla2fms5f")))
 #+end_src
-******* Patches
-******** Change paths
+****** Patches
+******* Change paths
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "change-paths.patch")
 :END:
-********* Core
+******** Core
 #+begin_src diff
 diff --git a/core/core.el b/core/core.el
 index 07254e602..3df3ce53b 100644
@@ -1593,7 +1593,7 @@ index 07254e602..3df3ce53b 100644
  (define-advice en/disable-command (:around (fn &rest args) write-to-data-dir)
    "Write saved safe-local-variables to `custom-file' instead.
 #+end_src
-********* RSS module
+******** RSS module
 #+begin_src diff
 diff --git a/modules/app/rss/config.el b/modules/app/rss/config.el
 index a8078d18f..075a5c8a7 100644
@@ -1611,12 +1611,12 @@ index a8078d18f..075a5c8a7 100644
    (setq elfeed-search-filter "@2-week-ago "
          elfeed-show-entry-switch #'pop-to-buffer
 #+end_src
-******** Ligatures
+******* Ligatures
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ligatures.patch")
 :END:
 Taken from this as-yet unmerged pull request: [[https://github.com/doomemacs/doomemacs/pull/5082][doomemacs/doomemacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
-********* README
+******** README
 #+begin_src diff
 diff --git a/modules/ui/ligatures/README.org b/modules/ui/ligatures/README.org
 index 66d969ff1..ed486dbf6 100644
@@ -1721,7 +1721,7 @@ index 66d969ff1..ed486dbf6 100644
  ,* TODO Troubleshooting
   If you have any problems with this module, do get in touch!
 #+end_src
-********* Autoload
+******** Autoload
 #+begin_src diff
 diff --git a/modules/ui/ligatures/autoload/ligatures.el b/modules/ui/ligatures/autoload/ligatures.el
 index 7856ff7c1..06486a4ec 100644
@@ -1797,7 +1797,7 @@ index 7856ff7c1..06486a4ec 100644
          (setf (alist-get mode +ligatures-extra-alist)
                (if-let (old-results (alist-get mode +ligatures-extra-alist))
 #+end_src
-********* Config
+******** Config
 #+begin_src diff
 diff --git a/modules/ui/ligatures/config.el b/modules/ui/ligatures/config.el
 index 484945ceb..3958aefbd 100644
@@ -1896,7 +1896,7 @@ index 484945ceb..3958aefbd 100644
   ;; Fallback ligature support for certain, patched fonts. Install them with
   ;; `+ligatures/install-patched-font'
 #+end_src
-********* Packages
+******** Packages
 #+begin_src diff :noweb yes
 diff --git a/modules/ui/ligatures/packages.el b/modules/ui/ligatures/packages.el
 new file mode 100644
@@ -1910,7 +1910,7 @@ index 000000000..c710f766c
 +           (featurep 'composite))
 +  <<ligature-package>>)
 #+end_src
-********** ligature.el package :version:
+********* ligature.el package :version:
 :PROPERTIES:
 :header-args+: :tangle no
 :END:
@@ -1931,12 +1931,12 @@ index 000000000..c710f766c
            length)))
   (+ initial num-lines))
 #+end_src
-******* \
+****** \
 - TODO write a command that shows me the git diff like doom-upgrade does and use it in my eventual dotfiles upgrade script
   https://github.com/doomemacs/doomemacs/compare/fca8bd7f3fa697a91774c2ddedcd1a47cd7da01a...849672691dd5d1214d6c72167ae84c03e8d9c8e3
-******* packaging doom WIP
+****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
-******** first attempts
+******* first attempts
 #+begin_src scheme :tangle (meta-in-dir "packaging-doom-wip-1.scm")
 (define-module (ebullient home packaging-doom-wip)
   #:use-module (guix build-system trivial)
@@ -2192,7 +2192,7 @@ Extremely WIP, basically just a scratchpad
 ;;     (home-page "")
 ;;     (license #f)))
 #+end_src
-******** second attempt
+******* second attempt
 #+begin_src scheme :tangle (meta-in-dir "packaging-wip-2.scm") :comments link
 (define-module (ebullient home packaging-wip)
   ;; #:use-module (guix build-system trivial)
@@ -2399,9 +2399,9 @@ Extremely WIP, basically just a scratchpad
 ;;  (hashes (list "restart-emacs" "smartparens")))
 ;; (write-hashes (doom-ps))
 #+end_src
-******** third attempt
-********* clojure part
-********** clj file
+******* third attempt
+******** clojure part
+********* clj file
 I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the source block options here.
 #+begin_src clojure
 (ns protostar.hickeyland
@@ -3180,7 +3180,7 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 ;;   - only org (:depth 1)
 ;; - spec that both host and repo must be specified so in inheritance one isn't overridden without the other?
 #+end_src
-********** deps
+********* deps
 Had =:tangle ebullient/deps.edn :comments link=
 #+begin_src clojure
 {:paths ["src" "resources"]
@@ -3204,7 +3204,7 @@ Had =:tangle ebullient/deps.edn :comments link=
                       io.github.cognitect-labs/test-runner
                       {:git/tag "v0.5.0" :git/sha "48c3c67"}}}}}
 #+end_src
-********* guix part
+******** guix part
 Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
 #+begin_src clojure
 (ns ebullient.home.packaging-wip
@@ -3316,12 +3316,12 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
              "asdf" asdf)]
        (apply func (map read-string args))))))
 #+end_src
-********* packaging runner
+******** packaging runner
 #+begin_src scheme :tangle (meta-in-dir "packaging-runner.scm")
 (use-modules (lokke ns))
 (require #(ebullient.home.packaging-wip))
 #+end_src
-********* test clj
+******** test clj
 Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
 #+begin_src clojure
 (ns ebullient.home.test-clj
@@ -3350,12 +3350,12 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
 (println 5)
 
 #+end_src
-********* test scm
+******** test scm
 #+begin_src scheme :tangle (meta-in-dir "test-scm.scm")
 (use-modules (lokke ns))
 (require #(ebullient.home.test-clj))
 #+end_src
-********* elisp
+******** elisp
 #+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
 (defun m-slurp (f)
   (with-temp-buffer
