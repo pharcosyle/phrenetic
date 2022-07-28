@@ -5587,7 +5587,6 @@ guix home \
             if-let
             when-not
             if-not
-            partial
             ->
             ->>
             as->
@@ -5636,14 +5635,6 @@ guix home \
 #+end_src
 *** Functions
 #+begin_src scheme
-(define* (partial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append args more))))
-
-(define* (rpartial f #:rest args)
-  (lambda* (#:rest more)
-    (apply f (append more args))))
-
 (define-syntax ->
   (syntax-rules ()
     ((_ value) value)
