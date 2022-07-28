@@ -1115,7 +1115,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Emacs packages
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "packages/emacs.scm")
+:meta-dir+: /packages
+:header-args+: :tangle (meta-in-dir "emacs.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient home packages emacs)
@@ -1286,7 +1287,10 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
        ,(local-file "doom-private" #:recursive? #t))))))
 #+end_src
 ***** Doom Emacs :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/doom-emacs.scm")
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
+#+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
 (define-module (ebullient home packages doom-emacs)
   #:use-module (guix build-system copy)
   #:use-module (guix gexp)
@@ -1350,7 +1354,7 @@ performance of a hand rolled config (or better).")
 Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
 ****** Emacs packages :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "packages/emacs-xyz.scm")
+:header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient home packages emacs-xyz)
@@ -1477,7 +1481,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+end_src
 ****** all-the-icons fonts :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "packages/fonts.scm")
+:header-args+: :tangle (meta-in-dir "fonts.scm")
 :END:
 #+begin_src scheme
 (define-module (ebullient home packages fonts)
@@ -1945,7 +1949,8 @@ index 000000000..c710f766c
 ****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
 ******* first attempts
-#+begin_src scheme :tangle (meta-in-dir "packaging-doom-wip-1.scm")
+Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
+#+begin_src scheme :tangle no
 (define-module (ebullient home packaging-doom-wip)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
@@ -2201,7 +2206,8 @@ Extremely WIP, basically just a scratchpad
 ;;     (license #f)))
 #+end_src
 ******* second attempt
-#+begin_src scheme :tangle (meta-in-dir "packaging-wip-2.scm") :comments link
+Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
+#+begin_src scheme :tangle no
 (define-module (ebullient home packaging-wip)
   ;; #:use-module (guix build-system trivial)
   ;; #:use-module (guix gexp)
@@ -2411,7 +2417,7 @@ Extremely WIP, basically just a scratchpad
 ******** clojure part
 ********* clj file
 I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the source block options here.
-#+begin_src clojure
+#+begin_src clojure :tangle no
 (ns protostar.hickeyland
   (:require [clojure.alpha.spec :as s]
             [clojure.edn :as edn]
@@ -3190,7 +3196,7 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 #+end_src
 ********* deps
 Had =:tangle ebullient/deps.edn :comments link=
-#+begin_src clojure
+#+begin_src clojure :tangle no
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/alpha.spec {:git/url "https://github.com/clojure/spec-alpha2.git"
@@ -3214,7 +3220,7 @@ Had =:tangle ebullient/deps.edn :comments link=
 #+end_src
 ******** guix part
 Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
-#+begin_src clojure
+#+begin_src clojure :tangle no
 (ns ebullient.home.packaging-wip
   (:require [guile :refer [command-line]]
             [guile.guix.base32 :refer [bytevector->nix-base32-string]]
@@ -3325,13 +3331,14 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
        (apply func (map read-string args))))))
 #+end_src
 ******** packaging runner
-#+begin_src scheme :tangle (meta-in-dir "packaging-runner.scm")
+Had =:tangle (meta-in-dir "packaging-runner.scm")=
+#+begin_src scheme :tangle no
 (use-modules (lokke ns))
 (require #(ebullient.home.packaging-wip))
 #+end_src
 ******** test clj
 Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
-#+begin_src clojure
+#+begin_src clojure :tangle no
 (ns ebullient.home.test-clj
   (:require [guile.guix.gexp :as g]
             [guile.guix.packages :refer [package package-description]]))
@@ -3359,12 +3366,14 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
 
 #+end_src
 ******** test scm
-#+begin_src scheme :tangle (meta-in-dir "test-scm.scm")
+Had =tangle (meta-in-dir "test-scm.scm")=
+#+begin_src scheme :tangle no
 (use-modules (lokke ns))
 (require #(ebullient.home.test-clj))
 #+end_src
 ******** elisp
-#+begin_src elisp :tangle (meta-in-dir "parse-doom-packages.el")
+Had =:tangle (meta-in-dir "parse-doom-packages.el")=
+#+begin_src elisp :tangle no
 (defun m-slurp (f)
   (with-temp-buffer
     (insert-file-contents f)
