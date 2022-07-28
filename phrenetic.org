@@ -853,35 +853,30 @@ sudo guix time-machine \
 #+end_src
 **** Shells
 #+begin_src scheme
-(define* (he-shells svcs
-                    #:key
+(define* (he-shells #:key
                     login-shell
                     interactive-shell)
-  (append
-   (filter
-    service?
-    (let ((setup-shell? (lambda (shell)
-                          (memq shell (list login-shell interactive-shell)))))
-      (list
-       (when (setup-shell? #:shell/bash)
-         (service home-bash-service-type
-                  ;; (home-bash-configuration
-                  ;;  (bash-profile
-                  ;;   (list (local-file "bashrc"))))
-                  ))
-       (when (setup-shell? #:shell/zsh)
-         (service home-zsh-service-type
-                  (home-zsh-configuration
-                   (zshrc
-                    (list (local-file "zshrc"))))))
-       (when-not (eq login-shell interactive-shell)
-         (simple-service
-          'set-shell-env-var
-          home-environment-variables-service-type
-          `(("SHELL" . ,(case interactive-shell
-                          ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                          ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))))
-   svcs))
+  (let ((setup-shell? (lambda (shell)
+                         (memq shell (list login-shell interactive-shell)))))
+     (list
+      (when (setup-shell? #:shell/bash)
+        (service home-bash-service-type
+                 ;; (home-bash-configuration
+                 ;;  (bash-profile
+                 ;;   (list (local-file "bashrc"))))
+                 ))
+      (when (setup-shell? #:shell/zsh)
+        (service home-zsh-service-type
+                 (home-zsh-configuration
+                  (zshrc
+                   (list (local-file "zshrc"))))))
+      (when-not (eq login-shell interactive-shell)
+        (simple-service
+         'set-shell-env-var
+         home-environment-variables-service-type
+         `(("SHELL" . ,(case interactive-shell
+                         ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                         ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))))
 #+end_src
 ***** Bash
 ****** Bashrc
@@ -1009,27 +1004,22 @@ SAVEHIST=$HISTSIZE
 #+end_src
 **** Nix
 #+begin_src scheme
-(define (he-nix svcs)
-  (cons*
-   (service
-    (service-type
-     (name 'he-nix)
-     (extensions
-      (list
-       (service-extension
-        home-files-service-type
-        (const
-         `((".nix-channels"
-            ,(local-file "nix-channels")))))
-       (service-extension
-        home-xdg-configuration-files-service-type
-        (const
-         `(("nixpkgs/config.nix"
-            ,(local-file "nixpkgs-config.nix")))))))
-     (default-value #f)))
-   svcs))
+(define (he-nix)
+  (list
+   (simple-service
+    'add-nix-channels
+    home-files-service-type
+    `((".nix-channels"
+       ,(local-file "nix-channels"))))
+
+   (simple-service
+    'add-nixpkgs-config
+    home-xdg-configuration-files-service-type
+    `(("nixpkgs/config.nix"
+       ,(local-file "nixpkgs-config.nix"))))))
 #+end_src
 ***** Load Nix environment
+TODO
 #+begin_src sh
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
@@ -1044,6 +1034,7 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 { allowUnfree = true; }
 #+end_src
 ***** Nix WIP
+TODO
 Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
 ****** Update channels
 #+begin_src sh :results output silent :async
@@ -1065,35 +1056,29 @@ nix-env --upgrade
 #+end_src
 **** Emacs
 #+begin_src scheme
-(define* (he-emacs svcs
-                   #:key
+(define* (he-emacs #:key
                    (emacs emacs)
-                   zsh-vterm?
-  (append
-   (filter
-    service?
-    (list
+                   zsh-vterm?)
+  (list
+   (simple-service
+    'emacs-add-package
+    home-profile-service-type
+    (list emacs))
+
+   (simple-service
+    'emacs-set-editor-env-vars
+    home-environment-variables-service-type
+    `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
+      ("EDITOR" . "$VISUAL")))
+
+   (when zsh-vterm?
      (simple-service
-      'add-emacs-package
-      home-profile-service-type
-      (list emacs))
-
-     (simple-service
-      'emacs-set-editor-env-vars
-      home-environment-variables-service-type
-      `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
-        ("EDITOR" . "$VISUAL")))
-
-     (when zsh-vterm?
-       (simple-service
-        'emacs-zsh-vterm
-        home-zsh-service-type
-        (home-zsh-extension
-         (zshrc
-          (list #~(format #f "source ~a"
-                          #$(local-file "zsh-vterm" "setup-vterm")))))))))
-
-   svcs))
+      'emacs-zsh-vterm
+      home-zsh-service-type
+      (home-zsh-extension
+       (zshrc
+        (list #~(format #f "source ~a"
+                        #$(local-file "zsh-vterm" "setup-vterm")))))))))
 #+end_src
 ***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
@@ -1275,26 +1260,22 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 #+end_src
 ***** Doom
 #+begin_src scheme
-(define (he-doom svcs)
-  (cons*
-   (service
-    (service-type
-     (name 'he-doom)
-     (extensions
-      (list
-       (service-extension
-        home-profile-service-type
-        (const (list `(,doom-emacs "bin")
-                     font-fira-code))) ; TODO maybe make this contributed by the doom /config/ specifically. Really what I want is to unquote a gexp for it inside the config like I'll be doing for e.g. the sway config. Even though my Doom private config is in elisp and not scheme, how might I do this as similarly to that as possible?
-       (service-extension
-        home-xdg-configuration-files-service-type
-        (const `(("emacs"
-                  ,#~#$doom-emacs)
-                 ;; ("config/doom"
-                 ;;  ,(local-file "doom-private" #:recursive? #t))
-                 )))))
-     (default-value #f)))
-   svcs))
+(define (he-doom)
+  (list
+   (simple-service
+    'doom-add-packages
+    home-profile-service-type
+    (list `(,doom-emacs "bin")
+          font-fira-code)) ; TODO maybe make this contributed by the doom /config/ specifically. Really what I want is to unquote a gexp for it inside the config like I'll be doing for e.g. the sway config. Even though my Doom private config is in elisp and not scheme, how might I do this as similarly to that as possible?
+
+   (simple-service
+    'doom-add-config
+    home-xdg-configuration-files-service-type
+    `(("emacs"
+       ,#~#$doom-emacs)
+      ;; ("doom"
+      ;;  ,(local-file "doom-private" #:recursive? #t))
+      ))))
 #+end_src
 ****** Doom Emacs :package:version:
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
@@ -3429,160 +3410,148 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
 #+end_src
 **** Direnv
 #+begin_src scheme
-(define* (he-direnv svcs #:key shell)
-  (cons*
-   (service
-    (service-type
-     (name 'he-zsh-direnv)
-     (extensions
-      (list
-       ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration (clarification: the envrc emacs package needs to have direnv on the command line, the emacs-direnv Guix package bakes it in)
-       (service-extension
-        home-profile-service-type
-        (const (list direnv)))
-       (let ((direnv-hook (lambda (shell)
-                            (let ((direnv-bin (file-append direnv "/bin/direnv")))
-                              (mixed-text-file
-                               "direnv-hook"
-                               "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell ")\"")))))
-         (case shell
-           ;; ((#:shell/bash)
-           ;;  (service-extension
-           ;;   home-bash-service-type
-           ;;   (const (home-bash-extension
-           ;;           (bashrc
-           ;;            (list (direnv-hook "bash")))))))
-           ((#:shell/zsh)
-            (service-extension
-             home-zsh-service-type
-             (const (home-zsh-extension
-                     (zshrc
-                      (list (direnv-hook "zsh")))))))))))
-     (default-value #f)))
-   svcs))
+(define* (he-direnv #:key shell)
+  (list
+   ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration (clarification: the envrc emacs package needs to have direnv on the command line, the emacs-direnv Guix package bakes it in)
+   (simple-service
+    'direnv-add-package
+    home-profile-service-type
+    (list direnv))
+
+   (let ((direnv-hook
+          (lambda (shell)
+            (let ((direnv-bin (file-append direnv "/bin/direnv")))
+              (mixed-text-file
+               "direnv-hook"
+               "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell ")\"")))))
+     (case shell
+       ;; ((#:shell/bash) (simple-service
+       ;;                  'direnv-bash-hook
+       ;;                  home-bash-service-type
+       ;;                  (home-bash-extension
+       ;;                   (bashrc
+       ;;                    (list (direnv-hook "bash"))))))
+       ((#:shell/zsh) (simple-service
+                       'direnv-zsh-hook
+                       home-zsh-service-type
+                       (home-zsh-extension
+                        (zshrc
+                         (list (direnv-hook "zsh"))))))))))
 #+end_src
 **** Desktop
 ***** Pipewire
 #+begin_src scheme
-(define (he-pipewire svcs)
-  (cons*
-   (service he-pipewire-service-type)
-   (service he-wireplumber-service-type)
-   svcs))
+(define (he-pipewire)
+  (append
+   (pipewire-services)
+   (wireplumber-service)))
 
-(define he-pipewire-service-type
-  (service-type
-   (name 'he-pipewire)
-   (extensions
+(define (pipewire-services)
+  (list
+   (simple-service
+    'pipewire-add-package
+    home-profile-service-type
+    (list pipewire-0.3))
+
+   (simple-service
+    'pipewire-add-shepherd-daemons
+    home-shepherd-service-type
     (list
-     (service-extension
-      home-profile-service-type
-      (const (list pipewire-0.3)))
-     (service-extension
-      home-shepherd-service-type
-      (const
-       (list
-        (shepherd-service
-         (provision '(pipewire))
-         (start #~(make-forkexec-constructor
-                   (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                   #:log-file (string-append
-                               (or (getenv "XDG_LOG_HOME")
-                                   (format #f "~a/.local/var/log"
-                                           (getenv "HOME")))
-                               "/pipewire.log")
-                   #:environment-variables
-                   (append (list "DISABLE_RTKIT=1")
-                           (default-environment-variables))))
-         (stop  #~(make-kill-destructor))
-         (auto-start? #f))
-        (shepherd-service
-         (provision '(pipewire-pulse pulseaudio))
-         (requirement '(pipewire pipewire-media-session))
-         (start #~(make-forkexec-constructor
-                   (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                   #:log-file (string-append
-                               (or (getenv "XDG_LOG_HOME")
-                                   (format #f "~a/.local/var/log"
-                                           (getenv "HOME")))
-                               "/pipewire-pulse.log")
-                   #:environment-variables
-                   (append (list "DISABLE_RTKIT=1")
-                           (default-environment-variables))))
-         (stop  #~(make-kill-destructor))
-         (auto-start? #f)))))
-     (service-extension
-      home-xdg-configuration-files-service-type
-      (const
-       `(("alsa/asoundrc"
-          ,(mixed-text-file
-            "asoundrc"
-            #~(string-append
-               "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-               "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
-               "\n"
-               "pcm_type.pipewire {" "\n"
-               "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-               "}" "\n"
-               "\n"
-               "ctl_type.pipewire {" "\n"
-               "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-               "}" "\n"))))))))
-   (default-value #f)))
+     (shepherd-service
+      (provision '(pipewire))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append pipewire-0.3 "/bin/pipewire"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/pipewire.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))
+     (shepherd-service
+      (provision '(pipewire-pulse pulseaudio))
+      (requirement '(pipewire pipewire-media-session))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/pipewire-pulse.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))))
+
+   (simple-service
+    'pipewire-add-alsa-config
+    home-xdg-configuration-files-service-type
+    `(("alsa/asoundrc"
+       ,(mixed-text-file
+         "asoundrc"
+         #~(string-append
+            "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
+            "<" #$(file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
+            "\n"
+            "pcm_type.pipewire {" "\n"
+            "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
+            "}" "\n"
+            "\n"
+            "ctl_type.pipewire {" "\n"
+            "  lib " #$(file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
+            "}" "\n")))))))
 #+end_src
 ****** Wireplumber
 #+begin_src scheme
-(define he-wireplumber-service-type
-  (service-type
-   (name 'he-wireplumber)
-   (extensions
+(define (wireplumber-services)
+  (list
+   (simple-service
+    'wireplumber-add-package
+    home-profile-service-type
+    (list wireplumber))
+
+   (simple-service
+    'wireplumber-add-shepherd-daemon
+    home-shepherd-service-type
     (list
-     (service-extension
-      home-profile-service-type
-      (const (list wireplumber)))
-     (service-extension
-      home-shepherd-service-type
-      (const
-       (list
-        (shepherd-service
-         (provision '(wireplumber pipewire-media-session))
-         (requirement '(pipewire))
-         (start #~(make-forkexec-constructor
-                   (list #$(file-append wireplumber "/bin/wireplumber"))
-                   #:log-file (string-append
-                               (or (getenv "XDG_LOG_HOME")
-                                   (format #f "~a/.local/var/log"
-                                           (getenv "HOME")))
-                               "/wireplumber.log")
-                   #:environment-variables
-                   (append (list "DISABLE_RTKIT=1")
-                           (default-environment-variables))))
-         (stop  #~(make-kill-destructor))
-         (auto-start? #f)))))))
-   (default-value #f)))
+     (shepherd-service
+      (provision '(wireplumber pipewire-media-session))
+      (requirement '(pipewire))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append wireplumber "/bin/wireplumber"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/wireplumber.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))))))
 #+end_src
 ***** Flatpak
 #+begin_src scheme
-(define (he-flatpak svcs)
-  (cons*
-   (service
-    (service-type
-     (name 'he-flatpak)
-     (extensions
-      (list
-       (service-extension
-        home-profile-service-type
-        (const (list flatpak
-                     xdg-desktop-portal
-                     xdg-desktop-portal-wlr)))))
-     (default-value #f)))
-   svcs))
+(define (he-flatpak)
+  (list
+   (simple-service
+    'flatpak-add-packages
+    home-profile-service-type
+    (list flatpak
+          xdg-desktop-portal
+          xdg-desktop-portal-wlr))))
 #+end_src
 ****** Make Flatpak apps visible
+TODO
 #+begin_src sh
 export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
 #+end_src
 ****** WIP Flatpak
+TODO
 Ran these manually
 #+begin_src sh
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -3603,8 +3572,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;               (xkb_variant ,(keyboard-layout-variant keyboard-layout))
 ;;               (xkb_options ,kb-options))))))
 
-(define* (he-sway svcs
-                  #:key
+(define* (he-sway #:key
                   pipewire?
                   extra-config
                   (sway-mod 'Mod4)
@@ -3616,244 +3584,241 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   default-terminal
                   (backup-terminal default-terminal)
                   (bg-image (local-file "../../res/alucard_bg.png"))) ; TODO relative path is brittle
-  (append
-   (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
-                     )
-          (layout-config  (if (and #f ; add-keyboard-layout-to-config?
-                                   kb-layout)
-                              #f ; (keyboard-layout-to-sway-config kb-layout)
-                              '())))
-     (filter
-      service?
-      (list
-       (service
+
+  (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
+                    )
+         (layout-config  (if (and #f ; add-keyboard-layout-to-config?
+                                  kb-layout)
+                             #f ; (keyboard-layout-to-sway-config kb-layout)
+                             '())))
+    (list
+     (service
+      home-sway-service-type
+      (home-sway-configuration
+       (config
+        `((xwayland ,(if xwayland? 'enable 'disable))
+          (,#~"")
+          ;; ,@layout-config ; TODO [sway-wip]
+
+          (,#~"\n\n# General settings:")
+          (set $mod ,sway-mod)
+          (set $term ,default-terminal)
+          (set $backup-term ,backup-terminal)
+          (set $menu ,application-launcher)
+          (set $lock ,screen-locker)
+
+          (floating_modifier $mod normal)
+
+          (bindsym --to-code $mod+Shift+r reload)
+
+          ;; TODO [sway-wip] I think I need to do gexp/ungexp with `dbus'
+          ;; (,#~"\n\n# Update dbus environment variables:")
+          ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+          ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
+
+          (,#~"\n\n# Launching external applications:")
+          (bindsym $mod+Control+Shift+Return exec $backup-term)
+          (bindsym $mod+Return exec $term)
+
+          (bindsym --to-code $mod+Shift+d exec $menu)
+          (bindsym --to-code $mod+Shift+l exec $lock)
+
+          (,#~"\n\n# Manipulating windows:")
+          (bindsym --to-code $mod+Shift+c kill)
+          (bindsym --to-code $mod+Shift+f fullscreen)
+          (bindsym $mod+Shift+space floating toggle)
+          (bindsym $mod+Ctrl+space focus mode_toggle)
+
+          (bindsym $mod+Left focus left)
+          (bindsym $mod+Down focus down)
+          (bindsym $mod+Up focus up)
+          (bindsym $mod+Right focus right)
+
+          (bindsym $mod+Shift+Left move left)
+          (bindsym $mod+Shift+Down move down)
+          (bindsym $mod+Shift+Up move up)
+          (bindsym $mod+Shift+Right move right)
+
+          (,#~"\n\n# Moving around workspaces:")
+          (bindsym $mod+tab workspace back_and_forth)
+          ,@(append-map
+             (lambda (x)
+               `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+                          workspace number ,x)
+                 (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                          move container to workspace number ,x)))
+             (iota 10 1))
+
+          (,#~"\n\n# Scratchpad settings:")
+          (bindsym --to-code $mod+Shift+minus move scratchpad)
+          (bindsym --to-code $mod+minus scratchpad show)
+
+          (,#~"")
+          (default_border pixel)
+          (default_floating_border pixel)
+          (gaps inner 8)))))
+
+     (when idle-manager
+       (simple-service
+        'sway-enable-idle-manager
         home-sway-service-type
-        (home-sway-configuration
-         (config
-          `((xwayland ,(if xwayland? 'enable 'disable))
-            (,#~"")
-            ;; ,@layout-config ; TODO [sway-wip]
+        `((,#~"")
+          (exec ,idle-manager))))
 
-            (,#~"\n\n# General settings:")
-            (set $mod ,sway-mod)
-            (set $term ,default-terminal)
-            (set $backup-term ,backup-terminal)
-            (set $menu ,application-launcher)
-            (set $lock ,screen-locker)
+     (simple-service
+      'sway-add-brightness-control
+      home-sway-service-type
+      (let ((step 10)
+            (step->symbol (lambda (op)
+                            (symbol-append (string->symbol (number->string step)) '% op)))
+            (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
+        `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
+          (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
 
-            (floating_modifier $mod normal)
+     (simple-service
+      'sway-add-audio-control
+      home-sway-service-type
+      ;; TODO what's are the "\\\n"s about? Probably will be clear once I see the generated file.
+      ;; TODO maybe parameterize out the step value like in the brightness control code (with `step->symbol')
+      (let ((pactl (file-append pulseaudio "/bin/pactl")))
+        `((bindsym --locked XF86AudioRaiseVolume "\\\n"
+                   exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                   exec ,pactl set-sink-volume @DEFAULT_SINK@ +5%)
+          (bindsym --locked XF86AudioLowerVolume "\\\n"
+                   exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                   exec ,pactl set-sink-volume @DEFAULT_SINK@ -5%)
+          (bindsym --locked XF86AudioMute
+                   exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
+          (bindsym --locked XF86AudioMicMute
+                   exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle))))
 
-            (bindsym --to-code $mod+Shift+r reload)
+     (simple-service
+      'sway-add-player-controls
+      home-sway-service-type
+      (let ((playerctl (file-append playerctl "/bin/playerctl")))
+        `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
+          (bindsym --locked XF86AudioPrev exec ,playerctl previous)
+          (bindsym --locked XF86AudioNext exec ,playerctl next))))
 
-            ;; TODO [sway-wip] I think I need to do gexp/ungexp with `dbus'
-            ;; (,#~"\n\n# Update dbus environment variables:")
-            ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-            ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
-
-            (,#~"\n\n# Launching external applications:")
-            (bindsym $mod+Control+Shift+Return exec $backup-term)
-            (bindsym $mod+Return exec $term)
-
-            (bindsym --to-code $mod+Shift+d exec $menu)
-            (bindsym --to-code $mod+Shift+l exec $lock)
-
-            (,#~"\n\n# Manipulating windows:")
-            (bindsym --to-code $mod+Shift+c kill)
-            (bindsym --to-code $mod+Shift+f fullscreen)
-            (bindsym $mod+Shift+space floating toggle)
-            (bindsym $mod+Ctrl+space focus mode_toggle)
-
-            (bindsym $mod+Left focus left)
-            (bindsym $mod+Down focus down)
-            (bindsym $mod+Up focus up)
-            (bindsym $mod+Right focus right)
-
-            (bindsym $mod+Shift+Left move left)
-            (bindsym $mod+Shift+Down move down)
-            (bindsym $mod+Shift+Up move up)
-            (bindsym $mod+Shift+Right move right)
-
-            (,#~"\n\n# Moving around workspaces:")
-            (bindsym $mod+tab workspace back_and_forth)
-            ,@(append-map
-               (lambda (x)
-                 `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                            workspace number ,x)
-                   (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                            move container to workspace number ,x)))
-               (iota 10 1))
-
-            (,#~"\n\n# Scratchpad settings:")
-            (bindsym --to-code $mod+Shift+minus move scratchpad)
-            (bindsym --to-code $mod+minus scratchpad show)
-
-            (,#~"")
-            (default_border pixel)
-            (default_floating_border pixel)
-            (gaps inner 8)))))
-
-       (when idle-manager
-         (simple-service
-          'sway-enable-idle-manager
-          home-sway-service-type
-          `((,#~"")
-            (exec ,idle-manager))))
-
+     (when bg-image
        (simple-service
-        'sway-add-brightness-control
+        'sway-add-bg-image
         home-sway-service-type
-        (let ((step 10)
-              (step->symbol (lambda (op)
-                              (symbol-append (string->symbol (number->string step)) '% op)))
-              (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
-          `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
-            (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
+        `((output * bg ,bg-image fill))))
 
+     (when extra-config
        (simple-service
-        'sway-add-audio-control
+        'sway-configuration
         home-sway-service-type
-        ;; TODO what's are the "\\\n"s about? Probably will be clear once I see the generated file.
-        ;; TODO maybe parameterize out the step value like in the brightness control code (with `step->symbol')
-        (let ((pactl (file-append pulseaudio "/bin/pactl")))
-          `((bindsym --locked XF86AudioRaiseVolume "\\\n"
-                     exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                     exec ,pactl set-sink-volume @DEFAULT_SINK@ +5%)
-            (bindsym --locked XF86AudioLowerVolume "\\\n"
-                     exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                     exec ,pactl set-sink-volume @DEFAULT_SINK@ -5%)
-            (bindsym --locked XF86AudioMute
-                     exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
-            (bindsym --locked XF86AudioMicMute
-                     exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle))))
+        `(,@extra-config
+          (,#~""))))
 
-       (simple-service
-        'sway-add-player-controls
-        home-sway-service-type
-        (let ((playerctl (file-append playerctl "/bin/playerctl")))
-          `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
-            (bindsym --locked XF86AudioPrev exec ,playerctl previous)
-            (bindsym --locked XF86AudioNext exec ,playerctl next))))
+     (simple-service
+      'sway-reload-config-on-change
+      home-run-on-change-service-type
+      `(("files/.config/sway/config"
+         ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
-       (when bg-image
-         (simple-service
-          'sway-add-bg-image
-          home-sway-service-type
-          `((output * bg ,bg-image fill))))
-
-       (when extra-config
-         (simple-service
-          'sway-configuration
-          home-sway-service-type
-          `(,@extra-config
-            (,#~""))))
-
-       (simple-service
-        'sway-reload-config-on-change
-        home-run-on-change-service-type
-        `(("files/.config/sway/config"
-           ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
-
-       (simple-service
-        'xdg-desktop-portal-wlr-configuration
-        home-xdg-configuration-files-service-type
-        `(("xdg-desktop-portal-wlr/config"
-           ,(mixed-text-file
-             "xdg-desktop-portal-wlr-config"
-             ;; TODO [sway-wip] do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
-             ;; TODO [sway-wip] then comment this entire simple-service out.
-             #~(format #f "[screencast]
+     (simple-service
+      'xdg-desktop-portal-wlr-configuration
+      home-xdg-configuration-files-service-type
+      `(("xdg-desktop-portal-wlr/config"
+         ,(mixed-text-file
+           "xdg-desktop-portal-wlr-config"
+           ;; TODO [sway-wip] do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
+           ;; TODO [sway-wip] then comment this entire simple-service out.
+           #~(format #f "[screencast]
 output_name=
 max_fps=30
 chooser_cmd=~a -f %o -or -c ff0000
 chooser_type=simple"
-                       #$(file-append slurp "/bin/slurp"))))))
+                     #$(file-append slurp "/bin/slurp"))))))
 
-       (simple-service
-        'packages-for-sway
-        home-profile-service-type
-        (list qtwayland ; Copied from RDE: I don't know what this is for.
-              swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
-              xdg-desktop-portal
-              xdg-desktop-portal-wlr))
+     (simple-service
+      'packages-for-sway
+      home-profile-service-type
+      (list qtwayland ; Copied from RDE: I don't know what this is for.
+            swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
+            xdg-desktop-portal
+            xdg-desktop-portal-wlr))
 
-       (simple-service
-        'set-wayland-specific-env-vars
-        home-environment-variables-service-type
-        ;; Copied from RDE: I don't know what all of these do.
-        (append
-         '(("XDG_CURRENT_DESKTOP" . "sway")
-           ("XDG_SESSION_TYPE" . "wayland")
-           ("SDL_VIDEODRIVER" . "wayland")
-           ("MOZ_ENABLE_WAYLAND" . "1")
-           ("CLUTTER_BACKEND" . "wayland")
-           ("ELM_ENGINE" . "wayland_egl")
-           ("ECORE_EVAS_ENGINE" . "wayland-egl")
-           ("QT_QPA_PLATFORM" . "wayland-egl")
-           ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
-         (if pipewire?
-             '(("RTC_USE_PIPEWIRE" . "true")) '())))
+     (simple-service
+      'set-wayland-specific-env-vars
+      home-environment-variables-service-type
+      ;; Copied from RDE: I don't know what all of these do.
+      (append
+       '(("XDG_CURRENT_DESKTOP" . "sway")
+         ("XDG_SESSION_TYPE" . "wayland")
+         ("SDL_VIDEODRIVER" . "wayland")
+         ("MOZ_ENABLE_WAYLAND" . "1")
+         ("CLUTTER_BACKEND" . "wayland")
+         ("ELM_ENGINE" . "wayland_egl")
+         ("ECORE_EVAS_ENGINE" . "wayland-egl")
+         ("QT_QPA_PLATFORM" . "wayland-egl")
+         ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+       (if pipewire?
+           '(("RTC_USE_PIPEWIRE" . "true")) '())))
 
-       (sway-screenshot))))
-
-   svcs))
+     (sway-screenshot-service))))
 #+end_src
 ******* Sway screenshot
 #+begin_src scheme
 ;; TODO [sway-wip] curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
-(define (sway-screenshot)
-
-  (define subject-output
-    #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
-              #$(file-append sway "/bin/swaymsg")
-              #$(file-append jq "/bin/jq")))
-  (define subject-window-or-selection
-    #~(format #f "~a -t get_tree | ~a -r '.. | select(.pid? and .visible?) \
-| .rect | \"\\(.x),\\(.y) \\(.width)x\\(.height)\"' | ~a -b ~a -B ~a"
-              #$(file-append sway "/bin/swaymsg")
-              #$(file-append jq "/bin/jq")
-              #$(file-append slurp "/bin/slurp")
-              "303030AA"
-              "303030AA"))
-
-  (define* (shot-script subject #:key output geom (file "-"))
-    (program-file
-     (string-append "sway-shot-" subject)
-     #~(system
-        (format #f "~a ~a~a~a | ~a"
-                #$(file-append grim "/bin/grim")
-                #$(if output #~(string-append "-o \"$(" #$output ")\" ") "")
-                #$(if geom #~(string-append "-g \"$(" #$geom ")\" ") "")
-                #$file
-                #$(file-append wl-clipboard "/bin/wl-copy")))))
-
-  (define shot-output
-    (shot-script "output" #:output subject-output))
-  (define shot-window-or-selection
-    (shot-script "window-or-selection" #:geom subject-window-or-selection))
-  (define swappy-clipboard
-    (program-file
-     "sway-swappy-clipboard"
-     #~(system
-        (format #f "~a | ~a -f -"
-                #$(file-append wl-clipboard "/bin/wl-paste")
-                #$(file-append swappy "/bin/swappy")))))
-
+(define (sway-screenshot-service)
   (simple-service
-    'sway-screenshot
-    home-sway-service-type
-    ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
-    `((bindsym $mod+Print exec ,shot-output)
-      (bindsym $mod+Alt+Print exec ,swappy-clipboard)
-      (bindsym $mod+Shift+Print exec ,shot-window-or-selection))))
+   'sway-screenshot
+   home-sway-service-type
+   ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
+   `((bindsym $mod+Print exec ,shot-output)
+     (bindsym $mod+Alt+Print exec ,swappy-clipboard)
+     (bindsym $mod+Shift+Print exec ,shot-window-or-selection))))
+
+(define subject-output
+  #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
+            #$(file-append sway "/bin/swaymsg")
+            #$(file-append jq "/bin/jq")))
+
+(define subject-window-or-selection
+  #~(format #f "~a -t get_tree | ~a -r '.. | select(.pid? and .visible?) \
+| .rect | \"\\(.x),\\(.y) \\(.width)x\\(.height)\"' | ~a -b ~a -B ~a"
+            #$(file-append sway "/bin/swaymsg")
+            #$(file-append jq "/bin/jq")
+            #$(file-append slurp "/bin/slurp")
+            "303030AA"
+            "303030AA"))
+
+(define* (shot-script subject #:key output geom (file "-"))
+  (program-file
+   (string-append "sway-shot-" subject)
+   #~(system
+      (format #f "~a ~a~a~a | ~a"
+              #$(file-append grim "/bin/grim")
+              #$(if output #~(string-append "-o \"$(" #$output ")\" ") "")
+              #$(if geom #~(string-append "-g \"$(" #$geom ")\" ") "")
+              #$file
+              #$(file-append wl-clipboard "/bin/wl-copy")))))
+
+(define shot-output
+  (shot-script "output" #:output subject-output))
+
+(define shot-window-or-selection
+  (shot-script "window-or-selection" #:geom subject-window-or-selection))
+
+(define swappy-clipboard
+  (program-file
+   "sway-swappy-clipboard"
+   #~(system
+      (format #f "~a | ~a -f -"
+              #$(file-append wl-clipboard "/bin/wl-paste")
+              #$(file-append swappy "/bin/swappy")))))
 #+end_src
 ***** Screen lockers
 ****** Swaylock
 #+begin_src scheme
-(define* (he-swaylock svcs
-                      #:key
+(define* (he-swaylock #:key
                       (effects? #t)
                       extra-config)
-  (cons*
+  (list
    (service
     home-swaylock-service-type
     (home-swaylock-configuration
@@ -3868,55 +3833,48 @@ chooser_type=simple"
         (color . 3e3e3e)
         (indicator-caps-lock)
         ,@(if extra-config
-              extra-config '())))))
-   svcs))
+              extra-config '())))))))
 
 (define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
 #+end_src
 ***** Idle managers
 ****** Swayidle
 #+begin_src scheme
-(define* (he-swayidle svcs
-                      #:key
+(define* (he-swayidle #:key
                       sway?
                       screen-locker
                       (lock-timeout 240)
                       extra-config)
-  (append
-   (filter
-    service?
-    (list
-     (service
-      home-swayidle-service-type
-      (home-swayidle-configuration
-       (swayidle swayidle)
-       (config
-        `(,@(if screen-locker
-                (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
-                  `((lock ,lock-cmd-quoted)
-                    (before-sleep ,lock-cmd-quoted)
-                    (timeout ,lock-timeout ,lock-cmd-quoted)))
-                '())
-          ,@(if extra-config
-                extra-config '())))))
-     (when sway?
-       (let* ((swaymsg (file-append sway "/bin/swaymsg"))
-              (swaymsg-cmd (lambda (cmd)
-                             #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-              (idle-timeout (+ lock-timeout 30)))
-         (simple-service
-          'add-sway-dpms-to-swayidle
-          home-swayidle-service-type
-          `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
-   svcs))
+  (list
+   (service
+    home-swayidle-service-type
+    (home-swayidle-configuration
+     (config
+      `(,@(if screen-locker
+              (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
+                `((lock ,lock-cmd-quoted)
+                  (before-sleep ,lock-cmd-quoted)
+                  (timeout ,lock-timeout ,lock-cmd-quoted)))
+              '())
+        ,@(if extra-config
+              extra-config '())))))
+
+   (when sway?
+     (let* ((swaymsg (file-append sway "/bin/swaymsg"))
+            (swaymsg-cmd (lambda (cmd)
+                           #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
+            (idle-timeout (+ lock-timeout 30)))
+       (simple-service
+        'swayidle-add-sway-dpms
+        home-swayidle-service-type
+        `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
 
 (define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
 #+end_src
 ***** Status bars
 ****** Waybar
 #+begin_src scheme
-(define* (he-waybar svcs
-                    #:key
+(define* (he-waybar #:key
                     sway?
                     (waybar-modules
                      (list
@@ -3939,77 +3897,76 @@ chooser_type=simple"
   (define font-mono
     (and=> #f ; TODO [sway-wip] was: (get-value 'font-monospace config)
            (compose string->symbol font-name)))
-  (filter
-   service?
-   (append
-    (list
-     (service
-      home-waybar-service-type
-      (home-waybar-configuration
-       (waybar waybar)
-       (config #(((position . top)
-                  (name . main))))
-       ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
-       (style-css
-        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
-             (*
-              ((font-family . #(,@(if font-mono (list font-mono) '())
-                                ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
-                                FontAwesome))
-               ,@(if transitions? '() '((transition . none)))
-               (box-shadow . none)
-               (text-shadow . none)
-               (min-height . 0)))
 
-             (tooltip
-              ((border . (solid @base02))
-               (background . @base01)
-               (opacity . 0.9)))
+  (append
+   (list
+    (service
+     home-waybar-service-type
+     (home-waybar-configuration
+      (waybar waybar)
+      (config #(((position . top)
+                 (name . main))))
+      ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
+      (style-css
+       `(,#~(format #f "@import \"~a\";\n" #$base16-css)
+            (*
+             ((font-family . #(,@(if font-mono (list font-mono) '())
+                               ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
+                               FontAwesome))
+              ,@(if transitions? '() '((transition . none)))
+              (box-shadow . none)
+              (text-shadow . none)
+              (min-height . 0)))
 
-             ((tooltip label)
-              ((color . @base05)
-               (padding . 0)))
+            (tooltip
+             ((border . (solid @base02))
+              (background . @base01)
+              (opacity . 0.9)))
 
-             (#{#waybar}#
-              ((color . @base04)
-               (background . @base01)))
+            ((tooltip label)
+             ((color . @base05)
+              (padding . 0)))
 
-             (#((.modules-right label)
-                (.modules-right image))
-              ((margin . (0.4em 0.2em))
-               (padding . (0 0.4em))
-               (background . @base02)
-               (border-radius . 0.2em)))
+            (#{#waybar}#
+             ((color . @base04)
+              (background . @base01)))
 
-             (.modules-left
-              ((margin-left . 0.2em)))
+            (#((.modules-right label)
+               (.modules-right image))
+             ((margin . (0.4em 0.2em))
+              (padding . (0 0.4em))
+              (background . @base02)
+              (border-radius . 0.2em)))
 
-             (.modules-right
-              ((margin-right . 0.2em))))))))
+            (.modules-left
+             ((margin-left . 0.2em)))
 
-    waybar-modules
+            (.modules-right
+             ((margin-right . 0.2em))))))))
 
-    (list
-     ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
-     ;; (simple-service
-     ;;  'waybar-add-font-package
-     ;;  home-profile-service-type
-     ;;  (list font-awesome))
+   waybar-modules
 
-     (simple-service
-      'waybar-reload-config-on-change
-      home-run-on-change-service-type
-      ;; TODO [sway-wip] factor out the command
-      `(("files/.config/waybar/style.css"
-         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
-        ("files/.config/waybar/config"
-         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+   (list
+    ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
+    ;; (simple-service
+    ;;  'waybar-add-font-package
+    ;;  home-profile-service-type
+    ;;  (list font-awesome))
 
-     (when sway?
-       (simple-service
-        'sway-waybar
-        home-sway-service-type
-        `((bar swaybar_command ,(file-append waybar "/bin/waybar")))))))))
+    (simple-service
+     'waybar-reload-config-on-change
+     home-run-on-change-service-type
+     ;; TODO [sway-wip] factor out the command
+     `(("files/.config/waybar/style.css"
+        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
+       ("files/.config/waybar/config"
+        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+
+    (when sway?
+      (simple-service
+       'waybar-add-to-sway
+       home-sway-service-type
+       `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
 #+end_src
 ******* Modules
 #+begin_src scheme
@@ -4170,11 +4127,10 @@ chooser_type=simple"
 ***** Application launchers
 ****** Rofi
 #+begin_src scheme
-(define* (he-rofi svcs
-                  #:key
+(define* (he-rofi #:key
                   wayland?
                   (theme "Arc-Dark"))
-  (cons*
+  (list
    (service
     home-rofi-service-type
     (home-rofi-configuration
@@ -4195,22 +4151,17 @@ chooser_type=simple"
           (kb-clear-line . "Control+slash")
           (kb-page-next . "Control+v")
           (kb-page-prev . "Alt+v")))
-        ,#~(format #f "@theme \"~a\"" #$theme)))))
-   svcs))
+        ,#~(format #f "@theme \"~a\"" #$theme)))))))
 
 (define rofi-application-launcher (file-append rofi "/bin/rofi -show drun"))
 #+end_src
 ***** Terminals
 ****** Alacritty
 #+begin_src scheme
-(define (font-weight->style weight)
-  (string-capitalize (string-delete #\- (symbol->string weight))))
-
-(define* (he-alacritty svcs
-                       #:key
+(define* (he-alacritty #:key
                        font-mono
                        config-file) ; (config-file (local-file "alacritty.yml"))
-  (cons*
+  (list
    (service
     home-alacritty-service-type
     (home-alacritty-configuration
@@ -4227,8 +4178,10 @@ chooser_type=simple"
               '())
         ,@(if config-file
               `((import . #(,config-file)))
-              '())))))
-   svcs))
+              '())))))))
+
+(define (font-weight->style weight)
+  (string-capitalize (string-delete #\- (symbol->string weight))))
 
 (define alacritty-terminal (file-append package "/bin/alacritty"))
 #+end_src
