@@ -1162,7 +1162,7 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
      (origin
        (inherit (package-source emacs))
        (patches
-        (cons (local-file "wayland-super-fix.patch")
+        (cons (local-file "patches/wayland-super-fix.patch")
               (-> emacs package-source origin-patches)))))))
 #+end_src
 ******* WAIT [#E] Remove the Wayland =Super= fix
@@ -1171,7 +1171,7 @@ Once either:
   As discussed in [[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55362][#55362 - 29.0.50; Super key no longer works on Wayland - GNU bug report logs]].
 - I find a workaround with KMonad after I start using it.
 ******* Patch
-#+begin_src diff :tangle (meta-in-dir "wayland-super-fix.patch")
+#+begin_src diff :tangle (meta-in-dir "patches/wayland-super-fix.patch")
 diff --git src/pgtkterm.c src/pgtkterm.c
 index 566fc1f03d..1cb4d5dac0 100644
 --- a/src/pgtkterm.c
@@ -1315,8 +1315,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
            "17xns3y3cjpmccdzpzab81770v8v4ivhn7iwvpf1ap8g5x41inav"))
          (file-name (git-file-name name version))
          (patches
-          (list (local-file "change-paths.patch")
-                (local-file "ligatures.patch")))))
+          (list (local-file "patches/change-paths.patch")
+                (local-file "patches/ligatures.patch")))))
       (build-system copy-build-system) ; TOOD LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
       (arguments
        (list
@@ -1538,7 +1538,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 ****** Patches
 ******* Change paths
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "change-paths.patch")
+:header-args+: :tangle (meta-in-dir "patches/change-paths.patch")
 :END:
 ******** Core
 #+begin_src diff
@@ -1621,7 +1621,7 @@ index a8078d18f..075a5c8a7 100644
 #+end_src
 ******* Ligatures
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ligatures.patch")
+:header-args+: :tangle (meta-in-dir "patches/ligatures.patch")
 :END:
 Taken from this as-yet unmerged pull request: [[https://github.com/doomemacs/doomemacs/pull/5082][doomemacs/doomemacs#5082 feat(:ui ligatures): use ligature.el for Emacs28+ by...]]
 ******** README
