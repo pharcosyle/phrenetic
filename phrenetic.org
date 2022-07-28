@@ -528,7 +528,7 @@ The stateless service should come after base/desktop services (potentially other
            (operating-system-users os))))
 #+end_src
 **** Nonguix substitutes
-- TODO probably use the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] (not important, just for cleanliness)
+This could be done using the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] but it works fine now so I won't change it.
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
