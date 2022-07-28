@@ -4267,6 +4267,7 @@ chooser_type=simple"
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
+  #:use-module (gnu services)
   #:use-module ((ebullient home emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
   #:use-module (ebullient utils)
@@ -4283,42 +4284,42 @@ chooser_type=simple"
                   sessions)
   (home-environment
    (services
-    (-> '()
-        (he-shells #:login-shell login-shell
-                   #:interactive-shell interactive-shell)
-        (as-> $
-          (if nix?
-              (he-nix $) $)
-          (if developer?
-              (-> $
-                  (he-emacs #:emacs (emacs-fully-loaded #:pgtk? #t) ; TODO maybe make this the he-emacs default
-                            #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-                  he-doom
-                  (he-direnv #:shell interactive-shell)))
-          (if desktop?
-              (-> $
-                  (as-> $
-                    (if pipewire?
-                        (he-pipewire $) $))
-                  he-flatpak
-                  (as-> $
-                    (if (member #:session/sway sessions)
-                        (let ((screen-locker swaylock-screen-locker))
-                          (-> $
-                              (he-sway #:pipewire? pipewire?
-                                       #:screen-locker screen-locker
-                                       #:idle-manager swayidle-idle-manager
-                                       #:application-launcher rofi-application-launcher
-                                       #:default-terminal alacritty-terminal
-                                       #:backup-terminal alacritty-terminal)
-                              he-swaylock
-                              (he-swayidle #:sway? #t
-                                           #:screen-locker screen-locker)
-                              (he-waybar #:sway? #t)
-                              (he-rofi #:wayland? #t)
-                              he-alacritty))
-                        $))
-              $)))))))
+    (filter
+     service?
+     (append
+      (he-shells #:login-shell login-shell
+                 #:interactive-shell interactive-shell)
+      (if nix?
+          (he-nix) '())
+      (if developer?
+          (append
+           (he-emacs #:emacs (emacs-fully-loaded #:pgtk? #t) ; TODO maybe make this the he-emacs default
+                     #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+           (he-doom)
+           (he-direnv #:shell interactive-shell))
+          '())
+      (if desktop?
+          (append
+           (if pipewire?
+               (he-pipewire) '())
+           (he-flatpak)
+           (if (member #:session/sway sessions)
+               (let ((screen-locker swaylock-screen-locker))
+                 (append
+                  (he-sway #:pipewire? pipewire?
+                           #:screen-locker screen-locker
+                           #:idle-manager swayidle-idle-manager
+                           #:application-launcher rofi-application-launcher
+                           #:default-terminal alacritty-terminal
+                           #:backup-terminal alacritty-terminal)
+                  (he-swaylock)
+                  (he-swayidle #:sway? #t
+                               #:screen-locker screen-locker)
+                  (he-waybar #:sway? #t)
+                  (he-rofi #:wayland? #t)
+                  (he-alacritty)))
+               '())
+           '())))))))
 #+end_src
 *** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
