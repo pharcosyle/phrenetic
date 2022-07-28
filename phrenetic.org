@@ -1115,10 +1115,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Emacs packages
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "emacs.scm")
+:header-args+: :tangle (meta-in-dir "packages/emacs.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home emacs)
+(define-module (ebullient home packages emacs)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
@@ -1286,8 +1286,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
        ,(local-file "doom-private" #:recursive? #t))))))
 #+end_src
 ***** Doom Emacs :package:version:
-#+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
-(define-module (ebullient home doom-emacs)
+#+begin_src scheme :tangle (meta-in-dir "packages/doom-emacs.scm")
+(define-module (ebullient home packages doom-emacs)
   #:use-module (guix build-system copy)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -1296,7 +1296,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   ;; #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((ebullient home fonts) #:select (all-the-icons-fonts)))
+  #:use-module ((ebullient home packages fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
   (let ((commit "a570ffe16c24aaaf6b4f8f1761bb037c992de877")
@@ -1350,10 +1350,10 @@ performance of a hand rolled config (or better).")
 Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
 ****** Emacs packages :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
+:header-args+: :tangle (meta-in-dir "packages/emacs-xyz.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home emacs-xyz)
+(define-module (ebullient home packages emacs-xyz)
   #:use-module (guix build-system copy)
   #:use-module (guix build-system emacs)
   #:use-module (guix download)
@@ -1477,10 +1477,10 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+end_src
 ****** all-the-icons fonts :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "fonts.scm")
+:header-args+: :tangle (meta-in-dir "packages/fonts.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home fonts)
+(define-module (ebullient home packages fonts)
   #:use-module (guix build-system font)
   #:use-module (guix git-download)
   #:use-module (guix packages)
@@ -1954,8 +1954,8 @@ Extremely WIP, basically just a scratchpad
   #:use-module ((guix licenses) #:prefix license:)
   ;; #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module (ebullient home emacs)
-  #:use-module (ebullient home doom-emacs)
+  #:use-module (ebullient home packages emacs)
+  #:use-module (ebullient home packages doom-emacs)
   )
 
 ;; (define doom-inputs
@@ -2210,14 +2210,14 @@ Extremely WIP, basically just a scratchpad
   ;; #:use-module ((guix licenses) #:prefix license:)
   ;; ;; #:use-module ((gnu packages emacs) #:select (emacs))
   ;; #:use-module ((gnu packages version-control) #:select (git))
-  ;; #:use-module (ebullient home emacs)
-  ;; #:use-module (ebullient home doom-emacs)
+  ;; #:use-module (ebullient home packages emacs)
+  ;; #:use-module (ebullient home packages doom-emacs)
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x emacs-next emacs-next-pgtk emacs-xwidgets emacs-no-x-toolkit emacs-wide-int))
 
   )
-(define emacs-variant (@ (ebullient home emacs) emacs-29-pgtk+native-comp))
+(define emacs-variant (@ (ebullient home packages emacs) emacs-29-pgtk+native-comp))
 
 ;; TODO does this rewrite recursively?
 ;; package-input-rewriting/spec says it specifically does this while package-input-rewriting does not. And what about using `package-mapping'? I can check the final product for references to emacs/emacs-minimal but still read over the source code of each later. What about native-inputs, sometimes emacs(-minimal) is in there.
@@ -2230,14 +2230,14 @@ Extremely WIP, basically just a scratchpad
 
                              ;; TODO maybe ths should be in a nested `package-input-rewriting' or having packages with themselves as input rewrites
                              ;; will cause problems, I donno. Putting this here for now.
-                             (,(@ (gnu packages emacs-xyz) emacs-dash) . ,(@ (ebullient home emacs-xyz) emacs-dash)))))
+                             (,(@ (gnu packages emacs-xyz) emacs-dash) . ,(@ (ebullient home packages emacs-xyz) emacs-dash)))))
 
 ;; (define-public test-reftex
 ;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-company-reftex)))
 ;; (define-public test-dash-existing
 ;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-dash)))
 ;; (define-public test-dash
-;;   (with-emacs-variant (@ (ebullient home emacs-xyz) emacs-dash)))
+;;   (with-emacs-variant (@ (ebullient home packages emacs-xyz) emacs-dash)))
 
 ;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-build-farm))
 ;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-cider))
@@ -2315,8 +2315,8 @@ Extremely WIP, basically just a scratchpad
 ;;       (remove null?)))
 
 (use-modules (gnu packages emacs-xyz)
-             (ebullient home emacs-xyz)
-             ;; (ebullient home emacs-xyz-batch)
+             (ebullient home packages emacs-xyz)
+             ;; (ebullient home packages emacs-xyz-batch)
              )
 
 (define (str->pkg x)
@@ -5505,7 +5505,7 @@ chooser_type=simple"
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module (gnu services)
-  #:use-module ((ebullient home emacs) #:select (emacs-fully-loaded))
+  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
   #:use-module (ebullient utils)
   #:export (base-he))
