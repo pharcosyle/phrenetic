@@ -5708,7 +5708,6 @@ guix home \
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
   #:export (update-list
-            keyvals
             when-let
             if-let
             when-not
@@ -5716,6 +5715,7 @@ guix home \
             ->
             ->>
             as->
+            keyvals
             update-services*
             update-services
             ;; get-inferior-package
@@ -5727,13 +5727,6 @@ guix home \
   (map (lambda (x)
          (if (pred x) (f x) x))
        l))
-
-(define (keyvals m)
-  (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
-       (apply append)))
 #+end_src
 *** Branching
 #+begin_src scheme
@@ -5782,6 +5775,15 @@ guix home \
     ((_ expr name form form* ...)
      (let ((name expr))
        (as-> form name form* ...)))))
+#+end_src
+*** Association lists
+#+begin_src scheme
+(define (keyvals m)
+  (->> m
+       (map (match-lambda
+              ((k . v)
+               (list k v))))
+       (apply append)))
 #+end_src
 *** Guix
 #+begin_src scheme
