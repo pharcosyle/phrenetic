@@ -797,7 +797,6 @@ sudo guix time-machine \
 (define-module (ebullient home components)
   #:use-module (guix gexp)
   #:use-module (gnu home services)
-  #:use-module (gnu home services mcron)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services xdg)
@@ -6179,16 +6178,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (service network-manager-service-type)
      (service udiskie-service-type)
 
-     (service home-mcron-service-type
-              (home-mcron-configuration
-               (jobs
-                (list
-                 #~(job '(next-hour)
-                        (lambda ()
-                          (call-with-output-file "/tmp/test-mcron-file"
-                            (lambda (port)
-                              (display "Output!" port))))
-                        "Test mcron output")))))
      ;; [2022-06-18 Sat] TODO compare with the new home-openssh-service-type: https://guix.gnu.org/manual/devel/en/guix.html#Secure-Shell
      (service home-ssh-service-type
               ;; (home-ssh-configuration
