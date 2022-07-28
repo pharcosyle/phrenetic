@@ -6126,7 +6126,7 @@ guix time-machine \
 (define-module (exuberant os frostfire)
   #:use-module (ebullient system base-os))
 
-(define-public os
+(define os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
            #:accounts '(((#:name . "pharcosyle")
@@ -6151,6 +6151,8 @@ guix time-machine \
                         #:session/sway)
            #:laptop? #t
            #:macbook? #t))
+
+os
 #+end_src
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
@@ -6197,10 +6199,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 *** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
 (define-module (exuberant he solitude)
-  #:use-module (ebullient home base-he)
-  #:export (he))
+  #:use-module (ebullient home base-he))
 
-(define-public he
+(define he
   (base-he #:full-name "Krzysztof Baranowski"
            #:email "pharcosyle@gmail.com"
            #:developer? #t
@@ -6208,6 +6209,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
            #:desktop? #t
            #:pipewire? #t
            #:sessions '(#:sesion/sway)))
+
+he
 #+end_src
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "solitude-channels")
