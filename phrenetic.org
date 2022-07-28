@@ -493,7 +493,14 @@ The stateless service should come after base/desktop services (potentially other
 #+end_src
 **** Users
 #+begin_src scheme
-(define* (account #:key name comment shell admin? password (salt "toosimple") bluetooth?)
+(define* (account #:key
+                  name
+                  comment
+                  shell
+                  admin?
+                  password
+                  (salt "toosimple")
+                  bluetooth?)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -509,7 +516,9 @@ The stateless service should come after base/desktop services (potentially other
                  (crypt password salt)
                  #f))))
 
-(define-system-comp (users #:key who bluetooth?)
+(define-system-comp (users #:key
+                           who
+                           bluetooth?)
   (users
    (append (map (lambda (user)
                   (apply account (-> user
