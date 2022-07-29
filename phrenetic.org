@@ -211,10 +211,10 @@ guix pull
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
-  #:use-module (ebullient utils)
   #:export (barebones-os
             host-info
             grub-efi
@@ -832,10 +832,10 @@ sudo guix time-machine \
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland))
-  #:use-module ((srfi srfi-1) #:select (append-map))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
+  #:use-module ((srfi srfi-1) #:select (append-map))
 
   #:export (he-packages
             he-shells
