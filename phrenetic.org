@@ -833,6 +833,7 @@ sudo guix time-machine \
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland))
   #:use-module ((srfi srfi-1) #:select (append-map))
+  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module (ebullient utils)
 
@@ -1084,28 +1085,27 @@ nix-env --upgrade
 #+end_src
 **** Emacs
 #+begin_src scheme
-(define* (he-emacs #:key
-                   (emacs emacs)
-                   zsh-vterm?)
-  (list
-   (simple-service
-    'emacs-add-package
-    home-profile-service-type
-    (list emacs))
-
-   (simple-service
-    'emacs-set-editor-env-vars
-    home-environment-variables-service-type
-    `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
-      ("EDITOR" . "$VISUAL")))
-
-   (when zsh-vterm?
+(define* (he-emacs #:key zsh-vterm?)
+  (let ((emacs (emacs-fully-loaded #:pgtk? #t)))
+    (list
      (simple-service
-      'emacs-zsh-vterm
-      home-zsh-service-type
-      (home-zsh-extension
-       (zshrc
-        (list (local-file "zsh-vterm"))))))))
+      'emacs-add-package
+      home-profile-service-type
+      (list emacs))
+
+     (simple-service
+      'emacs-set-editor-env-vars
+      home-environment-variables-service-type
+      `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
+        ("EDITOR" . "$VISUAL")))
+
+     (when zsh-vterm?
+       (simple-service
+        'emacs-zsh-vterm
+        home-zsh-service-type
+        (home-zsh-extension
+         (zshrc
+          (list (local-file "zsh-vterm")))))))))
 #+end_src
 ***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
@@ -5618,7 +5618,6 @@ chooser_type=simple"
 (define-module (ebullient home base-he)
   #:use-module (gnu home)
   #:use-module (gnu services)
-  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module (ebullient home components)
   #:use-module (ebullient utils)
   #:export (base-he))
@@ -5646,8 +5645,7 @@ chooser_type=simple"
           (he-nix) '())
       (if developer?
           (append
-           (he-emacs #:emacs (emacs-fully-loaded #:pgtk? #t) ; TODO maybe make this the he-emacs default
-                     #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
            (he-doom)
            (he-git #:full-name full-name
                    #:email email)
