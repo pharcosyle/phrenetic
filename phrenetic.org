@@ -1144,7 +1144,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (gcc-12))
+  #:use-module ((gnu packages gcc) #:select (gcc-11))
   #:use-module (ebullient utils)
   #:export (emacs-fully-loaded))
 
@@ -1230,7 +1230,7 @@ index 566fc1f03d..1cb4d5dac0 100644
 ****** Native comp
 #+begin_src scheme
 (define-public (with-native-comp emacs)
-  (emacs-with-native-comp emacs gcc-12 'full-aot))
+  (emacs-with-native-comp emacs gcc-11 'full-aot))
 #+end_src
 ****** Findable C source
 #+begin_src scheme
