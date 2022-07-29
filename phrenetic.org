@@ -1086,7 +1086,9 @@ nix-env --upgrade
 **** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key zsh-vterm?)
-  (let ((emacs (emacs-fully-loaded #:pgtk? #t)))
+  (let ((emacs (@ (gnu packages emacs) emacs-next-pgtk)
+               ;; (emacs-fully-loaded #:pgtk? #t)
+               ))
     (list
      (simple-service
       'emacs-add-package
