@@ -5139,6 +5139,12 @@ chooser_type=simple"
 
      (sway-screenshot-service))))
 #+end_src
+****** TODO [#E] Conditionalize Sway environment variables
+These should only be set for Sway and might mess up other sessions, like Gnome.
+- check for the presence of =DESKTOP_SESSION=sway=?
+- some (not particularly helpful) resources:
+  - [[https://lists.sr.ht/~abcdw/rde-devel/%3C871qy1vtaz.fsf%40minikn.xyz%3E][{BUG} feature-sway breaks existing GNOME sessions — sourcehut lists]]
+  - [[https://www.reddit.com/r/swaywm/comments/sw9lct/whats_the_recommended_way_of_setting_environment/][Whats the recommended way of setting environment variables? .profile doesnt w...]]
 ****** Sway screenshot
 #+begin_src scheme
 ;; TODO [sway-wip] curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
