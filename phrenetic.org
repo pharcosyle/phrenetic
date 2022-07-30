@@ -864,6 +864,8 @@ sudo guix time-machine \
             gammastep-applet-service-type
             network-manager-applet-service-type
             udiskie-applet-service-type))
+
+(define serialize-elisp-config (@@ (gnu home-services emacs) serialize-elisp-config))
 #+end_src
 *** Packages
 #+begin_src scheme
@@ -1285,7 +1287,10 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 #+end_src
 *** Doom
 #+begin_src scheme
-(define (he-doom)
+(define* (he-doom #:key
+                  full-name
+                  email
+                  font)
   (list
    (simple-service
     'doom-add-packages
@@ -1298,7 +1303,20 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
     `(("emacs"
        ,doom-emacs)
       ("doom"
-       ,(local-file "doom-private" #:recursive? #t))))))
+       ,(directory-union
+         "doom-private-with-params"
+         `(,(local-file "doom-private" #:recursive? #t)
+           ,(file-union
+             "params-dir"
+             `(("params.el"
+                ,(mixed-text-file
+                  "params.el"
+                  (serialize-elisp-config
+                   #f
+                   `((provide 'params)
+                     (setq param-full-name ,full-name)
+                     (setq param-email ,email)
+                     (setq param-font ,font))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -3561,11 +3579,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
 (use-package! dash)
 (use-package! s)
+
+(require 'params)
 #+end_src
 ****** Personal Info :user:
 #+begin_src elisp
-(setq user-full-name "Krzysztof Baranowski" ; FIXME <user-full-name>> ; passwd:gecos could be useful here
-      user-mail-address "pharcosyle@gmail.com") ; FIXME <user-email>>
+(setq user-full-name param-full-name
+      user-mail-address param-email)
 #+end_src
 ****** Locals :path:
 #+begin_src elisp
@@ -4126,7 +4146,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******* Font
 #+begin_src elisp
-(let ((font (font-spec :family "LigaSrc Pro" :size 12)))
+(let ((font (font-spec :family param-font :size 12)))
   (when (find-font font)
     (setq doom-font font)))
 #+end_src
@@ -5641,7 +5661,9 @@ chooser_type=simple"
       (if developer?
           (append
            (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-           (he-doom)
+           (he-doom #:full-name full-name
+                    #:email email
+                    #:font "LigaSrc Pro")
            (he-git #:full-name full-name
                    #:email email)
            (he-ssh)
