@@ -1175,7 +1175,7 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
      (origin
        (inherit (package-source emacs))
        (patches
-        (cons (local-file "patches/wayland-super-fix.patch")
+        (cons "/home/pharcosyle/projects/phrenetic/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
               (-> emacs package-source origin-patches)))))))
 #+end_src
 ******* WAIT [#E] Remove the Wayland =Super= fix
