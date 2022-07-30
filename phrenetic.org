@@ -1086,27 +1086,28 @@ nix-env --upgrade
 #+end_src
 **** Emacs
 #+begin_src scheme
-(define* (he-emacs #:key zsh-vterm?)
-  (let ((emacs (emacs-fully-loaded)))
-    (list
-     (simple-service
-      'emacs-add-package
-      home-profile-service-type
-      (list emacs))
+(define* (he-emacs #:key
+                   (emacs (emacs-fully-loaded))
+                   zsh-vterm?)
+  (list
+   (simple-service
+    'emacs-add-package
+    home-profile-service-type
+    (list emacs))
 
-     (simple-service
-      'emacs-set-editor-env-vars
-      home-environment-variables-service-type
-      `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
-        ("EDITOR" . "$VISUAL")))
+   (simple-service
+    'emacs-set-editor-env-vars
+    home-environment-variables-service-type
+    `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
+      ("EDITOR" . "$VISUAL")))
 
-     (when zsh-vterm?
-       (simple-service
-        'emacs-zsh-vterm
-        home-zsh-service-type
-        (home-zsh-extension
-         (zshrc
-          (list (local-file "zsh-vterm")))))))))
+   (when zsh-vterm?
+     (simple-service
+      'emacs-zsh-vterm
+      home-zsh-service-type
+      (home-zsh-extension
+       (zshrc
+        (list (local-file "zsh-vterm"))))))))
 #+end_src
 ***** Configure zsh for vterm
 #+begin_src sh :tangle (meta-in-dir "zsh-vterm")
