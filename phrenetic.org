@@ -862,6 +862,7 @@ sudo guix time-machine \
   #:use-module ((rde packages) #:select (rofi-wayland))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
+  #:use-module ((ebullient home packages fonts) #:select (font-awesome))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
 
@@ -5294,7 +5295,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
             (*
              ((font-family . #(,@(if font-mono (list font-mono) '())
-                               ;; TODO [sway-wip] Andrew Tropin: TODO: Add icon-font argument
                                FontAwesome))
               ,@(if transitions? '() '((transition . none)))
               (box-shadow . none)
@@ -5330,11 +5330,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    waybar-modules
 
    (list
-    ;; TODO [sway-wip] use my font-awesome package? Or try first with the default guix one (might not reveal anything as long as I have mine installed too though). Comment this back in.
-    ;; (simple-service
-    ;;  'waybar-add-font-package
-    ;;  home-profile-service-type
-    ;;  (list font-awesome))
+    (simple-service
+     'waybar-add-font-package
+     home-profile-service-type
+     (list font-awesome))
 
     (simple-service
      'waybar-reload-config-on-change
