@@ -793,6 +793,32 @@ sudo guix time-machine \
 :PROPERTIES:
 :meta-dir+: /ebullient/home
 :END:
+** Packages
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
+*** Font Awesome :package:version:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "fonts.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home packages fonts)
+  #:use-module (guix build-system font)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages fonts) #:select (font-awesome) #:prefix fonts:)
+  #:use-module (ebullient utils))
+
+(define-public font-awesome
+  (let ((version "6.1.1"))
+    (with-git-version
+     (package
+       (inherit fonts:font-awesome)
+       (build-system font-build-system)
+       (arguments '()))
+     #:version version
+     #:commit version
+     #:hash "01y8ys9k9cmf1pz4xqya4280yf942dm2h378qsvgip1pla2fms5f")))
+#+end_src
 ** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -1331,7 +1357,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((ebullient home packages fonts) #:select (all-the-icons-fonts)))
+  #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
   (let ((commit "a570ffe16c24aaaf6b4f8f1761bb037c992de877")
@@ -1512,15 +1538,16 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+end_src
 ***** all-the-icons fonts :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "fonts.scm")
+:header-args+: :tangle (meta-in-dir "all-the-icons-fonts.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home packages fonts)
+(define-module (ebullient home packages all-the-icons-fonts)
   #:use-module (guix build-system font)
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
-  #:use-module ((gnu packages fonts) #:select (font-awesome font-google-material-design-icons) #:prefix fonts:)
+  #:use-module ((gnu packages fonts) #:select (font-google-material-design-icons))
+  #:use-module ((ebullient home packages fonts) #:select (font-awesome))
   #:use-module (ebullient utils))
 
 (define-public all-the-icons-fonts
@@ -1551,24 +1578,11 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
                                  "material-design-icons.ttf"))))))))
       (propagated-inputs
        (list font-awesome
-             fonts:font-google-material-design-icons))
+             font-google-material-design-icons))
       (home-page (package-home-page emacs-all-the-icons))
       (synopsis (package-synopsis emacs-all-the-icons))
       (description (package-description emacs-all-the-icons))
       (license (package-license emacs-all-the-icons)))))
-#+end_src
-****** Font Awesome :package:version:
-#+begin_src scheme
-(define-public font-awesome
-  (let ((version "6.1.1"))
-    (with-git-version
-     (package
-       (inherit fonts:font-awesome)
-       (build-system font-build-system)
-       (arguments '()))
-     #:version version
-     #:commit version
-     #:hash "01y8ys9k9cmf1pz4xqya4280yf942dm2h378qsvgip1pla2fms5f")))
 #+end_src
 ***** Patches
 ****** Change paths
