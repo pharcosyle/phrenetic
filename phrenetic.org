@@ -33,9 +33,6 @@
 /meta.el
 #+end_src
 * Phrenetic
-:PROPERTIES:
-:meta-dir+: /phrenetic
-:END:
 ** Installation WIP
 *** Create bootable USB
 Download (or create) a Guix installation ISO
@@ -6066,11 +6063,9 @@ guix home \
                                    ("clj.1" "/share/man/man1/"))))))))
 #+end_src
 ** Channel
-TODO the =../.guix-channel= relative path (and temporary .guix-channel addition to the top-level gitignore file) might not be the best way (put this headline at the top-level instead?)
-#+begin_src scheme :tangle (meta-in-dir "../.guix-channel")
+#+begin_src scheme :tangle (meta-in-dir ".guix-channel")
 (channel
  (version 0)
- (directory "phrenetic")
  (dependencies
   (channel
    (name flat)
@@ -6104,20 +6099,13 @@ guix time-machine \
 	-- \
 	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
-** Dev
-- REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to where they're used. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
-*** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/*
-!res/
-#+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: /configurations
+:meta-dir+: /exuberant
 :END:
 ** Operating systems
 :PROPERTIES:
-:meta-dir+: /exuberant/os
+:meta-dir+: /os
 :END:
 *** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
@@ -6192,7 +6180,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 ** Home environments
 :PROPERTIES:
-:meta-dir+: /exuberant/he
+:meta-dir+: /he
 :END:
 *** Solitude
 #+begin_src scheme :tangle (meta-in-dir "solitude.scm")
@@ -6265,18 +6253,23 @@ he
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
-** Dev
-*** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-,*
-#+end_src
 * Dev
-- TODO maybe make this a =*= with excludes later. I could then get rid of any subproject dirs' gitignores that consist solely of a =*= but I might not want to, for project isolation
+- TODO maybe make this a =,*= with excludes later
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
 # TODO temporary
 /.guix-channel
+ebullient/
+mendicant/
+exuberant/
+
+# TODO from old phrenetic Dev > Git ignore
+# # REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to where they're used. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
+# #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+# /*
+# !res/
+# #+end_src
 #+end_src
 ** Github
 *** Git config
