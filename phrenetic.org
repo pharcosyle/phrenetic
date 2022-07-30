@@ -5346,6 +5346,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        ("files/.config/waybar/config"
         ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
 
+    ;; I could pass the waybar command to the sway module (like I do with the screen locker and idle manager) instead of making this module aware of Sway, however the the `bar' command can take other arguments (see https://man.archlinux.org/man/sway-bar.5.en) that I might perhaps need in the future (though I think they only apply to swaybar, not waybar).
     (when sway?
       (simple-service
        'waybar-add-to-sway
