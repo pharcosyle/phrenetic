@@ -378,7 +378,7 @@ The stateless service should come after base/desktop services (potentially other
 (define stateless-persist-dir "/.persist")
 #+end_src
 ***** HOLD [#D] Make my stateless service more error-tolerant
-Wait until I'm done with most of my other filesystem/btrfs tasks so I'm sure the stateless service won't undergo major changes because of them.
+Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the stateless service won't undergo major changes because of them.
 - At the very least wrap it in some sort of try/catch and print a warning.
   It needs to be visible. Make the warning big and/or sleep the process for ten-ish sections to make sure I see it?
 - I don't want the =install.scm= code I depend on to change and that to mess things up.
