@@ -1329,7 +1329,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((guix licenses) #:prefix license:)
-  ;; #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((ebullient home packages fonts) #:select (all-the-icons-fonts)))
@@ -1368,8 +1367,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list ;; emacs ; TODO uncomment and wrap usage(s) with `package-input-rewriting`
-             git
+       (list git
              ripgrep
              fd
              all-the-icons-fonts))
