@@ -1353,7 +1353,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
          (patches
           (list (local-file "patches/change-paths.patch")
                 (local-file "patches/ligatures.patch")))))
-      (build-system copy-build-system) ; TOOD LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
+      (build-system copy-build-system) ; TODO LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
       (arguments
        (list
         ;; #:install-plan
