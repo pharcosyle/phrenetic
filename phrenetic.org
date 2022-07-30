@@ -811,7 +811,6 @@ sudo guix time-machine \
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages fonts) #:select (font-fira-code))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
@@ -1291,8 +1290,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
    (simple-service
     'doom-add-packages
     home-profile-service-type
-    (list `(,doom-emacs "bin")
-          font-fira-code)) ; TODO maybe make this contributed by the doom /config/ specifically. Really what I want is to unquote a gexp for it inside the config like I'll be doing for e.g. the sway config. Even though my Doom private config is in elisp and not scheme, how might I do this as similarly to that as possible?
+    (list `(,doom-emacs "bin")))
 
    (simple-service
     'doom-add-config
