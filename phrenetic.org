@@ -5818,25 +5818,24 @@ guix home \
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (-> (f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
-
-(define (thread-last-helper f value . body)
-  (apply f (append body (list value))))
+    ((_ x) x)
+    ((_ x (f args ...) expr ...) (-> (f x args ...) expr ...))
+    ((_ x f expr ...) (-> (f x) expr ...))))
 
 (define-syntax ->>
   (syntax-rules ()
-    ((_ value) value)
-    ((_ value (f . body) next ...) (->> (thread-last-helper f value . body) next ...))
-    ((_ value f next ...) (-> (f value) next ...))))
+    ((_ x) x)
+    ((_ x (f args ...) expr ...) (->> (f args ... x) expr ...))
+    ((_ x f expr ...) (->> (f x) expr ...))))
 
 (define-syntax as->
-  (syntax-rules ()
-    ((_ expr name) expr)
-    ((_ expr name form form* ...)
-     (let ((name expr))
-       (as-> form name form* ...)))))
+  (lambda (x)
+    (syntax-case x ()
+      ((_ exp name) #'exp)
+      ((_ exp name form form* ...)
+       (with-syntax ((x (datum->syntax #'form (syntax->datum #'name))))
+         #'(let ((x exp))
+             (as-> form name form* ...)))))))
 #+end_src
 ** Association lists
 #+begin_src scheme
