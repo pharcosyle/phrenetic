@@ -4985,7 +4985,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   application-launcher
                   default-terminal
                   (backup-terminal default-terminal)
-                  (bg-image (local-file "../res/alucard_bg.png"))) ; TODO relative path is brittle
+                  (bg-image (local-file "../../res/alucard_bg.png"))) ; TODO relative path is brittle
 
   (let* ((kb-layout #f ;; (get-value 'keyboard-layout config)
                     )
@@ -5744,9 +5744,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                     ;;  (service gammastep-applet-service-type)
                     ;;  (service network-manager-applet-service-type)
                     ;;  (service udiskie-applet-service-type))
-                    )
-                   '())
-                 '())))))))))
+                    ))
+                 '()))
+            '())))))))
 #+end_src
 ** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
