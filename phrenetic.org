@@ -837,6 +837,7 @@ sudo guix time-machine \
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
@@ -856,7 +857,6 @@ sudo guix time-machine \
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
-  #:use-module (rde features fontutils)
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland))
@@ -868,6 +868,8 @@ sudo guix time-machine \
 
   #:export (he-packages
             he-shells
+            he-fonts
+            font-monospace
             he-nix
             he-emacs
             he-doom
@@ -1055,6 +1057,23 @@ alias grep='grep --color=auto'
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
+#+end_src
+*** Fonts
+#+begin_src scheme
+(define* (he-fonts #:key fonts)
+  (list
+   (simple-service
+    'fonts-add-packages
+    home-profile-service-type
+    (map (lambda (font)
+           (assoc-ref font #:package))
+         fonts))))
+
+(define font-monospace
+  `((#:name . "Source Code Pro")
+    (#:size . 12)
+    (#:weight . 'medium)
+    (#:package . ,font-adobe-source-code-pro)))
 #+end_src
 *** Nix
 #+begin_src scheme
@@ -1343,7 +1362,9 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                    `((provide 'params)
                      (setq param-full-name ,full-name)
                      (setq param-email ,email)
-                     (setq param-font ,font))))))))))))))
+                     (setq param-font-name ,(assoc-ref font #:name))
+                     (setq param-font-size ,(assoc-ref font #:size))
+                     (setq param-font-weight ,(assoc-ref font #:weight)))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -4159,7 +4180,9 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******* Font
 #+begin_src elisp
-(let ((font (font-spec :family param-font :size 12)))
+(let ((font (font-spec :family param-font-name
+                       :size param-font-size
+                       :weight param-font-weight)))
   (when (find-font font)
     (setq doom-font font)))
 #+end_src
@@ -5138,6 +5161,11 @@ chooser_type=simple"
        (if pipewire?
            '(("RTC_USE_PIPEWIRE" . "true")) '())))
 
+     (simple-service
+      'packages-for-sway-fonts
+      home-profile-service-type
+      (list font-google-noto)) ; A font with good unicode coverage that should cover most needs.
+
      (sway-screenshot-service))))
 #+end_src
 ****** TODO [#E] Conditionalize Sway environment variables
@@ -5274,15 +5302,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (waybar-clock)))
                     ;; TODO [sway-wip]
                     (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
+                    font
                     ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
                     transitions?)
-
-  ;; (when use-global-fonts?
-  ;;   (require-value 'font-monospace config))
-  (define font-mono
-    (and=> #f ; TODO [sway-wip] was: (get-value 'font-monospace config)
-           (compose string->symbol font-name)))
-
   (append
    (list
     (service
@@ -5294,7 +5316,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (style-css
        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
             (*
-             ((font-family . #(,@(if font-mono (list font-mono) '())
+             ((font-family . #(,@(if font
+                                     (list
+                                      (-> font (assoc-ref #:name) string->symbol))
+                                     '())
                                FontAwesome))
               ,@(if transitions? '() '((transition . none)))
               (box-shadow . none)
@@ -5542,7 +5567,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 ***** Alacritty
 #+begin_src scheme
 (define* (he-alacritty #:key
-                       font-mono
+                       font
                        config-file) ; (config-file (local-file "alacritty.yml"))
   (list
    (service
@@ -5552,18 +5577,21 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       ;; TODO keeping this padding thing here for now, revisit it later
       `((window . ((padding . ((x . 10)
                                (y . 5)))))
-        ,@(if font-mono
+        ,@(if font
               `((font . ((normal . ((style . , (font-weight->style
-                                                (font-weight font-mono)))
-                                    (family . ,(font-name font-mono))))
-                         (size . ,(font-size font-mono)))))
+                                                (assoc-ref font #:weight)))
+                                    (family . ,(assoc-ref font #:name))))
+                         (size . ,(assoc-ref font #:size)))))
               '())
         ,@(if config-file
               `((import . #(,config-file)))
               '())))))))
 
 (define (font-weight->style weight)
-  (string-capitalize (string-delete #\- (symbol->string weight))))
+  (->> weight
+       symbol->string
+       (string-delete #\-)
+       string-capitalize))
 
 (define alacritty-terminal (file-append alacritty "/bin/alacritty"))
 #+end_src
@@ -5669,51 +5697,54 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    (services
     (filter
      service?
-     (append
-      (he-packages)
-      (he-shells #:login-shell login-shell
-                 #:interactive-shell interactive-shell)
-      (if nix?
-          (he-nix) '())
-      (if developer?
-          (append
-           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-           (he-doom #:full-name full-name
-                    #:email email
-                    #:font "LigaSrc Pro")
-           (he-git #:full-name full-name
-                   #:email email)
-           (he-ssh)
-           (he-direnv #:shell interactive-shell))
-          '())
-      (if desktop?
-          (append
-           (he-desktop-packages)
-           (he-xdg)
-           (if pipewire?
-               (he-pipewire) '())
-           (he-flatpak)
-           (if (member #:session/sway sessions)
-               (let ((screen-locker swaylock-screen-locker))
-                 (append
-                  (he-sway #:pipewire? pipewire?
-                           #:screen-locker screen-locker
-                           #:idle-manager swayidle-idle-manager
-                           #:application-launcher rofi-application-launcher
-                           #:default-terminal alacritty-terminal
-                           #:backup-terminal alacritty-terminal)
-                  (he-swaylock)
-                  (he-swayidle #:sway? #t
-                               #:screen-locker screen-locker)
-                  (he-waybar #:sway? #t)
-                  (he-rofi #:wayland? #t)
-                  (he-alacritty)
-                  (list
-                   (service gammastep-applet-service-type)
-                   (service network-manager-applet-service-type)
-                   (service udiskie-applet-service-type)))
-                 '())
-               '()))))))))
+     (let ((font-mono font-monospace))
+       (append
+        (he-packages)
+        (he-shells #:login-shell login-shell
+                   #:interactive-shell interactive-shell)
+        (he-fonts #:fonts (list font-mono))
+        (if nix?
+            (he-nix) '())
+        (if developer?
+            (append
+             (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+             (he-doom #:full-name full-name
+                      #:email email
+                      #:font font-mono)
+             (he-git #:full-name full-name
+                     #:email email)
+             (he-ssh)
+             (he-direnv #:shell interactive-shell))
+            '())
+        (if desktop?
+            (append
+             (he-desktop-packages)
+             (he-xdg)
+             (if pipewire?
+                 (he-pipewire) '())
+             (he-flatpak)
+             (if (member #:session/sway sessions)
+                 (let ((screen-locker swaylock-screen-locker))
+                   (append
+                    (he-sway #:pipewire? pipewire?
+                             #:screen-locker screen-locker
+                             #:idle-manager swayidle-idle-manager
+                             #:application-launcher rofi-application-launcher
+                             #:default-terminal alacritty-terminal
+                             #:backup-terminal alacritty-terminal)
+                    (he-swaylock)
+                    (he-swayidle #:sway? #t
+                                 #:screen-locker screen-locker)
+                    (he-waybar #:sway? #t
+                               #:font font-mono)
+                    (he-rofi #:wayland? #t)
+                    (he-alacritty #:font font-mono)
+                    (list
+                     (service gammastep-applet-service-type)
+                     (service network-manager-applet-service-type)
+                     (service udiskie-applet-service-type)))
+                   '())
+                 '())))))))))
 #+end_src
 ** \
 #+begin_src sh :var he_name="" he_dir=(meta-get-dir)
