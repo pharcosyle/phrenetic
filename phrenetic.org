@@ -1405,7 +1405,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/change-paths.patch")
-                (local-file "patches/ligatures.patch")))))
+                ;; (local-file "patches/ligatures.patch")
+                ))))
       (build-system copy-build-system) ; TODO LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and post- copy-build-system
       (arguments
        (list
@@ -3802,28 +3803,28 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ******** Ligatures
 ********* ligature
 #+begin_src elisp :tangle (meta-in-dir "init.el")
-(use-package-hook! ligature
-  :pre-config
-  (setq +ligatures-all-modes-list
-        '("www")
-        +ligatures-prog-mode-list
-        '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
-          "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-          ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-          "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-          "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-          "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-          "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-          "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-          "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-          "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-          "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
-          ;; Doom defaults (just the ones not already present in Fira Code)
-          "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
-          "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
-          ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
-          "*)" "://"))
-  t)
+;; (use-package-hook! ligature
+;;   :pre-config
+;;   (setq +ligatures-all-modes-list
+;;         '("www")
+;;         +ligatures-prog-mode-list
+;;         '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
+;;           "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+;;           ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+;;           "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+;;           "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+;;           "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+;;           "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+;;           "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+;;           "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+;;           "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+;;           "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
+;;           ;; Doom defaults (just the ones not already present in Fira Code)
+;;           "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
+;;           "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
+;;           ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
+;;           "*)" "://"))
+;;   t)
 #+end_src
 ******* Editor
 ******** Evil
