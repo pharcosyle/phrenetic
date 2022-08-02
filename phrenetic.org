@@ -898,34 +898,37 @@ sudo guix time-machine \
 #+end_src
 *** Packages
 #+begin_src scheme
-(define* (he-packages)
+(define* (he-packages #:key
+                      (packages (list curl
+                                      zip
+                                      unzip)))
   (list
    (simple-service
     'packages-add
     home-profile-service-type
-    (list curl
-          zip
-          unzip))))
+    packages)))
 #+end_src
 *** Shells
 #+begin_src scheme
 (define* (he-shells #:key
                     login-shell
-                    interactive-shell)
+                    interactive-shell
+                    ;; (bashrc (local-file "bashrc"))
+                    (zshrc (local-file "zshrc")))
   (let ((setup-shell? (lambda (shell)
                          (memq shell (list login-shell interactive-shell)))))
      (list
       (when (setup-shell? #:shell/bash)
         (service home-bash-service-type
                  ;; (home-bash-configuration
-                 ;;  (bash-profile
+                 ;;  (bashrc
                  ;;   (list (local-file "bashrc"))))
                  ))
       (when (setup-shell? #:shell/zsh)
         (service home-zsh-service-type
                  (home-zsh-configuration
                   (zshrc
-                   (list (local-file "zshrc"))))))
+                   (list zshrc)))))
       (when-not (eq? login-shell interactive-shell)
         (simple-service
          'set-shell-env-var
@@ -1077,19 +1080,21 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Nix
 #+begin_src scheme
-(define (he-nix)
+(define* (he-nix #:key
+                 (nix-channels (local-file "nix-channels"))
+                 (nixpkgs-config (local-file "nixpkgs-config.nix")))
   (list
    (simple-service
     'nix-add-channels
     home-files-service-type
     `((".nix-channels"
-       ,(local-file "nix-channels"))))
+       ,nix-channels)))
 
    (simple-service
     'nix-add-nixpkgs-config
     home-xdg-configuration-files-service-type
     `(("nixpkgs/config.nix"
-       ,(local-file "nixpkgs-config.nix"))))))
+       ,nixpkgs-config)))))
 #+end_src
 **** Load Nix environment
 TODO and remove "tangle no"
@@ -1334,6 +1339,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 *** Doom
 #+begin_src scheme
 (define* (he-doom #:key
+                  (doom-private (local-file "doom-private" #:recursive? #t))
                   full-name
                   email
                   font)
@@ -1351,7 +1357,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       ("doom"
        ,(directory-union
          "doom-private-with-params"
-         `(,(local-file "doom-private" #:recursive? #t)
+         `(,doom-private
            ,(file-union
              "params-dir"
              `(("params.el"
@@ -4730,7 +4736,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 (define* (he-git #:key
                  full-name
                  email
-                 sign-commits? ; TODO make this default to true once I have my gpg stuff set up and I'm passing a gpg-sign-key.
+                 sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
                  gpg-sign-key
                  ;; git-send-email?
                  extra-config)
@@ -4810,24 +4816,40 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 *** Desktop
 **** Desktop packages
 #+begin_src scheme
-(define* (he-desktop-packages)
+(define* (he-desktop-packages
+          #:key
+          (packages (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
+
+                          ;; nyxt
+                          ;; gst-libav
+                          ;; gst-plugins-bad
+                          ;; gst-plugins-base
+                          ;; gst-plugins-good
+                          ;; gst-plugins-ugly
+                          )))
   (list
    (simple-service
     'desktop-packages-add
     home-profile-service-type
-    (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
-
-          ;; nyxt
-          ;; gst-libav
-          ;; gst-plugins-bad
-          ;; gst-plugins-base
-          ;; gst-plugins-good
-          ;; gst-plugins-ugly
-          ))))
+    packages)))
 #+end_src
 **** XDG
 #+begin_src scheme
-(define (he-xdg)
+(define* (he-xdg
+          #:key
+          (xdg-user-directories-configuration
+           (let* ((xdg-user-subdir "/files")
+                  (xdg-dir (lambda (path)
+                             (string-append "$HOME" xdg-user-subdir path))))
+             (home-xdg-user-directories-configuration
+              (desktop "$HOME/desktop")
+              (documents (xdg-dir "/docs"))
+              (download "$HOME/dl")
+              (music (xdg-dir "/music"))
+              (pictures (xdg-dir "/pics"))
+              (publicshare (xdg-dir "/public"))
+              (templates (xdg-dir "/templates"))
+              (videos (xdg-dir "/vids"))))))
   (list
    (simple-service
     'add-xdg-packages
@@ -4838,18 +4860,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 
    (service
     home-xdg-user-directories-service-type
-    (let* ((xdg-user-subdir "/files")
-           (xdg-dir (lambda (path)
-                      (string-append "$HOME" xdg-user-subdir path))))
-      (home-xdg-user-directories-configuration
-       (desktop "$HOME/desktop")
-       (documents (xdg-dir "/docs"))
-       (download "$HOME/dl")
-       (music (xdg-dir "/music"))
-       (pictures (xdg-dir "/pics"))
-       (publicshare (xdg-dir "/public"))
-       (templates (xdg-dir "/templates"))
-       (videos (xdg-dir "/vids")))))))
+    xdg-user-directories-configuration)))
 #+end_src
 **** Pipewire
 #+begin_src scheme
@@ -5238,13 +5249,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 ***** Swaylock
 #+begin_src scheme
 (define* (he-swaylock #:key
-                      (effects? #t)
+                      (swaylock-effects? #t)
                       extra-config)
   (list
    (service
     home-swaylock-service-type
     (home-swaylock-configuration
-     (swaylock (if effects?
+     (swaylock (if swaylock-effects?
                    swaylock-effects
                    swaylock))
      (config
