@@ -450,7 +450,7 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                 (delete-file system-1-path)))
             (#$save-or-restore-users+groups persist-dir #:restore))
 
-          (apply populate (keyvals '#$config))))))
+          (apply populate (#$keyvals '#$config))))))
 
 (define (activate-state-gexp config)
   #~(begin
@@ -486,7 +486,7 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
         (for-each install paths)
         (#$save-or-restore-users+groups persist-dir #:save))
 
-      (apply activate-state (keyvals '#$config))))
+      (apply activate-state (#$keyvals '#$config))))
 
 (define stateless-service-type
   (service-type
