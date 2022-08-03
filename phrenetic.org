@@ -430,13 +430,13 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                   "/etc/shadow"))))
 
 (define (populate-gexp config)
-  (with-extensions (list guile-gcrypt)
-    (with-imported-modules (source-module-closure
-                            '((gnu build install)))
-      #~(begin
-          (use-modules ((gnu build install) #:select (populate-root-file-system)))
+  (let ((persist-dir (assoc-ref config #:persist-dir)))
+    (with-extensions (list guile-gcrypt)
+      (with-imported-modules (source-module-closure
+                              '((gnu build install)))
+        #~(begin
+            (use-modules ((gnu build install) #:select (populate-root-file-system)))
 
-          (define* (populate #:key persist-dir #:allow-other-keys)
             (let* ((system-path "/var/guix/profiles/system")
                    (system-1-path "/var/guix/profiles/system-1-link")
                    (system-1-exists? (file-exists? system-1-path))
@@ -448,19 +448,17 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                                          #:extras `((,system-path -> ,system-link)))
               (unless system-1-exists?
                 (delete-file system-1-path)))
-            (#$save-or-restore-users+groups persist-dir #:restore))
-
-          (apply populate (#$keyvals '#$config))))))
+            (#$save-or-restore-users+groups #$persist-dir #:restore))))))
 
 (define (activate-state-gexp config)
-  #~(begin
-      (use-modules ((ice-9 match) #:select (match)))
-
-      (define* (activate-state #:key persist-dir paths)
+  (let ((persist-dir (assoc-ref config #:persist-dir))
+        (paths (assoc-ref config #:paths)))
+    #~(begin
+        (use-modules ((ice-9 match) #:select (match)))
 
         (define (install path)
           (let loop ((components (string-tokenize path (char-set-complement (char-set #\/))))
-                     (base persist-dir)
+                     (base #$persist-dir)
                      (target-base ""))
             (match components
               ((head tail ...)
@@ -483,10 +481,8 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                          (chmod target-path (stat:perms st)))
                        (loop tail path target-path))))))))
 
-        (for-each install paths)
-        (#$save-or-restore-users+groups persist-dir #:save))
-
-      (apply activate-state (#$keyvals '#$config))))
+        (for-each install #$paths)
+        (#$save-or-restore-users+groups #$persist-dir #:save))))
 
 (define stateless-service-type
   (service-type
