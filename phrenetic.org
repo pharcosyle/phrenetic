@@ -5827,7 +5827,7 @@ guix home \
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold first append-map))
   #:export (update-list
             when-let
             if-let
@@ -5899,11 +5899,11 @@ guix home \
 ** Association lists
 #+begin_src scheme
 (define (keyvals m)
-  (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
-       (apply append)))
+  (append-map
+   (match-lambda
+     ((k . v)
+      (list k v)))
+   m))
 #+end_src
 ** Guix
 #+begin_src scheme
