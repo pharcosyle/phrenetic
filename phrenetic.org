@@ -481,7 +481,7 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                          (chmod target-path (stat:perms st)))
                        (loop tail path target-path))))))))
 
-        (for-each install #$paths)
+        (for-each install '#$paths)
         (#$save-or-restore-users+groups #$persist-dir #:save))))
 
 (define stateless-service-type
