@@ -5898,12 +5898,12 @@ guix home \
 #+end_src
 ** Association lists
 #+begin_src scheme
-(define (keyvals m)
+(define (keyvals x)
   (append-map
    (match-lambda
      ((k . v)
       (list k v)))
-   m))
+   x))
 #+end_src
 ** Guix
 #+begin_src scheme
