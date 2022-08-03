@@ -829,7 +829,7 @@ sudo guix time-machine \
 :PROPERTIES:
 :meta-dir+: /packages
 :END:
-*** Font Awesome :package:version:
+*** Fonts :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "fonts.scm")
 :END:
@@ -837,8 +837,15 @@ sudo guix time-machine \
 (define-module (ebullient home packages fonts)
   #:use-module (guix build-system font)
   #:use-module (guix packages)
-  #:use-module ((gnu packages fonts) #:select (font-awesome) #:prefix fonts:)
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-awesome) #:prefix fonts:)
   #:use-module (ebullient utils))
+
+(define-public font-adobe-source-code-pro
+  (with-git-version
+   fonts:font-adobe-source-code-pro
+   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
+   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
+   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
 
 (define-public font-awesome
   (let ((version "6.1.1"))
@@ -869,7 +876,7 @@ sudo guix time-machine \
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto))
+  #:use-module ((gnu packages fonts) #:select (font-google-noto))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
@@ -894,7 +901,7 @@ sudo guix time-machine \
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((ebullient home packages fonts) #:select (font-awesome))
+  #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
 
