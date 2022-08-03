@@ -240,7 +240,7 @@ guix pull
   #:use-module (gnu system file-systems)
   #:use-module (gnu system keyboard)
   #:use-module (gnu system mapped-devices)
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
+  #:use-module ((nongnu packages linux) #:select (linux-lts linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module (ebullient utils)
@@ -341,7 +341,7 @@ guix pull
 *** Linux nonfree
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
-  (kernel linux)
+  (kernel linux-lts) ; TODO make this just `linux` again once nonguix fixes the broadcom-sta patch.
   (initrd microcode-initrd)
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
