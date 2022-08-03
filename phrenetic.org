@@ -6344,6 +6344,16 @@ guix time-machine \
 #+end_src
 * Dev
 - TODO maybe make this a =,*= with excludes later
+** Git config
+#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+
+[branch "tangled"]
+	remote = origin
+	merge = refs/heads/tangled
+#+end_src
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
@@ -6366,14 +6376,6 @@ exuberant/
 [remote "origin"]
 	url = https://github.com/pharcosyle/phrenetic.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
-
-[branch "master"]
-	remote = origin
-	merge = refs/heads/master
-
-[branch "tangled"]
-	remote = origin
-	merge = refs/heads/tangled
 #+end_src
 * Dev local
 ** Git config
