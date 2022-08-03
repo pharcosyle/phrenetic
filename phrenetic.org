@@ -5826,7 +5826,6 @@ guix home \
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
   #:export (update-list
             when-let
@@ -5900,9 +5899,8 @@ guix home \
 #+begin_src scheme
 (define (keyvals m)
   (->> m
-       (map (match-lambda
-              ((k . v)
-               (list k v))))
+       (map (lambda (x)
+              (list (car x) (cdr x))))
        (apply append)))
 #+end_src
 ** Guix
