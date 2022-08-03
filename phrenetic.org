@@ -6379,7 +6379,6 @@ guix time-machine \
 	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 * Dev
-- TODO maybe make this a =,*= with excludes later
 ** Git config
 #+begin_src gitconfig :tangle (meta-in-dir ".git/config")
 [branch "master"]
@@ -6391,6 +6390,8 @@ guix time-machine \
 	merge = refs/heads/tangled
 #+end_src
 ** Git ignore
+- TODO maybe make this a =,*= with excludes later
+
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.gitignore
 # TODO temporary
