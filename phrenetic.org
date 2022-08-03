@@ -31,7 +31,7 @@
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /meta.el
 #+end_src
-* Installation WIP
+* Installation
 ** Create bootable USB
 Download (or create) a Guix installation ISO
 - I'm using the [[https://github.com/SystemCrafters/guix-installer/releases/latest][System Crafters Guix Installer]] since it's kept up-to-date which should speed things up a bit.
@@ -6379,8 +6379,11 @@ exuberant/
 #+end_src
 *** Readme
 #+begin_src org :tangle (meta-in-dir "README.org")
+,* Phrenetic
 A configuration framework and collection of useful packages/services for [[https://guix.gnu.org/][GNU Guix]].
-,* [[file:phrenetic.org][View the full source]]
+
+It's decent.
+,* [[file:phrenetic.org][Browse the full source]]
 ,* Usage
 Install as a [[https://guix.gnu.org/manual/devel/en/guix.html#Channels][Guix channel]] with the following declaration:
 ,#+begin_src scheme
@@ -6391,8 +6394,8 @@ Install as a [[https://guix.gnu.org/manual/devel/en/guix.html#Channels][Guix cha
 ,#+end_src
 ,* Noteworthy features
 Some stuff I haven't seen elsewhere folks might be interested in:
-- Stateless service :: Configure your Guix to run with an ephemeral, in-memory root directory. Adapted from [[https://grahamc.com/blog/erase-your-darlings][Erase your darlings: immutable infrastructure for mutable systems]] but using Guix/Btrfs instead of NixOS/ZFS.
-- Doom package and module :: [[https://github.com/doomemacs/doomemacs][Doom Emacs]] packaged for Guix and with patches to better organize external state, a service to set up symlinks, etc.
+- Stateless service :: Configure your Guix to run with an ephemeral, in-memory root directory. Kind of like [[https://grahamc.com/blog/erase-your-darlings][Erase your darlings: immutable infrastructure for mutable systems]] but using Guix/Btrfs instead of NixOS/ZFS.
+- Doom package and module :: [[https://github.com/doomemacs/doomemacs][Doom Emacs]] packaged for Guix and with patches to better organize Emacs state, a service to set up symlinks, etc.
 - Guix integration for [[https://github.com/radian-software/straight.el][Straight.el]] :: Your Straight or Doom-based Emacs configuration can use Guix Emacs packages under hood (but with the revisions you, or Doom, specify). Get the best of both worlds! Still WIP.
 - Miscellaneous packages :: Guix packages for stuff not upstream yet: Datomic CLI tools, the AWS CLI v2, etc.
 ,* A word about literate programming
