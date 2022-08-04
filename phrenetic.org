@@ -7207,28 +7207,3 @@ Public License instead of this License.  But first, please read
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /.dir-locals.el
 #+end_src
-
-
-
-
-* COMMENT Guix Emacs integration WIP
-TODO
-My old "Guix > Emacs Integration" code that I might still want for extra-profiles or on a per-project basis. What did the Andrew Tropin video(s) on per-project dev environment have to say again? Move them into some sort of shared/parameterizable per-project section?
-** man :path:
-#+begin_src elisp :noweb yes
-(after! man
-  (prependq! Man-header-file-path
-             (-map (lambda (p)
-                     (concat p "/include"))
-                   '(<<guix-extra-profiles>>))))
-#+end_src
-** tramp :path:
-Make tramp work on Guix. Tramp is used locally to do sudo from inside Emacs so include my user-specific paths too.
-- TODO why did I add =~/.config/guix/current/bin=?
-#+begin_src elisp :noweb yes
-(after! tramp
-  (prependq! tramp-remote-path
-             (-map (lambda (p)
-                     (concat p "/bin"))
-                   '(<<guix-extra-profiles>>))))
-#+end_src
