@@ -5073,10 +5073,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
           (bindsym --to-code $mod+Shift+r reload)
 
-          ;; TODO [sway-wip] I think I need to do gexp/ungexp with `dbus'
-          ;; (,#~"\n\n# Update dbus environment variables:")
-          ;; (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-          ;;       WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
+          (,#~"\n\n# Update dbus environment variables:")
+          (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+                WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
 
           (,#~"\n\n# Launching external applications:")
           (bindsym $mod+Control+Shift+Return exec $backup-term)
