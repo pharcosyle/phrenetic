@@ -5138,7 +5138,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (bindsym $mod+Shift+w layout tabbed)
           (bindsym $mod+Shift+e layout toggle split)
           (bindsym $mod+Shift+a focus parent)
-          (bindsym $mod+Shift+e exec ,(file-append sway "/bin/swaynag")
+          (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
                    -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
                    -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
           (gaps left 78))))) ; To accommodate the crack in my screen.
@@ -5266,7 +5266,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    home-sway-service-type
    ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
    `((bindsym $mod+Print exec ,shot-output)
-     (bindsym $mod+Alt+Print exec ,swappy-clipboard)
+     (bindsym $mod+Control+Print exec ,swappy-clipboard)
      (bindsym $mod+Shift+Print exec ,shot-window-or-selection))))
 
 (define subject-output
