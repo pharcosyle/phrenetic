@@ -1239,22 +1239,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
-***** Emacs fully loaded :package:
-#+begin_src scheme
-(define* (emacs-fully-loaded* #:key pgtk?)
-  (-> (if pgtk?
-          (-> emacs-next-pgtk
-              with-emacs-latest
-              with-wayland-super-fix)
-          emacs)
-      with-native-comp
-      with-findable-C-source
-      with-zstd
-      with-path-integration-improvements))
-
-(define emacs-fully-loaded (emacs-fully-loaded*))
-(define emacs-fully-loaded-pgtk (emacs-fully-loaded* #:pgtk? #t))
-#+end_src
 ***** Emacs latest :version:
 Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
 #+begin_src scheme
@@ -1379,6 +1363,22 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                          (wrap-in-quotes "~/.guix-home/profile/include"))
                    " ")))))))))))
 #+end_src
+***** Emacs fully loaded :package:
+#+begin_src scheme
+(define* (emacs-fully-loaded* #:key pgtk?)
+  (-> (if pgtk?
+          (-> emacs-next-pgtk
+              with-emacs-latest
+              with-wayland-super-fix)
+          emacs)
+      with-native-comp
+      with-findable-C-source
+      with-zstd
+      with-path-integration-improvements))
+
+(define emacs-fully-loaded (emacs-fully-loaded*))
+(define emacs-fully-loaded-pgtk (emacs-fully-loaded* #:pgtk? #t))
+#+end_src
 *** Doom
 #+begin_src scheme
 (define* (he-doom #:key
@@ -1431,7 +1431,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "55544200be1a7334418024715f9878e04ed0e3b9")
+  (let ((commit "a570ffe16c24aaaf6b4f8f1761bb037c992de877")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -1444,7 +1444,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                (commit commit)))
          (sha256
           (base32
-           "0j25mwf19yip04vi6129wj9jihv9msx6j57mi175kwxa2l55p6gj"))
+           "17xns3y3cjpmccdzpzab81770v8v4ivhn7iwvpf1ap8g5x41inav"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/change-paths.patch")
