@@ -5137,7 +5137,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
                    -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
                    -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
-          (gaps left 78))))) ; To accommodate the crack in my screen.
+          (gaps left 78) ; To accommodate the crack in my screen.
+          ;; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
+          (exec herd start pipewire)
+          (exec herd start wireplumber)
+          (exec herd start pipewire-pulse)))))
 
      (when idle-manager
        (simple-service
@@ -5843,7 +5847,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                #:font font-mono)
                     (he-rofi #:wayland? #t)
                     (he-alacritty #:font font-mono)
-                    ;; TODO
+                    ;; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
                     ;; (list
                     ;;  (service gammastep-applet-service-type)
                     ;;  (service network-manager-applet-service-type)
