@@ -1409,7 +1409,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                      (setq param-email ,email)
                      (setq param-font-name ,(assoc-ref font #:name))
                      (setq param-font-size ,(assoc-ref font #:size))
-                     (setq param-font-weight ,(assoc-ref font #:weight)))))))))))))))
+                     (setq param-font-weight ',(assoc-ref font #:weight)))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -3664,7 +3664,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (setq param-email "pharcosyle@gmail.com")
 (setq param-font-name "Source Code Pro")
 (setq param-font-size 12)
-(setq param-font-weight medium)
+(setq param-font-weight 'medium)
 #+end_src
 ****** Personal Info :user:
 #+begin_src elisp
