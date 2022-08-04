@@ -5381,10 +5381,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (waybar-sway-language)
                       (waybar-battery)
                       (waybar-clock)))
-                    ;; TODO [sway-wip]
-                    (base16-css (local-file "/gnu/store/gnp30nm80pd8rc5j7klvm95wkxd9xkqj-rde-5b823d7/rde/features/wm/waybar/base16-default-dark.css"))
+                    (base16-css (local-file "base16-default-dark.css"))
                     font
-                    ;; (base16-css (local-file "./wm/waybar/base16-default-dark.css"))
                     transitions?)
   (append
    (list
@@ -5457,6 +5455,25 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        home-sway-service-type
        `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
          (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
+#+end_src
+****** Base16 CSS
+#+begin_src css :tangle (meta-in-dir "base16-default-dark.css")
+@define-color base00 #181818;
+@define-color base01 #282828;
+@define-color base02 #383838;
+@define-color base03 #585858;
+@define-color base04 #b8b8b8;
+@define-color base05 #d8d8d8;
+@define-color base06 #e8e8e8;
+@define-color base07 #f8f8f8;
+@define-color base08 #ab4642;
+@define-color base09 #dc9656;
+@define-color base0A #f7ca88;
+@define-color base0B #a1b56c;
+@define-color base0C #86c1b9;
+@define-color base0D #7cafc2;
+@define-color base0E #ba8baf;
+@define-color base0F #a16946;
 #+end_src
 ****** Modules
 #+begin_src scheme
