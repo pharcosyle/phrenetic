@@ -5062,6 +5062,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (,#~"")
           ;; ,@layout-config ; TODO [sway-wip]
 
+          (input type:keyboard
+                 ((xkb_file ~/projects/phrenetic/ekskaybee.xkb)
+                  (repeat_delay 250)
+                  (repeat_rate 35)))
+          (input type:touchpad
+                 ((natural_scroll enabled)
+                  (tap enabled)))
+
           (,#~"\n\n# General settings:")
           (set $mod ,sway-mod)
           (set $term ,default-terminal)
@@ -5082,23 +5090,23 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (bindsym $mod+Return exec $term)
 
           (bindsym --to-code $mod+Shift+d exec $menu)
-          (bindsym --to-code $mod+Shift+l exec $lock)
+          (bindsym --to-code $mod+Control+Shift+l exec $lock)
 
           (,#~"\n\n# Manipulating windows:")
           (bindsym --to-code $mod+Shift+c kill)
           (bindsym --to-code $mod+Shift+f fullscreen)
           (bindsym $mod+Shift+space floating toggle)
-          (bindsym $mod+Ctrl+space focus mode_toggle)
+          (bindsym $mod+Control+space focus mode_toggle)
 
-          (bindsym $mod+Left focus left)
-          (bindsym $mod+Down focus down)
-          (bindsym $mod+Up focus up)
-          (bindsym $mod+Right focus right)
+          (bindsym $mod+h focus left)
+          (bindsym $mod+j focus down)
+          (bindsym $mod+k focus up)
+          (bindsym $mod+l focus right)
 
-          (bindsym $mod+Shift+Left move left)
-          (bindsym $mod+Shift+Down move down)
-          (bindsym $mod+Shift+Up move up)
-          (bindsym $mod+Shift+Right move right)
+          (bindsym $mod+Shift+h move left)
+          (bindsym $mod+Shift+j move down)
+          (bindsym $mod+Shift+k move up)
+          (bindsym $mod+Shift+l move right)
 
           (,#~"\n\n# Moving around workspaces:")
           (bindsym $mod+tab workspace back_and_forth)
@@ -5117,7 +5125,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (,#~"")
           (default_border pixel)
           (default_floating_border pixel)
-          (gaps inner 8)))))
+          (gaps inner 8)
+
+          (,#~"")
+          (bindsym $mod+Shift+b splith)
+          (bindsym $mod+Shift+v splitv)
+          (bindsym $mod+Shift+s layout stacking)
+          (bindsym $mod+Shift+w layout tabbed)
+          (bindsym $mod+Shift+e layout toggle split)
+          (bindsym $mod+Shift+a focus parent)
+          (bindsym $mod+Shift+e exec ,(file-append sway "/bin/swaynag")
+                   -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
+                   -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+          (gaps left 78))))) ; To accommodate the crack in my screen.
 
      (when idle-manager
        (simple-service
@@ -5433,7 +5453,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (simple-service
        'waybar-add-to-sway
        home-sway-service-type
-       `((bar swaybar_command ,(file-append waybar "/bin/waybar"))))))))
+       `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
+         (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
 #+end_src
 ****** Modules
 #+begin_src scheme
