@@ -848,7 +848,7 @@ sudo guix time-machine \
    #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
 
 (define-public font-awesome
-  (let ((version "6.1.1"))
+  (let ((version "6.1.2"))
     (with-git-version
      (package
        (inherit fonts:font-awesome)
@@ -856,7 +856,7 @@ sudo guix time-machine \
        (arguments '()))
      #:version version
      #:commit version
-     #:hash "01y8ys9k9cmf1pz4xqya4280yf942dm2h378qsvgip1pla2fms5f")))
+     #:hash "0ikax3i6xkv6nrc8w543rfp9bs72mxz7zc0irq21y4jw8mqahpwq")))
 #+end_src
 ** Components
 :PROPERTIES:
@@ -1257,8 +1257,8 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
 (define-public (with-emacs-latest emacs)
   (-> emacs
       (with-git-commit #:upstream-version "29.0.50"
-                       #:commit "d92fb1592a02f7e34fb82069fc8d61d85dac8a48"
-                       #:hash "12xhfiikz349vndfj992mkm0hjvbarc8l4731sk8i76a17nnfkz5")
+                       #:commit "118a911159e75f3ad9305cd7f298816bfb59d715"
+                       #:hash "0hbh19sbychhkfpnj0g8f7c20q2wz7qvnjmyvm9wa3fa9vi8zlx0")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
 ***** Wayland =Super= fix
@@ -1427,7 +1427,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "a570ffe16c24aaaf6b4f8f1761bb037c992de877")
+  (let ((commit "55544200be1a7334418024715f9878e04ed0e3b9")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -1440,7 +1440,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                (commit commit)))
          (sha256
           (base32
-           "17xns3y3cjpmccdzpzab81770v8v4ivhn7iwvpf1ap8g5x41inav"))
+           "0j25mwf19yip04vi6129wj9jihv9msx6j57mi175kwxa2l55p6gj"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/change-paths.patch")
@@ -1619,7 +1619,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
   #:use-module (ebullient utils))
 
 (define-public all-the-icons-fonts
-  (let ((commit "7193403b47ad8b65347f9bafc939a152f0fe448a")
+  (let ((commit "6f876fa11ef64af20d9b2a44fdabac6446de51ba")
         (revision "0"))
     (package
       (name "all-the-icons-fonts")
@@ -1632,7 +1632,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
                (commit commit)))
          (sha256
           (base32
-           "1mwh493312xgfra3grgnqncf2ihf7rr6rpwfx8234d46xplf0879"))
+           "1n975ziy5wyfnmmpak1vsj7nqzm5ciw811pcg7rdmc2ljlc90n5p"))
          (file-name (git-file-name name version))))
       (build-system font-build-system)
       (arguments
@@ -4739,7 +4739,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 ;; -*- no-byte-compile: t; -*-
 
 (package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
-(package! expand-region :pin "7e5bbe2763c12bae3e77fe0c49bcad05ff91dbfe")
+(package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
 (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
 (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
 
