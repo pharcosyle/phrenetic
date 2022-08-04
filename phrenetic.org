@@ -5327,7 +5327,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         ,@(if extra-config
               extra-config '())))))))
 
-(define swaylock-screen-locker "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
+(define (swaylock-screen-locker)
+  "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved.
 #+end_src
 **** Idle managers
 ***** Swayidle
@@ -5361,7 +5362,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         home-swayidle-service-type
         `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
 
-(define swayidle-idle-manager (file-append swayidle "/bin/swayidle -w"))
+(define (swayidle-idle-manager)
+  (file-append swayidle "/bin/swayidle -w"))
 #+end_src
 **** Status bars
 ***** Waybar
@@ -5622,9 +5624,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    (service
     home-rofi-service-type
     (home-rofi-configuration
-     (rofi (if wayland?
-               rofi-wayland
-               rofi))
+     (rofi (get-rofi wayland?))
      ;; TODO Trying out Andrew Tropin's confguration as-is for now, revisit later.
      (config-rasi
       `((configuration
@@ -5641,7 +5641,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
           (kb-page-prev . "Alt+v")))
         ,#~(format #f "@theme \"~a\"" #$theme)))))))
 
-(define rofi-application-launcher (file-append rofi "/bin/rofi -show drun"))
+(define* (rofi-application-launcher #:key wayland?)
+  (file-append (get-rofi wayland?) "/bin/rofi -show drun"))
+
+(define (get-rofi wayland?)
+  (if wayland?
+      rofi-wayland
+      rofi))
 #+end_src
 **** Terminals
 ***** Alacritty
@@ -5673,7 +5679,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (string-delete #\-)
        string-capitalize))
 
-(define alacritty-terminal (file-append alacritty "/bin/alacritty"))
+(define (alacritty-terminal)
+  (file-append alacritty "/bin/alacritty"))
 #+end_src
 **** Applets
 ***** Gammastep
@@ -5804,14 +5811,14 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  (he-pipewire) '())
              (he-flatpak)
              (if (member #:session/sway sessions)
-                 (let ((screen-locker swaylock-screen-locker))
+                 (let ((screen-locker (swaylock-screen-locker)))
                    (append
                     (he-sway #:pipewire? pipewire?
                              #:screen-locker screen-locker
-                             #:idle-manager swayidle-idle-manager
-                             #:application-launcher rofi-application-launcher
-                             #:default-terminal alacritty-terminal
-                             #:backup-terminal alacritty-terminal)
+                             #:idle-manager (swayidle-idle-manager)
+                             #:application-launcher (rofi-application-launcher #:wayland? #t)
+                             #:default-terminal (alacritty-terminal)
+                             #:backup-terminal (alacritty-terminal))
                     (he-swaylock)
                     (he-swayidle #:sway? #t
                                  #:screen-locker screen-locker)
