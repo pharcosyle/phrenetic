@@ -899,7 +899,7 @@ sudo guix time-machine \
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
-  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
+  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
   #:use-module (ebullient utils)
@@ -1174,7 +1174,7 @@ nix-env --upgrade
 *** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key
-                   (emacs (emacs-fully-loaded))
+                   (emacs emacs-fully-loaded-pgtk)
                    zsh-vterm?)
   (list
    (simple-service
@@ -1234,13 +1234,14 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-12))
   #:use-module (ebullient utils)
-  #:export (emacs-fully-loaded))
+  #:export (emacs-fully-loaded
+            emacs-fully-loaded-pgtk))
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
 ***** Emacs fully loaded :package:
 #+begin_src scheme
-(define* (emacs-fully-loaded #:key (pgtk? #t))
+(define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
           (-> emacs-next-pgtk
               with-emacs-latest
@@ -1250,6 +1251,9 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
       with-findable-C-source
       with-zstd
       with-path-integration-improvements))
+
+(define emacs-fully-loaded (emacs-fully-loaded*))
+(define emacs-fully-loaded-pgtk (emacs-fully-loaded* #:pgtk? #t))
 #+end_src
 ***** Emacs latest :version:
 Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
