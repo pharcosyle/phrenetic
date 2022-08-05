@@ -1430,7 +1430,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "bcca96a69a44c1a752dd58761f8c7e2b43695f0b")
+  (let ((commit "a71e757c8d14fbe0eb7187b9bd6d317edf302f27")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -1443,7 +1443,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                (commit commit)))
          (sha256
           (base32
-           "1vhwhigrssfw5rqclg4kyy4d4hvi3104ywxainim1w5m4w90p35r"))
+           "1nry7k7vm09rx4g1x1yqf5vy0r5n3qa1chi14lppcijj6isjz9c6"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/change-paths.patch")
