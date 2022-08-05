@@ -228,7 +228,7 @@ guix pull
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
   ;; #:use-module ((gnu packages shells) #:select (zsh))
-  #:use-module ((gnu packages wm) #:select (sway swaylock))
+  #:use-module ((gnu packages wm) #:select (swaylock))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -242,6 +242,7 @@ guix pull
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux-lts linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
@@ -891,13 +892,13 @@ sudo guix time-machine \
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (sway swaylock swaylock-effects swayidle waybar))
+  #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
-  #:use-module ((rde packages) #:select (rofi-wayland))
+  #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
@@ -5076,6 +5077,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (service
       home-sway-service-type
       (home-sway-configuration
+       (package sway) ; TODO remove this line when I'm not using sway-latest any more
        (config
         `((xwayland ,(if xwayland? 'enable 'disable))
           (,#~"")
