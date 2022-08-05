@@ -1408,8 +1408,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   "params.el"
                   (serialize-elisp-config
                    #f
-                   `((provide 'params)
-                     (setq param-full-name ,full-name)
+                   `((setq param-full-name ,full-name)
                      (setq param-email ,email)
                      (setq param-font-name ,(assoc-ref font #:name))
                      (setq param-font-size ,(assoc-ref font #:size))
@@ -3671,11 +3670,15 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 :END:
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
-
+#+end_src
+****** Doom Guix module params
+#+begin_src elisp
+(load! "params")
+#+end_src
+****** Requires
+#+begin_src elisp
 (use-package! dash)
 (use-package! s)
-
-(require 'params)
 #+end_src
 ****** Personal Info :user:
 #+begin_src elisp
