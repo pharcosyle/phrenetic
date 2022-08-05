@@ -899,8 +899,8 @@ sudo guix time-machine \
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
-  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
+  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
@@ -1234,7 +1234,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-12))
   #:use-module (ebullient utils)
-  #:export (emacs-fully-loaded
+  #:export (;; emacs-fully-loaded
             emacs-fully-loaded-pgtk))
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
@@ -1376,7 +1376,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       with-zstd
       with-path-integration-improvements))
 
-(define emacs-fully-loaded (emacs-fully-loaded*))
+;; (define emacs-fully-loaded (emacs-fully-loaded*))
 (define emacs-fully-loaded-pgtk (emacs-fully-loaded* #:pgtk? #t))
 #+end_src
 *** Doom
@@ -6249,9 +6249,10 @@ guix home \
 (define-module (penitent packages clojure)
   #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments)))
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
 
-(define-public (with-man-pages clojure-tools)
+(define (with-man-pages clojure-tools)
   (package
     (inherit clojure-tools)
     (arguments
@@ -6259,6 +6260,9 @@ guix home \
        ((#:install-plan install-plan)
         #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
                                    ("clj.1" "/share/man/man1/"))))))))
+
+(define-public clojure-tools-with-man-pages
+  (with-man-pages clojure:clojure-tools))
 #+end_src
 * Configurations
 :PROPERTIES:
