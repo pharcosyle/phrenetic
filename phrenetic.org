@@ -373,7 +373,7 @@ guix pull
            (operating-system-file-systems os))))))
 #+end_src
 *** Stateless
-The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems so users of this component should include it at the end of their component chain.
+The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems. All of this is to say: include it at the end of the component chain.
 #+begin_src scheme
 (define-system-comp (stateless #:key persist-dir bluetooth?)
   (initrd (lambda (file-systems . rest)
