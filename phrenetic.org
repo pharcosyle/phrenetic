@@ -16,7 +16,7 @@
   - [[#packages][Packages]]
   - [[#components-1][Components]]
   - [[#base-he][Base HE]]
-- [[#unity][Unity]]
+- [[#union][Union]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
   - [[#functions][Functions]]
@@ -5869,16 +5869,16 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  '()))
             '())))))))
 #+end_src
-* Unity
-#+begin_src scheme :tangle (meta-in-dir "ebullient/unity.scm")
-(define-module (ebullient unity)
+* Union
+#+begin_src scheme :tangle (meta-in-dir "ebullient/union.scm")
+(define-module (ebullient union)
   #:use-module (gnu services)
   #:use-module (gnu services home)
   #:use-module (gnu system)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:export (unity))
+  #:export (union))
 
-(define* (unity #:key
+(define* (union #:key
                 os
                 hes)
   (operating-system
@@ -6276,7 +6276,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define-module (exuberant frostfire)
   #:use-module (ebullient home base-he)
   #:use-module (ebullient system base-os)
-  #:use-module (ebullient unity)
+  #:use-module (ebullient union)
   #:export (os
             primary-he
             aux-he
@@ -6341,7 +6341,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
            #:pipewire? pipewire?))
 
 (define frostfire
-  (unity #:os os
+  (union #:os os
          #:hes `(;; (,primary-name . ,primary-he)
                  (,aux-name . ,aux-he)
                  ;; (,guest-name . ,guest-he)
