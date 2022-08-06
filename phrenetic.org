@@ -5735,7 +5735,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  (list (service-extension
                         home-shepherd-service-type
                         gammastep-shepherd-service)))
-                (default-value #f)))
+                (default-value #f)
+                (description "Gammastep applet.")))
 #+end_src
 ***** Network Manager
 #+begin_src scheme
@@ -5759,7 +5760,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  (list (service-extension
                         home-shepherd-service-type
                         network-manager-shepherd-service)))
-                (default-value #f)))
+                (default-value #f)
+                (description "Network manager applet.")))
 #+end_src
 ***** Udiskie
 #+begin_src scheme
@@ -5787,7 +5789,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  (list (service-extension
                         home-shepherd-service-type
                         udiskie-shepherd-service)))
-                (default-value #f)))
+                (default-value #f)
+                (description "Udiskie applet.")))
 #+end_src
 ** Base HE
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
