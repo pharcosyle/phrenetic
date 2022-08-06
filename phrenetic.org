@@ -1108,14 +1108,14 @@ SAVEHIST=$HISTSIZE
     'fonts-add-packages
     home-profile-service-type
     (map (lambda (font)
-           (assoc-ref font #:package))
+           (assoc-ref font #:font/package))
          fonts))))
 
 (define font-monospace
-  `((#:name . "Source Code Pro")
-    (#:size . 12)
-    (#:weight . ,'medium)
-    (#:package . ,font-adobe-source-code-pro)))
+  `((#:font/name . "Source Code Pro")
+    (#:font/size . 12)
+    (#:font/weight . ,'medium)
+    (#:font/package . ,font-adobe-source-code-pro)))
 #+end_src
 *** Nix
 #+begin_src scheme
@@ -1410,9 +1410,9 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                    #f
                    `((setq param-full-name ,full-name)
                      (setq param-email ,email)
-                     (setq param-font-name ,(assoc-ref font #:name))
-                     (setq param-font-size ,(assoc-ref font #:size))
-                     (setq param-font-weight ',(assoc-ref font #:weight)))))))))))))))
+                     (setq param-font-name ,(assoc-ref font #:font/name))
+                     (setq param-font-size ,(assoc-ref font #:font/size))
+                     (setq param-font-weight ',(assoc-ref font #:font/weight)))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -5422,7 +5422,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             (*
              ((font-family . #(,@(if font
                                      (list
-                                      (-> font (assoc-ref #:name) string->symbol))
+                                      (-> font (assoc-ref #:font/name) string->symbol))
                                      '())
                                FontAwesome))
               ,@(if transitions? '() '((transition . none)))
@@ -5707,9 +5707,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                (y . 5)))))
         ,@(if font
               `((font . ((normal . ((style . , (font-weight->style
-                                                (assoc-ref font #:weight)))
-                                    (family . ,(assoc-ref font #:name))))
-                         (size . ,(assoc-ref font #:size)))))
+                                                (assoc-ref font #:font/weight)))
+                                    (family . ,(assoc-ref font #:font/name))))
+                         (size . ,(assoc-ref font #:font/size)))))
               '())
         ,@(if config-file
               `((import . #(,config-file)))
