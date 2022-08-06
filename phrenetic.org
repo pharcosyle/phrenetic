@@ -529,6 +529,17 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
 #+end_src
 *** Accounts
 #+begin_src scheme
+(define-system-comp (accounts #:key
+                              users
+                              bluetooth?)
+  (users
+   (append (map (lambda (user)
+                  (apply account (->> user
+                                      (acons #:bluetooth? bluetooth?)
+                                      keyvals)))
+                users)
+           (operating-system-users os))))
+
 (define* (account #:key
                   name
                   comment
@@ -551,17 +562,6 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
    (password (if password
                  (crypt password salt)
                  #f))))
-
-(define-system-comp (accounts #:key
-                              users
-                              bluetooth?)
-  (users
-   (append (map (lambda (user)
-                  (apply account (->> user
-                                      (acons #:bluetooth? bluetooth?)
-                                      keyvals)))
-                users)
-           (operating-system-users os))))
 #+end_src
 *** Nonguix substitutes
 This could be done using the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] but it works fine now so I won't change it.
