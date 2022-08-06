@@ -4766,11 +4766,6 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 
 (package! i3wm-config-mode :pin "3574d88241118ed6cc5a3022b6dde58d6f5af9dd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
 
-;; REVIEW Breaks stuff after I updated to emacs 29 latest:
-;; Compiling EmacSQL SQLite binary ...
-;; Code Review initialization: (error "No EmacSQL SQLite binary available, aborting")
-(package! code-review :disable t)
-
 (package! app-launcher
   :recipe (:host github
            :repo "SebastienWae/app-launcher")
