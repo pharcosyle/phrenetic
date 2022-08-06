@@ -1158,6 +1158,8 @@ nix-env --install <<nix-packages>>
 #+begin_src sh :results output silent :async
 nix-env --upgrade
 #+end_src
+***** how to pin packages?
+Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
 *** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key
@@ -5028,6 +5030,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # flatpak install --user flathub com.spotify.Client
 # flatpak install --user flathub us.zoom.Zoom
 #+end_src
+****** how to pin?
+Some cursorily-googled intel:
+- [[https://github.com/flatpak/flatpak/issues/3097][flatpak/flatpak#3097 Is there a way to install a specific version?]]
+- [[https://discourse.flathub.org/t/install-an-older-version-of-an-app/320/3][Install an older version of an app - #3 by gjanssens - Flathub Discourse]]
 **** Window managers
 ***** Sway
 #+begin_src scheme
@@ -6459,6 +6465,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       )
 #+end_src
 ** Scripts WIP
+TODO Are the double-quotes I have around --expression args okay?
 #+begin_src sh :var os_name="" os_dir=(meta-get-dir)
 sudo guix time-machine \
 	--channels="$os_dir"/$os_name-channels-lock \
