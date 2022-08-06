@@ -18,6 +18,7 @@
   - [[#components-1][Components]]
   - [[#base-he][Base HE]]
   - [[#-1][\]]
+- [[#unity][Unity]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
   - [[#functions][Functions]]
@@ -26,8 +27,7 @@
 - [[#auxillary][Auxillary]]
   - [[#packages-1][Packages]]
 - [[#configurations][Configurations]]
-  - [[#operating-systems][Operating systems]]
-  - [[#home-environments][Home environments]]
+  - [[#frostfire][Frostfire]]
 - [[#channel][Channel]]
 - [[#-2][\]]
 - [[#dev-1][Dev]]
@@ -5889,6 +5889,29 @@ guix home \
 	--expression="(@ (exuberant he $he_name) he)" \
 	reconfigure
 #+end_src
+* Unity
+#+begin_src scheme :tangle (meta-in-dir "ebullient/unity.scm")
+(define-module (ebullient unity)
+  #:use-module (gnu services)
+  #:use-module (gnu services home)
+  #:use-module (gnu system)
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:export (unity))
+
+(define* (unity #:key
+                os
+                hes)
+  (operating-system
+    (inherit os)
+    (services
+     (append
+      (operating-system-user-services os)
+      (map
+       (match-lambda
+         ((user . he)
+          (service guix-home-service-type `((,user . ,he)))))
+       hes)))))
+#+end_src
 * Utils
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
@@ -6268,111 +6291,134 @@ guix home \
 :PROPERTIES:
 :meta-dir+: /exuberant
 :END:
-** Operating systems
-:PROPERTIES:
-:meta-dir+: /os
-:END:
-*** Frostfire
+** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
-(define-module (exuberant os frostfire)
-  #:use-module (ebullient system base-os))
+(define-module (exuberant frostfire)
+  #:use-module (ebullient home base-he)
+  #:use-module (ebullient system base-os)
+  #:use-module (ebullient unity)
+  #:export (os
+            primary-he))
+
+(define nix? #t)
+(define desktop? #t)
+(define pipewire? #t)
+
+(define primary-name "pharcosyle")
+(define primary-full-name "Krzysztof Baranowski")
+(define aux-name "pcoulson")
+(define aux-full-name "Phil Coulson")
+(define guest-name "gandalf")
 
 (define os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
-           #:users '(((#:name . "pharcosyle")
-                      (#:comment . "Krzysztof Baranowski")
+           #:users `(((#:name . ,primary-name)
+                      (#:comment . ,primary-full-name)
                       (#:admin? . #t))
-                     ((#:name . "pcoulson")
-                      (#:comment . "Phil Coulson")
+                     ((#:name . ,aux-name)
+                      (#:comment . ,aux-full-name)
                       (#:admin? . #t))
-                     ((#:name . "gandalf")
+                     ((#:name . ,guest-name)
                       (#:comment . "Speak Friend and Enter")
                       (#:password . "mellon")))
            ;; #:auto-login "pharcosyle" ; REVIEW Enable this later.
            #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:stateless? #t
-           #:nix? #t
+           #:nix? nix?
            #:console? #t
-           #:desktop? #t
-           #:pipewire? #t
+           #:desktop? desktop?
+           #:pipewire? pipewire?
            #:bluetooth? #t
            #:sessions '(#:session/gnome
                         #:session/sway)
            #:laptop? #t
            #:macbook? #t))
 
-os
+(define primary-he
+  (base-he #:full-name ,primary-full-name
+           #:email "pharcosyle@gmail.com"
+           #:developer? #t
+           #:nix? nix?
+           #:desktop? desktop?
+           #:pipewire? pipewire?
+           #:sessions '(#:session/sway)))
+
+(define aux-he
+  (base-he #:full-name ,aux-full-name
+           #:email "pharcosyle+phil_coulson@gmail.com"
+           #:developer? #t
+           #:nix? nix?
+           #:desktop? desktop?
+           #:pipewire? pipewire?
+           #:sessions '(#:session/sway)))
+
+(define guest-he
+  (base-he #:desktop? desktop?
+           #:pipewire? pipewire?))
+
+(define frostfire
+  (unity #:os os
+         #:hes `(;; (,primary-name . ,primary-he)
+                 (,aux-name . ,aux-he)
+                 ;; (,guest-name . ,guest-he)
+                 )))
 #+end_src
-**** Channels
-#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
-(cons* (channel
-        (name 'phrenetic)
-        (url "file:///home/pharcosyle/projects/phrenetic")
-        (branch "tangled"))
-       %default-channels)
+*** LUKS UUID :external_state:
+#+name: frostfire-luks-uuid
+#+begin_src org
+bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
-**** Channels lock :version:
-#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
+*** Channels
+#+begin_src scheme :tangle (meta-in-dir "channels")
 (list (channel
         (name 'guix)
         (url "https://git.savannah.gnu.org/git/guix.git")
-        (branch "master")
-        (commit
-          "85f026f36ae93ac3ce3fa50150848eab9b31b69f")
         (introduction
           (make-channel-introduction
             "9edb3f66fd807b096b48283debdcddccfea34bad"
             (openpgp-fingerprint
               "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
       (channel
+        (name 'flat)
+        (url "https://github.com/flatwhatson/guix-channel.git")
+        (introduction
+          (make-channel-introduction
+            "33f86a4b48205c0dc19d7c036c85393f0766f806"
+            (openpgp-fingerprint
+              "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
+      (channel
+        (name 'rde)
+        (url "https://git.sr.ht/~abcdw/rde")
+        (introduction
+          (make-channel-introduction
+            "257cebd587b66e4d865b3537a9a88cccd7107c95"
+            (openpgp-fingerprint
+              "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+      (channel
         (name 'nonguix)
         (url "https://gitlab.com/nonguix/nonguix")
-        (branch "master")
-        (commit
-          "35533c763a81365e14d0b58ad262e8f88c82872c")
         (introduction
           (make-channel-introduction
             "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
             (openpgp-fingerprint
               "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
-#+end_src
-**** LUKS UUID :external_state:
-#+name: frostfire-luks-uuid
-#+begin_src org
-bdda56af-6ca0-4953-bc13-d5af8715e0e5
-#+end_src
-** Home environments
-:PROPERTIES:
-:meta-dir+: /he
-:END:
-*** Solitude
-#+begin_src scheme :tangle (meta-in-dir "solitude.scm")
-(define-module (exuberant he solitude)
-  #:use-module (ebullient home base-he))
 
-(define he
-  (base-he #:full-name "Krzysztof Baranowski"
-           #:email "pharcosyle@gmail.com"
-           #:developer? #t
-           #:nix? #t
-           #:desktop? #t
-           #:pipewire? #t
-           #:sessions '(#:session/sway)))
+;; (cons* (channel
+;;         (name 'phrenetic)
+;;         (url "https://github.com/pharcosyle/phrenetic")
+;;         (branch "tangled"))
+;;        %default-channels)
 
-he
+;; (cons* (channel
+;;         (name 'phrenetic)
+;;         (url "file:///home/pharcosyle/projects/phrenetic")
+;;         (branch "tangled"))
+;;        %default-channels)
 #+end_src
-**** Channels
-#+begin_src scheme :tangle (meta-in-dir "solitude-channels")
-(cons* (channel
-        (name 'phrenetic)
-        (url "file:///home/pharcosyle/projects/phrenetic")
-        (branch "tangled"))
-       %default-channels)
-#+end_src
-**** Channels lock :version:
-#+begin_src scheme :tangle (meta-in-dir "solitude-channels-lock")
+*** Channels lock :version:
+#+begin_src scheme :tangle (meta-in-dir "channels-lock")
 (list (channel
         (name 'guix)
         (url "https://git.savannah.gnu.org/git/guix.git")
@@ -6416,7 +6462,20 @@ he
           (make-channel-introduction
             "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
             (openpgp-fingerprint
-              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+              "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+      ;; (channel
+      ;;   (name 'phrenetic)
+      ;;   (url "https://github.com/pharcosyle/phrenetic")
+      ;;   (branch "tangled")
+      ;;   (commit
+      ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
+      ;; (channel
+      ;;   (name 'phrenetic)
+      ;;   (url "file:///home/pharcosyle/projects/phrenetic")
+      ;;   (branch "tangled")
+      ;;   (commit
+      ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
+      )
 #+end_src
 * Channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
