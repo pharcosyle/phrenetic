@@ -12,12 +12,10 @@
 - [[#system][System]]
   - [[#components][Components]]
   - [[#base-os][Base OS]]
-  - [[#][\]]
 - [[#home][Home]]
   - [[#packages][Packages]]
   - [[#components-1][Components]]
   - [[#base-he][Base HE]]
-  - [[#-1][\]]
 - [[#unity][Unity]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
@@ -28,8 +26,8 @@
   - [[#packages-1][Packages]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
+  - [[#scripts-wip][Scripts WIP]]
 - [[#channel][Channel]]
-- [[#-2][\]]
 - [[#dev-1][Dev]]
   - [[#git-config][Git config]]
   - [[#git-ignore][Git ignore]]
@@ -809,17 +807,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                     (stateless $ #:persist-dir persist-dir
                                #:bluetooth? bluetooth?)
                     $)))))))
-#+end_src
-** \
-- TODO expression shouldn't reference "exuberant"
-#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
-sudo guix time-machine \
-	--channels="$os_dir"/$os_name-channels-lock \
-	-- \
-	system \
-	--load-path=. \
-	--expression="(@ (exuberant os $os_name) os)" \
-	reconfigure
 #+end_src
 * Home
 :PROPERTIES:
@@ -5878,17 +5865,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                  '()))
             '())))))))
 #+end_src
-** \
-#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
-guix pull --channels="$he_dir"/$he_name-channels-lock
-#+end_src
-- TODO expression shouldn't reference "exuberant"
-#+begin_src sh :var he_name=""
-guix home \
-	--load-path=. \
-	--expression="(@ (exuberant he $he_name) he)" \
-	reconfigure
-#+end_src
 * Unity
 #+begin_src scheme :tangle (meta-in-dir "ebullient/unity.scm")
 (define-module (ebullient unity)
@@ -6477,6 +6453,33 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
       )
 #+end_src
+** Scripts WIP
+#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
+sudo guix time-machine \
+	--channels="$os_dir"/$os_name-channels-lock \
+	-- \
+	system \
+	--load-path=. \
+	--expression="(@ (exuberant os $os_name) os)" \
+	reconfigure
+#+end_src
+
+#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
+guix pull --channels="$he_dir"/$he_name-channels-lock
+#+end_src
+#+begin_src sh :var he_name=""
+guix home \
+	--load-path=. \
+	--expression="(@ (exuberant he $he_name) he)" \
+	reconfigure
+#+end_src
+
+#+begin_src sh :var name="" dir=""
+guix time-machine \
+	--channels="$dir"/$name-channels \
+	-- \
+	describe --format=channels > "$dir"/$name-channels-lock
+#+end_src
 * Channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
 (channel
@@ -6506,13 +6509,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
-#+end_src
-* \
-#+begin_src sh :var name="" dir=""
-guix time-machine \
-	--channels="$dir"/$name-channels \
-	-- \
-	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 * Dev
 ** Git config
