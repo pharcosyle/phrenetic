@@ -258,7 +258,7 @@ guix pull
             stateless-persist-dir
             btrfs
             btrfs-subvols
-            users
+            accounts
             nonguix-substitutes
             nix
             console-keyboard-layouts
@@ -527,7 +527,7 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
    (if nix?
        '(("nix" . "/nix")) '())))
 #+end_src
-*** Users
+*** Accounts
 #+begin_src scheme
 (define* (account #:key
                   name
@@ -552,15 +552,15 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                  (crypt password salt)
                  #f))))
 
-(define-system-comp (users #:key
-                           who
-                           bluetooth?)
+(define-system-comp (accounts #:key
+                              users
+                              bluetooth?)
   (users
    (append (map (lambda (user)
                   (apply account (->> user
                                       (acons #:bluetooth? bluetooth?)
                                       keyvals)))
-                who)
+                users)
            (operating-system-users os))))
 #+end_src
 *** Nonguix substitutes
@@ -746,7 +746,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                   host-name
                   timezone
                   locale
-                  accounts
+                  users
                   auto-login
                   disk-encryption?
                   luks-uuid
@@ -768,8 +768,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
       grub-efi
       base-services
       nss
-      (users #:who accounts
-             #:bluetooth? bluetooth?)
+      (accounts #:users users
+                #:bluetooth? bluetooth?)
       nonguix-substitutes
       linux-nonfree
       (as-> $
@@ -6280,15 +6280,15 @@ guix home \
 (define os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
-           #:accounts '(((#:name . "pharcosyle")
-                         (#:comment . "Krzysztof Baranowski")
-                         (#:admin? . #t))
-                        ((#:name . "pcoulson")
-                         (#:comment . "Phil Coulson")
-                         (#:admin? . #t))
-                        ((#:name . "gandalf")
-                         (#:comment . "Speak Friend and Enter")
-                         (#:password . "mellon")))
+           #:users '(((#:name . "pharcosyle")
+                      (#:comment . "Krzysztof Baranowski")
+                      (#:admin? . #t))
+                     ((#:name . "pcoulson")
+                      (#:comment . "Phil Coulson")
+                      (#:admin? . #t))
+                     ((#:name . "gandalf")
+                      (#:comment . "Speak Friend and Enter")
+                      (#:password . "mellon")))
            ;; #:auto-login "pharcosyle" ; REVIEW Enable this later.
            #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
