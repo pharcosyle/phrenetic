@@ -4969,7 +4969,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+begin_src scheme
 (define* (he-desktop-packages
           #:key
-          (packages (list pavucontrol
+          (packages (list pavucontrol ; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
 
                           ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
 
@@ -5159,7 +5159,7 @@ Some cursorily-googled intel:
    (service
     home-sway-service-type
     (home-sway-configuration
-     (package sway) ; TODO remove this line when I'm not using sway-latest any more
+     (package sway) ; Remove this when I'm not using `sway-latest` any more.
      (config
       `((xwayland ,(if xwayland? 'enable 'disable))
         (,#~"")
