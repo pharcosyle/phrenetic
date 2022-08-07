@@ -412,7 +412,8 @@ guix pull
            (operating-system-file-systems os))))))
 #+end_src
 *** Stateless
-The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services. It also modifies file systems. All of this is to say: include it at the end of the component chain.
+Must succeed "File systems" component. Probably should succeed /all/ other components.
+- The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
 #+begin_src scheme
 (define-system-comp (stateless #:key persist-dir bluetooth?)
   (initrd (lambda (file-systems . rest)
@@ -658,6 +659,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
            config)))))
 #+end_src
 **** KMonad
+Must succeed "Accounts" component.
 #+begin_src scheme
 (define-system-comp (kmonad-cmp #:key users)
   (packages
