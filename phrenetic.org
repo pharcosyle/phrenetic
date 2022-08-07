@@ -5164,16 +5164,24 @@ Some cursorily-googled intel:
       `((xwayland ,(if xwayland? 'enable 'disable))
         (,#~"")
 
-        ,@(if kb-layout
-              `((input type:keyboard
-                       ((xkb_layout  ,(keyboard-layout-name kb-layout))
-                        (xkb_variant ,(keyboard-layout-variant kb-layout))
-                        (xkb_model ,(keyboard-layout-model kb-layout))
-                        (xkb_options ,(string-join
-                                       (keyboard-layout-options kb-layout) ","))
-                        (repeat_delay ,kb-repeat-delay)
-                        (repeat_rate ,kb-repeat-rate))))
-              '())
+        (input type:keyboard
+               ,(append
+                 (if kb-layout
+                     (append
+                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
+                      (if-let ((variant (keyboard-layout-variant kb-layout)))
+                              `((xkb_variant ,variant)) '())
+                      (if-let ((model (keyboard-layout-model kb-layout)))
+                              `((xkb_model ,model)) '())
+                      (let ((options (keyboard-layout-options kb-layout)))
+                        (if (null? options)
+                            '()
+                            `((xkb_options ,(string-join
+                                             (keyboard-layout-options kb-layout) ","))))))
+                     '())
+                 `((repeat_delay ,kb-repeat-delay))
+                 `((repeat_rate ,kb-repeat-rate))))
+
         (input type:touchpad
                ((natural_scroll enabled)
                 (tap enabled)))
