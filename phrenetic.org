@@ -1233,8 +1233,7 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
 #+begin_src scheme
 (define-public (with-emacs-latest emacs)
   (-> emacs
-      (with-git-commit #:upstream-version "29.0.50"
-                       #:commit "d92fb1592a02f7e34fb82069fc8d61d85dac8a48"
+      (with-git-commit #:commit "d92fb1592a02f7e34fb82069fc8d61d85dac8a48"
                        #:hash "12xhfiikz349vndfj992mkm0hjvbarc8l4731sk8i76a17nnfkz5")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
@@ -6005,7 +6004,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 
 (define* (with-git pkg
                    #:key
-                   (upstream-version (package-version pkg))
+                   upstream-version
                    revision
                    commit
                    hash)
@@ -6031,9 +6030,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             #:commit commit
             #:hash hash))
 
-(define* (with-git-commit pkg #:key upstream-version (revision "0") commit hash)
+(define* (with-git-commit pkg #:key (revision "0") commit hash)
   (with-git pkg
-            #:upstream-version upstream-version
+            #:upstream-version (package-version pkg)
             #:revision revision
             #:commit commit
             #:hash hash))
