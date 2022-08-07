@@ -9,11 +9,13 @@
 - [[#installation][Installation]]
   - [[#create-bootable-usb][Create bootable USB]]
   - [[#install][Install]]
+- [[#packages][Packages]]
+  - [[#kmonad][KMonad]]
 - [[#system][System]]
   - [[#components][Components]]
   - [[#base-os][Base OS]]
 - [[#home][Home]]
-  - [[#packages][Packages]]
+  - [[#packages-1][Packages]]
   - [[#components-1][Components]]
   - [[#base-he][Base HE]]
 - [[#union][Union]]
@@ -23,7 +25,7 @@
   - [[#association-lists][Association lists]]
   - [[#guix][Guix]]
 - [[#auxillary][Auxillary]]
-  - [[#packages-1][Packages]]
+  - [[#packages-2][Packages]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
   - [[#scripts-wip][Scripts WIP]]
@@ -205,6 +207,43 @@ guix pull
 
 # Run a system reconfigure, home reconfigure, install manifests, and deploy `home-state.git`. Copy over all my old data.
 #+end_src
+* Packages
+:PROPERTIES:
+:meta-dir+: /ebullient/packages
+:END:
+** KMonad :upstream:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "kmonad.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient packages kmonad)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages haskell-apps) #:select (kmonad) #:prefix haskell-apps:)
+  #:use-module ((gnu packages haskell-check) #:select (ghc-hspec hspec-discover))
+  #:use-module (ebullient utils))
+
+(define-public kmonad
+  (let ((commit "95bb58b7347ebacb4654fb21c798e1cd10331b0d"))
+    (with-git-commit
+     (package
+       (inherit haskell-apps:kmonad)
+       (arguments
+        (substitute-keyword-arguments (package-arguments haskell-apps:kmonad)
+          ((#:phases phases '%standard-phases)
+           #~(modify-phases #$phases
+               (add-after 'unpack 'patch-git-revision
+                 (lambda _
+                   (substitute* "src/KMonad/Args/Cmd.hs"
+                     (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
+       (inputs
+        (modify-inputs (package-inputs haskell-apps:kmonad)
+                       (prepend ghc-hspec
+                                hspec-discover))))
+     #:commit commit
+     #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
+#+end_src
 * System
 :PROPERTIES:
 :meta-dir+: /ebullient/system
@@ -241,6 +280,7 @@ guix pull
   #:use-module ((nongnu packages linux) #:select (linux-lts linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
+  #:use-module ((ebullient packages kmonad) #:select (kmonad))
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
@@ -261,6 +301,7 @@ guix pull
             nix
             console-keyboard-layouts
             hidpi-console-font
+            kmonad-cmp
             desktop-services
             gdm
             gnome-desktop
@@ -545,7 +586,8 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                   admin?
                   password
                   (salt "toosimple")
-                  bluetooth?)
+                  bluetooth?
+                  #:allow-other-keys)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -614,6 +656,32 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
              (cons (car tty-and-font)
                    (file-append font-terminus "/share/consolefonts/ter-132n")))
            config)))))
+#+end_src
+**** KMonad
+#+begin_src scheme
+(define-system-comp (kmonad-cmp #:key users)
+  (packages
+   (cons* kmonad
+          (operating-system-packages os)))
+  (users
+   (update-list
+    (operating-system-users os)
+    (let ((kmonad-users
+           (->> users
+                (filter (lambda (user)
+                          (assoc-ref user #:kmonad?)))
+                (map (lambda (user)
+                       (assoc-ref user #:name))))))
+      (lambda (account)
+        (member (user-account-name account) kmonad-users)))
+    (lambda (account)
+      (user-account
+       (inherit account)
+       (supplementary-groups (append (user-account-supplementary-groups account)
+                                     '("input")))))))
+  (services
+   (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
+          (operating-system-user-services os))))
 #+end_src
 *** Desktop
 **** Desktop services
@@ -751,6 +819,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                   stateless?
                   nix?
                   console?
+                  kmonad?
                   desktop?
                   pipewire?
                   bluetooth?
@@ -776,7 +845,10 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         (if console?
             (-> $
                 (console-keyboard-layouts #:keyboard-layout kbl)
-                hidpi-console-font)
+                hidpi-console-font
+                (as-> $
+                  (if kmonad?
+                      (kmonad-cmp $ #:users users) $)))
             $)
         (if desktop?
             (-> $
@@ -889,9 +961,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
+  #:use-module ((ebullient packages kmonad) #:select (kmonad))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
-
   #:export (he-packages
             he-shells
             he-fonts
@@ -902,6 +974,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             he-git
             he-ssh
             he-direnv
+            he-kmonad
             he-xdg
             he-desktop-packages
             he-pipewire
@@ -4772,6 +4845,10 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
   :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
 
 (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
+
+(package! kbd-mode
+  :recipe (:host github
+           :repo "kmonad/kbd-mode"))
 #+end_src
 *** Git
 #+begin_src scheme
@@ -4854,6 +4931,37 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                        (home-zsh-extension
                         (zshrc
                          (list (direnv-hook "zsh"))))))))))
+#+end_src
+*** Console
+**** KMonad
+#+begin_src scheme
+(define* (he-kmonad #:key
+                    (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
+                    ;; (kbd (local-file "config.kbd"))
+                    (kbd (local-file "../../mine.kbd")))
+  (list
+   (service kmonad-service-type kbd)))
+
+(define (kmonad-shepherd-service kbd)
+  (list
+   (shepherd-service
+    (provision '(kmonad))
+    (start #~(make-forkexec-constructor
+              (list #$(file-append kmonad "/bin/kmonad") #$kbd)
+              #:log-file (string-append
+                          (or (getenv "XDG_LOG_HOME")
+                              (format #f "~a/.local/var/log"
+                                      (getenv "HOME")))
+                          "/kmonad.log")))
+    (stop #~(make-kill-destructor)))))
+
+(define kmonad-service-type
+  (service-type (name 'he-kmonad)
+                (extensions
+                 (list (service-extension
+                        home-shepherd-service-type
+                        kmonad-shepherd-service)))
+                (description "Run KMonad.")))
 #+end_src
 *** Desktop
 **** Desktop packages
@@ -5810,6 +5918,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                   (interactive-shell (if developer?
                                          #:shell/zsh login-shell))
                   nix?
+                  console?
+                  kmonad?
                   desktop?
                   pipewire?
                   sessions)
@@ -5835,6 +5945,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                      #:email email)
              (he-ssh)
              (he-direnv #:shell interactive-shell))
+            '())
+        (if console?
+            (if kmonad?
+                (he-kmonad) '())
             '())
         (if desktop?
             (append
@@ -6288,13 +6402,16 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             guest-he))
 
 (define nix? #t)
+(define console? #t)
 (define desktop? #t)
 (define pipewire? #t)
 
 (define primary-name "pharcosyle")
 (define primary-full-name "Krzysztof Baranowski")
+(define primary-kmonad? #t)
 (define aux-name "pcoulson")
 (define aux-full-name "Phil Coulson")
+(define aux-kmonad? #t)
 (define guest-name "gandalf")
 
 (define os
@@ -6302,10 +6419,12 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
            #:timezone "America/Los_Angeles"
            #:users `(((#:name . ,primary-name)
                       (#:comment . ,primary-full-name)
-                      (#:admin? . #t))
+                      (#:admin? . #t)
+                      (#:kmonad? . ,primary-kmonad?))
                      ((#:name . ,aux-name)
                       (#:comment . ,aux-full-name)
-                      (#:admin? . #t))
+                      (#:admin? . #t)
+                      (#:kmonad? ,aux-kmonad?))
                      ((#:name . ,guest-name)
                       (#:comment . "Speak Friend and Enter")
                       (#:password . "mellon")))
@@ -6314,7 +6433,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
            #:luks-uuid "<<frostfire-luks-uuid>>"
            #:stateless? #t
            #:nix? nix?
-           #:console? #t
+           #:console? console?
+           #:kmonad? #t
            #:desktop? desktop?
            #:pipewire? pipewire?
            #:bluetooth? #t
@@ -6328,6 +6448,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
            #:email "pharcosyle@gmail.com"
            #:developer? #t
            #:nix? nix?
+           #:console? console?
+           #:kmonad? primary-kmonad?
            #:desktop? desktop?
            #:pipewire? pipewire?
            #:sessions '(#:session/sway)))
@@ -6337,12 +6459,15 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
            #:email "pharcosyle+phil_coulson@gmail.com"
            #:developer? #t
            #:nix? nix?
+           #:console? console?
+           #:kmonad? aux-kmonad?
            #:desktop? desktop?
            #:pipewire? pipewire?
            #:sessions '(#:session/sway)))
 
 (define guest-he
-  (base-he #:desktop? desktop?
+  (base-he #:console? console?
+           #:desktop? desktop?
            #:pipewire? pipewire?))
 
 (define frostfire
