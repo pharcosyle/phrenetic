@@ -307,7 +307,7 @@ guix pull
             wm
             sway-wm
             macbook-wireless
-            macbook-kbl))
+            macbook-kb-layout))
 #+end_src
 #+begin_src scheme
 (define-syntax-rule (system-comp os field ...)
@@ -641,11 +641,11 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
 *** Console
 **** Console keyboard layouts
 #+begin_src scheme
-(define-system-comp (console-keyboard-layouts #:key keyboard-layout)
-  (keyboard-layout keyboard-layout)
+(define-system-comp (console-keyboard-layouts #:key kb-layout)
+  (keyboard-layout kb-layout)
   (bootloader (bootloader-configuration
                (inherit (operating-system-bootloader os))
-               (keyboard-layout keyboard-layout))))
+               (keyboard-layout kb-layout))))
 #+end_src
 **** HiDPI console font
 #+begin_src scheme
@@ -802,7 +802,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 #+end_src
 **** Keyboard layout
 #+begin_src scheme
-(define macbook-kbl
+(define macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ** Base OS
@@ -830,8 +830,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                   sessions
                   laptop?
                   macbook?
-                  (kbl (if macbook?
-                           macbook-kbl #f)))
+                  (kb-layout (if macbook?
+                                 macbook-kb-layout #f)))
   (-> barebones-os
       (host-info #:host-name host-name
                  #:timezone timezone
@@ -848,7 +848,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             (nix $) $)
         (if console?
             (-> $
-                (console-keyboard-layouts #:keyboard-layout kbl)
+                (console-keyboard-layouts #:keyboard-layout kb-layout)
                 hidpi-console-font
                 (as-> $
                   (if kmonad?
@@ -5444,7 +5444,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
      (config
       `((show-failed-attempts . #t)
         (daemonize . #t)
-        ;; (show-keyboard-layout . ,show-keyboard-layout?) ; TODO [sway-wip]
+        ;; (show-keyboard-layout . ,show-kb-layout?) ; TODO [sway-wip]
         ;; TODO [sway-wip] Andrew Tropin: TODO: Source color from colorscheme
         (color . 3e3e3e)
         (indicator-caps-lock)
