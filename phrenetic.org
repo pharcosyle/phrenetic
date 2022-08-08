@@ -1200,6 +1200,7 @@ SAVEHIST=$HISTSIZE
 #+end_src
 **** Load Nix environment
 TODO and remove "tangle no"
+- I vaguely recall not being sure I wanted to source nix.sh, or make sure it was sourced earlier than guix stuff, so it wouldn't override guix env vars (but wouldn't that mess up one or the other, nix or guix?)
 #+begin_src sh :tangle no
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
