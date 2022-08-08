@@ -5851,7 +5851,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
-                 (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123")
+                 (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123") ; TODO don't hardcode lat/long
                  #:environment-variables
                  ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
                  (call-with-input-file "/tmp/env-for-applets" read)))))
