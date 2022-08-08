@@ -5223,9 +5223,12 @@ Some cursorily-googled intel:
 
         (bindsym --to-code $mod+Shift+r reload)
 
+        ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested in the Sway wiki and an RDE mailing list thread:
+        ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
+        ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
         (,#~"\n\n# Update dbus environment variables:")
         (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-              WAYLAND_DISPLAY XDG_CURRENT_DESKTOP)
+              DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
 
         (,#~"\n\n# Launching external applications:")
         (bindsym $mod+Control+Shift+Return exec $backup-term)
