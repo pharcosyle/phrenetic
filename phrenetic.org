@@ -1006,7 +1006,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                                       unzip)))
   (list
    (simple-service
-    'packages-add
+    'packages-add-packages
     home-profile-service-type
     packages)))
 #+end_src
@@ -4658,7 +4658,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                           )))
   (list
    (simple-service
-    'desktop-packages-add
+    'desktop-packages-add-packages
     home-profile-service-type
     packages)))
 #+end_src
@@ -4838,7 +4838,7 @@ Some cursorily-googled intel:
 (define (wm-common-packages)
   (list
    (simple-service
-    'wm-common-packages-add
+    'wm-common-add-packages
     home-profile-service-type
     (list pavucontrol))))
 
@@ -4846,7 +4846,7 @@ Some cursorily-googled intel:
   (list
    ;; The only one I know for sure needs to be installed is gammastep (the applet can't find its icon otherwise) but install the rest too just in case.
    (simple-service
-    'wm-common-applet-packages-add
+    'wm-common-applet-add-packages
     home-profile-service-type
     (list network-manager-applet
           gammastep
