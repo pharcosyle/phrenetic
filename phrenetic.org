@@ -5854,7 +5854,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define (network-manager-shepherd-service _)
   (list
    (shepherd-service
-    (provision '(nm-applet))
+    (provision '(network-manager-applet))
     (respawn? #f)
     (start #~(lambda (wayland-display . _)
                ((make-forkexec-constructor
