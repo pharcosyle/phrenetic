@@ -22,7 +22,6 @@
 - [[#utils][Utils]]
   - [[#branching][Branching]]
   - [[#functions][Functions]]
-  - [[#association-lists][Association lists]]
   - [[#guix][Guix]]
 - [[#auxillary][Auxillary]]
   - [[#packages-2][Packages]]
@@ -6021,8 +6020,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold first append-map))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
   #:export (update-list
             when-let
             if-let
@@ -6031,7 +6029,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             ->
             ->>
             as->
-            keyvals
             update-services*
             update-services
             ;; get-inferior-package
@@ -6090,15 +6087,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (with-syntax ((x (datum->syntax #'form (syntax->datum #'name))))
          #'(let ((x exp))
              (as-> form name form* ...)))))))
-#+end_src
-** Association lists
-#+begin_src scheme
-(define (keyvals x)
-  (append-map
-   (match-lambda
-     ((k . v)
-      (list k v)))
-   x))
 #+end_src
 ** Guix
 #+begin_src scheme
