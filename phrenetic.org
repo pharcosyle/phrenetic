@@ -5146,24 +5146,41 @@ Some cursorily-googled intel:
 #+begin_src scheme
 (define* (he-wm-common #:key sway?)
   (append
-   (list
-    (simple-service
-     'wm-common-packages-add
-     home-profile-service-type
-     (list pavucontrol)))
+   (wm-common-packages)
+   (wm-common-pipewire #:sway? sway?)
+   (wm-common-applets #:sway? sway?)))
+
+(define (wm-common-packages)
+  (list
+   (simple-service
+    'wm-common-packages-add
+    home-profile-service-type
+    (list pavucontrol))))
+
+(define* (wm-common-pipewire #:key sway?)
+  (list
+   (when sway?
+     (simple-service
+      'sway-start-pipewire
+      home-sway-service-type
+      '((exec herd start pipewire)
+        (exec herd start wireplumber)
+        (exec herd start pipewire-pulse))))))
+
+(define* (wm-common-applets #:key sway?)
+  (append
    (list
     (service gammastep-applet-service-type)
     (service network-manager-applet-service-type)
     (service udiskie-applet-service-type))
-   ;; (list
-   ;;  (when sway?
-   ;;    (simple-service
-   ;;     'sway-start-applets
-   ;;     home-sway-service-type
-   ;;     `((exec herd start pipewire)
-   ;;       (exec herd start wireplumber)
-   ;;       (exec herd start pipewire-pulse)))))
-   ))
+   (list
+    (when sway?
+      (simple-service
+       'sway-start-applets
+       home-sway-service-type
+       '((exec herd start gammastep-applet)
+         (exec herd start network-manager-applet)
+         (exec herd start udiskie-applet)))))))
 #+end_src
 ***** Sway
 #+begin_src scheme
@@ -5845,19 +5862,18 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 #+end_src
 **** Applets
 ***** Gammastep
-- TODO broken tray icon. Probably I need to have some part of the =gammastep= package on the path so it can find the icon. Don't worry about this for now, maybe there will be some way to tell =papirus-icon-theme= to use a different icon or something.
 #+begin_src scheme
 (define (gammastep-shepherd-service _)
   (list
    (shepherd-service
     (provision '(gammastep-applet))
-    (respawn? #f)
-    (start #~(lambda (wayland-display . _)
-               ((make-forkexec-constructor
-                 (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123") ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
-                 #:environment-variables
-                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)))))
+    (start #~(make-forkexec-constructor
+                (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123") ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/gammastep-applet.log")))
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
@@ -5876,13 +5892,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   (list
    (shepherd-service
     (provision '(network-manager-applet))
-    (respawn? #f)
-    (start #~(lambda (wayland-display . _)
-               ((make-forkexec-constructor
-                 (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
-                 #:environment-variables
-                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)))))
+    (start #~(make-forkexec-constructor
+                (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/network-manager-applet.log")))
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
@@ -5901,17 +5917,17 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   (list
    (shepherd-service
     (provision '(udiskie-applet))
-    (respawn? #f)
-    (start #~(lambda (wayland-display . _)
-               ((make-forkexec-constructor
-                 (list #$(file-append udiskie "/bin/udiskie")
+    (start #~(make-forkexec-constructor
+                (list #$(file-append udiskie "/bin/udiskie")
                        "--tray"
                        ;; (string-append "--file-manager="
                        ;;                #$(file-append xdg-utils "/bin/xdg-open"))
                        )
-                 #:environment-variables
-                 ;; (list (string-append "WAYLAND_DISPLAY=" wayland-display))
-                 (call-with-input-file "/tmp/env-for-applets" read)))))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/udiskie-applet.log")))
     (stop #~(make-kill-destructor))
     (auto-start? #f))))
 
@@ -5983,6 +5999,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
              (if (member #:session/sway (or sessions '()))
                  (let ((screen-locker (swaylock-screen-locker)))
                    (append
+                    (he-wm-common #:sway? #t)
                     (he-sway #:pipewire? pipewire?
                              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                              #:screen-locker screen-locker
@@ -5996,7 +6013,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                #:font font-mono)
                     (he-rofi #:wayland? #t)
                     (he-alacritty #:font font-mono)))
-                    (he-wm-common #:sway? #t)
                  '()))
             '())))))))
 #+end_src
