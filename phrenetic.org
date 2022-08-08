@@ -6017,10 +6017,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 #+begin_src scheme
 (define-module (ebullient utils)
   #:use-module (guix git-download)
-  #:use-module ((guix inferior) #:select (inferior-for-channels lookup-inferior-packages))
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module ((srfi srfi-1) #:select (take drop remove fold first))
+  #:use-module ((srfi srfi-1) #:select (take drop remove fold))
   #:export (update-list
             when-let
             if-let
@@ -6031,7 +6030,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             as->
             update-services*
             update-services
-            ;; get-inferior-package
             with-git-version
             with-git-commit
             with-git-url))
@@ -6104,11 +6102,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    (lambda (svc)
      (eq? (service-kind svc) kind))
    update-fn))
-
-;; (define (get-inferior-package channels package)
-;;   (-> (inferior-for-channels channels)
-;;       (lookup-inferior-packages package)
-;;       first))
 
 (define* (with-git pkg
                    #:key
