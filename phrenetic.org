@@ -300,7 +300,7 @@ guix pull
             nix
             console-keyboard-layouts
             hidpi-console-font
-            kmonad-cmp
+            kmonad-tool
             desktop-services
             gdm
             gnome-desktop
@@ -663,7 +663,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
 **** KMonad
 Must succeed "Accounts" component.
 #+begin_src scheme
-(define-system-comp (kmonad-cmp #:key users)
+(define-system-comp (kmonad-tool #:key users)
   (packages
    (cons* kmonad
           (operating-system-packages os)))
@@ -852,7 +852,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                 hidpi-console-font
                 (as-> $
                   (if kmonad?
-                      (kmonad-cmp $ #:users users) $)))
+                      (kmonad-tool $ #:users users) $)))
             $)
         (if desktop?
             (-> $
