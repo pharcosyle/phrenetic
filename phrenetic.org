@@ -5980,7 +5980,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
              (if (member #:session/sway (or sessions '()))
                  (let ((screen-locker (swaylock-screen-locker)))
                    (append
-                    (he-wm-common #:sway? #t)
                     (he-sway #:pipewire? pipewire?
                              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                              #:screen-locker screen-locker
@@ -5994,6 +5993,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                #:font font-mono)
                     (he-rofi #:wayland? #t)
                     (he-alacritty #:font font-mono)))
+                    (he-wm-common #:sway? #t)
                  '()))
             '())))))))
 #+end_src
