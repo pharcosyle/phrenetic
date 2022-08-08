@@ -4693,12 +4693,12 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+end_src
 **** Pipewire
 #+begin_src scheme
-(define (he-pipewire)
+(define* (he-pipewire #:key sway?)
   (append
-   (pipewire-services)
-   (wireplumber-services)))
+   (pipewire-services #:sway? sway?)
+   (wireplumber-services #:sway? sway?)))
 
-(define (pipewire-services)
+(define* (pipewire-services #:key sway?)
   (list
    (simple-service
     'pipewire-add-package
@@ -4754,11 +4754,18 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
          "\n"
          "ctl_type.pipewire {" "\n"
          "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-         "}" "\n"))))))
+         "}" "\n"))))
+
+   (when sway?
+     (simple-service
+      'pipewire-sway-start
+      home-sway-service-type
+      '((exec herd start pipewire)
+        (exec herd start pipewire-pulse))))))
 #+end_src
 ***** Wireplumber
 #+begin_src scheme
-(define (wireplumber-services)
+(define* (wireplumber-services #:key sway?)
   (list
    (simple-service
     'wireplumber-add-package
@@ -4783,7 +4790,13 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
       (stop  #~(make-kill-destructor))
-      (auto-start? #f))))))
+      (auto-start? #f))))
+
+   (when sway?
+     (simple-service
+      'wireplumber-sway-start
+      home-sway-service-type
+      '((exec herd start wireplumber))))))
 #+end_src
 **** Flatpak
 #+begin_src scheme
@@ -4820,7 +4833,6 @@ Some cursorily-googled intel:
 (define* (he-wm-common #:key sway?)
   (append
    (wm-common-packages)
-   (wm-common-pipewire #:sway? sway?)
    (wm-common-applets #:sway? sway?)))
 
 (define (wm-common-packages)
@@ -4829,16 +4841,6 @@ Some cursorily-googled intel:
     'wm-common-packages-add
     home-profile-service-type
     (list pavucontrol))))
-
-(define* (wm-common-pipewire #:key sway?)
-  (list
-   (when sway?
-     (simple-service
-      'sway-start-pipewire
-      home-sway-service-type
-      '((exec herd start pipewire)
-        (exec herd start wireplumber)
-        (exec herd start pipewire-pulse))))))
 
 (define* (wm-common-applets #:key sway?)
   (list
@@ -5587,30 +5589,31 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                 (he-kmonad) '())
             '())
         (if desktop?
-            (append
-             (he-desktop-packages)
-             (he-xdg)
-             (if pipewire?
-                 (he-pipewire) '())
-             (he-flatpak)
-             (if (member #:session/sway (or sessions '()))
-                 (let ((screen-locker (swaylock-screen-locker)))
-                   (append
-                    (he-wm-common #:sway? #t)
-                    (he-sway #:pipewire? pipewire?
-                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                             #:screen-locker screen-locker
-                             #:idle-manager (swayidle-idle-manager)
-                             #:application-launcher (rofi-application-launcher #:wayland? #t)
-                             #:default-terminal (alacritty-terminal))
-                    (he-swaylock)
-                    (he-swayidle #:sway? #t
-                                 #:screen-locker screen-locker)
-                    (he-waybar #:sway? #t
-                               #:font font-mono)
-                    (he-rofi #:wayland? #t)
-                    (he-alacritty #:font font-mono)))
-                 '()))
+            (let ((sway? (member #:session/sway (or sessions '()))))
+              (append
+               (he-desktop-packages)
+               (he-xdg)
+               (if pipewire?
+                   (he-pipewire #:sway? sway?) '())
+               (he-flatpak)
+               (if sway?
+                   (let ((screen-locker (swaylock-screen-locker)))
+                     (append
+                      (he-wm-common #:sway? #t)
+                      (he-sway #:pipewire? pipewire?
+                               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                               #:screen-locker screen-locker
+                               #:idle-manager (swayidle-idle-manager)
+                               #:application-launcher (rofi-application-launcher #:wayland? #t)
+                               #:default-terminal (alacritty-terminal))
+                      (he-swaylock)
+                      (he-swayidle #:sway? #t
+                                   #:screen-locker screen-locker)
+                      (he-waybar #:sway? #t
+                                 #:font font-mono)
+                      (he-rofi #:wayland? #t)
+                      (he-alacritty #:font font-mono)))
+                   '())))
             '())))))))
 #+end_src
 * Union
