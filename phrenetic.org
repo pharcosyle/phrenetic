@@ -994,10 +994,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             he-rofi
             rofi-application-launcher
             he-alacritty
-            alacritty-terminal
-            gammastep-applet-service-type
-            network-manager-applet-service-type
-            udiskie-applet-service-type))
+            alacritty-terminal))
 
 (define serialize-elisp-config (@@ (gnu home-services emacs) serialize-elisp-config))
 #+end_src
@@ -5168,19 +5165,23 @@ Some cursorily-googled intel:
         (exec herd start pipewire-pulse))))))
 
 (define* (wm-common-applets #:key sway?)
-  (append
-   (list
-    (service gammastep-applet-service-type)
-    (service network-manager-applet-service-type)
-    (service udiskie-applet-service-type))
-   (list
-    (when sway?
-      (simple-service
-       'sway-start-applets
-       home-sway-service-type
-       '((exec herd start gammastep-applet)
-         (exec herd start network-manager-applet)
-         (exec herd start udiskie-applet)))))))
+  (list
+   ;; The only one I know for sure needs to be installed is gammastep (the applet can't find its icon otherwise) but install the rest too just in case.
+   (simple-service
+    'wm-common-applet-packages-add
+    home-profile-service-type
+    (list network-manager-applet
+          gammastep
+          udiskie))
+   (when sway?
+     (simple-service
+      'sway-start-applets
+      home-sway-service-type
+      `((exec ,(file-append network-manager-applet "/bin/nm-applet") --indicator)
+        (exec ,(file-append gammastep "/bin/gammastep-indicator") -l 44:-123) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
+        (exec ,(file-append udiskie "/bin/udiskie") --tray
+              ;; --file-manager ,(file-append xdg-utils "/bin/xdg-open")
+              ))))))
 #+end_src
 ***** Sway
 #+begin_src scheme
@@ -5859,86 +5860,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 
 (define (alacritty-terminal)
   (file-append alacritty "/bin/alacritty"))
-#+end_src
-**** Applets
-***** Gammastep
-#+begin_src scheme
-(define (gammastep-shepherd-service _)
-  (list
-   (shepherd-service
-    (provision '(gammastep-applet))
-    (start #~(make-forkexec-constructor
-                (list #$(file-append gammastep "/bin/gammastep-indicator") "-l 44:-123") ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/gammastep-applet.log")))
-    (stop #~(make-kill-destructor))
-    (auto-start? #f))))
-
-(define gammastep-applet-service-type
-  (service-type (name 'he-gammastep-applet)
-                (extensions
-                 (list (service-extension
-                        home-shepherd-service-type
-                        gammastep-shepherd-service)))
-                (default-value #f)
-                (description "Gammastep applet.")))
-#+end_src
-***** Network Manager
-#+begin_src scheme
-(define (network-manager-shepherd-service _)
-  (list
-   (shepherd-service
-    (provision '(network-manager-applet))
-    (start #~(make-forkexec-constructor
-                (list #$(file-append network-manager-applet "/bin/nm-applet") "--indicator")
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/network-manager-applet.log")))
-    (stop #~(make-kill-destructor))
-    (auto-start? #f))))
-
-(define network-manager-applet-service-type
-  (service-type (name 'he-network-manager-applet)
-                (extensions
-                 (list (service-extension
-                        home-shepherd-service-type
-                        network-manager-shepherd-service)))
-                (default-value #f)
-                (description "Network manager applet.")))
-#+end_src
-***** Udiskie
-#+begin_src scheme
-(define (udiskie-shepherd-service _)
-  (list
-   (shepherd-service
-    (provision '(udiskie-applet))
-    (start #~(make-forkexec-constructor
-                (list #$(file-append udiskie "/bin/udiskie")
-                       "--tray"
-                       ;; (string-append "--file-manager="
-                       ;;                #$(file-append xdg-utils "/bin/xdg-open"))
-                       )
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/udiskie-applet.log")))
-    (stop #~(make-kill-destructor))
-    (auto-start? #f))))
-
-(define udiskie-applet-service-type
-  (service-type (name 'he-udiskie-applet)
-                (extensions
-                 (list (service-extension
-                        home-shepherd-service-type
-                        udiskie-shepherd-service)))
-                (default-value #f)
-                (description "Udiskie applet.")))
 #+end_src
 ** Base HE
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
