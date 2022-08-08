@@ -984,6 +984,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             he-desktop-packages
             he-pipewire
             he-flatpak
+            he-wm-common
             he-sway
             he-swaylock
             swaylock-screen-locker
@@ -4973,9 +4974,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+begin_src scheme
 (define* (he-desktop-packages
           #:key
-          (packages (list pavucontrol ; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
-
-                          ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
+          (packages (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
 
                           ;; nyxt
                           ;; gst-libav
@@ -5143,6 +5142,29 @@ Some cursorily-googled intel:
 - [[https://github.com/flatpak/flatpak/issues/3097][flatpak/flatpak#3097 Is there a way to install a specific version?]]
 - [[https://discourse.flathub.org/t/install-an-older-version-of-an-app/320/3][Install an older version of an app - #3 by gjanssens - Flathub Discourse]]
 **** Window managers
+***** Common
+#+begin_src scheme
+(define* (he-wm-common #:key sway?)
+  (append
+   (list
+    (simple-service
+     'wm-common-packages-add
+     home-profile-service-type
+     (list pavucontrol)))
+   (list
+    (service gammastep-applet-service-type)
+    (service network-manager-applet-service-type)
+    (service udiskie-applet-service-type))
+   ;; (list
+   ;;  (when sway?
+   ;;    (simple-service
+   ;;     'sway-start-applets
+   ;;     home-sway-service-type
+   ;;     `((exec herd start pipewire)
+   ;;       (exec herd start wireplumber)
+   ;;       (exec herd start pipewire-pulse)))))
+   ))
+#+end_src
 ***** Sway
 #+begin_src scheme
 (define* (he-sway #:key
@@ -5257,11 +5279,7 @@ Some cursorily-googled intel:
         (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
                  -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
                  -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
-        (gaps left 78) ; To accommodate the crack in my screen.
-        ;; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
-        (exec herd start pipewire)
-        (exec herd start wireplumber)
-        (exec herd start pipewire-pulse)))))
+        (gaps left 78))))) ; To accommodate the crack in my screen.
 
    (when idle-manager
      (simple-service
@@ -5962,27 +5980,20 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
              (if (member #:session/sway (or sessions '()))
                  (let ((screen-locker (swaylock-screen-locker)))
                    (append
+                    (he-wm-common #:sway? #t)
                     (he-sway #:pipewire? pipewire?
                              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                              #:screen-locker screen-locker
                              #:idle-manager (swayidle-idle-manager)
                              #:application-launcher (rofi-application-launcher #:wayland? #t)
-                             #:default-terminal (alacritty-terminal)
-                             ;; #:backup-terminal (alacritty-terminal)
-                             )
+                             #:default-terminal (alacritty-terminal))
                     (he-swaylock)
                     (he-swayidle #:sway? #t
                                  #:screen-locker screen-locker)
                     (he-waybar #:sway? #t
                                #:font font-mono)
                     (he-rofi #:wayland? #t)
-                    (he-alacritty #:font font-mono)
-                    ;; TODO probably put these in some more generic location. They're for any WM, just not e.g. Gnome
-                    ;; (list
-                    ;;  (service gammastep-applet-service-type)
-                    ;;  (service network-manager-applet-service-type)
-                    ;;  (service udiskie-applet-service-type))
-                    ))
+                    (he-alacritty #:font font-mono)))
                  '()))
             '())))))))
 #+end_src
