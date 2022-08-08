@@ -574,9 +574,13 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                               bluetooth?)
   (users
    (append (map (lambda (user)
-                  (apply account (->> user
-                                      (acons #:bluetooth? bluetooth?)
-                                      keyvals)))
+                  (account #:name (assoc-ref user #:user/name)
+                           #:comment (assoc-ref user #:user/comment)
+                           #:shell (assoc-ref user #:user/shell)
+                           #:admin? (assoc-ref user #:user/admin?)
+                           #:password (assoc-ref user #:user/password)
+                           #:salt (assoc-ref user #:user/salt)
+                           #:bluetooth? bluetooth?))
                 users)
            (operating-system-users os))))
 
@@ -586,9 +590,8 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                   shell
                   admin?
                   password
-                  (salt "toosimple")
-                  bluetooth?
-                  #:allow-other-keys)
+                  salt
+                  bluetooth?)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -601,7 +604,7 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
             ;; ((#:shell/zsh) (file-append zsh "/bin/zsh"))
             (else (default-shell))))
    (password (if password
-                 (crypt password salt)
+                 (crypt password (or salt "toosimple"))
                  #f))))
 #+end_src
 *** Nonguix substitutes
@@ -671,9 +674,9 @@ Must succeed "Accounts" component.
     (let ((kmonad-users
            (->> users
                 (filter (lambda (user)
-                          (assoc-ref user #:kmonad?)))
+                          (assoc-ref user #:user/kmonad?)))
                 (map (lambda (user)
-                       (assoc-ref user #:name))))))
+                       (assoc-ref user #:user/name))))))
       (lambda (account)
         (member (user-account-name account) kmonad-users)))
     (lambda (account)
@@ -6419,17 +6422,17 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define os
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
-           #:users `(((#:name . ,primary-name)
-                      (#:comment . ,primary-full-name)
-                      (#:admin? . #t)
-                      (#:kmonad? . ,primary-kmonad?))
-                     ((#:name . ,aux-name)
-                      (#:comment . ,aux-full-name)
-                      (#:admin? . #t)
-                      (#:kmonad? ,aux-kmonad?))
-                     ((#:name . ,guest-name)
-                      (#:comment . "Speak Friend and Enter")
-                      (#:password . "mellon")))
+           #:users `(((#:user/name . ,primary-name)
+                      (#:user/comment . ,primary-full-name)
+                      (#:user/admin? . #t)
+                      (#:user/kmonad? . ,primary-kmonad?))
+                     ((#:user/name . ,aux-name)
+                      (#:user/comment . ,aux-full-name)
+                      (#:user/admin? . #t)
+                      (#:user/kmonad? ,aux-kmonad?))
+                     ((#:user/name . ,guest-name)
+                      (#:user/comment . "Speak Friend and Enter")
+                      (#:user/password . "mellon")))
            ;; #:auto-login primary-name ; REVIEW Enable this later.
            #:disk-encryption? #t
            #:luks-uuid "<<frostfire-luks-uuid>>"
