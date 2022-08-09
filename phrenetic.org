@@ -942,7 +942,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((gnu packages fonts) #:select (font-google-noto))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
+  #:use-module ((gnu packages gnome) #:select (dconf network-manager-applet))
+  #:use-module ((gnu packages gnome-xyz) #:select (arc-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
@@ -963,6 +964,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
+  #:use-module ((rde serializers ini) #:select (serialize-ini-config))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
@@ -981,6 +983,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             he-direnv
             he-kmonad
             he-xdg
+            he-gtk
             he-desktop-packages
             he-pipewire
             he-flatpak
@@ -4691,6 +4694,46 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
     home-xdg-user-directories-service-type
     xdg-user-directories-configuration)))
 #+end_src
+**** GTK
+It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland). I'm also a little worried that the =dconf/user= file not being writable will mess up Gnome.
+#+begin_src scheme
+(define (he-gtk)
+  (list
+   (simple-service
+    'gtk-add-packages
+    home-profile-service-type
+    (list arc-theme))
+
+   (simple-service
+    'gtk-settings-and-dconf
+    home-xdg-configuration-files-service-type
+    `(("gtk-3.0/settings.ini"
+       ,(ini-config-file
+         "gtk-3.0-settings.ini"
+         `((Settings ((gtk-application-prefer-dark-theme . #t))))))
+      ("dconf/user"
+       ,(computed-file
+         "dconf-user"
+         #~(system*
+            #$(file-append dconf "/bin/dconf")
+            "compile"
+            #$output
+            ;; Target of `compile` must be a directory.
+            #$(file-union
+               "keyfiledir"
+               `(("dconf-keyfile"
+                  ,(ini-config-file
+                    "dconf-keyfile"
+                    `((org/gnome/desktop/interface ((gtk-theme . ,(quoted-symbol "Arc-Dark"))
+                                                    (font-name . ,(quoted-symbol "Source Code Pro 12"))
+                                                    (monospace-font-name . ,(quoted-symbol "Source Code Pro 12"))))))))))))))))
+
+(define (ini-config-file name config)
+  (apply mixed-text-file name (serialize-ini-config config)))
+
+(define (quoted-symbol s)
+  (string->symbol (string-append "'" s "'")))
+#+end_src
 **** Pipewire
 #+begin_src scheme
 (define* (he-pipewire #:key sway?)
@@ -5593,6 +5636,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
               (append
                (he-desktop-packages)
                (he-xdg)
+               (he-gtk)
                (if pipewire?
                    (he-pipewire #:sway? sway?) '())
                (he-flatpak)
