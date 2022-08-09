@@ -5,7 +5,6 @@
 * Table of Contents :TOC:
 - [[#meta][Meta]]
   - [[#path-hierarchy][Path hierarchy]]
-  - [[#dev][Dev]]
 - [[#installation][Installation]]
   - [[#create-bootable-usb][Create bootable USB]]
   - [[#install][Install]]
@@ -29,7 +28,7 @@
   - [[#frostfire][Frostfire]]
   - [[#scripts-wip][Scripts WIP]]
 - [[#channel][Channel]]
-- [[#dev-1][Dev]]
+- [[#dev][Dev]]
   - [[#git-config][Git config]]
   - [[#git-ignore][Git ignore]]
   - [[#github][Github]]
@@ -55,11 +54,6 @@
 
 (defun meta-in-dir (sub-path)
   (concat (meta-get-dir) "/" sub-path))
-#+end_src
-** Dev
-*** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/meta.el
 #+end_src
 * Installation
 ** Create bootable USB
@@ -6418,24 +6412,9 @@ guix time-machine \
 	merge = refs/heads/tangled
 #+end_src
 ** Git ignore
-- TODO maybe make this a =,*= with excludes later
-
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/.gitignore
-# TODO temporary
-/.guix-channel
-ebullient/
-penitent/
-exuberant/
-README.org
-LICENSE
-
-# TODO from old phrenetic Dev > Git ignore
-# # REVIEW I might want to have the res files (e.g. =alucard_bg.png=) placed closer to where they're used. Don't worry about this right now, gitignores are a pain and they've been changing frequently as I rewrite stuff.
-# #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-# /*
-# !res/
-# #+end_src
+/*
+!res/
 #+end_src
 ** Github
 *** Git config
@@ -7176,8 +7155,4 @@ The default git config on my Guix system.
                     (locate-dominating-file default-directory ".dir-locals.el"))))
               (make-local-variable 'geiser-guile-load-path)
               (add-to-list 'geiser-guile-load-path root-dir))))))
-#+end_src
-
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/.dir-locals.el
 #+end_src
