@@ -1478,12 +1478,12 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   "params.el"
                   (serialize-elisp-config
                    #f
-                   `((setq param-full-name ,full-name)
-                     (setq param-email ,email)
-                     (setq param-theme ,theme)
-                     (setq param-font-name ,(assoc-ref font #:font/name))
-                     (setq param-font-size ,(assoc-ref font #:font/size))
-                     (setq param-font-weight ',(assoc-ref font #:font/weight)))))))))))))))
+                   `((setq param-full-name ,full-name
+                           param-email ,email
+                           param-theme ,theme
+                           param-font-name ,(assoc-ref font #:font/name)
+                           param-font-size ,(assoc-ref font #:font/size)
+                           param-font-weight ',(assoc-ref font #:font/weight)))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
