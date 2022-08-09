@@ -1463,7 +1463,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                            param-email ,email
                            param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
-                           param-font-size ,(assoc-ref font #:font/size)
+                           param-font-size ,(+ (assoc-ref font #:font/size) 2)
                            param-font-weight ,(if-let ((weight (assoc-ref font #:font/weight)))
                                                       `',weight
                                                       'nil)
@@ -4647,7 +4647,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
           fonts)
      extra-font-packages))))
 
-(define font-size 12)
+(define font-size 10)
 
 (define font-mono
   `((#:font/name . "Source Code Pro")
@@ -5625,7 +5625,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                      `((family . ,(assoc-ref font #:font/name)))
                                      (if-let ((weight (assoc-ref font #:font/weight)))
                                              `((style . ,(font-weight->style weight))) '())))
-                         (size . ,(- (assoc-ref font #:font/size) 2)))))
+                         (size . ,(assoc-ref font #:font/size)))))
               '())))))))
 
 (define (font-weight->style weight)
