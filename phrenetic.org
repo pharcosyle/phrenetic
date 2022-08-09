@@ -46,8 +46,6 @@
     ~mkdirp~ and ~lexical~ at the time of this writing
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
-
-(require 'dash)
 #+end_src
 ** Path hierarchy
 #+begin_src elisp
@@ -56,7 +54,7 @@
 (defun meta-get-dir ()
   (concat meta--base-dir
           (when-let ((dirs (org-entry-get (point) "meta-dir" 'inherit)))
-            (-> dirs (split-string " /") (string-join "/")))))
+            (thread-first dirs (split-string " /") (string-join "/")))))
 
 (defun meta-in-dir (sub-path)
   (concat (meta-get-dir) "/" sub-path))
@@ -4205,6 +4203,8 @@ Can be an integer to determine the exact padding."
 :END:
 #+name: gen-doom-theme
 #+begin_src elisp :var palette=palette
+(require 'dash)
+
 (defun dt--color (color)
   (let ((k (-> color symbol-name (substring 1))))
     (cadr (assoc k palette))))
