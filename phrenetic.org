@@ -4987,7 +4987,7 @@ Some cursorily-googled intel:
                   application-launcher
                   default-terminal
                   (backup-terminal default-terminal)
-                  (bg-image (local-file "../../res/alucard_bg.png")) ; TODO relative path is brittle
+                  (bg-image (local-file "alucard_bg.png"))
                   extra-config)
   (list
    (service
@@ -5243,8 +5243,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (effects? #t)
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
-                      (image "/home/pharcosyle/projects/phrenetic/res/alucard_bg.png")
-                      ;; (image (local-file "../../res/alucard_bg.png")) ; TODO relative path is brittle
+                      (image "/home/pharcosyle/projects/phrenetic/ebullient/home/alucard_bg.png")
+                      ;; (image (local-file "alucard_bg.png"))
                       extra-config)
   (list
    (service
@@ -6414,7 +6414,12 @@ guix time-machine \
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /*
-!res/
+
+!/ebullient/
+/ebullient/*
+!/ebullient/home/
+/ebullient/home/*
+!ebullient/home/alucard_bg.png
 #+end_src
 ** Github
 *** Git config
