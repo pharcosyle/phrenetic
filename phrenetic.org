@@ -5163,27 +5163,13 @@ Some cursorily-googled intel:
        ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
    (simple-service
-    'xdg-desktop-portal-wlr-configuration
-    home-xdg-configuration-files-service-type
-    `(("xdg-desktop-portal-wlr/config"
-       ,(mixed-text-file
-         "xdg-desktop-portal-wlr-config"
-         ;; TODO [sway-wip] do with newlines (note that I should string-join so it's still one arg to `format') (and do it for that sway-screenshot line too)
-         ;; TODO [sway-wip] then comment this entire simple-service out.
-         #~(format #f "[screencast]
-output_name=
-max_fps=30
-chooser_cmd=~a -f %o -or -c ff0000
-chooser_type=simple"
-                   #$(file-append slurp "/bin/slurp"))))))
-
-   (simple-service
     'packages-for-sway
     home-profile-service-type
     (list qtwayland ; Copied from RDE: I don't know what this is for.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
-          xdg-desktop-portal-wlr))
+          xdg-desktop-portal-wlr
+          slurp)) ; This might be necessary to make xdg-desktop-portal-wlr screencasting work. See "xdpw will try to use the first chooser found in the list of hardcoded choosers..." in https://man.archlinux.org/man/xdg-desktop-portal-wlr.5.
 
    (simple-service
     'set-wayland-specific-env-vars
@@ -5212,15 +5198,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   - [[https://www.reddit.com/r/swaywm/comments/sw9lct/whats_the_recommended_way_of_setting_environment/][Whats the recommended way of setting environment variables? .profile doesnt w...]]
 ****** Sway screenshot
 #+begin_src scheme
-;; TODO [sway-wip] curious what the 303030AA are, wait until I've built the config to check what the finished command looks like. Update: it's a grey color with high opacity I think.
 (define (sway-screenshot-service)
   (simple-service
    'sway-screenshot
    home-sway-service-type
-   ;; TODO [sway-wip] change these keys? I don't have a Print key (or do I?)
-   `((bindsym $mod+Print exec ,shot-output)
-     (bindsym $mod+Control+Print exec ,swappy-clipboard)
-     (bindsym $mod+Shift+Print exec ,shot-window-or-selection))))
+   `((bindsym $mod+grave exec ,shot-output)
+     (bindsym $mod+Control+grave exec ,swappy-clipboard)
+     (bindsym $mod+Shift+grave exec ,shot-window-or-selection))))
 
 (define subject-output
   #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
@@ -5370,17 +5354,18 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define* (he-waybar #:key
                     sway?
                     (waybar-modules
-                     (list
-                      ;; TODO [sway-wip] conditionalize the sway ones?
-                      (waybar-sway-workspaces)
-                      ;; (waybar-sway-window)
-                      (waybar-tray)
-                      (waybar-idle-inhibitor)
-                      ;; (waybar-temperature)
-                      (waybar-sway-language)
-                      (waybar-battery)
-                      (waybar-clock)))
-                    theme ; TODO use this
+                     (append
+                      (if sway?
+                          (list
+                           (waybar-sway-workspaces)
+                           (waybar-sway-window))
+                          '())
+                      (list
+                       (waybar-tray)
+                       (waybar-idle-inhibitor)
+                       (waybar-battery)
+                       (waybar-clock))))
+                    theme ; TODO unused. Use it.
                     (base16-css (local-file "base16-default-dark.css"))
                     font
                     transitions?)
@@ -5391,7 +5376,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
      (home-waybar-configuration
       (config #(((position . top)
                  (name . main))))
-      ;; TODO [sway-wip] Andrew Tropin: TODO: fix tray menu styles.
       (style-css
        `(,#~(format #f "@import \"~a\";\n" #$base16-css)
             (*
@@ -5442,11 +5426,11 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     (simple-service
      'waybar-reload-config-on-change
      home-run-on-change-service-type
-     ;; TODO [sway-wip] factor out the command
-     `(("files/.config/waybar/style.css"
-        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))
-       ("files/.config/waybar/config"
-        ,#~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar"))))
+     (let ((reload-cmd #~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar")))
+       `(("files/.config/waybar/style.css"
+          ,reload-cmd)
+         ("files/.config/waybar/config"
+          ,reload-cmd))))
 
     ;; I could pass the waybar command to the sway module (like I do with the screen locker and idle manager) instead of making this module aware of Sway, however the the `bar' command can take other arguments (see https://man.archlinux.org/man/sway-bar.5.en) that I might perhaps need in the future (though I think they only apply to swaybar, not waybar).
     (when sway?
@@ -5527,7 +5511,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    'sway/workspaces
    `((disable-scroll . #t)
      (format . {icon})
-     ;; TODO [sway-wip] Andrew Tropin: FIXME: Height becomes higher when icons are not used.
      (format-icons . ,format-icons)
      (persistent_workspaces . ,(if persistent-workspaces
                                    persistent-workspaces '())))
@@ -5621,15 +5604,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (high . )
                       (full . ))))
    `((#{#battery.discharging.empty}#
-      ,(if #f ; TODO [sway-wip] was `intense?'
-           `((color . @base02)
-             (background . @base08))
-           `((color . @base08))))
+      ((color . @base08)))
      (#{#battery.discharging.low}#
-      ,(if #f ; TODO [sway-wip] was `intense?'
-           `((color . @base02)
-             (background . @base09))
-           `((color . @base09)))))))
+      ((color . @base09))))))
 #+end_src
 **** Application launchers
 ***** Rofi
@@ -5786,7 +5763,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                #:idle-manager (swayidle-idle-manager)
                                #:application-launcher (rofi-application-launcher #:wayland? #t)
                                #:default-terminal (alacritty-terminal))
-                      (he-swaylock)
+                      (he-swaylock #:font font-variable-pitch)
                       (he-swayidle #:sway? #t
                                    #:screen-locker screen-locker)
                       (he-waybar #:sway? #t
