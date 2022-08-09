@@ -1480,7 +1480,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                    #f
                    `((setq param-full-name ,full-name
                            param-email ,email
-                           param-theme ,theme
+                           param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
                            param-font-size ,(assoc-ref font #:font/size)
                            param-font-weight ',(assoc-ref font #:font/weight)))))))))))))))
