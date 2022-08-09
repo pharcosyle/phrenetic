@@ -4990,169 +4990,6 @@ Some cursorily-googled intel:
                   (bg-image (local-file "alucard_bg.png"))
                   extra-config)
   (list
-   (service
-    home-sway-service-type
-    (home-sway-configuration
-     (package sway) ; Remove this when I'm not using `sway-latest` any more.
-     (config
-      `((xwayland ,(if xwayland? 'enable 'disable))
-        (,#~"")
-
-        (input type:keyboard
-               ,(append
-                 (if kb-layout
-                     (append
-                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
-                      (if-let ((variant (keyboard-layout-variant kb-layout)))
-                              `((xkb_variant ,variant)) '())
-                      (if-let ((model (keyboard-layout-model kb-layout)))
-                              `((xkb_model ,model)) '())
-                      (let ((options (keyboard-layout-options kb-layout)))
-                        (if (null? options)
-                            '()
-                            `((xkb_options ,(string-join
-                                             (keyboard-layout-options kb-layout) ","))))))
-                     '())
-                 `((repeat_delay ,kb-repeat-delay))
-                 `((repeat_rate ,kb-repeat-rate))))
-
-        (input type:touchpad
-               ((natural_scroll enabled)
-                (tap enabled)))
-
-        (,#~"\n\n# General settings:")
-        (set $mod ,sway-mod)
-        (set $term ,default-terminal)
-        (set $backup-term ,backup-terminal)
-        (set $menu ,application-launcher)
-        (set $lock ,screen-locker)
-
-        (floating_modifier $mod normal)
-
-        (bindsym --to-code $mod+Shift+r reload)
-
-        ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested in the Sway wiki and an RDE mailing list thread:
-        ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
-        ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
-        (,#~"\n\n# Update dbus environment variables:")
-        (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-              DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
-
-        (,#~"\n\n# Launching external applications:")
-        (bindsym $mod+Control+Shift+Return exec $backup-term)
-        (bindsym $mod+Return exec $term)
-
-        (bindsym --to-code $mod+Shift+d exec $menu)
-        (bindsym --to-code $mod+Control+Shift+l exec $lock)
-
-        (,#~"\n\n# Manipulating windows:")
-        (bindsym --to-code $mod+Shift+c kill)
-        (bindsym --to-code $mod+Shift+f fullscreen)
-        (bindsym $mod+Shift+space floating toggle)
-        (bindsym $mod+Control+space focus mode_toggle)
-
-        (bindsym $mod+h focus left)
-        (bindsym $mod+j focus down)
-        (bindsym $mod+k focus up)
-        (bindsym $mod+l focus right)
-
-        (bindsym $mod+Shift+h move left)
-        (bindsym $mod+Shift+j move down)
-        (bindsym $mod+Shift+k move up)
-        (bindsym $mod+Shift+l move right)
-
-        (,#~"\n\n# Moving around workspaces:")
-        (bindsym $mod+tab workspace back_and_forth)
-        ,@(append-map
-           (lambda (x)
-             `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                        workspace number ,x)
-               (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                        move container to workspace number ,x)))
-           (iota 10 1))
-
-        (,#~"\n\n# Scratchpad settings:")
-        (bindsym --to-code $mod+Shift+minus move scratchpad)
-        (bindsym --to-code $mod+minus scratchpad show)
-
-        (,#~"")
-        (default_border pixel)
-        (default_floating_border pixel)
-        (gaps inner 8)
-
-        (,#~"")
-        (bindsym $mod+Shift+b splith)
-        (bindsym $mod+Shift+v splitv)
-        (bindsym $mod+Shift+s layout stacking)
-        (bindsym $mod+Shift+w layout tabbed)
-        (bindsym $mod+Shift+e layout toggle split)
-        (bindsym $mod+Shift+a focus parent)
-        (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
-                 -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
-                 -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
-        (gaps left 78))))) ; To accommodate the crack in my screen.
-
-   (when idle-manager
-     (simple-service
-      'sway-enable-idle-manager
-      home-sway-service-type
-      `((,#~"")
-        (exec ,idle-manager))))
-
-   (simple-service
-    'sway-add-brightness-control
-    home-sway-service-type
-    (let* ((step 10)
-           (step->symbol (lambda (op)
-                           (symbol-append (string->symbol (number->string step)) '% op)))
-           (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
-      `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
-        (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
-
-   (simple-service
-    'sway-add-audio-control
-    home-sway-service-type
-    ;; TODO what's are the "\\\n"s about? Probably will be clear once I see the generated file.
-    ;; TODO maybe parameterize out the step value like in the brightness control code (with `step->symbol')
-    (let ((pactl (file-append pulseaudio "/bin/pactl")))
-      `((bindsym --locked XF86AudioRaiseVolume "\\\n"
-                 exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                 exec ,pactl set-sink-volume @DEFAULT_SINK@ +5%)
-        (bindsym --locked XF86AudioLowerVolume "\\\n"
-                 exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                 exec ,pactl set-sink-volume @DEFAULT_SINK@ -5%)
-        (bindsym --locked XF86AudioMute
-                 exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
-        (bindsym --locked XF86AudioMicMute
-                 exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle))))
-
-   (simple-service
-    'sway-add-player-controls
-    home-sway-service-type
-    (let ((playerctl (file-append playerctl "/bin/playerctl")))
-      `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
-        (bindsym --locked XF86AudioPrev exec ,playerctl previous)
-        (bindsym --locked XF86AudioNext exec ,playerctl next))))
-
-   (when bg-image
-     (simple-service
-      'sway-add-bg-image
-      home-sway-service-type
-      `((output * bg ,bg-image fill))))
-
-   (when extra-config
-     (simple-service
-      'sway-configuration
-      home-sway-service-type
-      `(,@extra-config
-        (,#~""))))
-
-   (simple-service
-    'sway-reload-config-on-change
-    home-run-on-change-service-type
-    `(("files/.config/sway/config"
-       ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
-
    (simple-service
     'packages-for-sway
     home-profile-service-type
@@ -5178,6 +5015,141 @@ Some cursorily-googled intel:
        ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
      (if pipewire?
          '(("RTC_USE_PIPEWIRE" . "true")) '())))
+
+   (service
+    home-sway-service-type
+    (home-sway-configuration
+     (package sway) ; Remove this when I'm not using `sway-latest` any more.
+     (config
+      `((xwayland ,(if xwayland? 'enable 'disable))
+
+        (input type:keyboard
+               ,(append
+                 (if kb-layout
+                     (append
+                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
+                      (if-let ((variant (keyboard-layout-variant kb-layout)))
+                              `((xkb_variant ,variant)) '())
+                      (if-let ((model (keyboard-layout-model kb-layout)))
+                              `((xkb_model ,model)) '())
+                      (let ((options (keyboard-layout-options kb-layout)))
+                        (if (null? options)
+                            '()
+                            `((xkb_options ,(string-join
+                                             (keyboard-layout-options kb-layout) ","))))))
+                     '())
+                 `((repeat_delay ,kb-repeat-delay))
+                 `((repeat_rate ,kb-repeat-rate))))
+
+        (input type:touchpad
+               ((natural_scroll enabled)
+                (tap enabled)))
+
+        (set $mod ,sway-mod)
+        (set $term ,default-terminal)
+        (set $backup-term ,backup-terminal)
+        (set $menu ,application-launcher)
+        (set $lock ,screen-locker)
+
+        (floating_modifier $mod normal)
+
+        (bindsym --to-code $mod+Shift+r reload)
+
+        ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested in the Sway wiki and an RDE mailing list thread:
+        ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
+        ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
+        (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+              DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
+
+        ;; Launching external applications.
+        (bindsym $mod+Control+Shift+Return exec $backup-term)
+        (bindsym $mod+Return exec $term)
+        (bindsym --to-code $mod+Shift+d exec $menu)
+        (bindsym --to-code $mod+Control+Shift+l exec $lock)
+
+        ;; Manipulating windows.
+        (bindsym --to-code $mod+Shift+c kill)
+        (bindsym --to-code $mod+Shift+f fullscreen)
+        (bindsym $mod+Shift+space floating toggle)
+        (bindsym $mod+Control+space focus mode_toggle)
+        (bindsym $mod+h focus left)
+        (bindsym $mod+j focus down)
+        (bindsym $mod+k focus up)
+        (bindsym $mod+l focus right)
+        (bindsym $mod+Shift+h move left)
+        (bindsym $mod+Shift+j move down)
+        (bindsym $mod+Shift+k move up)
+        (bindsym $mod+Shift+l move right)
+
+        ;; Moving around workspaces.
+        (bindsym $mod+tab workspace back_and_forth)
+        ,@(append-map
+           (lambda (x)
+             `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+                        workspace number ,x)
+               (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                        move container to workspace number ,x)))
+           (iota 10 1))
+
+        ;; Scratchpad settings.
+        (bindsym --to-code $mod+Shift+minus move scratchpad)
+        (bindsym --to-code $mod+minus scratchpad show)
+
+        (default_border pixel)
+        (default_floating_border pixel)
+        (gaps inner 8)
+
+        (exec ,idle-manager)
+
+        ,@(let* ((step 10)
+                 (step->symbol (lambda (op)
+                                 (symbol-append (string->symbol (number->string step)) '% op)))
+                 (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
+            `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
+              (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-))))
+
+        ,@(let* ((step 5)
+                 (step->symbol (lambda (op)
+                                 (symbol-append op (string->symbol (number->string step)) '%)))
+                 (pactl (file-append pulseaudio "/bin/pactl")))
+            `((bindsym --locked XF86AudioRaiseVolume "\\\n"
+                       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                       exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '+))
+              (bindsym --locked XF86AudioLowerVolume "\\\n"
+                       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+                       exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '-))
+              (bindsym --locked XF86AudioMute
+                       exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
+              (bindsym --locked XF86AudioMicMute
+                       exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle)))
+
+        ,@(let ((playerctl (file-append playerctl "/bin/playerctl")))
+            `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
+              (bindsym --locked XF86AudioPrev exec ,playerctl previous)
+              (bindsym --locked XF86AudioNext exec ,playerctl next)))
+
+        ,@(if bg-image
+              `((output * bg ,bg-image fill)) '())
+
+        (bindsym $mod+Shift+b splith)
+        (bindsym $mod+Shift+v splitv)
+        (bindsym $mod+Shift+s layout stacking)
+        (bindsym $mod+Shift+w layout tabbed)
+        (bindsym $mod+Shift+e layout toggle split)
+        (bindsym $mod+Shift+a focus parent)
+        (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
+                 -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
+                 -b "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+        (gaps left 78) ; To accommodate the crack in my screen.
+
+        ,@(if extra-config
+              extra-config '())))))
+
+   (simple-service
+    'sway-reload-config-on-change
+    home-run-on-change-service-type
+    `(("files/.config/sway/config"
+       ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
    (sway-screenshot-service)))
 #+end_src
