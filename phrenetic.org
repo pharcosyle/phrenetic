@@ -1485,7 +1485,9 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                            param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
                            param-font-size ,(assoc-ref font #:font/size)
-                           param-font-weight ',(assoc-ref font #:font/weight)))))))))))))))
+                           param-font-weight ,(if-let ((weight (assoc-ref font #:font/weight)))
+                                                      `',weight
+                                                      'nil)))))))))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -4004,7 +4006,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 (when param-console?
   (let ((font (font-spec :family param-font-name
                          :size param-font-size
-                         :weight param-font-weight)))
+                         :weight (or param-font-weight 'normal))))
     (when (find-font font)
       (setq doom-font font))))
 #+end_src
@@ -5584,9 +5586,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       `((window . ((padding . ((x . 10)
                                (y . 5)))))
         ,@(if font
-              `((font . ((normal . ((style . , (font-weight->style
-                                                (assoc-ref font #:font/weight)))
-                                    (family . ,(assoc-ref font #:font/name))))
+              `((font . ((normal . ,(append
+                                     `((family . ,(assoc-ref font #:font/name)))
+                                     (if-let ((weight (assoc-ref font #:font/weight)))
+                                             `((style . ,(font-weight->style weight))) '())))
                          (size . ,(assoc-ref font #:font/size)))))
               '())
         ,@(if config-file
