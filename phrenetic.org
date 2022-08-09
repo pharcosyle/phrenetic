@@ -974,17 +974,17 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (he-packages
             he-shells
-            he-fonts
-            font-mono
-            font-sans
-            font-serif
-            font-unicode
             he-nix
             he-emacs
             he-doom
             he-git
             he-ssh
             he-direnv
+            he-fonts
+            font-mono
+            font-sans
+            font-serif
+            font-unicode
             he-kmonad
             he-xdg
             he-gtk
@@ -1169,43 +1169,6 @@ alias grep='grep --color=auto'
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
-#+end_src
-*** Fonts
-#+begin_src scheme
-(define* (he-fonts #:key
-                   fonts
-                   (extra-font-packages (list font-noto-color-emoji
-                                              font-liberation)))
-  (list
-   (simple-service
-    'fonts-add-packages
-    home-profile-service-type
-    (append
-     (map (lambda (font)
-            (assoc-ref font #:font/package))
-          fonts)
-     extra-font-packages))))
-
-(define font-size 12)
-
-(define font-mono
-  `((#:font/name . "Source Code Pro")
-    (#:font/size . ,font-size)
-    (#:font/weight . ,'medium)
-    (#:font/package . ,font-adobe-source-code-pro)))
-
-(define font-sans
-  `((#:font/name . "Iosevka Aile")
-    (#:font/size . ,font-size)
-    (#:font/package . ,font-iosevka-aile)))
-
-(define font-serif
-  `((#:font/name . "Iosevka Etoile")
-    (#:font/package . ,font-iosevka-etoile)))
-
-(define font-unicode
-  `((#:font/name . "Unifont")
-    (#:font/package . ,font-gnu-unifont)))
 #+end_src
 *** Nix
 #+begin_src scheme
@@ -4677,6 +4640,43 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                          (list (direnv-hook "zsh"))))))))))
 #+end_src
 *** Console
+**** Fonts
+#+begin_src scheme
+(define* (he-fonts #:key
+                   fonts
+                   (extra-font-packages (list font-noto-color-emoji
+                                              font-liberation)))
+  (list
+   (simple-service
+    'fonts-add-packages
+    home-profile-service-type
+    (append
+     (map (lambda (font)
+            (assoc-ref font #:font/package))
+          fonts)
+     extra-font-packages))))
+
+(define font-size 12)
+
+(define font-mono
+  `((#:font/name . "Source Code Pro")
+    (#:font/size . ,font-size)
+    (#:font/weight . ,'medium)
+    (#:font/package . ,font-adobe-source-code-pro)))
+
+(define font-sans
+  `((#:font/name . "Iosevka Aile")
+    (#:font/size . ,font-size)
+    (#:font/package . ,font-iosevka-aile)))
+
+(define font-serif
+  `((#:font/name . "Iosevka Etoile")
+    (#:font/package . ,font-iosevka-etoile)))
+
+(define font-unicode
+  `((#:font/name . "Unifont")
+    (#:font/package . ,font-gnu-unifont)))
+#+end_src
 **** KMonad
 #+begin_src scheme
 (define* (he-kmonad #:key
@@ -5695,10 +5695,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         (he-packages)
         (he-shells #:login-shell login-shell
                    #:interactive-shell interactive-shell)
-        (he-fonts #:fonts (list font-mono
-                                font-sans
-                                font-serif
-                                font-unicode))
         (if nix?
             (he-nix) '())
         (if developer?
@@ -5718,8 +5714,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
              (he-direnv #:shell interactive-shell))
             '())
         (if console?
-            (if kmonad?
-                (he-kmonad) '())
+            (append
+             (he-fonts #:fonts (list font-mono
+                                     font-sans
+                                     font-serif
+                                     font-unicode))
+             (if kmonad?
+                 (he-kmonad) '()))
             '())
         (if desktop?
             (let ((sway? (member #:session/sway (or sessions '()))))
