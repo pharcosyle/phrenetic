@@ -1451,6 +1451,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 *** Doom
 #+begin_src scheme
 (define* (he-doom #:key
+                  console?
                   (doom-private (local-file "doom-private" #:recursive? #t))
                   full-name
                   email
@@ -1478,7 +1479,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   "params.el"
                   (serialize-elisp-config
                    #f
-                   `((setq param-full-name ,full-name
+                   `((setq param-console? ,(if console? 't 'nil)
+                           param-full-name ,full-name
                            param-email ,email
                            param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
@@ -3634,16 +3636,17 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ********* evil :bindings:theming:
 #+begin_src elisp
 (after! evil
-  (defun biome--set-theme-cursor-color-symbols ()
-    (put 'cursor 'evil-normal-color (biome--color :gold))
-    (put 'cursor 'evil-emacs-color  (biome--color :pink)))
+  (map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
 
-  (defadvice! biome-update-cursor-color-a (&rest _)
-    :after #'+evil-update-cursor-color-h
-    (when (memq biome--nuclear-theme custom-enabled-themes)
-      (biome--set-theme-cursor-color-symbols)))
+  (when param-console?
+    (defun biome--set-theme-cursor-color-symbols ()
+      (put 'cursor 'evil-normal-color (biome--color :gold))
+      (put 'cursor 'evil-emacs-color  (biome--color :pink)))
 
-  (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
+    (defadvice! biome-update-cursor-color-a (&rest _)
+      :after #'+evil-update-cursor-color-h
+      (when (memq biome--nuclear-theme custom-enabled-themes)
+        (biome--set-theme-cursor-color-symbols)))))
 #+end_src
 ******** Multiple Cursors
 ********* evil-multiedit :evil:
@@ -3735,8 +3738,9 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
   :config
   (set-ligatures! 'clojure-mode :lambda "fn")
-  (custom-theme-set-faces! biome--nuclear-theme
-    `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
+  (when param-console?
+    (custom-theme-set-faces! biome--nuclear-theme
+      `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))))
 #+end_src
 ********* cider :persistence:
 #+begin_src elisp
@@ -3773,12 +3777,14 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
                            ,(concat biome--org-dir "/projects"))
         org-log-done 'time
         org-priority-lowest ?E
-        org-priority-default ?C
-        org-priority-faces `((?A . ,(doom-color 'red))
-                             (?B . ,(doom-color 'orange))
-                             (?C . ,(doom-color 'blue))
-                             (?D . ,(doom-color 'yellow))
-                             (?E . ,(doom-color 'green)))))
+        org-priority-default ?C)
+
+  (when param-console?
+    (setq org-priority-faces `((?A . ,(doom-color 'red))
+                               (?B . ,(doom-color 'orange))
+                               (?C . ,(doom-color 'blue))
+                               (?D . ,(doom-color 'yellow))
+                               (?E . ,(doom-color 'green))))))
 #+end_src
 ********* ob
 #+begin_src elisp
@@ -3891,25 +3897,26 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******** rainbow-delimiters :theming:
 #+begin_src elisp
-(after! rainbow-delimiters
-  (let ((default-max rainbow-delimiters-max-face-count))
-    (defun biome-set-rainbow-delimiters-max-face-count ()
-      (setq rainbow-delimiters-max-face-count
-            (if (memq biome--nuclear-theme custom-enabled-themes)
-                8 default-max))))
+(when param-console?
+  (after! rainbow-delimiters
+    (let ((default-max rainbow-delimiters-max-face-count))
+      (defun biome-set-rainbow-delimiters-max-face-count ()
+        (setq rainbow-delimiters-max-face-count
+              (if (memq biome--nuclear-theme custom-enabled-themes)
+                  8 default-max))))
 
-  (biome-set-rainbow-delimiters-max-face-count)
-  (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
+    (biome-set-rainbow-delimiters-max-face-count)
+    (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
 
-  (custom-theme-set-faces! biome--nuclear-theme
-    `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
-    `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
-    `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
-    `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
-    `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
-    `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
-    `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
-    `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red))))
+    (custom-theme-set-faces! biome--nuclear-theme
+      `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
+      `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
+      `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
+      `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
+      `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
+      `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
+      `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
+      `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red)))))
 #+end_src
 ******** recentf :persistence:
 #+begin_src elisp
@@ -3982,22 +3989,24 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ****** Theming :theming:
 #+begin_src elisp
-(setq doom-theme
-      (pcase param-theme
-        (:theme/light 'doom-one-light)
-        (:theme/dark biome--nuclear-theme)))
+(when param-console?
+  (setq doom-theme
+        (pcase param-theme
+          (:theme/light 'doom-one-light)
+          (:theme/dark biome--nuclear-theme)))
 
-(custom-theme-set-faces! biome--nuclear-theme
-  `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
-  `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
+  (custom-theme-set-faces! biome--nuclear-theme
+    `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
+    `(font-lock-doc-face :foreground ,(doom-color 'cyan))))
 #+end_src
 ******* Font
 #+begin_src elisp
-(let ((font (font-spec :family param-font-name
-                       :size param-font-size
-                       :weight param-font-weight)))
-  (when (find-font font)
-    (setq doom-font font)))
+(when param-console?
+  (let ((font (font-spec :family param-font-name
+                         :size param-font-size
+                         :weight param-font-weight)))
+    (when (find-font font)
+      (setq doom-font font))))
 #+end_src
 ******* Nuclear Theme
 
@@ -5631,7 +5640,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         (if developer?
             (append
              (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-             (he-doom #:full-name full-name
+             (he-doom #:console? console?
+                      #:full-name full-name
                       #:email email
                       #:theme theme
                       #:font font-mono)
