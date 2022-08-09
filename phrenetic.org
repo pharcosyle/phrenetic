@@ -5664,7 +5664,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                                      `((family . ,(assoc-ref font #:font/name)))
                                      (if-let ((weight (assoc-ref font #:font/weight)))
                                              `((style . ,(font-weight->style weight))) '())))
-                         (size . ,(assoc-ref font #:font/size)))))
+                         (size . ,(- (assoc-ref font #:font/size) 2)))))
               '())
         ,@(if config-file
               `((import . #(,config-file)))
