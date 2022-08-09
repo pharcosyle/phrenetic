@@ -5,8 +5,8 @@
   allow-cmd false)
 
 (defalias
-  caps (tap-hold-next 400 esc lctl)
-  semi (tap-hold-next 400 ; rctl))
+  cap (tap-hold-next 400 esc lctl)
+  sem (tap-hold-next 400 ; rctl))
 
 (defsrc
   esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
@@ -17,12 +17,12 @@
   lsft lctl lalt lmet           spc            rmet ralt left down rght)
 
 (deflayer default
-  _     _    _    _    _    _    _    _    _    _    _     _    _
-  _     _    _    _    _    _    _    _    _    _    _     _    _    _
-  _     _    _    _    _    _    _    _    _    _    _     _    _    _
-  @caps _    _    _    _    _    _    _    _    _    @semi _    _
-  _     _    _    _    _    _    _    _    _    _    _     _    _
-  _     _    _    _              _              _    _     _    _    _)
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  @cap _    _    _    _    _    _    _    _    _    @sem _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _              _              _    _    _    _    _)
 
 ;; (deflayer default
 ;;   _    _    _    _    _    _    _    _    _    _    _    _    _
