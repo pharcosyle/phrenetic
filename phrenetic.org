@@ -4409,19 +4409,6 @@ Can be an integer to determine the exact padding."
   (setq vertico-count 20  ; Trying out, maybe too big.
         vertico-scroll-margin 7))
 #+end_src
-******* "status bar"
-Not using waybar at the moment so these are handy.
-#+begin_src elisp
-(use-package! battery
-  :config
-  (display-battery-mode 1))
-
-(use-package! time
-  :config
-  (setq display-time-day-and-date t)
-  ;; (setq display-time-24hr-format t)
-  (display-time-mode 1))
-#+end_src
 ******* keybinding ideas
 #+begin_src elisp
 ;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
