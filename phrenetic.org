@@ -4699,6 +4699,9 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                 (description "Run KMonad.")))
 #+end_src
 *** Desktop
+#+begin_src scheme
+(define wallpaper (local-file "alucard_bg.png"))
+#+end_src
 **** Desktop packages
 #+begin_src scheme
 (define* (he-desktop-packages
@@ -4987,7 +4990,7 @@ Some cursorily-googled intel:
                   application-launcher
                   default-terminal
                   (backup-terminal default-terminal)
-                  (bg-image (local-file "alucard_bg.png"))
+                  (bg-image wallpaper)
                   extra-config)
   (list
    (simple-service
@@ -5216,7 +5219,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
                       (image "/home/pharcosyle/projects/phrenetic/ebullient/home/alucard_bg.png")
-                      ;; (image (local-file "alucard_bg.png"))
+                      ;; (image wallpaper)
                       extra-config)
   (list
    (service
