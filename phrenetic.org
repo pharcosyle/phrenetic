@@ -5334,7 +5334,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                        (waybar-battery)
                        (waybar-clock))))
                     theme ; TODO unused. Use it.
-                    (base16-css (local-file "base16-default-dark.css"))
+                    (css (local-file "waybar-style.css"))
                     font
                     transitions?)
   (append
@@ -5345,7 +5345,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (config #(((position . top)
                  (name . main))))
       (style-css
-       `(,#~(format #f "@import \"~a\";\n" #$base16-css)
+       `(,#~(format #f "@import \"~a\";\n" #$css)
             (*
              ((font-family . #(FontAwesome
                                ,@(if font
@@ -5363,7 +5363,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
               (opacity . 0.9)))
 
             ((tooltip label)
-             ((color . @base05)
+             ((color . @base04)
               (padding . 0)))
 
             (#{#waybar}#
@@ -5411,24 +5411,15 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
          (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
 #+end_src
-****** Base16 CSS
-#+begin_src css :tangle (meta-in-dir "base16-default-dark.css")
-@define-color base00 #181818;
-@define-color base01 #282828;
-@define-color base02 #383838;
-@define-color base03 #585858;
-@define-color base04 #b8b8b8;
-@define-color base05 #d8d8d8;
-@define-color base06 #e8e8e8;
-@define-color base07 #f8f8f8;
-@define-color base08 #ab4642;
-@define-color base09 #dc9656;
-@define-color base0A #f7ca88;
-@define-color base0B #a1b56c;
-@define-color base0C #86c1b9;
-@define-color base0D #7cafc2;
-@define-color base0E #ba8baf;
-@define-color base0F #a16946;
+****** CSS
+#+begin_src css :tangle (meta-in-dir "waybar-style.css")
+@define-color base01 #282c34;
+@define-color base02 #3f444a;
+@define-color base03 #5B6268;
+@define-color base04 #dee2f8;
+@define-color base07 #8496ff;
+@define-color base08 #fb8578;
+@define-color base09 #fdce5f;
 #+end_src
 ****** Modules
 #+begin_src scheme
@@ -5534,7 +5525,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (border-radius . 0.2em)
        (margin . (0.4em 0.2em))
        (padding . (0.1em 0.2em))
-       (color . @base05)))
+       (color . @base04)))
 
      ((#{#workspaces}# button:hover)
       ((background . none)
@@ -5553,7 +5544,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    'tray
    `()
    `(((#{#tray}# menu)
-      ((color . @base05)
+      ((color . @base04)
        (background . @base01)
        (border . (solid 1px))
        (border-color . @base02)))
