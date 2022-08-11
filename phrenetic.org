@@ -992,6 +992,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             he-alacritty
             alacritty-terminal))
 
+;; TODO replace with the following after my next guix pull:
+;; #:use-module ((rde serializers elisp) #:select (serialize-elisp-config))
 (define serialize-elisp-config (@@ (gnu home-services emacs) serialize-elisp-config))
 #+end_src
 *** Packages
@@ -4981,7 +4983,7 @@ Some cursorily-googled intel:
    (simple-service
     'packages-for-sway
     home-profile-service-type
-    (list qtwayland ; Copied from RDE: I don't know what this is for.
+    (list qtwayland ; Copied from RDE. I don't know what this is for.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
           xdg-desktop-portal-wlr
