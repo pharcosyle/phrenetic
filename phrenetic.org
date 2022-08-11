@@ -4888,14 +4888,17 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Flatpak
 #+begin_src scheme
-(define (he-flatpak)
+(define* (he-flatpak #:key wayland?)
   (list
    (simple-service
     'flatpak-add-packages
     home-profile-service-type
-    (list flatpak
-          xdg-desktop-portal
-          xdg-desktop-portal-wlr))))
+    (append
+     (list flatpak)
+     (if wayland?
+         (list xdg-desktop-portal
+               xdg-desktop-portal-wlr)
+         '())))))
 #+end_src
 ***** Make Flatpak apps visible
 TODO and remove "tangle no"
@@ -5689,7 +5692,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                  (he-kmonad) '()))
             '())
         (if desktop?
-            (let ((sway? (member #:session/sway (or sessions '()))))
+            (let ((wayland? #t)
+                  (sway? (member #:session/sway (or sessions '()))))
               (append
                (he-desktop-packages)
                (he-xdg)
@@ -5698,7 +5702,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                        #:font-monospace font-mono)
                (if pipewire?
                    (he-pipewire #:sway? sway?) '())
-               (he-flatpak)
+               (he-flatpak #:wayland? wayland?)
                (if sway?
                    (let ((screen-locker (swaylock-screen-locker)))
                      (append
