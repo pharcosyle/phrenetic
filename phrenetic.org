@@ -932,7 +932,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects swayidle waybar))
+  #:use-module ((gnu packages wm) #:select (mako swaylock swaylock-effects swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
@@ -973,8 +973,10 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
             swaylock-screen-locker
             he-swayidle
             swayidle-idle-manager
+            he-mako
             he-waybar
             he-rofi
+            rofi-menu
             rofi-application-launcher
             he-alacritty
             alacritty-terminal))
@@ -4673,6 +4675,18 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+end_src
 *** Desktop
 #+begin_src scheme
+(define* (ini-config-file name config
+                          #:key (serialize-ini-config serialize-ini-config))
+  (apply mixed-text-file name (serialize-ini-config config)))
+
+(define (font-value font)
+  (string-join
+   (list
+    (assoc-ref font #:font/name)
+    (number->string
+     (assoc-ref font #:font/size)))
+   " "))
+
 (define wallpaper (local-file "alucard_bg.png"))
 #+end_src
 **** Desktop packages
@@ -4761,23 +4775,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                        (case theme
                                          ((#:theme/light) "Arc")
                                          ((#:theme/dark) "Arc-Dark"))))
-                        (font-name . ,(font-value font))
-                        (monospace-font-name . ,(font-value font-monospace))))))))))))))))
-
-(define (ini-config-file name config)
-  (apply mixed-text-file name (serialize-ini-config config)))
+                        (font-name . ,(quoted-symbol
+                                       (font-value font)))
+                        (monospace-font-name . ,(quoted-symbol
+                                                 (font-value font-monospace)))))))))))))))))
 
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
-
-(define (font-value font)
-  (quoted-symbol
-   (string-join
-    (list
-     (assoc-ref font #:font/name)
-     (number->string
-      (assoc-ref font #:font/size)))
-    " ")))
 #+end_src
 **** Pipewire
 #+begin_src scheme
@@ -5281,6 +5285,42 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define (swayidle-idle-manager)
   (file-append swayidle "/bin/swayidle -w"))
 #+end_src
+**** Notification daemons
+***** Mako
+#+begin_src scheme
+(define* (he-mako #:key
+                  sway?
+                  menu
+                  font)
+  (list
+   (simple-service
+    'mako-add-packages
+    home-profile-service-type
+    (list mako
+          jq)) ; Required to use `makoctl menu'.
+
+   (simple-service
+    'mako-config
+    home-xdg-configuration-files-service-type
+    `(("mako/config"
+       ,(ini-config-file
+         "mako-config"
+         `((global ((font . ,(string->symbol
+                              (font-value font))))))
+         #:serialize-ini-config
+         (lambda (config)
+           (serialize-ini-config config #:equal-string "="))))))
+
+   (when sway?
+     (simple-service
+      'mako-add-to-sway
+      home-sway-service-type
+      `((exec ,(file-append mako "/bin/mako"))
+        ,@(let ((makoctl (file-append mako "/bin/makoctl")))
+            `((bindsym $mod+m exec ,makoctl dismiss)
+              (bindsym $mod+Shift+m exec ,makoctl restore)
+              (bindsym $mod+Control+m exec ,makoctl menu ,menu "\"Notification action\""))))))))
+#+end_src
 **** Status bars
 ***** Waybar
 #+begin_src scheme
@@ -5562,7 +5602,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 #+end_src
 ******* WAIT [#D] Remove zero-padding from clock hour
 Once Waybar is updated in Guix this should be doable (possibly with the format =%-i=). See https://github.com/Alexays/Waybar/issues/1452.
-**** Application launchers
+**** Menus and launchers
 ***** Rofi
 #+begin_src scheme
 (define* (he-rofi #:key
@@ -5590,6 +5630,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
         ,#~(format #f "@theme \"~a\"" #$(case theme
                                           ((#:theme/light) "Arc")
                                           ((#:theme/dark) "Arc-Dark")))))))))
+
+(define* (rofi-menu #:key wayland?)
+  (file-append (get-rofi wayland?) "/bin/rofi -dmenu -p"))
 
 (define* (rofi-application-launcher #:key wayland?)
   (file-append (get-rofi wayland?) "/bin/rofi -show drun"))
@@ -5716,6 +5759,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                       (he-swaylock #:font font-variable-pitch)
                       (he-swayidle #:sway? #t
                                    #:screen-locker screen-locker)
+                      (he-mako #:sway? #t
+                               #:menu (rofi-menu #:wayland? #t)
+                               #:font font-variable-pitch)
                       (he-waybar #:sway? #t
                                  #:font font-variable-pitch
                                  #:theme theme)
