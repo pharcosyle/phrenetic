@@ -4933,16 +4933,7 @@ Some cursorily-googled intel:
 ***** Common
 #+begin_src scheme
 (define* (he-wm-common #:key sway?)
-  (append
-   (wm-common-packages)
-   (wm-common-applets #:sway? sway?)))
-
-(define (wm-common-packages)
-  (list
-   (simple-service
-    'wm-common-add-packages
-    home-profile-service-type
-    (list pavucontrol))))
+  (wm-common-applets #:sway? sway?))
 
 (define* (wm-common-applets #:key sway?)
   (list
@@ -5337,11 +5328,11 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (style-css
        `(,#~(format #f "@import \"~a\";\n" #$css)
             (*
-             ((font-family . #(FontAwesome
-                               ,@(if font
+             ((font-family . #(,@(if font
                                      (list
                                       (-> font (assoc-ref #:font/name) string->symbol))
-                                     '())))
+                                     '())
+                               FontAwesome))
               ,@(if transitions? '() '((transition . none)))
               (box-shadow . none)
               (text-shadow . none)
@@ -5369,7 +5360,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 
             ;; To accommodate the crack in my screen.
             (.modules-left
-             ((margin-left . 78px)))
+             ((margin-left . 82px)))
             ;; (.modules-left
             ;;  ((margin-left . 0.2em)))
 
@@ -5433,13 +5424,28 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                    style '())))))
 
 (define (waybar-audio)
-  (waybar-module 'pulseaudio))
+  (waybar-module
+   'pulseaudio
+   `((format . "{volume}% {icon} {format_source}")
+     (format-muted . " {format_source}")
+     (format-bluetooth . "{volume}% {icon} {format_source}")
+     (format-bluetooth-muted . " {icon} {format_source}")
+     (format-source . "{volume}% ")
+     (format-source-muted . "")
+     (format-icons . ((headphone . )
+                       (hands-free . )
+                       (headset . )
+                       (phone . )
+                       (portable . )
+                       (car . )
+                       (default . #("" "" ""))))
+     (on-click . ,#~(string-append "\"" #$(file-append pavucontrol "/bin/pavucontrol") "\"")))))
 
 (define (waybar-battery)
   (waybar-module
    'battery
    `((format . "{icon} {capacity}%")
-     (format-charging . "{icon} {capacity}% ")
+     (format-charging . " {icon} {capacity}%")
      (states . ((empty . 10)
                 (low . 20)
                 (half-low . 40)
@@ -5456,11 +5462,14 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       ((color . @base08)))
      (#{#battery.discharging.low}#
       ((color . @base09)))
-     (#{#battery.discharging.full}#
+     (#{#battery.full}#
       ((color . @base05))))))
 
 (define (waybar-backlight)
-  (waybar-module 'backlight))
+  (waybar-module
+   'backlight
+   '((format . "{icon} {percent}")
+     (format-icons . #(        )))))
 
 (define* (waybar-clock #:key
                        (format "{:%a %b %d %i:%M %p}"))
@@ -5472,7 +5481,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    #:placement 'modules-left))
 
 (define (waybar-cpu)
-  (waybar-module 'cpu))
+  (waybar-module
+   'cpu
+   '((format . " {usage}%"))))
 
 (define (waybar-idle-inhibitor)
   (waybar-module
@@ -5482,7 +5493,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (deactivated . ))))))
 
 (define (waybar-memory)
-  (waybar-module 'memory))
+  (waybar-module
+   'memory
+   '((format . " {}%"))))
 
 (define (waybar-sway-window)
   (waybar-module
@@ -5559,6 +5572,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
+******* WAIT [#D] Remove zero-padding from clock hour
+Once Waybar is updated in Guix this should be doable (possibly with the format =%-i=). See https://github.com/Alexays/Waybar/issues/1452.
 **** Application launchers
 ***** Rofi
 #+begin_src scheme
