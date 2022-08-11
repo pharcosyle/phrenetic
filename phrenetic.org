@@ -5308,6 +5308,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                     sway?
                     (waybar-modules
                      (append
+                      (list
+                       (waybar-clock))
                       (if sway?
                           (list
                            (waybar-sway-workspaces)
@@ -5320,8 +5322,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                        (waybar-backlight)
                        (waybar-cpu)
                        (waybar-memory)
-                       (waybar-battery)
-                       (waybar-clock))))
+                       (waybar-battery))))
                     theme ; TODO unused. Use it.
                     (css (local-file "waybar-style.css"))
                     font
@@ -5463,7 +5464,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     (format . ,format))))
+     (format . ,format))
+   '()
+   #:placement 'modules-left))
 
 (define (waybar-cpu)
   (waybar-module 'cpu))
