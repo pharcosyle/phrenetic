@@ -5314,11 +5314,11 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (style-css
        `(,#~(format #f "@import \"~a\";\n" #$css)
             (*
-             ((font-family . #(,@(if font
+             ((font-family . #(FontAwesome
+                               ,@(if font
                                      (list
                                       (-> font (assoc-ref #:font/name) string->symbol))
-                                     '())
-                               FontAwesome))
+                                     '())))
               ,@(if transitions? '() '((transition . none)))
               (box-shadow . none)
               (text-shadow . none)
@@ -5413,9 +5413,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   (waybar-module
    'pulseaudio
    `((format . "{volume}% {icon} {format_source}")
-     (format-muted . " {format_source}")
+     (format-muted . " {format_source}")
      (format-bluetooth . "{volume}% {icon} {format_source}")
-     (format-bluetooth-muted . " {icon} {format_source}")
+     (format-bluetooth-muted . " {icon} {format_source}")
      (format-source . "{volume}% ")
      (format-source-muted . "")
      (format-icons . ((headphone . )
@@ -5424,7 +5424,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                        (phone . )
                        (portable . )
                        (car . )
-                       (default . #("" "" ""))))
+                       (default . #(  ))))
      (on-click . ,#~(string-append "\"" #$(file-append pavucontrol "/bin/pavucontrol") "\"")))))
 
 (define (waybar-battery)
@@ -5454,11 +5454,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define (waybar-backlight)
   (waybar-module
    'backlight
-   '((format . "{icon} {percent}")
-     (format-icons . #(        )))))
+   '((format . " {percent}"))))
 
 (define* (waybar-clock #:key
-                       (format "{:%a %b %d %i:%M %p}"))
+                       (format "{:%a %b %d %I:%M %p}"))
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
