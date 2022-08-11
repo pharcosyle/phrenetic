@@ -887,9 +887,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 :END:
 #+begin_src scheme
 (define-module (ebullient home packages fonts)
-  #:use-module (guix build-system font)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-awesome) #:prefix fonts:)
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
   #:use-module (ebullient utils))
 
 (define-public font-adobe-source-code-pro
@@ -898,17 +896,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
    #:version "2.038R-ro-1.058R-it-1.018R-VAR"
    #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
    #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
-
-(define-public font-awesome
-  (let ((version "6.1.2"))
-    (with-git-version
-     (package
-       (inherit fonts:font-awesome)
-       (build-system font-build-system)
-       (arguments '()))
-     #:version version
-     #:commit version
-     #:hash "0ikax3i6xkv6nrc8w543rfp9bs72mxz7zc0irq21y4jw8mqahpwq")))
 #+end_src
 ** Components
 :PROPERTIES:
@@ -928,7 +915,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
+  #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (dconf network-manager-applet))
@@ -957,7 +944,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
   #:use-module ((rde serializers ini) #:select (serialize-ini-config))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
-  #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro font-awesome))
+  #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
@@ -1674,8 +1661,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
-  #:use-module ((gnu packages fonts) #:select (font-google-material-design-icons))
-  #:use-module ((ebullient home packages fonts) #:select (font-awesome))
+  #:use-module ((gnu packages fonts) #:select (font-google-material-design-icons font-awesome))
   #:use-module (ebullient utils))
 
 (define-public all-the-icons-fonts
