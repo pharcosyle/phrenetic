@@ -5407,6 +5407,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 @define-color base02 #3f444a;
 @define-color base03 #5B6268;
 @define-color base04 #dee2f8;
+@define-color base05 #9fed9c;
 @define-color base07 #8496ff;
 @define-color base08 #fb8578;
 @define-color base09 #fdce5f;
@@ -5454,7 +5455,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    `((#{#battery.discharging.empty}#
       ((color . @base08)))
      (#{#battery.discharging.low}#
-      ((color . @base09))))))
+      ((color . @base09)))
+     (#{#battery.discharging.full}#
+      ((color . @base05))))))
 
 (define (waybar-backlight)
   (waybar-module 'backlight))
