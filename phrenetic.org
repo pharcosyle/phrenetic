@@ -5294,13 +5294,14 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define* (he-mako #:key
                   sway?
                   menu
+                  theme ; TODO unused. Use it.
                   font)
   (list
    (simple-service
     'mako-add-packages
     home-profile-service-type
     (list mako
-          jq)) ; Required to use `makoctl menu'.
+          jq)) ; Required to use `makoctl menu'. Ideally this would be part of the Guix package.
 
    (simple-service
     'mako-config
@@ -5308,8 +5309,15 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     `(("mako/config"
        ,(ini-config-file
          "mako-config"
-         `((global ((font . ,(string->symbol
-                              (font-value font))))))
+         `((global ((font . ,(string->symbol (font-value font)))
+                    (max-icon-size . ,(string->symbol "32"))
+                    (text-color . ,(string->symbol "#dee2f8"))
+                    (background-color . ,(string->symbol (string-append "#282c34" "1A"))) ; TODO why isn't the transparency working right?
+                    (border-color . ,(string->symbol "#8496ff"))
+                    (border-size . ,(string->symbol "2"))
+                    (border-radius . ,(string->symbol "8"))))
+           (urgency=low ((border-color . ,(string->symbol "#9fed9c"))))
+           (urgency=high ((border-color . ,(string->symbol "#fb8578")))))
          #:serialize-ini-config
          (lambda (config)
            (serialize-ini-config config #:equal-string "="))))))
@@ -5764,10 +5772,11 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                    #:screen-locker screen-locker)
                       (he-mako #:sway? #t
                                #:menu (rofi-menu #:wayland? #t)
+                               #:theme theme
                                #:font font-variable-pitch)
                       (he-waybar #:sway? #t
-                                 #:font font-variable-pitch
-                                 #:theme theme)
+                                 #:theme theme
+                                 #:font font-variable-pitch)
                       (he-rofi #:wayland? #t
                                #:theme theme)
                       (he-alacritty #:font font-mono)))
