@@ -600,10 +600,9 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
   (services
-   (update-services
-    (operating-system-user-services os)
-    guix-service-type
-    (lambda (config)
+   (modify-services (operating-system-user-services os)
+     (guix-service-type
+      config =>
       (guix-configuration
        (inherit config)
        (substitute-urls
@@ -640,10 +639,9 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
   (services
-   (update-services
-    (operating-system-user-services os)
-    console-font-service-type
-    (lambda (config)
+   (modify-services (operating-system-user-services os)
+     (console-font-service-type
+      config =>
       (map (lambda (tty-and-font)
              (cons (car tty-and-font)
                    (file-append font-terminus "/share/consolefonts/ter-132n")))
@@ -5823,8 +5821,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             ->
             ->>
             as->
-            update-services*
-            update-services
             with-git-version
             with-git-commit
             with-git-url))
@@ -5883,21 +5879,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 #+end_src
 ** Guix
 #+begin_src scheme
-(define (update-services* services pred update-fn)
-  (update-list
-   services
-   pred
-   (lambda (svc)
-     (service (service-kind svc)
-              (update-fn (service-value svc))))))
-
-(define (update-services services kind update-fn)
-  (update-services*
-   services
-   (lambda (svc)
-     (eq? (service-kind svc) kind))
-   update-fn))
-
 (define* (with-git pkg
                    #:key
                    upstream-version
