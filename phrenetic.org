@@ -295,7 +295,7 @@ guix pull
             gnome-desktop
             wm
             sway-wm
-            macbook-wireless
+            macbook
             macbook-kb-layout))
 #+end_src
 #+begin_src scheme
@@ -764,6 +764,12 @@ Must succeed "Accounts" component.
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
 *** Macbook
+#+begin_src scheme
+(define* (macbook os #:key bluetooth?)
+  (-> os
+      (macbook-wireless #:bluetooth? bluetooth?)
+      macbook-power-key))
+#+end_src
 **** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
 #+begin_src scheme
@@ -786,6 +792,18 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
       (update-list kernel-args blacklist? (lambda (blacklist)
                                             (string-append blacklist "," new)))
       (cons* (string-append blacklist-param "=" new) kernel-args)))
+#+end_src
+**** Power key
+The power key is part of they keyboard on MacBooks and too easy to press by accident. Also, suspending is what the key does on macOS.
+#+begin_src scheme
+(define-system-comp (macbook-power-key)
+  (services
+   (modify-services (operating-system-user-services os)
+     (elogind-service-type
+      config =>
+      (elogind-configuration
+       (inherit config)
+       (handle-power-key 'suspend))))))
 #+end_src
 **** Keyboard layout
 #+begin_src scheme
@@ -854,7 +872,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                       (sway-wm $ #:laptop? laptop?) $)))
             $)
         (if macbook?
-            (macbook-wireless $ #:bluetooth? bluetooth?) $)
+            (macbook $ #:bluetooth? bluetooth?) $)
         (let* ((persist-dir stateless-persist-dir)
                (subvols (btrfs-subvols #:stateless? stateless?
                                        #:persist-dir persist-dir
