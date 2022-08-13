@@ -957,6 +957,7 @@ The power key is part of they keyboard on MacBooks and too easy to press by acci
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
+  #:use-module ((rde serializers elisp) #:select (serialize-elisp-config))
   #:use-module ((rde serializers ini) #:select (serialize-ini-config))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
@@ -996,10 +997,6 @@ The power key is part of they keyboard on MacBooks and too easy to press by acci
             rofi-application-launcher
             he-alacritty
             alacritty-terminal))
-
-;; TODO replace with the following after my next guix pull:
-;; #:use-module ((rde serializers elisp) #:select (serialize-elisp-config))
-(define serialize-elisp-config (@@ (gnu home-services emacs) serialize-elisp-config))
 #+end_src
 *** Packages
 #+begin_src scheme
