@@ -6173,10 +6173,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module (ebullient home base-he)
   #:use-module (ebullient system base-os)
   #:use-module (ebullient union)
-  #:export (os
-            primary-he
-            aux-he
-            guest-he))
+  #:export (os))
 
 (define nix? #t)
 (define console? #t)
@@ -6191,7 +6188,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define aux-kmonad? #t)
 (define guest-name "gandalf")
 
-(define os
+(define os*
   (base-os #:host-name "frostfire"
            #:timezone "America/Los_Angeles"
            #:users `(((#:user/name . ,primary-name)
@@ -6247,12 +6244,11 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
            #:desktop? desktop?
            #:pipewire? pipewire?))
 
-(define frostfire
-  (union #:os os
+(define os
+  (union #:os os*
          #:hes `(;; (,primary-name . ,primary-he)
-                 (,aux-name . ,aux-he)
-                 ;; (,guest-name . ,guest-he)
-                 )))
+                 ;; (,aux-name . ,aux-he)
+                 (,guest-name . ,guest-he))))
 #+end_src
 *** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
