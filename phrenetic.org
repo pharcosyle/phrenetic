@@ -10,6 +10,8 @@
   - [[#install][Install]]
 - [[#packages][Packages]]
   - [[#kmonad][KMonad]]
+- [[#common][Common]]
+  - [[#stateless][Stateless]]
 - [[#system][System]]
   - [[#components][Components]]
   - [[#base-os][Base OS]]
@@ -17,7 +19,6 @@
   - [[#packages-1][Packages]]
   - [[#components-1][Components]]
   - [[#base-he][Base HE]]
-- [[#union][Union]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
   - [[#functions][Functions]]
@@ -232,6 +233,125 @@ guix pull
      #:commit commit
      #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
 #+end_src
+* Common
+:PROPERTIES:
+:meta-dir+: /ebullient
+:END:
+** Stateless
+#+begin_src scheme :tangle (meta-in-dir "stateless.scm")
+(define-module (ebullient stateless)
+  #:use-module ((guix modules) #:select (source-module-closure))
+  #:use-module (guix gexp)
+  #:export (stateless-persist-dir
+            stateless-machine-dir
+            activate-stateless-gexp))
+
+(define stateless-persist-dir "/.persist")
+(define stateless-machine-dir "/.machine")
+
+(define* (activate-stateless-gexp persist-dir
+                                  machine-dir
+                                  state
+                                  #:key
+                                  home?)
+  (with-imported-modules (source-module-closure
+                          '((guix build utils)))
+    #~(begin
+        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
+                     ((srfi srfi-1) #:select (any drop-right every)))
+
+        (define (alist? x)
+          (and (list? x) (every pair? x)))
+
+        (define (normalize-state state)
+          (let ((as-alist
+                 (lambda (i)
+                   (cond
+                    ((alist? i) i)
+                    ((or (string? i) (list? i)) `((#:path . ,i))))))
+                (with-default-store
+                 (lambda (i)
+                   (if (assoc-ref i #:store)
+                       i
+                       (acons #:store #:machine i))))
+                (with-home-expansions
+                 (lambda (i)
+                   (acons
+                    #:path
+                    (let ((path (assoc-ref i #:path)))
+                      (cond
+                       ((string? path) (string-append (getenv "HOME") "/" path))
+                       ((list? path)
+                        (apply
+                         (lambda* (#:optional tail #:key xdg-base)
+                           (string-append (getenv xdg-base) "/" (or tail "")))
+                         path))))
+                    i))))
+            (map (compose (if #$home?
+                              with-home-expansions identity)
+                          with-default-store
+                          as-alist)
+                 state)))
+
+        (define (mkdirp-perms dir perms)
+          (mkdir-p dir)
+          (chown dir
+                 (let ((user (assoc-ref perms #:user)))
+                   (if user
+                       (passwd:uid (getpwnam user)) -1))
+                 (let ((group (assoc-ref perms #:group)))
+                   (if group
+                       (group:gid (getgrnam group)) -1)))
+          (let ((mode (assoc-ref perms #:mode)))
+            (when mode
+              (chmod dir mode))))
+
+        (define (no-follow-file-exists? file)
+          (->bool (false-if-exception (lstat file))))
+
+        (define (cleanup-and-migrate target state-file)
+          (let ((symlink-to-state?
+                 (lambda (file)
+                   (and (symbolic-link? file)
+                        (any (lambda (state-dir)
+                               (string-prefix? state-dir (readlink file)))
+                             (list
+                              #$persist-dir
+                              #$machine-dir)))))
+                (migrate-file
+                 (lambda (source dest)
+                   (when (no-follow-file-exists? dest)
+                     (delete-file-recursively dest))
+                   (copy-recursively source dest)
+                   (delete-file-recursively source))))
+            (when (no-follow-file-exists? target)
+              (if (symlink-to-state? target)
+                  (delete-file target)
+                  (migrate-file target state-file)))))
+
+        (define (process-state-entry i)
+          (let* ((path (assoc-ref i #:path))
+                 (directory-target? (string-suffix? "/" path))
+                 (target (if directory-target?
+                             (string-drop-right path 1) path))
+                 (state-dir (case (assoc-ref i #:store)
+                         ((#:persist) #$persist-dir)
+                         ((#:machine) #$machine-dir))))
+            (let ((parent-dir (string-join
+                               (drop-right (string-split path #\/) 1)
+                               "/"))
+                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
+              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
+              (mkdirp-perms parent-dir parent-dir-perms))
+            (let ((state-file (string-append state-dir target)))
+              (cleanup-and-migrate target state-file)
+              (when directory-target?
+                (mkdirp-perms state-file i))
+              (when (no-follow-file-exists? state-file)
+                (symlink state-file target)))))
+
+        (for-each process-state-entry (normalize-state '#$state)))))
+#+end_src
 * System
 :PROPERTIES:
 :meta-dir+: /ebullient/system
@@ -257,7 +377,9 @@ guix pull
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
+  #:use-module ((gnu services networking) #:select (network-manager-service-type))
   #:use-module (gnu services nix)
+  #:use-module (gnu services shepherd)
   #:use-module (gnu services sound)
   #:use-module (gnu services xorg)
   #:use-module (gnu system)
@@ -269,10 +391,11 @@ guix pull
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
-  #:use-module ((srfi srfi-1) #:select (any remove iota))
+  #:use-module ((srfi srfi-1) #:select (any append-map concatenate remove iota))
   #:export (barebones-os
             host-info
             grub-efi
@@ -281,7 +404,6 @@ guix pull
             linux-nonfree
             disk-encryption
             stateless
-            stateless-persist-dir
             btrfs
             btrfs-subvols
             accounts
@@ -291,6 +413,9 @@ guix pull
             hidpi-console-font
             kmonad-tool
             desktop-services
+            pipewire-multimedia
+            network-manager
+            bluetooth
             gdm
             gnome-desktop
             wm
@@ -400,10 +525,14 @@ guix pull
            (operating-system-file-systems os))))))
 #+end_src
 *** Stateless
-Must succeed "File systems" component. Probably should succeed /all/ other components.
+Must succeed "File systems" and "Accounts" components. Probably should succeed /all/ other components.
 - The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
 #+begin_src scheme
-(define-system-comp (stateless #:key persist-dir bluetooth?)
+(define-system-comp (stateless #:key
+                               persist-dir
+                               machine-dir
+                               who
+                               hes)
   (initrd (lambda (file-systems . rest)
             (apply (operating-system-initrd os) file-systems
                    #:volatile-root? #t
@@ -419,100 +548,122 @@ Must succeed "File systems" component. Probably should succeed /all/ other compo
                 (needed-for-boot? #t))
               fs))
         (operating-system-file-systems os)))
+  (users
+   (map (lambda (account)
+          (if (member (user-account-name account) who)
+              (user-account
+               (inherit account)
+               (create-home-directory? #f))
+              account))
+        (operating-system-users os)))
   (services
    (append
     (operating-system-user-services os)
     (list
      (service stateless-service-type
               `((#:persist-dir . ,persist-dir)
-                (#:paths . ,(append
-                             '("/etc/machine-id"
-                               "/var/lib/random-seed"
-                               "/etc/NetworkManager/system-connections"
-                               "/var/lib/NetworkManager/secret_key"
-                               "/etc/guix/signing-key.pub"
-                               "/etc/guix/signing-key.sec")
-                             (if bluetooth?
-                                 '("/var/lib/bluetooth") '())))))))))
-
-(define stateless-persist-dir "/.persist")
+                (#:machine-dir . ,machine-dir)
+                (#:homes . ,(->> users
+                                 (filter (lambda (account)
+                                           (member (user-account-name account) who)))
+                                 (map (lambda (account)
+                                        `(,(user-account-name account) . ,(user-account-home-directory account))))))
+                (#:hes . ,hes)))
+     (simple-service
+      'stateless-system-state
+      stateless-service-type
+      '("/etc/machine-id"
+        "/var/lib/random-seed"
+        ((#:path . "/etc/guix/signing-key.pub")
+         (#:parent-dir-perms . ((#:mode . #o111))))
+        ((#:path . "/etc/guix/signing-key.sec")
+         (#:parent-dir-perms . ((#:mode . #o111))))))))))
 #+end_src
-**** HOLD [#D] Make stateless service more error-tolerant
-Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the stateless service won't undergo major changes because of them.
-- At the very least wrap it in some sort of try/catch and print a warning.
-  It needs to be visible. Make the warning big and/or sleep the process for ten-ish sections to make sure I see it?
-- I don't want the =install.scm= code I depend on to change and that to mess things up.
-  There might not be much I can do about it though. Maybe copy it in?
-  - as of [2022-07-30 Sat] =install.scm= hasn't been modified in two years
-  - maybe just copy over the relevant section of =install.scm=
 **** Service
+***** Populate
 #+begin_src scheme
-(define save-or-restore-users+groups
-  #~(lambda (persist-dir save-or-restore)
-      (for-each (lambda (path)
-                  (let ((files (list path (string-append persist-dir path))))
-                    (apply copy-file (case save-or-restore
-                                       ((#:restore) (reverse files))
-                                       ((#:save) files)))))
-                '("/etc/group"
-                  "/etc/passwd"
-                  "/etc/shadow"))))
+(define (populate-gexp _)
+  (with-extensions (list guile-gcrypt)
+    (with-imported-modules (source-module-closure
+                            '((gnu build install)))
+      #~(begin
+          (use-modules ((gnu build install) #:select (populate-root-file-system)))
 
-(define (populate-gexp config)
-  (let ((persist-dir (assoc-ref config #:persist-dir)))
-    (with-extensions (list guile-gcrypt)
-      (with-imported-modules (source-module-closure
-                              '((gnu build install)))
-        #~(begin
-            (use-modules ((gnu build install) #:select (populate-root-file-system)))
+          (let* ((system-path "/var/guix/profiles/system")
+                 (system-1-path "/var/guix/profiles/system-1-link")
+                 (system-1-exists? (file-exists? system-1-path))
+                 (system-link (readlink system-path))
+                 (system-1-link (if system-1-exists?
+                                    (readlink system-1-path)
+                                    system-link)))
+            (populate-root-file-system system-1-link ""
+                                       #:extras `((,system-path -> ,system-link)))
+            (unless system-1-exists?
+              (delete-file system-1-path)))))))
+#+end_src
+***** Activate
+#+begin_src scheme
+(define (system-activate-stateless-gexp config)
+  (activate-stateless-gexp
+   (assoc-ref config #:persist-dir)
+   (assoc-ref config #:machine-dir)
+   (assoc-ref config #:state)))
+#+end_src
+***** Users
+#+begin_src scheme
+(define (user-homes-shepherd-service config)
+  (let ((user-homes (assoc-ref config #:homes))
+        (state-dirs (list
+                     (assoc-ref config #:persist-dir)
+                     (assoc-ref config #:machine-dir))))
 
-            (let* ((system-path "/var/guix/profiles/system")
-                   (system-1-path "/var/guix/profiles/system-1-link")
-                   (system-1-exists? (file-exists? system-1-path))
-                   (system-link (readlink system-path))
-                   (system-1-link (if system-1-exists?
-                                      (readlink system-1-path)
-                                      system-link)))
-              (populate-root-file-system system-1-link ""
-                                         #:extras `((,system-path -> ,system-link)))
-              (unless system-1-exists?
-                (delete-file system-1-path)))
-            (#$save-or-restore-users+groups #$persist-dir #:restore))))))
+    (shepherd-service
+     (provision '(stateless-user-homes))
+     (requirement '(file-systems))
+     (one-shot? #t)
+     (start (with-imported-modules (source-module-closure
+                                    '((guix build utils)))
+              #~(lambda ()
+                  (let ((mkdirp-user-home
+                         (lambda (dir uid gid)
+                           (mkdir-p dir)
+                           (chmod dir #o700)
+                           (chown dir uid gid))))
+                    (for-each
+                     (lambda (user-home)
+                       (let* ((pw (getpwnam (car user-home)))
+                              (uid (passwd:uid pw))
+                              (gid (passwd:gid pw))
+                              (home (cdr user-home)))
+                         (mkdirp-user-home home uid gid)
+                         (for-each
+                          (lambda (state-dir)
+                            (mkdirp-user-home (string-append state-dir home) uid gid))
+                          '#$state-dirs)))
+                     '#$user-homes))
+                  #t))))))
 
-(define (activate-state-gexp config)
-  (let ((persist-dir (assoc-ref config #:persist-dir))
-        (paths (assoc-ref config #:paths)))
-    #~(begin
-        (use-modules ((ice-9 match) #:select (match)))
-
-        (define (install path)
-          (let loop ((components (string-tokenize path (char-set-complement (char-set #\/))))
-                     (base #$persist-dir)
-                     (target-base ""))
-            (match components
-              ((head tail ...)
-               (let* ((path (string-append base "/" head))
-                      (target-path (string-append target-base "/" head)))
-                 (if (null? tail)
-                     ;; The Guix code makes a point of doing stuff like this atomically. I don't really know why but I will too.
-                     (let ((pivot (string-append target-path ".new")))
-                       (symlink path pivot)
-                       (rename-file pivot target-path))
-                     (begin
-                       (catch 'system-error
-                         (lambda ()
-                           (mkdir target-path))
-                         (lambda args
-                           (unless (= EEXIST (system-error-errno args))
-                             (apply throw args))))
-                       (let ((st (lstat path)))
-                         (chown target-path (stat:uid st) (stat:gid st))
-                         (chmod target-path (stat:perms st)))
-                       (loop tail path target-path))))))))
-
-        (for-each install '#$paths)
-        (#$save-or-restore-users+groups #$persist-dir #:save))))
-
+(define (activate-home-shepherd-services config)
+  (let ((svc
+         (lambda (user he)
+           (shepherd-service
+            (provision (list (symbol-append 'stateless-home- (string->symbol user))))
+            (requirement '(stateless-user-homes))
+            (one-shot? #t)
+            (start #~(make-forkexec-constructor
+                      '(#$(file-append he "/activate"))
+                      #:user #$user
+                      #:group (group:name (getgrgid (passwd:gid (getpw #$user))))
+                      #:environment-variables
+                      (list (string-append "HOME=" (passwd:dir (getpw #$user))))))
+            (stop #~(make-kill-destructor))))))
+    (map (match-lambda
+           ((user . he)
+            (svc user he)))
+         (assoc-ref config #:hes))))
+#+end_src
+***** Service type
+#+begin_src scheme
 (define stateless-service-type
   (service-type
    (name 'stateless)
@@ -520,7 +671,14 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
     (list (service-extension boot-service-type
                              populate-gexp)
           (service-extension activation-service-type
-                             activate-state-gexp)))
+                             system-activate-stateless-gexp)
+          (service-extension shepherd-root-service-type
+                             (lambda (config)
+                               (cons* (user-homes-shepherd-service config)
+                                      (activate-home-shepherd-services config))))))
+   (compose concatenate)
+   (extend (lambda (config state)
+             (acons #:state state config)))
    (description "Initialize a stateless system.")))
 #+end_src
 *** File systems
@@ -543,35 +701,37 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
          subvols)
     (operating-system-file-systems os))))
 
-(define* (btrfs-subvols #:key stateless? persist-dir nix?)
+(define* (btrfs-subvols #:key
+                        stateless?
+                        persist-dir
+                        machine-dir
+                        nix?)
   (append
    '(("root-blank" . "/")
      ("boot" . "/boot")
      ("guix-store" . "/gnu/store")
      ("guix-var" . "/var/guix")
-     ("log" . "/var/log")
-     ("home" . "/home"))
+     ("log" . "/var/log"))
    (if stateless?
-       `(("persist" . ,persist-dir)) '())
+       `(("persist" . ,persist-dir)
+         ("machine" . ,machine-dir))
+       '())
    (if nix?
        '(("nix" . "/nix")) '())))
 #+end_src
 *** Accounts
 #+begin_src scheme
-(define-system-comp (accounts #:key
-                              users
-                              bluetooth?)
+(define-system-comp (accounts #:key users-info)
   (users
-   (append (map (lambda (user)
-                  (account #:name (assoc-ref user #:user/name)
-                           #:comment (assoc-ref user #:user/comment)
-                           #:shell (assoc-ref user #:user/shell)
-                           #:admin? (assoc-ref user #:user/admin?)
-                           #:password (assoc-ref user #:user/password)
-                           #:salt (assoc-ref user #:user/salt)
-                           #:bluetooth? bluetooth?))
-                users)
-           (operating-system-users os))))
+   (append
+    (operating-system-users os)
+    (map (lambda (user-info)
+           (apply account (append-map
+                           (match-lambda
+                             ((k . v)
+                              (list k v)))
+                           user-info)))
+         users-info))))
 
 (define* (account #:key
                   name
@@ -579,15 +739,13 @@ Hold until I'm done with most of my other filesystem/btrfs tasks so I'm sure the
                   shell
                   admin?
                   password
-                  salt
-                  bluetooth?)
+                  salt)
   (user-account
    (name name)
    (comment (or comment ""))
    (group "users")
    (supplementary-groups (append '("netdev" "audio" "video")
-                                 (if admin? '("wheel") '())
-                                 (if bluetooth? '("lp") '())))
+                                 (if admin? '("wheel") '())))
    (shell (case shell
             ;; ((#:shell/bash) (file-append bash "/bin/bash"))
             ;; ((#:shell/zsh) (file-append zsh "/bin/zsh"))
@@ -651,65 +809,100 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
 **** KMonad
 Must succeed "Accounts" component.
 #+begin_src scheme
-(define-system-comp (kmonad-tool #:key users)
+(define-system-comp (kmonad-tool #:key who)
   (packages
    (cons* kmonad
           (operating-system-packages os)))
   (users
-   (update-list
-    (operating-system-users os)
-    (let ((kmonad-users
-           (->> users
-                (filter (lambda (user)
-                          (assoc-ref user #:user/kmonad?)))
-                (map (lambda (user)
-                       (assoc-ref user #:user/name))))))
-      (lambda (account)
-        (member (user-account-name account) kmonad-users)))
-    (lambda (account)
-      (user-account
-       (inherit account)
-       (supplementary-groups (append (user-account-supplementary-groups account)
-                                     '("input")))))))
+   (map (lambda (account)
+          (if (member (user-account-name account) who)
+              (user-account
+               (inherit account)
+               (supplementary-groups (append (user-account-supplementary-groups account)
+                                             '("input"))))
+              account))
+        (operating-system-users os)))
   (services
    (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
           (operating-system-user-services os))))
 #+end_src
 *** Desktop
-**** Desktop services
-#+begin_src scheme
-(define-system-comp (desktop-services #:key pipewire? bluetooth?)
-  (services
-   (as-> (operating-system-user-services os) $
-     (append selective-desktop-services $)
-     (if pipewire?
-         (with-pipewire $) $)
-     ;; (if bluetooth?
-     ;;     (cons* (bluetooth-service #:auto-enable? #t) $))
-     )))
-#+end_src
-***** Pipewire
-#+begin_src scheme
-(define (with-pipewire services)
-  (as-> services $
-    (remove-services $ (list pulseaudio-service-type
-                             alsa-service-type))
-    (cons* (udev-rules-service 'pipewire-add-udev-rules
-                               pipewire-0.3)
-           $)))
-#+end_src
-***** \
 #+begin_src scheme
 (define (remove-services services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
-
-(define selective-desktop-services
-  (remove-services %desktop-services
-                   (append (map service-kind %base-services)
-                           (list gdm-service-type
-                                 screen-locker-service-type))))
+#+end_src
+**** Desktop services
+#+begin_src scheme
+(define-system-comp (desktop-services)
+  (services
+   (append
+    (operating-system-user-services os)
+    (remove-services
+     %desktop-services
+     (append (map service-kind %base-services)
+             (list network-manager-service-type
+                   gdm-service-type
+                   screen-locker-service-type))))))
+#+end_src
+**** Pipewire
+#+begin_src scheme
+(define-system-comp (pipewire-multimedia)
+  (services
+   (as-> (operating-system-user-services os) $
+         (remove-services $ (list pulseaudio-service-type
+                                  alsa-service-type))
+         (cons* (udev-rules-service 'pipewire-add-udev-rules
+                                    pipewire-0.3)
+                $))))
+#+end_src
+**** Network
+***** Network manager
+#+begin_src scheme
+(define-system-comp (network-manager #:key stateless?)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (service network-manager-service-type))
+    (if stateless?
+        (list
+         (simple-service
+          'network-manager-stateless
+          stateless-service-type
+          '("/etc/NetworkManager/system-connections/"
+            ((#:path . "/var/lib/NetworkManager/secret_key")
+             (#:parent-dir-perms . ((#:mode . #o700)))))))
+        '()))))
+#+end_src
+**** Bluetooth
+#+begin_src scheme
+(define-system-comp (bluetooth #:key
+                               who
+                               stateless?)
+  (users
+   (map (lambda (account)
+          (if (member (user-account-name account) who)
+              (user-account
+               (inherit account)
+               (supplementary-groups (append (user-account-supplementary-groups account)
+                                             '("lp"))))
+              account))
+        (operating-system-users os)))
+  (services
+   (append
+    (operating-system-user-services os)
+    ;; (list
+    ;;  (bluetooth-service #:auto-enable? #t))
+    (if stateless?
+        (list
+         (simple-service
+          'bluetooth-stateless
+          stateless-service-type
+          '(((#:path . "/var/lib/bluetooth/")
+             (#:mode . #o700)))))
+        '()))))
 #+end_src
 **** Display managers
 ***** GDM
@@ -790,8 +983,11 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
     (string-prefix? blacklist-param ka))
 
   (if (any blacklist? kernel-args)
-      (update-list kernel-args blacklist? (lambda (blacklist)
-                                            (string-append blacklist "," new)))
+      (map (lambda (arg)
+             (if (blacklist? arg)
+                 (string-append arg "," new)
+                 arg))
+           kernel-args)
       (cons* (string-append blacklist-param "=" new) kernel-args)))
 #+end_src
 **** Power key
@@ -822,17 +1018,24 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                   host-name
                   timezone
                   locale
-                  users
-                  auto-login
+                  users-info
                   disk-encryption?
                   luks-uuid
                   stateless?
+                  stateless-persist-dir
+                  stateless-machine-dir
+                  stateless-users
+                  stateless-hes
                   nix?
                   console?
                   kmonad?
+                  kmonad-users
                   desktop?
                   pipewire?
                   bluetooth?
+                  bluetooth-users
+                  gdm?
+                  gdm-auto-login
                   sessions
                   laptop?
                   macbook?
@@ -845,8 +1048,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
       grub-efi
       base-services
       nss
-      (accounts #:users users
-                #:bluetooth? bluetooth?)
+      (accounts #:users-info users-info)
       nonguix-substitutes
       linux-nonfree
       (as-> $
@@ -858,15 +1060,22 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                 hidpi-console-font
                 (as-> $
                   (if kmonad?
-                      (kmonad-tool $ #:users users) $)))
+                      (kmonad-tool $ #:who kmonad-users) $)))
             $)
         (if desktop?
             (-> $
-                (desktop-services #:pipewire? pipewire?
-                                  #:bluetooth? bluetooth?)
-                (gdm #:auto-login (if disk-encryption?
-                                      auto-login #f))
+                desktop-services
                 (as-> $
+                  (if pipewire?
+                      (pipewire-multimedia $) $)
+                  (network-manager $ #:stateless? stateless?)
+                  (if bluetooth?
+                      (bluetooth $ #:who bluetooth-users
+                                 #:stateless? stateless?)
+                      $)
+                  (if gdm?
+                      (gdm $ #:auto-login (if disk-encryption?
+                                              gdm-auto-login #f)))
                   (if (member #:session/gnome (or sessions '()))
                       (gnome-desktop $) $)
                   (if (member #:session/sway (or sessions '()))
@@ -875,8 +1084,10 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
         (if macbook?
             (macbook $ #:bluetooth? bluetooth?) $)
         (let* ((persist-dir stateless-persist-dir)
+               (machine-dir stateless-machine-dir)
                (subvols (btrfs-subvols #:stateless? stateless?
                                        #:persist-dir persist-dir
+                                       #:machine-dir machine-dir
                                        #:nix? nix?)))
           (-> $
               (btrfs #:subvols subvols)
@@ -887,7 +1098,9 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                     $)
                 (if stateless?
                     (stateless $ #:persist-dir persist-dir
-                               #:bluetooth? bluetooth?)
+                               #:machine-dir machine-dir
+                               #:who stateless-users
+                               #:hes stateless-hes)
                     $)))))))
 #+end_src
 * Home
@@ -964,9 +1177,11 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
-  #:use-module ((srfi srfi-1) #:select (append-map))
+  #:use-module ((srfi srfi-1) #:select (append-map concatenate))
   #:export (he-packages
+            he-stateless
             he-shells
             he-nix
             he-emacs
@@ -981,10 +1196,12 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
             font-unicode
             he-kmonad
             he-xdg
+            he-mesa
             he-gtk
             he-desktop-packages
             he-pipewire
             he-flatpak
+            he-gdm
             he-wm-common
             he-sway
             he-swaylock
@@ -1011,38 +1228,132 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
     home-profile-service-type
     packages)))
 #+end_src
+*** Stateless
+#+begin_src scheme
+(define* (he-stateless #:key
+                       persist-dir
+                       machine-dir
+                       (extra-state '(((#:path . "org/")
+                                       (#:store . #:persist))
+                                      ((#:path . "projects/")
+                                       (#:store . #:persist)))))
+  (append
+   (list
+    (service home-stateless-service-type
+             `((#:persist-dir . ,persist-dir)
+               (#:machine-dir . ,machine-dir)))
+
+    (simple-service
+     'stateless-home-state
+     home-stateless-service-type
+     (append
+      '((#:xdg-base "XDG_LOG_HOME")
+        ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
+         (#:mode . #o700))
+        ("guix/" #:xdg-base "XDG_CACHE_HOME")
+        ("guile/" #:xdg-base "XDG_CACHE_HOME"))
+      extra-state)))
+
+   (stateless-skeletons)))
+#+end_src
+**** Service
+#+begin_src scheme
+(define (home-activate-stateless-gexp config)
+  (activate-stateless-gexp
+   (assoc-ref config #:persist-dir)
+   (assoc-ref config #:machine-dir)
+   (assoc-ref config #:state)
+   #:home? #t))
+
+(define home-stateless-service-type
+  (service-type
+   (name 'home-stateless)
+   (extensions (list (service-extension
+                      home-activation-service-type
+                      home-activate-stateless-gexp)))
+   (compose concatenate)
+   (extend (lambda (config state)
+             (acons #:state state config)))
+   (description "Initialize a stateless home.")))
+#+end_src
+**** Skeletons
+#+begin_src scheme
+(define (stateless-skeletons)
+  (list
+   (simple-service
+    'stateless-skeletons
+    home-files-service-type
+    (map (lambda (file)
+           `(,file
+             ,(skel-file file #:strip-dot? #t)))
+         '(".Xdefaults"
+           ".gdbinit"
+           ".guile")))
+
+   (simple-service
+    'stateless-skeletons-xdg
+    home-xdg-configuration-files-service-type
+    `(("nano/nanorc"
+       ,(skel-file ".config/nano/nanorc"))))))
+
+(define* (skel-file file* #:key strip-dot?)
+  (let ((file (string-append "/etc/skel/" file*)))
+    (if strip-dot?
+        (local-file file (substring file* 1))
+        (local-file file))))
+#+end_src
 *** Shells
 #+begin_src scheme
 (define* (he-shells #:key
+                    stateless?
                     login-shell
                     interactive-shell
-                    ;; (bashrc (local-file "bashrc"))
+                    (bashrc (local-file "bashrc"))
                     (zshrc (local-file "zshrc")))
   (let ((setup-shell? (lambda (shell)
-                         (memq shell (list login-shell interactive-shell)))))
+                        (memq shell (list login-shell interactive-shell)))))
+    (append
+     (if (setup-shell? #:shell/bash)
+         (list
+          (service home-bash-service-type
+                   (home-bash-configuration
+                    (bashrc
+                     (list (local-file "bashrc")))))
+          (when stateless?
+            (simple-service
+             'bash-stateless
+             home-stateless-service-type
+             '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
+                (#:store . #:persist))))))
+         '())
+     (if (setup-shell? #:shell/zsh)
+         (list
+          (service home-zsh-service-type
+                   (home-zsh-configuration
+                    (zshrc
+                     (list zshrc))))
+          (when stateless?
+            (simple-service
+             'zsh-stateless
+             home-stateless-service-type
+             '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
+                (#:store . #:persist))
+               ("zsh/" #:xdg-base "XDG_CACHE_HOME")))))
+         '())
      (list
-      (when (setup-shell? #:shell/bash)
-        (service home-bash-service-type
-                 ;; (home-bash-configuration
-                 ;;  (bashrc
-                 ;;   (list (local-file "bashrc"))))
-                 ))
-      (when (setup-shell? #:shell/zsh)
-        (service home-zsh-service-type
-                 (home-zsh-configuration
-                  (zshrc
-                   (list zshrc)))))
       (when-not (eq? login-shell interactive-shell)
-        (simple-service
-         'set-shell-env-var
-         home-environment-variables-service-type
-         `(("SHELL" . ,(case interactive-shell
-                         ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                         ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))))
+                (simple-service
+                 'set-shell-env-var
+                 home-environment-variables-service-type
+                 `(("SHELL" . ,(case interactive-shell
+                                 ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                                 ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
 #+end_src
 **** Bash
 ***** Bashrc
-...
+#+begin_src sh :tangle (meta-in-dir "bashrc")
+HISTFILE=${XDG_STATE_HOME:-$HOME/.local/var/lib}/bash/.bash_history
+#+end_src
 **** Zsh
 ***** Zshrc
 :PROPERTIES:
@@ -1056,7 +1367,7 @@ hash stty 2> /dev/null && stty -ixon
 
 # Completions and other stuff
 autoload -U compinit
-compinit -d ${XDG_CACHE_HOME:-$HOME/.cache}/.zcompdump
+compinit -d ${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump
 
 # Enable bash completion, requires to source them from somewhere
 # autoload -U bashcompinit && bashcompinit
@@ -1131,7 +1442,7 @@ WORDCHARS=""
 # Configure history
 # HISTSIZE=5000
 # SAVEHIST=$HISTSIZE
-HISTFILE=${XDG_CACHE_HOME:-$HOME/.cache}/.zhistory
+HISTFILE=${XDG_STATE_HOME:-$HOME/.local/var/lib}/zsh/.zhistory
 
 #setopt incappendhistory # Save history to shared file, but not read
 setopt sharehistory     # Share history across shell sessions
@@ -1167,20 +1478,30 @@ SAVEHIST=$HISTSIZE
 *** Nix
 #+begin_src scheme
 (define* (he-nix #:key
+                 stateless?
                  (nix-channels (local-file "nix-channels"))
                  (nixpkgs-config (local-file "nixpkgs-config.nix")))
-  (list
-   (simple-service
-    'nix-add-channels
-    home-files-service-type
-    `((".nix-channels"
-       ,nix-channels)))
+  (append
+   (list
+    (simple-service
+     'nix-add-channels
+     home-files-service-type
+     `((".nix-channels"
+        ,nix-channels)))
 
-   (simple-service
-    'nix-add-nixpkgs-config
-    home-xdg-configuration-files-service-type
-    `(("nixpkgs/config.nix"
-       ,nixpkgs-config)))))
+    (simple-service
+     'nix-add-nixpkgs-config
+     home-xdg-configuration-files-service-type
+     `(("nixpkgs/config.nix"
+        ,nixpkgs-config)))
+
+    (when stateless?
+      (simple-service
+       'nix-stateless
+       home-stateless-service-type
+       '(("nix/" #:xdg-base "XDG_CACHE_HOME")))))
+
+   (google-chrome-services #:stateless? stateless?)))
 #+end_src
 **** Load Nix environment
 TODO and remove "tangle no"
@@ -1221,6 +1542,21 @@ nix-env --upgrade
 #+end_src
 ***** how to pin packages?
 Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
+**** Google Chrome
+#+begin_src scheme
+(define* (google-chrome-services #:key stateless?)
+  (list
+   (when stateless?
+     (simple-service
+      'google-chrome-stateless
+      home-stateless-service-type
+      '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+         (#:mode . #o700))
+        ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+         (#:mode . #o700))
+        ((#:path . ".pki/")
+         (#:mode . #o700)))))))
+#+end_src
 *** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key
@@ -1308,7 +1644,9 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
      (origin
        (inherit (package-source emacs))
        (patches
-        (cons "/home/pharcosyle/projects/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
+        (cons
+         "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/wayland-super-fix.patch"
+         ;; "/home/pharcosyle/projects/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
               (-> emacs package-source origin-patches)))))))
 #+end_src
 ****** WAIT [#E] Remove the Wayland =Super= fix
@@ -1432,6 +1770,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 *** Doom
 #+begin_src scheme
 (define* (he-doom #:key
+                  stateless?
                   console?
                   (doom-private (local-file "doom-private" #:recursive? #t))
                   full-name
@@ -1474,7 +1813,40 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                                       'nil)
                            param-font-variable-pitch-name ,(assoc-ref font-variable-pitch #:font/name)
                            param-font-unicode-name ,(assoc-ref font-unicode #:font/name)
-                           param-font-serif-name ,(assoc-ref font-serif #:font/name)))))))))))))))
+                           param-font-serif-name ,(assoc-ref font-serif #:font/name)))))))))))))
+
+   (when stateless?
+     (simple-service
+      'doom-stateless
+      home-stateless-service-type
+      `(("doom-local/" #:xdg-base "XDG_STATE_HOME")
+        ,@(let* ((doom (lambda (subpath)
+                         `(,(string-append "doom/" subpath) #:xdg-base "XDG_STATE_HOME")))
+                 (doom-persist (lambda (subpath)
+                                 `((#:path . ,(doom subpath))
+                                   (#:store . #:persist)))))
+            (list
+             (doom "cache/autosave/")
+             (doom "cache/org-gcal/token.gpg")
+             (doom "cache/org/persist/")
+             (doom "cache/projectile.cache")
+             (doom "cache/tramp")
+             (doom "cache/undo-fu-session/")
+             (doom "etc/persist/org-gcal--sync-tokens")
+             (doom "etc/workspaces/autosave/")
+             (doom-persist "cache/cider-repl-history")
+             (doom-persist "cache/geiser-history.guile")
+             (doom-persist "cache/projectile.projects")
+             (doom-persist "cache/recentf")
+             (doom-persist "cache/savehist")
+             (doom-persist "cache/saveplace")
+             (doom-persist "etc/bookmarks")
+             (doom-persist "etc/eshell/history")
+             (doom-persist "etc/eshell/lastdir")
+             (doom-persist "etc/eshell/z")
+             (doom-persist "etc/org-clock-save.el")
+             (doom-persist "etc/scratch/")
+             (doom-persist "etc/transient/history"))))))))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -4591,7 +4963,9 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+end_src
 *** Direnv
 #+begin_src scheme
-(define* (he-direnv #:key shell)
+(define* (he-direnv #:key
+                    stateless?
+                    shell)
   (list
    ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration (clarification: the envrc emacs package needs to have direnv on the command line, the emacs-direnv Guix package bakes it in)
    (simple-service
@@ -4617,12 +4991,21 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
                        home-zsh-service-type
                        (home-zsh-extension
                         (zshrc
-                         (list (direnv-hook "zsh"))))))))))
+                         (list (direnv-hook "zsh"))))))))
+
+   ;; TODO In the future I may want to have 'allow' folder entries in my configuration, if that's possible.
+   (when stateless?
+     (simple-service
+      'direnv-stateless
+      home-stateless-service-type
+      `(((#:path . ("direnv/allow/" #:xdg-base "XDG_DATA_HOME"))
+         (#:store . #:persist)))))))
 #+end_src
 *** Console
 **** Fonts
 #+begin_src scheme
 (define* (he-fonts #:key
+                   stateless?
                    fonts
                    (extra-font-packages (list font-noto-color-emoji
                                               font-liberation)))
@@ -4634,7 +5017,13 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
      (map (lambda (font)
             (assoc-ref font #:font/package))
           fonts)
-     extra-font-packages))))
+     extra-font-packages))
+
+   (when stateless?
+     (simple-service
+      'fonts-stateless
+      home-stateless-service-type
+      '(("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))))))
 
 (define font-size 10)
 
@@ -4729,22 +5118,18 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 #+begin_src scheme
 (define* (he-xdg
           #:key
-          (xdg-user-directories-configuration
-           (let* ((xdg-user-subdir "/files")
-                  (xdg-dir (lambda (path)
-                             (string-append "$HOME" xdg-user-subdir path))))
-             (home-xdg-user-directories-configuration
-              (desktop "$HOME/desktop")
-              (documents (xdg-dir "/docs"))
-              (download "$HOME/dl")
-              (music (xdg-dir "/music"))
-              (pictures (xdg-dir "/pics"))
-              (publicshare (xdg-dir "/public"))
-              (templates (xdg-dir "/templates"))
-              (videos (xdg-dir "/vids"))))))
+          stateless?
+          (desktop "$HOME/desktop")
+          (documents "$HOME/docs")
+          (download "$HOME/dl")
+          (music "$HOME/music")
+          (pictures "$HOME/pics")
+          (publicshare "$HOME/public")
+          (templates "$HOME/templates")
+          (videos "$HOME/vids"))
   (list
    (simple-service
-    'add-xdg-packages
+    'xdg-add-packages
     home-profile-service-type
     (list xdg-utils
           xdg-user-dirs ; I don't think I need this (the only reason would be if programs ever call the `xdg-user-dir' shell command and this package isn't an input to theirs).
@@ -4752,12 +5137,54 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 
    (service
     home-xdg-user-directories-service-type
-    xdg-user-directories-configuration)))
+    (home-xdg-user-directories-configuration
+     (desktop desktop)
+     (documents documents)
+     (download download)
+     (music music)
+     (pictures pictures)
+     (publicshare publicshare)
+     (templates templates)
+     (videos videos)))
+
+   (when stateless?
+     (simple-service
+      'xdg-stateless
+      home-stateless-service-type
+      (let ((normalize (lambda (dir)
+                         (as-> dir $
+                               (let ((home-prefix "$HOME/"))
+                                 (if (string-prefix? home-prefix $)
+                                     (string-drop $ (string-length home-prefix))
+                                     $))
+                               (string-append $ "/")))))
+        `(,@(map (lambda (dir)
+                   `((#:path . ,(normalize dir))
+                     (#:store . #:persist)))
+                 (list desktop
+                       documents
+                       music
+                       pictures
+                       publicshare
+                       templates
+                       videos))
+          ,(normalize download)))))))
+#+end_src
+**** Mesa
+#+begin_src scheme
+(define* (he-mesa #:key stateless?)
+  (list
+   (when stateless?
+     (simple-service
+      'mesa-stateless
+      home-stateless-service-type
+      '(("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))))))
 #+end_src
 **** GTK
 It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland).
 #+begin_src scheme
 (define* (he-gtk #:key
+                 stateless?
                  theme
                  font
                  font-monospace)
@@ -4795,19 +5222,32 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         (font-name . ,(quoted-symbol
                                        (font-value font)))
                         (monospace-font-name . ,(quoted-symbol
-                                                 (font-value font-monospace)))))))))))))))))
+                                                 (font-value font-monospace)))))))))))))))
+
+   (when stateless?
+     (simple-service
+      'gtk-stateless
+      home-stateless-service-type
+      '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
+         (#:store . #:persist)))))))
 
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
 #+end_src
 **** Pipewire
 #+begin_src scheme
-(define* (he-pipewire #:key sway?)
+(define* (he-pipewire #:key
+                      stateless?
+                      sway?)
   (append
-   (pipewire-services #:sway? sway?)
-   (wireplumber-services #:sway? sway?)))
+   (pipewire-services #:stateless? stateless?
+                      #:sway? sway?)
+   (wireplumber-services #:stateless? stateless?
+                         #:sway? sway?)))
 
-(define* (pipewire-services #:key sway?)
+(define* (pipewire-services #:key
+                            stateless?
+                            sway?)
   (list
    (simple-service
     'pipewire-add-package
@@ -4870,11 +5310,20 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       'pipewire-sway-start
       home-sway-service-type
       '((exec herd start pipewire)
-        (exec herd start pipewire-pulse))))))
+        (exec herd start pipewire-pulse))))
+
+   (when stateless?
+     (simple-service
+      'pipewire-stateless
+      home-stateless-service-type
+      '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
+         (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 ***** Wireplumber
 #+begin_src scheme
-(define* (wireplumber-services #:key sway?)
+(define* (wireplumber-services #:key
+                               stateless?
+                               sway?)
   (list
    (simple-service
     'wireplumber-add-package
@@ -4905,11 +5354,20 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (simple-service
       'wireplumber-sway-start
       home-sway-service-type
-      '((exec herd start wireplumber))))))
+      '((exec herd start wireplumber))))
+
+   (when stateless?
+     (simple-service
+      'wireplumber-stateless
+      home-stateless-service-type
+      '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
+         (#:mode . #o700)))))))
 #+end_src
 **** Flatpak
 #+begin_src scheme
-(define* (he-flatpak #:key wayland?)
+(define* (he-flatpak #:key
+                     stateless?
+                     wayland?)
   (list
    (simple-service
     'flatpak-add-packages
@@ -4919,7 +5377,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (if wayland?
          (list xdg-desktop-portal
                xdg-desktop-portal-wlr)
-         '())))))
+         '())))
+
+   (when stateless?
+     (simple-service
+      'flatpak-stateless
+      home-stateless-service-type
+      '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
+         (#:mode . #o700)))))))
 #+end_src
 ***** Make Flatpak apps visible
 TODO and remove "tangle no"
@@ -4939,6 +5404,18 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 Some cursorily-googled intel:
 - [[https://github.com/flatpak/flatpak/issues/3097][flatpak/flatpak#3097 Is there a way to install a specific version?]]
 - [[https://discourse.flathub.org/t/install-an-older-version-of-an-app/320/3][Install an older version of an app - #3 by gjanssens - Flathub Discourse]]
+**** Display managers
+***** GDM
+#+begin_src scheme
+(define* (he-gdm #:key stateless?)
+  (list
+   (when stateless?
+     (simple-service
+      'gdm-stateless
+      home-stateless-service-type
+      '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
+         (#:mode . #o700)))))))
+#+end_src
 **** Window managers
 ***** Common
 #+begin_src scheme
@@ -5630,6 +6107,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ***** Rofi
 #+begin_src scheme
 (define* (he-rofi #:key
+                  stateless?
                   wayland?
                   theme)
   (list
@@ -5653,7 +6131,14 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
           (kb-page-prev . "Alt+v")))
         ,#~(format #f "@theme \"~a\"" #$(case theme
                                           ((#:theme/light) "Arc")
-                                          ((#:theme/dark) "Arc-Dark")))))))))
+                                          ((#:theme/dark) "Arc-Dark")))))))
+
+   (when stateless?
+     (simple-service
+      'rofi-stateless
+      home-stateless-service-type
+      '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
+         (#:store . #:persist)))))))
 
 (define* (rofi-menu #:key wayland?)
   (file-append (get-rofi wayland?) "/bin/rofi -dmenu -p"))
@@ -5707,6 +6192,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define* (base-he #:key
                   full-name
                   email
+                  stateless?
+                  stateless-persist-dir
+                  stateless-machine-dir
                   (login-shell #:shell/bash)
                   developer?
                   (interactive-shell (if developer?
@@ -5716,6 +6204,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                   kmonad?
                   desktop?
                   pipewire?
+                  gdm?
                   sessions)
   (home-environment
    (services
@@ -5729,14 +6218,20 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
            (font-variable-pitch font-sans))
        (append
         (he-packages)
-        (he-shells #:login-shell login-shell
+        (if stateless?
+            (he-stateless #:persist-dir stateless-persist-dir
+                          #:machine-dir stateless-machine-dir)
+            '())
+        (he-shells #:stateless? stateless?
+                   #:login-shell login-shell
                    #:interactive-shell interactive-shell)
         (if nix?
-            (he-nix) '())
+            (he-nix #:stateless? stateless?) '())
         (if developer?
             (append
              (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-             (he-doom #:console? console?
+             (he-doom #:stateless? stateless?
+                      #:console? console?
                       #:full-name full-name
                       #:email email
                       #:theme theme
@@ -5747,11 +6242,13 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
              (he-git #:full-name full-name
                      #:email email)
              (he-ssh)
-             (he-direnv #:shell interactive-shell))
+             (he-direnv #:stateless? stateless?
+                        #:shell interactive-shell))
             '())
         (if console?
             (append
-             (he-fonts #:fonts (list font-mono
+             (he-fonts #:stateless? stateless?
+                       #:fonts (list font-mono
                                      font-sans
                                      font-serif
                                      font-unicode))
@@ -5759,65 +6256,51 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                  (he-kmonad) '()))
             '())
         (if desktop?
-            (let ((wayland? #t)
-                  (sway? (member #:session/sway (or sessions '()))))
-              (append
-               (he-desktop-packages)
-               (he-xdg)
-               (he-gtk #:theme theme
-                       #:font font-variable-pitch
-                       #:font-monospace font-mono)
-               (if pipewire?
-                   (he-pipewire #:sway? sway?) '())
-               (he-flatpak #:wayland? wayland?)
-               (if sway?
-                   (let ((screen-locker (swaylock-screen-locker)))
-                     (append
-                      (he-wm-common #:sway? #t)
-                      (he-sway #:pipewire? pipewire?
-                               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                               #:screen-locker screen-locker
-                               #:idle-manager (swayidle-idle-manager)
-                               #:application-launcher (rofi-application-launcher #:wayland? #t)
-                               #:default-terminal (alacritty-terminal))
-                      (he-swaylock #:font font-variable-pitch)
-                      (he-swayidle #:sway? #t
-                                   #:screen-locker screen-locker)
-                      (he-mako #:sway? #t
-                               #:menu (rofi-menu #:wayland? #t)
-                               #:theme theme
-                               #:font font-variable-pitch)
-                      (he-waybar #:sway? #t
-                                 #:theme theme
-                                 #:font font-variable-pitch)
-                      (he-rofi #:wayland? #t
-                               #:theme theme)
-                      (he-alacritty #:font font-mono)))
-                   '())))
+            (append
+             (he-mesa #:stateless? stateless?)
+             (if gdm?
+                 (he-gdm #:stateless? stateless?) '())
+             (let ((wayland? #t)
+                   (sway? (member #:session/sway (or sessions '()))))
+               (append
+                (he-desktop-packages)
+                (he-xdg #:stateless? stateless?)
+                (he-gtk #:stateless? stateless?
+                        #:theme theme
+                        #:font font-variable-pitch
+                        #:font-monospace font-mono)
+                (if pipewire?
+                    (he-pipewire #:stateless? stateless?
+                                 #:sway? sway?)
+                    '())
+                (he-flatpak #:stateless? stateless?
+                            #:wayland? wayland?)
+                (if sway?
+                    (let ((screen-locker (swaylock-screen-locker)))
+                      (append
+                       (he-wm-common #:sway? #t)
+                       (he-sway #:pipewire? pipewire?
+                                #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                                #:screen-locker screen-locker
+                                #:idle-manager (swayidle-idle-manager)
+                                #:application-launcher (rofi-application-launcher #:wayland? #t)
+                                #:default-terminal (alacritty-terminal))
+                       (he-swaylock #:font font-variable-pitch)
+                       (he-swayidle #:sway? #t
+                                    #:screen-locker screen-locker)
+                       (he-mako #:sway? #t
+                                #:menu (rofi-menu #:wayland? #t)
+                                #:theme theme
+                                #:font font-variable-pitch)
+                       (he-waybar #:sway? #t
+                                  #:theme theme
+                                  #:font font-variable-pitch)
+                       (he-rofi #:stateless? stateless?
+                                #:wayland? #t
+                                #:theme theme)
+                       (he-alacritty #:font font-mono)))
+                    '()))))
             '())))))))
-#+end_src
-* Union
-#+begin_src scheme :tangle (meta-in-dir "ebullient/union.scm")
-(define-module (ebullient union)
-  #:use-module (gnu services)
-  #:use-module (gnu services home)
-  #:use-module (gnu system)
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:export (union))
-
-(define* (union #:key
-                os
-                hes)
-  (operating-system
-    (inherit os)
-    (services
-     (append
-      (operating-system-user-services os)
-      (map
-       (match-lambda
-         ((user . he)
-          (service guix-home-service-type `((,user . ,he)))))
-       hes)))))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -5829,8 +6312,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module ((srfi srfi-1) #:select (take drop remove fold))
-  #:export (update-list
-            when-let
+  #:export (when-let
             if-let
             when-not
             if-not
@@ -5840,11 +6322,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             with-git-version
             with-git-commit
             with-git-url))
-
-(define (update-list l pred f)
-  (map (lambda (x)
-         (if (pred x) (f x) x))
-       l))
 #+end_src
 ** Branching
 #+begin_src scheme
@@ -6171,85 +6648,108 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
+  #:use-module ((ebullient stateless) #:select (stateless-persist-dir stateless-machine-dir))
   #:use-module (ebullient home base-he)
   #:use-module (ebullient system base-os)
-  #:use-module (ebullient union)
   #:export (os))
 
+(define stateless? #t)
+(define stateless-persist-dir stateless-persist-dir)
+(define stateless-machine-dir stateless-machine-dir)
 (define nix? #t)
 (define console? #t)
 (define desktop? #t)
 (define pipewire? #t)
+(define gdm? #t)
 
 (define primary-name "pharcosyle")
 (define primary-full-name "Krzysztof Baranowski")
-(define primary-kmonad? #t)
 (define aux-name "pcoulson")
 (define aux-full-name "Phil Coulson")
-(define aux-kmonad? #t)
 (define guest-name "gandalf")
 
-(define os*
-  (base-os #:host-name "frostfire"
-           #:timezone "America/Los_Angeles"
-           #:users `(((#:user/name . ,primary-name)
-                      (#:user/comment . ,primary-full-name)
-                      (#:user/admin? . #t)
-                      (#:user/kmonad? . ,primary-kmonad?))
-                     ((#:user/name . ,aux-name)
-                      (#:user/comment . ,aux-full-name)
-                      (#:user/admin? . #t)
-                      (#:user/kmonad? ,aux-kmonad?))
-                     ((#:user/name . ,guest-name)
-                      (#:user/comment . "Speak Friend and Enter")
-                      (#:user/password . "mellon")))
-           ;; #:auto-login primary-name ; REVIEW Enable this later.
-           #:disk-encryption? #t
-           #:luks-uuid "<<frostfire-luks-uuid>>"
-           #:stateless? #t
+(define primary-he
+  (base-he #:full-name primary-full-name
+           #:email "pharcosyle@gmail.com"
+           #:stateless? stateless?
+           #:stateless-persist-dir stateless-persist-dir
+           #:stateless-machine-dir stateless-machine-dir
+           #:developer? #t
            #:nix? nix?
            #:console? console?
            #:kmonad? #t
            #:desktop? desktop?
            #:pipewire? pipewire?
-           #:bluetooth? #t
-           #:sessions '(#:session/gnome
-                        #:session/sway)
-           #:laptop? #t
-           #:macbook? #t))
-
-(define primary-he
-  (base-he #:full-name primary-full-name
-           #:email "pharcosyle@gmail.com"
-           #:developer? #t
-           #:nix? nix?
-           #:console? console?
-           #:kmonad? primary-kmonad?
-           #:desktop? desktop?
-           #:pipewire? pipewire?
+           #:gdm? gdm?
            #:sessions '(#:session/sway)))
 
 (define aux-he
   (base-he #:full-name aux-full-name
            #:email "pharcosyle+phil_coulson@gmail.com"
+           #:stateless? stateless?
+           #:stateless-persist-dir stateless-persist-dir
+           #:stateless-machine-dir stateless-machine-dir
            #:developer? #t
            #:nix? nix?
            #:console? console?
-           #:kmonad? aux-kmonad?
+           #:kmonad? #t
            #:desktop? desktop?
            #:pipewire? pipewire?
+           #:gdm? gdm?
            #:sessions '(#:session/sway)))
 
 (define guest-he
-  (base-he #:console? console?
+  (base-he #:stateless? stateless?
+           #:stateless-persist-dir stateless-persist-dir
+           #:stateless-machine-dir stateless-machine-dir
+           #:console? console?
            #:desktop? desktop?
-           #:pipewire? pipewire?))
+           #:pipewire? pipewire?
+           #:gdm? gdm?))
 
 (define os
-  (union #:os os*
-         #:hes `(;; (,primary-name . ,primary-he)
-                 ;; (,aux-name . ,aux-he)
-                 (,guest-name . ,guest-he))))
+  (base-os #:host-name "frostfire"
+           #:timezone "America/Los_Angeles"
+           #:users-info `(((#:name . ,primary-name)
+                           (#:comment . ,primary-full-name)
+                           (#:admin? . #t)
+                           (#:password . "mellon")) ; TODO remove this
+                          ((#:name . ,aux-name)
+                           (#:comment . ,aux-full-name)
+                           (#:admin? . #t)
+                           (#:password . "mellon")) ; TODO remove this
+                          ((#:name . ,guest-name)
+                           (#:comment . "Speak Friend and Enter")
+                           (#:password . "mellon")
+                           (#:admin? . #t))) ; TODO remove this
+           #:disk-encryption? #t
+           #:luks-uuid "<<frostfire-luks-uuid>>"
+           #:stateless? stateless?
+           #:stateless-persist-dir stateless-persist-dir
+           #:stateless-machine-dir stateless-machine-dir
+           #:stateless-users (list primary-name
+                                   aux-name
+                                   guest-name)
+           #:stateless-hes `((,primary-name . ,primary-he)
+                             (,aux-name . ,aux-he)
+                             (,guest-name . ,guest-he))
+           #:nix? nix?
+           #:console? console?
+           #:kmonad? #t
+           #:kmonad-users (list primary-name
+                                aux-name)
+           #:desktop? desktop?
+           #:pipewire? pipewire?
+           #:bluetooth? #t
+           #:bluetooth-users (list primary-name
+                                   aux-name
+                                   guest-name)
+           #:gdm? gdm?
+           ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
+           #:sessions '(#:session/gnome
+                        #:session/sway)
+           #:laptop? #t
+           #:macbook? #t))
 #+end_src
 *** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
