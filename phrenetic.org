@@ -8,17 +8,14 @@
 - [[#installation][Installation]]
   - [[#create-bootable-usb][Create bootable USB]]
   - [[#install][Install]]
-- [[#packages][Packages]]
-  - [[#kmonad][KMonad]]
-- [[#common][Common]]
-  - [[#stateless][Stateless]]
 - [[#system][System]]
   - [[#components][Components]]
-  - [[#base-os][Base OS]]
 - [[#home][Home]]
-  - [[#packages-1][Packages]]
   - [[#components-1][Components]]
-  - [[#base-he][Base HE]]
+  - [[#packages][Packages]]
+- [[#common][Common]]
+  - [[#packages-1][Packages]]
+  - [[#stateless][Stateless]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
   - [[#functions][Functions]]
@@ -27,6 +24,8 @@
   - [[#packages-2][Packages]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
+  - [[#base-os][Base OS]]
+  - [[#base-he][Base HE]]
   - [[#scripts-wip][Scripts WIP]]
 - [[#channel][Channel]]
 - [[#dev][Dev]]
@@ -195,162 +194,6 @@ passwd $my_user
 guix pull
 
 # Run a system reconfigure, home reconfigure, install manifests, and deploy `home-state.git`. Copy over all my old data.
-#+end_src
-* Packages
-:PROPERTIES:
-:meta-dir+: /ebullient/packages
-:END:
-** KMonad :upstream:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "kmonad.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient packages kmonad)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages haskell-apps) #:select (kmonad) #:prefix haskell-apps:)
-  #:use-module ((gnu packages haskell-check) #:select (ghc-hspec hspec-discover))
-  #:use-module (ebullient utils))
-
-(define-public kmonad
-  (let ((commit "95bb58b7347ebacb4654fb21c798e1cd10331b0d"))
-    (with-git-commit
-     (package
-       (inherit haskell-apps:kmonad)
-       (arguments
-        (substitute-keyword-arguments (package-arguments haskell-apps:kmonad)
-          ((#:phases phases '%standard-phases)
-           #~(modify-phases #$phases
-               (add-after 'unpack 'patch-git-revision
-                 (lambda _
-                   (substitute* "src/KMonad/Args/Cmd.hs"
-                     (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
-       (inputs
-        (modify-inputs (package-inputs haskell-apps:kmonad)
-                       (prepend ghc-hspec
-                                hspec-discover))))
-     #:commit commit
-     #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
-#+end_src
-* Common
-:PROPERTIES:
-:meta-dir+: /ebullient
-:END:
-** Stateless
-#+begin_src scheme :tangle (meta-in-dir "stateless.scm")
-(define-module (ebullient stateless)
-  #:use-module ((guix modules) #:select (source-module-closure))
-  #:use-module (guix gexp)
-  #:export (stateless-persist-dir
-            stateless-machine-dir
-            activate-stateless-gexp))
-
-(define stateless-persist-dir "/.persist")
-(define stateless-machine-dir "/.machine")
-
-(define* (activate-stateless-gexp persist-dir
-                                  machine-dir
-                                  state
-                                  #:key
-                                  home?)
-  (with-imported-modules (source-module-closure
-                          '((guix build utils)))
-    #~(begin
-        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
-                     ((srfi srfi-1) #:select (any drop-right every)))
-
-        (define (alist? x)
-          (and (list? x) (every pair? x)))
-
-        (define (normalize-state state)
-          (let ((as-alist
-                 (lambda (i)
-                   (cond
-                    ((alist? i) i)
-                    ((or (string? i) (list? i)) `((#:path . ,i))))))
-                (with-default-store
-                 (lambda (i)
-                   (if (assoc-ref i #:store)
-                       i
-                       (acons #:store #:machine i))))
-                (with-home-expansions
-                 (lambda (i)
-                   (acons
-                    #:path
-                    (let ((path (assoc-ref i #:path)))
-                      (cond
-                       ((string? path) (string-append (getenv "HOME") "/" path))
-                       ((list? path)
-                        (apply
-                         (lambda* (#:optional tail #:key xdg-base)
-                           (string-append (getenv xdg-base) "/" (or tail "")))
-                         path))))
-                    i))))
-            (map (compose (if #$home?
-                              with-home-expansions identity)
-                          with-default-store
-                          as-alist)
-                 state)))
-
-        (define (mkdirp-perms dir perms)
-          (mkdir-p dir)
-          (chown dir
-                 (let ((user (assoc-ref perms #:user)))
-                   (if user
-                       (passwd:uid (getpwnam user)) -1))
-                 (let ((group (assoc-ref perms #:group)))
-                   (if group
-                       (group:gid (getgrnam group)) -1)))
-          (let ((mode (assoc-ref perms #:mode)))
-            (when mode
-              (chmod dir mode))))
-
-        (define (no-follow-file-exists? file)
-          (->bool (false-if-exception (lstat file))))
-
-        (define (cleanup-and-migrate target state-file)
-          (let ((symlink-to-state?
-                 (lambda (file)
-                   (and (symbolic-link? file)
-                        (any (lambda (state-dir)
-                               (string-prefix? state-dir (readlink file)))
-                             (list
-                              #$persist-dir
-                              #$machine-dir)))))
-                (migrate-file
-                 (lambda (source dest)
-                   (when (no-follow-file-exists? dest)
-                     (delete-file-recursively dest))
-                   (copy-recursively source dest)
-                   (delete-file-recursively source))))
-            (when (no-follow-file-exists? target)
-              (if (symlink-to-state? target)
-                  (delete-file target)
-                  (migrate-file target state-file)))))
-
-        (define (process-state-entry i)
-          (let* ((path (assoc-ref i #:path))
-                 (directory-target? (string-suffix? "/" path))
-                 (target (if directory-target?
-                             (string-drop-right path 1) path))
-                 (state-dir (case (assoc-ref i #:store)
-                         ((#:persist) #$persist-dir)
-                         ((#:machine) #$machine-dir))))
-            (let ((parent-dir (string-join
-                               (drop-right (string-split path #\/) 1)
-                               "/"))
-                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
-              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
-              (mkdirp-perms parent-dir parent-dir-perms))
-            (let ((state-file (string-append state-dir target)))
-              (cleanup-and-migrate target state-file)
-              (when directory-target?
-                (mkdirp-perms state-file i))
-              (when (no-follow-file-exists? state-file)
-                (symlink state-file target)))))
-
-        (for-each process-state-entry (normalize-state '#$state)))))
 #+end_src
 * System
 :PROPERTIES:
@@ -568,7 +411,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                                            (member (user-account-name account) who)))
                                  (map (lambda (account)
                                         `(,(user-account-name account) . ,(user-account-home-directory account))))))
-                (#:hes . ,hes)))
+                (#:hes . ,(map cons who hes))))
      (simple-service
       'stateless-system-state
       stateless-service-type
@@ -1007,126 +850,10 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
 (define macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
-** Base OS
-#+begin_src scheme :tangle (meta-in-dir "base-os.scm")
-(define-module (ebullient system base-os)
-  #:use-module (ebullient system components)
-  #:use-module (ebullient utils)
-  #:export (base-os))
-
-(define* (base-os #:key
-                  host-name
-                  timezone
-                  locale
-                  users-info
-                  disk-encryption?
-                  luks-uuid
-                  stateless?
-                  stateless-persist-dir
-                  stateless-machine-dir
-                  stateless-users
-                  stateless-hes
-                  nix?
-                  console?
-                  kmonad?
-                  kmonad-users
-                  desktop?
-                  pipewire?
-                  bluetooth?
-                  bluetooth-users
-                  gdm?
-                  gdm-auto-login
-                  sessions
-                  laptop?
-                  macbook?
-                  (kb-layout (if macbook?
-                                 macbook-kb-layout #f)))
-  (-> barebones-os
-      (host-info #:host-name host-name
-                 #:timezone timezone
-                 #:locale locale)
-      grub-efi
-      base-services
-      nss
-      (accounts #:users-info users-info)
-      nonguix-substitutes
-      linux-nonfree
-      (as-> $
-        (if nix?
-            (nix $) $)
-        (if console?
-            (-> $
-                (console-keyboard-layouts #:kb-layout kb-layout)
-                hidpi-console-font
-                (as-> $
-                  (if kmonad?
-                      (kmonad-tool $ #:who kmonad-users) $)))
-            $)
-        (if desktop?
-            (-> $
-                desktop-services
-                (as-> $
-                  (if pipewire?
-                      (pipewire-multimedia $) $)
-                  (network-manager $ #:stateless? stateless?)
-                  (if bluetooth?
-                      (bluetooth $ #:who bluetooth-users
-                                 #:stateless? stateless?)
-                      $)
-                  (if gdm?
-                      (gdm $ #:auto-login (if disk-encryption?
-                                              gdm-auto-login #f)))
-                  (if (member #:session/gnome (or sessions '()))
-                      (gnome-desktop $) $)
-                  (if (member #:session/sway (or sessions '()))
-                      (sway-wm $ #:laptop? laptop?) $)))
-            $)
-        (if macbook?
-            (macbook $ #:bluetooth? bluetooth?) $)
-        (let* ((persist-dir stateless-persist-dir)
-               (machine-dir stateless-machine-dir)
-               (subvols (btrfs-subvols #:stateless? stateless?
-                                       #:persist-dir persist-dir
-                                       #:machine-dir machine-dir
-                                       #:nix? nix?)))
-          (-> $
-              (btrfs #:subvols subvols)
-              (as-> $
-                (if disk-encryption?
-                    (disk-encryption $ #:source-uuid luks-uuid
-                                     #:encrypted-mount-points (map cdr subvols))
-                    $)
-                (if stateless?
-                    (stateless $ #:persist-dir persist-dir
-                               #:machine-dir machine-dir
-                               #:who stateless-users
-                               #:hes stateless-hes)
-                    $)))))))
-#+end_src
 * Home
 :PROPERTIES:
 :meta-dir+: /ebullient/home
 :END:
-** Packages
-:PROPERTIES:
-:meta-dir+: /packages
-:END:
-*** Fonts :package:version:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "fonts.scm")
-:END:
-#+begin_src scheme
-(define-module (ebullient home packages fonts)
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
-  #:use-module (ebullient utils))
-
-(define-public font-adobe-source-code-pro
-  (with-git-version
-   fonts:font-adobe-source-code-pro
-   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
-   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
-   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
-#+end_src
 ** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -5072,12 +4799,12 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
     (stop #~(make-kill-destructor)))))
 
 (define kmonad-service-type
-  (service-type (name 'he-kmonad)
-                (extensions
-                 (list (service-extension
-                        home-shepherd-service-type
-                        kmonad-shepherd-service)))
-                (description "Run KMonad.")))
+  (service-type
+   (name 'he-kmonad)
+   (extensions
+    (list (service-extension home-shepherd-service-type
+                             kmonad-shepherd-service)))
+   (description "Run KMonad.")))
 #+end_src
 *** Desktop
 #+begin_src scheme
@@ -6180,127 +5907,181 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define (alacritty-terminal)
   (file-append alacritty "/bin/alacritty"))
 #+end_src
-** Base HE
-#+begin_src scheme :tangle (meta-in-dir "base-he.scm")
-(define-module (ebullient home base-he)
-  #:use-module (gnu home)
-  #:use-module (gnu services)
-  #:use-module (ebullient home components)
-  #:use-module (ebullient utils)
-  #:export (base-he))
+** Packages
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
+*** Fonts :package:version:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "fonts.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient home packages fonts)
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
+  #:use-module (ebullient utils))
 
-(define* (base-he #:key
-                  full-name
-                  email
-                  stateless?
-                  stateless-persist-dir
-                  stateless-machine-dir
-                  (login-shell #:shell/bash)
-                  developer?
-                  (interactive-shell (if developer?
-                                         #:shell/zsh login-shell))
-                  nix?
-                  console?
-                  kmonad?
-                  desktop?
-                  pipewire?
-                  gdm?
-                  sessions)
-  (home-environment
-   (services
-    (filter
-     service?
-     (let ((theme #:theme/dark)
-           (font-mono font-mono)
-           (font-sans font-sans)
-           (font-serif font-serif)
-           (font-unicode font-unicode)
-           (font-variable-pitch font-sans))
-       (append
-        (he-packages)
-        (if stateless?
-            (he-stateless #:persist-dir stateless-persist-dir
-                          #:machine-dir stateless-machine-dir)
-            '())
-        (he-shells #:stateless? stateless?
-                   #:login-shell login-shell
-                   #:interactive-shell interactive-shell)
-        (if nix?
-            (he-nix #:stateless? stateless?) '())
-        (if developer?
-            (append
-             (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-             (he-doom #:stateless? stateless?
-                      #:console? console?
-                      #:full-name full-name
-                      #:email email
-                      #:theme theme
-                      #:font font-mono
-                      #:font-variable-pitch font-variable-pitch
-                      #:font-unicode font-unicode
-                      #:font-serif font-serif)
-             (he-git #:full-name full-name
-                     #:email email)
-             (he-ssh)
-             (he-direnv #:stateless? stateless?
-                        #:shell interactive-shell))
-            '())
-        (if console?
-            (append
-             (he-fonts #:stateless? stateless?
-                       #:fonts (list font-mono
-                                     font-sans
-                                     font-serif
-                                     font-unicode))
-             (if kmonad?
-                 (he-kmonad) '()))
-            '())
-        (if desktop?
-            (append
-             (he-mesa #:stateless? stateless?)
-             (if gdm?
-                 (he-gdm #:stateless? stateless?) '())
-             (let ((wayland? #t)
-                   (sway? (member #:session/sway (or sessions '()))))
-               (append
-                (he-desktop-packages)
-                (he-xdg #:stateless? stateless?)
-                (he-gtk #:stateless? stateless?
-                        #:theme theme
-                        #:font font-variable-pitch
-                        #:font-monospace font-mono)
-                (if pipewire?
-                    (he-pipewire #:stateless? stateless?
-                                 #:sway? sway?)
-                    '())
-                (he-flatpak #:stateless? stateless?
-                            #:wayland? wayland?)
-                (if sway?
-                    (let ((screen-locker (swaylock-screen-locker)))
-                      (append
-                       (he-wm-common #:sway? #t)
-                       (he-sway #:pipewire? pipewire?
-                                #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                                #:screen-locker screen-locker
-                                #:idle-manager (swayidle-idle-manager)
-                                #:application-launcher (rofi-application-launcher #:wayland? #t)
-                                #:default-terminal (alacritty-terminal))
-                       (he-swaylock #:font font-variable-pitch)
-                       (he-swayidle #:sway? #t
-                                    #:screen-locker screen-locker)
-                       (he-mako #:sway? #t
-                                #:menu (rofi-menu #:wayland? #t)
-                                #:theme theme
-                                #:font font-variable-pitch)
-                       (he-waybar #:sway? #t
-                                  #:theme theme
-                                  #:font font-variable-pitch)
-                       (he-rofi #:stateless? stateless?
-                                #:wayland? #t
-                                #:theme theme)
-                       (he-alacritty #:font font-mono)))
-                    '()))))
-            '())))))))
+(define-public font-adobe-source-code-pro
+  (with-git-version
+   fonts:font-adobe-source-code-pro
+   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
+   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
+   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
+#+end_src
+* Common
+:PROPERTIES:
+:meta-dir+: /ebullient
+:END:
+** Packages
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
+*** KMonad :upstream:
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "kmonad.scm")
+:END:
+#+begin_src scheme
+(define-module (ebullient packages kmonad)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages haskell-apps) #:select (kmonad) #:prefix haskell-apps:)
+  #:use-module ((gnu packages haskell-check) #:select (ghc-hspec hspec-discover))
+  #:use-module (ebullient utils))
+
+(define-public kmonad
+  (let ((commit "95bb58b7347ebacb4654fb21c798e1cd10331b0d"))
+    (with-git-commit
+     (package
+       (inherit haskell-apps:kmonad)
+       (arguments
+        (substitute-keyword-arguments (package-arguments haskell-apps:kmonad)
+          ((#:phases phases '%standard-phases)
+           #~(modify-phases #$phases
+               (add-after 'unpack 'patch-git-revision
+                 (lambda _
+                   (substitute* "src/KMonad/Args/Cmd.hs"
+                     (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
+       (inputs
+        (modify-inputs (package-inputs haskell-apps:kmonad)
+                       (prepend ghc-hspec
+                                hspec-discover))))
+     #:commit commit
+     #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
+#+end_src
+** Stateless
+#+begin_src scheme :tangle (meta-in-dir "stateless.scm")
+(define-module (ebullient stateless)
+  #:use-module ((guix modules) #:select (source-module-closure))
+  #:use-module (guix gexp)
+  #:export (stateless-persist-dir
+            stateless-machine-dir
+            activate-stateless-gexp))
+
+(define stateless-persist-dir "/.persist")
+(define stateless-machine-dir "/.machine")
+
+(define* (activate-stateless-gexp persist-dir
+                                  machine-dir
+                                  state
+                                  #:key
+                                  home?)
+  (with-imported-modules (source-module-closure
+                          '((guix build utils)))
+    #~(begin
+        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
+                     ((srfi srfi-1) #:select (any drop-right every)))
+
+        (define (alist? x)
+          (and (list? x) (every pair? x)))
+
+        (define (normalize-state state)
+          (let ((as-alist
+                 (lambda (i)
+                   (cond
+                    ((alist? i) i)
+                    ((or (string? i) (list? i)) `((#:path . ,i))))))
+                (with-default-store
+                 (lambda (i)
+                   (if (assoc-ref i #:store)
+                       i
+                       (acons #:store #:machine i))))
+                (with-home-expansions
+                 (lambda (i)
+                   (acons
+                    #:path
+                    (let ((path (assoc-ref i #:path)))
+                      (cond
+                       ((string? path) (string-append (getenv "HOME") "/" path))
+                       ((list? path)
+                        (apply
+                         (lambda* (#:optional tail #:key xdg-base)
+                           (string-append (getenv xdg-base) "/" (or tail "")))
+                         path))))
+                    i))))
+            (map (compose (if #$home?
+                              with-home-expansions identity)
+                          with-default-store
+                          as-alist)
+                 state)))
+
+        (define (mkdirp-perms dir perms)
+          (mkdir-p dir)
+          (chown dir
+                 (let ((user (assoc-ref perms #:user)))
+                   (if user
+                       (passwd:uid (getpwnam user)) -1))
+                 (let ((group (assoc-ref perms #:group)))
+                   (if group
+                       (group:gid (getgrnam group)) -1)))
+          (let ((mode (assoc-ref perms #:mode)))
+            (when mode
+              (chmod dir mode))))
+
+        (define (no-follow-file-exists? file)
+          (->bool (false-if-exception (lstat file))))
+
+        (define (cleanup-and-migrate target state-file)
+          (let ((symlink-to-state?
+                 (lambda (file)
+                   (and (symbolic-link? file)
+                        (any (lambda (state-dir)
+                               (string-prefix? state-dir (readlink file)))
+                             (list
+                              #$persist-dir
+                              #$machine-dir)))))
+                (migrate-file
+                 (lambda (source dest)
+                   (when (no-follow-file-exists? dest)
+                     (delete-file-recursively dest))
+                   (copy-recursively source dest)
+                   (delete-file-recursively source))))
+            (when (no-follow-file-exists? target)
+              (if (symlink-to-state? target)
+                  (delete-file target)
+                  (migrate-file target state-file)))))
+
+        (define (process-state-entry i)
+          (let* ((path (assoc-ref i #:path))
+                 (directory-target? (string-suffix? "/" path))
+                 (target (if directory-target?
+                             (string-drop-right path 1) path))
+                 (state-dir (case (assoc-ref i #:store)
+                         ((#:persist) #$persist-dir)
+                         ((#:machine) #$machine-dir))))
+            (let ((parent-dir (string-join
+                               (drop-right (string-split path #\/) 1)
+                               "/"))
+                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
+              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
+              (mkdirp-perms parent-dir parent-dir-perms))
+            (let ((state-file (string-append state-dir target)))
+              (cleanup-and-migrate target state-file)
+              (when directory-target?
+                (mkdirp-perms state-file i))
+              (when (no-follow-file-exists? state-file)
+                (symlink state-file target)))))
+
+        (for-each process-state-entry (normalize-state '#$state)))))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -6649,107 +6430,122 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
   #:use-module ((ebullient stateless) #:select (stateless-persist-dir stateless-machine-dir))
-  #:use-module (ebullient home base-he)
-  #:use-module (ebullient system base-os)
-  #:export (os))
+  #:use-module (exuberant base-he)
+  #:use-module (exuberant base-os)
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((srfi srfi-1) #:select (append-map))
+  #:export (frostfire
+            pharcosyle
+            pcoulson
+            gandalf))
 
-(define stateless? #t)
-(define stateless-persist-dir stateless-persist-dir)
-(define stateless-machine-dir stateless-machine-dir)
-(define nix? #t)
-(define console? #t)
-(define desktop? #t)
-(define pipewire? #t)
-(define gdm? #t)
+(define* (os #:key
+             hes
+             primary-full-name
+             aux-full-name)
+  (let ((primary-name "pharcosyle")
+        (aux-name "pcoulson")
+        (guest-name "gandalf"))
+    (with-shared-opts
+     base-os
+     #:host-name "frostfire"
+     #:timezone "America/Los_Angeles"
+     #:users-info `(((#:name . ,primary-name)
+                     (#:comment . ,primary-full-name)
+                     (#:admin? . #t)
+                     (#:password . "mellon")) ; TODO remove this
+                    ((#:name . ,aux-name)
+                     (#:comment . ,aux-full-name)
+                     (#:admin? . #t)
+                     (#:password . "mellon")) ; TODO remove this
+                    ((#:name . ,guest-name)
+                     (#:comment . "Speak Friend and Enter")
+                     (#:password . "mellon")
+                     (#:admin? . #t))) ; TODO remove this
+     #:disk-encryption? #t
+     #:luks-uuid "<<frostfire-luks-uuid>>"
+     #:stateless? stateless?
+     #:stateless-persist-dir stateless-persist-dir
+     #:stateless-machine-dir stateless-machine-dir
+     #:stateless-users (list primary-name
+                             aux-name
+                             guest-name)
+     #:stateless-hes stateless-hes
+     #:nix? nix?
+     #:console? console?
+     #:kmonad? #t
+     #:kmonad-users (list primary-name
+                          aux-name)
+     #:desktop? desktop?
+     #:pipewire? pipewire?
+     #:bluetooth? #t
+     #:bluetooth-users (list primary-name
+                             aux-name
+                             guest-name)
+     #:gdm? gdm?
+     ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
+     #:sessions '(#:session/gnome
+                  #:session/sway)
+     #:laptop? #t
+     #:macbook? #t)))
 
-(define primary-name "pharcosyle")
+(define* (primary-he #:key full-name)
+  (with-shared-opts
+   base-he
+   #:full-name full-name
+   #:email "pharcosyle@gmail.com"
+   #:developer? #t
+   #:kmonad? #t
+   #:sessions '(#:session/sway)))
+
+(define* (aux-he #:key full-name)
+  (with-shared-opts
+   base-he
+   #:full-name full-name
+   #:email "pharcosyle+phil_coulson@gmail.com"
+   #:developer? #t
+   #:kmonad? #t
+   #:sessions '(#:session/sway)))
+
+(define (guest-he)
+  (with-shared-opts base-he))
+
+(define shared-opts
+  `((stateless? . #t)
+    (stateless-persist-dir . stateless-persist-dir)
+    (stateless-machine-dir . stateless-machine-dir)
+    (nix? . #t)
+    (console? . #t)
+    (desktop? . #t)
+    (pipewire? . #t)
+    (gdm? . #t)))
+
+(define* (with-shared-opts f #:rest args)
+  (apply f (append-map
+            (match-lambda
+              ((k . v)
+               (list k v)))
+            shared-opts)))
+
+
 (define primary-full-name "Krzysztof Baranowski")
-(define aux-name "pcoulson")
 (define aux-full-name "Phil Coulson")
-(define guest-name "gandalf")
 
-(define primary-he
-  (base-he #:full-name primary-full-name
-           #:email "pharcosyle@gmail.com"
-           #:stateless? stateless?
-           #:stateless-persist-dir stateless-persist-dir
-           #:stateless-machine-dir stateless-machine-dir
-           #:developer? #t
-           #:nix? nix?
-           #:console? console?
-           #:kmonad? #t
-           #:desktop? desktop?
-           #:pipewire? pipewire?
-           #:gdm? gdm?
-           #:sessions '(#:session/sway)))
+(define pharcosyle
+  (primary-he #:full-name primary-full-name))
 
-(define aux-he
-  (base-he #:full-name aux-full-name
-           #:email "pharcosyle+phil_coulson@gmail.com"
-           #:stateless? stateless?
-           #:stateless-persist-dir stateless-persist-dir
-           #:stateless-machine-dir stateless-machine-dir
-           #:developer? #t
-           #:nix? nix?
-           #:console? console?
-           #:kmonad? #t
-           #:desktop? desktop?
-           #:pipewire? pipewire?
-           #:gdm? gdm?
-           #:sessions '(#:session/sway)))
+(define pcoulson
+  (aux-he #:full-name aux-full-name))
 
-(define guest-he
-  (base-he #:stateless? stateless?
-           #:stateless-persist-dir stateless-persist-dir
-           #:stateless-machine-dir stateless-machine-dir
-           #:console? console?
-           #:desktop? desktop?
-           #:pipewire? pipewire?
-           #:gdm? gdm?))
+(define gandalf
+  (guest-he))
 
-(define os
-  (base-os #:host-name "frostfire"
-           #:timezone "America/Los_Angeles"
-           #:users-info `(((#:name . ,primary-name)
-                           (#:comment . ,primary-full-name)
-                           (#:admin? . #t)
-                           (#:password . "mellon")) ; TODO remove this
-                          ((#:name . ,aux-name)
-                           (#:comment . ,aux-full-name)
-                           (#:admin? . #t)
-                           (#:password . "mellon")) ; TODO remove this
-                          ((#:name . ,guest-name)
-                           (#:comment . "Speak Friend and Enter")
-                           (#:password . "mellon")
-                           (#:admin? . #t))) ; TODO remove this
-           #:disk-encryption? #t
-           #:luks-uuid "<<frostfire-luks-uuid>>"
-           #:stateless? stateless?
-           #:stateless-persist-dir stateless-persist-dir
-           #:stateless-machine-dir stateless-machine-dir
-           #:stateless-users (list primary-name
-                                   aux-name
-                                   guest-name)
-           #:stateless-hes `((,primary-name . ,primary-he)
-                             (,aux-name . ,aux-he)
-                             (,guest-name . ,guest-he))
-           #:nix? nix?
-           #:console? console?
-           #:kmonad? #t
-           #:kmonad-users (list primary-name
-                                aux-name)
-           #:desktop? desktop?
-           #:pipewire? pipewire?
-           #:bluetooth? #t
-           #:bluetooth-users (list primary-name
-                                   aux-name
-                                   guest-name)
-           #:gdm? gdm?
-           ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
-           #:sessions '(#:session/gnome
-                        #:session/sway)
-           #:laptop? #t
-           #:macbook? #t))
+(define frostfire
+  (os #:hes (list pharcosyle
+                  pcoulson
+                  gandalf)
+      #:primary-full-name primary-full-name
+      #:aux-full-name aux-full-name))
 #+end_src
 *** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
@@ -6855,6 +6651,224 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       ;;   (commit
       ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
       )
+#+end_src
+** Base OS
+#+begin_src scheme :tangle (meta-in-dir "base-os.scm")
+(define-module (exuberant base-os)
+  #:use-module (ebullient system components)
+  #:use-module (ebullient utils)
+  #:export (base-os))
+
+(define* (base-os #:key
+                  host-name
+                  timezone
+                  locale
+                  users-info
+                  disk-encryption?
+                  luks-uuid
+                  stateless?
+                  stateless-persist-dir
+                  stateless-machine-dir
+                  stateless-users
+                  stateless-hes
+                  nix?
+                  console?
+                  kmonad?
+                  kmonad-users
+                  desktop?
+                  pipewire?
+                  bluetooth?
+                  bluetooth-users
+                  gdm?
+                  gdm-auto-login
+                  sessions
+                  laptop?
+                  macbook?
+                  (kb-layout (if macbook?
+                                 macbook-kb-layout #f)))
+  (-> barebones-os
+      (host-info #:host-name host-name
+                 #:timezone timezone
+                 #:locale locale)
+      grub-efi
+      base-services
+      nss
+      (accounts #:users-info users-info)
+      nonguix-substitutes
+      linux-nonfree
+      (as-> $
+        (if nix?
+            (nix $) $)
+        (if console?
+            (-> $
+                (console-keyboard-layouts #:kb-layout kb-layout)
+                hidpi-console-font
+                (as-> $
+                  (if kmonad?
+                      (kmonad-tool $ #:who kmonad-users) $)))
+            $)
+        (if desktop?
+            (-> $
+                desktop-services
+                (as-> $
+                  (if pipewire?
+                      (pipewire-multimedia $) $)
+                  (network-manager $ #:stateless? stateless?)
+                  (if bluetooth?
+                      (bluetooth $ #:who bluetooth-users
+                                 #:stateless? stateless?)
+                      $)
+                  (if gdm?
+                      (gdm $ #:auto-login (if disk-encryption?
+                                              gdm-auto-login #f)))
+                  (if (member #:session/gnome (or sessions '()))
+                      (gnome-desktop $) $)
+                  (if (member #:session/sway (or sessions '()))
+                      (sway-wm $ #:laptop? laptop?) $)))
+            $)
+        (if macbook?
+            (macbook $ #:bluetooth? bluetooth?) $)
+        (let* ((persist-dir stateless-persist-dir)
+               (machine-dir stateless-machine-dir)
+               (subvols (btrfs-subvols #:stateless? stateless?
+                                       #:persist-dir persist-dir
+                                       #:machine-dir machine-dir
+                                       #:nix? nix?)))
+          (-> $
+              (btrfs #:subvols subvols)
+              (as-> $
+                (if disk-encryption?
+                    (disk-encryption $ #:source-uuid luks-uuid
+                                     #:encrypted-mount-points (map cdr subvols))
+                    $)
+                (if stateless?
+                    (stateless $ #:persist-dir persist-dir
+                               #:machine-dir machine-dir
+                               #:who stateless-users
+                               #:hes stateless-hes)
+                    $)))))))
+#+end_src
+** Base HE
+#+begin_src scheme :tangle (meta-in-dir "base-he.scm")
+(define-module (exuberant base-he)
+  #:use-module (gnu home)
+  #:use-module (gnu services)
+  #:use-module (ebullient home components)
+  #:use-module (ebullient utils)
+  #:export (base-he))
+
+(define* (base-he #:key
+                  full-name
+                  email
+                  stateless?
+                  stateless-persist-dir
+                  stateless-machine-dir
+                  (login-shell #:shell/bash)
+                  developer?
+                  (interactive-shell (if developer?
+                                         #:shell/zsh login-shell))
+                  nix?
+                  console?
+                  kmonad?
+                  desktop?
+                  pipewire?
+                  gdm?
+                  sessions)
+  (home-environment
+   (services
+    (filter
+     service?
+     (let ((theme #:theme/dark)
+           (font-mono font-mono)
+           (font-sans font-sans)
+           (font-serif font-serif)
+           (font-unicode font-unicode)
+           (font-variable-pitch font-sans))
+       (append
+        (he-packages)
+        (if stateless?
+            (he-stateless #:persist-dir stateless-persist-dir
+                          #:machine-dir stateless-machine-dir)
+            '())
+        (he-shells #:stateless? stateless?
+                   #:login-shell login-shell
+                   #:interactive-shell interactive-shell)
+        (if nix?
+            (he-nix #:stateless? stateless?) '())
+        (if developer?
+            (append
+             (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+             (he-doom #:stateless? stateless?
+                      #:console? console?
+                      #:full-name full-name
+                      #:email email
+                      #:theme theme
+                      #:font font-mono
+                      #:font-variable-pitch font-variable-pitch
+                      #:font-unicode font-unicode
+                      #:font-serif font-serif)
+             (he-git #:full-name full-name
+                     #:email email)
+             (he-ssh)
+             (he-direnv #:stateless? stateless?
+                        #:shell interactive-shell))
+            '())
+        (if console?
+            (append
+             (he-fonts #:stateless? stateless?
+                       #:fonts (list font-mono
+                                     font-sans
+                                     font-serif
+                                     font-unicode))
+             (if kmonad?
+                 (he-kmonad) '()))
+            '())
+        (if desktop?
+            (append
+             (he-mesa #:stateless? stateless?)
+             (if gdm?
+                 (he-gdm #:stateless? stateless?) '())
+             (let ((wayland? #t)
+                   (sway? (member #:session/sway (or sessions '()))))
+               (append
+                (he-desktop-packages)
+                (he-xdg #:stateless? stateless?)
+                (he-gtk #:stateless? stateless?
+                        #:theme theme
+                        #:font font-variable-pitch
+                        #:font-monospace font-mono)
+                (if pipewire?
+                    (he-pipewire #:stateless? stateless?
+                                 #:sway? sway?)
+                    '())
+                (he-flatpak #:stateless? stateless?
+                            #:wayland? wayland?)
+                (if sway?
+                    (let ((screen-locker (swaylock-screen-locker)))
+                      (append
+                       (he-wm-common #:sway? #t)
+                       (he-sway #:pipewire? pipewire?
+                                #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                                #:screen-locker screen-locker
+                                #:idle-manager (swayidle-idle-manager)
+                                #:application-launcher (rofi-application-launcher #:wayland? #t)
+                                #:default-terminal (alacritty-terminal))
+                       (he-swaylock #:font font-variable-pitch)
+                       (he-swayidle #:sway? #t
+                                    #:screen-locker screen-locker)
+                       (he-mako #:sway? #t
+                                #:menu (rofi-menu #:wayland? #t)
+                                #:theme theme
+                                #:font font-variable-pitch)
+                       (he-waybar #:sway? #t
+                                  #:theme theme
+                                  #:font font-variable-pitch)
+                       (he-rofi #:stateless? stateless?
+                                #:wayland? #t
+                                #:theme theme)
+                       (he-alacritty #:font font-mono)))
+                    '()))))
+            '())))))))
 #+end_src
 ** Scripts WIP
 TODO Are the double-quotes I have around --expression args okay?
