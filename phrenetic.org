@@ -966,6 +966,14 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                                        (#:store . #:persist)))))
   (append
    (list
+    (simple-service
+     'stateless-guix-ensure-profiles
+     home-activation-service-type
+     (stateless-ensure-profiles
+      (let ((user-profiles-dir (sting-append "/var/guix/profiles/per-user/" (getenv "USER"))))
+        `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
+          (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix"))))))
+
     (service home-stateless-service-type
              `((#:persist-dir . ,persist-dir)
                (#:machine-dir . ,machine-dir)))
@@ -1002,6 +1010,24 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
    (extend (lambda (config state)
              (acons #:state state config)))
    (description "Initialize a stateless home.")))
+#+end_src
+**** Ensure profiles
+#+begin_src scheme
+(define (stateless-ensure-profiles profiles)
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (for-each
+         (match-lambda
+           ((link . profile)
+            (let ((no-follow-file-exists? (lambda (file)
+                                            (false-if-exception (lstat file)))))
+              (when (and (no-follow-file-exists? profile)
+                         (not (no-follow-file-exists? link)))
+                (mkdir-p (dirname link))
+                (symlink profile link)))))
+         profiles))))
 #+end_src
 **** Skeletons
 #+begin_src scheme
@@ -1224,6 +1250,14 @@ SAVEHIST=$HISTSIZE
 
     (when stateless?
       (simple-service
+       'stateless-nix-ensure-profiles
+       home-activation-service-type
+       (stateless-ensure-profiles
+        (let ((user-profiles-dir (sting-append "/nix/var/nix/profiles/per-user/" (getenv "USER"))))
+          `((,(string-append (getenv "HOME") "/.nix-profile") . ,(string-append user-profiles-dir "/profile"))
+            (,(string-append (getenv "HOME") "/.nix-defexpr/current") . ,(string-append user-profiles-dir "/channels"))))))
+
+      (simple-service
        'nix-stateless
        home-stateless-service-type
        '(("nix/" #:xdg-base "XDG_CACHE_HOME")))))
@@ -1269,6 +1303,8 @@ nix-env --upgrade
 #+end_src
 ***** how to pin packages?
 Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
+***** [2022-08-21 Sun] stateless first install
+Maybe make a simple home-activation-service that ensures the nix profile packages are installed so I don't have to do it manually after a fresh computer install.
 **** Google Chrome
 #+begin_src scheme
 (define* (google-chrome-services #:key stateless?)
@@ -5971,7 +6007,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ** Stateless
 #+begin_src scheme :tangle (meta-in-dir "stateless.scm")
 (define-module (ebullient stateless)
-  #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix gexp)
   #:export (stateless-persist-dir
             stateless-machine-dir
@@ -5985,8 +6020,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                   state
                                   #:key
                                   home?)
-  (with-imported-modules (source-module-closure
-                          '((guix build utils)))
+  (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
                      ((srfi srfi-1) #:select (any drop-right every)))
@@ -6038,7 +6072,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
               (chmod dir mode))))
 
         (define (no-follow-file-exists? file)
-          (->bool (false-if-exception (lstat file))))
+          (false-if-exception (lstat file)))
 
         (define (cleanup-and-migrate target state-file)
           (let ((symlink-to-state?
