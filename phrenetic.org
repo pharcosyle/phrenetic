@@ -6023,7 +6023,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
-                     ((srfi srfi-1) #:select (any drop-right every)))
+                     ((srfi srfi-1) #:select (any every)))
 
         (define (alist? x)
           (and (list? x) (every pair? x)))
@@ -6102,9 +6102,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                  (state-dir (case (assoc-ref i #:store)
                          ((#:persist) #$persist-dir)
                          ((#:machine) #$machine-dir))))
-            (let ((parent-dir (string-join
-                               (drop-right (string-split path #\/) 1)
-                               "/"))
+            (let ((parent-dir (dirname path))
                   (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
               (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
               (mkdirp-perms parent-dir parent-dir-perms))
