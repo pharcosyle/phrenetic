@@ -969,10 +969,10 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
     (simple-service
      'stateless-guix-ensure-profiles
      home-activation-service-type
-     (stateless-ensure-profiles
-      (let ((user-profiles-dir (sting-append "/var/guix/profiles/per-user/" (getenv "USER"))))
-        `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
-          (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix"))))))
+     #~(#$stateless-ensure-profiles-gexp
+        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (getenv "USER"))))
+          `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
+            (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix"))))))
 
     (service home-stateless-service-type
              `((#:persist-dir . ,persist-dir)
@@ -1013,21 +1013,22 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
 #+end_src
 **** Ensure profiles
 #+begin_src scheme
-(define (stateless-ensure-profiles profiles)
+(define stateless-ensure-profiles-gexp
   (with-imported-modules '((guix build utils))
-    #~(begin
+    #~(lambda (profiles)
         (use-modules ((guix build utils) #:select (mkdir-p)))
 
-        (for-each
-         (match-lambda
-           ((link . profile)
-            (let ((no-follow-file-exists? (lambda (file)
-                                            (false-if-exception (lstat file)))))
-              (when (and (no-follow-file-exists? profile)
-                         (not (no-follow-file-exists? link)))
-                (mkdir-p (dirname link))
-                (symlink profile link)))))
-         profiles))))
+        (let ((no-follow-file-exists? (lambda (file)
+                                        (false-if-exception (lstat file)))))
+          (for-each
+           (lambda (i)
+             (let ((link (car i))
+                   (profile (cdr i)))
+               (when (and (no-follow-file-exists? profile)
+                          (not (no-follow-file-exists? link)))
+                 (mkdir-p (dirname link))
+                 (symlink profile link))))
+           profiles)))))
 #+end_src
 **** Skeletons
 #+begin_src scheme
@@ -1246,21 +1247,23 @@ SAVEHIST=$HISTSIZE
      'nix-add-nixpkgs-config
      home-xdg-configuration-files-service-type
      `(("nixpkgs/config.nix"
-        ,nixpkgs-config)))
+        ,nixpkgs-config))))
 
-    (when stateless?
+   (if stateless?
+     (list
       (simple-service
        'stateless-nix-ensure-profiles
        home-activation-service-type
-       (stateless-ensure-profiles
-        (let ((user-profiles-dir (sting-append "/nix/var/nix/profiles/per-user/" (getenv "USER"))))
-          `((,(string-append (getenv "HOME") "/.nix-profile") . ,(string-append user-profiles-dir "/profile"))
-            (,(string-append (getenv "HOME") "/.nix-defexpr/current") . ,(string-append user-profiles-dir "/channels"))))))
+       #~(#$stateless-ensure-profiles-gexp
+          (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (getenv "USER"))))
+            `((,(string-append (getenv "HOME") "/.nix-profile") . ,(string-append user-profiles-dir "/profile"))
+              (,(string-append (getenv "HOME") "/.nix-defexpr/channels") . ,(string-append user-profiles-dir "/channels"))))))
 
       (simple-service
        'nix-stateless
        home-stateless-service-type
-       '(("nix/" #:xdg-base "XDG_CACHE_HOME")))))
+       '(("nix/" #:xdg-base "XDG_CACHE_HOME"))))
+     '())
 
    (google-chrome-services #:stateless? stateless?)))
 #+end_src
@@ -6022,7 +6025,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                   home?)
   (with-imported-modules '((guix build utils))
     #~(begin
-        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively mkdir-p symbolic-link?))
+        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p symbolic-link?))
                      ((srfi srfi-1) #:select (any every)))
 
         (define (alist? x)
@@ -6085,14 +6088,22 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                               #$machine-dir)))))
                 (migrate-file
                  (lambda (source dest)
-                   (when (no-follow-file-exists? dest)
-                     (delete-file-recursively dest))
                    (copy-recursively source dest)
-                   (delete-file-recursively source))))
+                   (delete-file-recursively source)))
+                (backup-file
+                 (lambda (file)
+                   (rename-file file (string-append
+                                      (dirname file)
+                                      "/stateless-backup-" (number->string (current-time)) "-"
+                                      (basename file))))))
             (when (no-follow-file-exists? target)
               (if (symlink-to-state? target)
                   (delete-file target)
-                  (migrate-file target state-file)))))
+                  (begin
+                    (if (not (nil? (find-files state-file)))
+                        (backup-file state-file)
+                        (rmdir state-file))
+                    (migrate-file target state-file))))))
 
         (define (process-state-entry i)
           (let* ((path (assoc-ref i #:path))
@@ -6496,25 +6507,17 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                      (#:admin? . #t))) ; TODO remove this
      #:disk-encryption? #t
      #:luks-uuid "<<frostfire-luks-uuid>>"
-     #:stateless? stateless?
-     #:stateless-persist-dir stateless-persist-dir
-     #:stateless-machine-dir stateless-machine-dir
      #:stateless-users (list primary-name
                              aux-name
                              guest-name)
-     #:stateless-hes stateless-hes
-     #:nix? nix?
-     #:console? console?
+     #:stateless-hes hes
      #:kmonad? #t
      #:kmonad-users (list primary-name
                           aux-name)
-     #:desktop? desktop?
-     #:pipewire? pipewire?
      #:bluetooth? #t
      #:bluetooth-users (list primary-name
                              aux-name
                              guest-name)
-     #:gdm? gdm?
      ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
      #:sessions '(#:session/gnome
                   #:session/sway)
@@ -6543,21 +6546,23 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   (with-shared-opts base-he))
 
 (define shared-opts
-  `((stateless? . #t)
-    (stateless-persist-dir . stateless-persist-dir)
-    (stateless-machine-dir . stateless-machine-dir)
-    (nix? . #t)
-    (console? . #t)
-    (desktop? . #t)
-    (pipewire? . #t)
-    (gdm? . #t)))
+  `((#:stateless? . #t)
+    (#:stateless-persist-dir . ,stateless-persist-dir)
+    (#:stateless-machine-dir . ,stateless-machine-dir)
+    (#:nix? . #t)
+    (#:console? . #t)
+    (#:desktop? . #t)
+    (#:pipewire? . #t)
+    (#:gdm? . #t)))
 
 (define* (with-shared-opts f #:rest args)
-  (apply f (append-map
-            (match-lambda
-              ((k . v)
-               (list k v)))
-            shared-opts)))
+  (apply f (append
+            (append-map
+             (match-lambda
+               ((k . v)
+                (list k v)))
+             shared-opts)
+            args)))
 
 
 (define primary-full-name "Krzysztof Baranowski")
