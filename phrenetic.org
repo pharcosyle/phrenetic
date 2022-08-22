@@ -6072,7 +6072,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
         (define (no-follow-file-exists? file)
           (false-if-exception (lstat file)))
 
-        (define (cleanup-and-migrate target state-file)
+        (define (cleanup-and-migrate target state-file state-dir)
           (let ((symlink-to-state?
                  (lambda (file)
                    (and (symbolic-link? file)
@@ -6087,10 +6087,10 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                    (delete-file-recursively source)))
                 (backup-file
                  (lambda (file)
-                   (rename-file file (string-append
-                                      (dirname file)
-                                      "/stateless-backup-" (number->string (current-time)) "-"
-                                      (basename file))))))
+                   (let* ((backup-dir (string-append state-dir "/stateless-backup-" (number->string (current-time))))
+                          (backup-file (string-drop file (string-length state-dir))))
+                     (mkdir-p (dirname backup-file))
+                     (rename-file file backup-file)))))
             (when (no-follow-file-exists? target)
               (if (symlink-to-state? target)
                   (delete-file target)
@@ -6113,7 +6113,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
               (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
               (mkdirp-perms parent-dir parent-dir-perms))
             (let ((state-file (string-append state-dir target)))
-              (cleanup-and-migrate target state-file)
+              (cleanup-and-migrate target state-file state-dir)
               (when directory-target?
                 (mkdirp-perms state-file i))
               (when (no-follow-file-exists? state-file)
