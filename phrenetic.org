@@ -1539,7 +1539,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   stateless?
                   console?
                   (doom-private (local-file "doom-private" #:recursive? #t))
-                  full-name
                   email
                   theme
                   font
@@ -1569,7 +1568,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   (serialize-elisp-config
                    #f
                    `((setq param-console? ,(if console? 't 'nil)
-                           param-full-name ,full-name
                            param-email ,email
                            param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
@@ -3556,8 +3554,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 ****** Personal Info :user:
 #+begin_src elisp
-(setq user-full-name param-full-name
-      user-mail-address param-email)
+(setq user-mail-address param-email)
 #+end_src
 ****** Locals :path:
 #+begin_src elisp
@@ -4678,7 +4675,6 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
 *** Git
 #+begin_src scheme
 (define* (he-git #:key
-                 full-name
                  email
                  sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
                  gpg-sign-key
@@ -4695,8 +4691,7 @@ Useful for making quick configuration additions if the the active Doomdir isn't 
     (home-git-configuration
      (config
       `((user
-         ((name . ,full-name)
-          (email . ,email)
+         ((email . ,email)
           ,@(if sign-commits?
                 `((signingkey . ,gpg-sign-key)) '())))
         ;; TODO stuff from feature-git, figure it out later
@@ -6484,9 +6479,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 
 (define* (os #:key
              primary-name
-             primary-full-name
              aux-name
-             aux-full-name
              guest-name
              stateless-users)
   (with-shared-opts
@@ -6494,11 +6487,11 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    #:host-name "frostfire"
    #:timezone "America/Los_Angeles"
    #:users-info `(((#:name . ,primary-name)
-                   (#:comment . ,primary-full-name)
+                   (#:comment . "Krzysztof Baranowski")
                    (#:admin? . #t)
                    (#:password . "mellon")) ; TODO remove this
                   ((#:name . ,aux-name)
-                   (#:comment . ,aux-full-name)
+                   (#:comment . "Phil Coulson")
                    (#:admin? . #t)
                    (#:password . "mellon")) ; TODO remove this
                   ((#:name . ,guest-name)
@@ -6521,19 +6514,17 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    #:laptop? #t
    #:macbook? #t))
 
-(define* (primary-he #:key full-name)
+(define* (primary-he)
   (with-shared-opts
    base-he
-   #:full-name full-name
    #:email "pharcosyle@gmail.com"
    #:developer? #t
    #:kmonad? #t
    #:sessions '(#:session/sway)))
 
-(define* (aux-he #:key full-name)
+(define* (aux-he)
   (with-shared-opts
    base-he
-   #:full-name full-name
    #:email "pharcosyle+phil_coulson@gmail.com"
    #:developer? #t
    #:kmonad? #t
@@ -6562,26 +6553,16 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             args)))
 
 
-(define primary-full-name "Krzysztof Baranowski")
-(define aux-full-name "Phil Coulson")
-
-(define primary
-  (primary-he #:full-name primary-full-name))
-
-(define aux
-  (aux-he #:full-name aux-full-name))
-
-(define guest
-  (guest-he))
+(define primary (primary-he))
+(define aux (aux-he))
+(define guest (guest-he))
 
 (define frostfire
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "gandalf"))
     (os #:primary-name primary-name
-        #:primary-full-name primary-full-name
         #:aux-name aux-name
-        #:aux-full-name aux-full-name
         #:guest-name guest-name
         #:stateless-users `((,primary-name . ,primary)
                             (,aux-name . ,aux)
@@ -6797,7 +6778,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (base-he))
 
 (define* (base-he #:key
-                  full-name
                   email
                   stateless?
                   stateless-persist-dir
@@ -6839,15 +6819,13 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
              (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
              (he-doom #:stateless? stateless?
                       #:console? console?
-                      #:full-name full-name
                       #:email email
                       #:theme theme
                       #:font font-mono
                       #:font-variable-pitch font-variable-pitch
                       #:font-unicode font-unicode
                       #:font-serif font-serif)
-             (he-git #:full-name full-name
-                     #:email email)
+             (he-git #:email email)
              (he-ssh)
              (he-direnv #:stateless? stateless?
                         #:shell interactive-shell))
