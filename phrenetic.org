@@ -497,6 +497,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                       '(#$(file-append he "/activate"))
                       #:user #$user
                       #:group (group:name (getgrgid (passwd:gid (getpw #$user))))
+                      #:log-file (string-append "/var/log/stateless-home-" #$user ".log")
                       #:environment-variables
                       (list (string-append "HOME=" (passwd:dir (getpw #$user))))))
             (stop #~(make-kill-destructor))))))
