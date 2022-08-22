@@ -971,7 +971,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
      'stateless-guix-ensure-profiles
      home-activation-service-type
      #~(#$stateless-ensure-profiles-gexp
-        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (getenv "USER"))))
+        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
           `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
             (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix"))))))
 
@@ -1256,7 +1256,7 @@ SAVEHIST=$HISTSIZE
        'stateless-nix-ensure-profiles
        home-activation-service-type
        #~(#$stateless-ensure-profiles-gexp
-          (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (getenv "USER"))))
+          (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
             `((,(string-append (getenv "HOME") "/.nix-profile") . ,(string-append user-profiles-dir "/profile"))
               (,(string-append (getenv "HOME") "/.nix-defexpr/channels") . ,(string-append user-profiles-dir "/channels"))))))
 
@@ -6101,9 +6101,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
               (if (symlink-to-state? target)
                   (delete-file target)
                   (begin
-                    (if (not (nil? (find-files state-file)))
-                        (backup-file state-file)
-                        (rmdir state-file))
+                    (when (and (no-follow-file-exists? state-file)
+                               (not (nil? (find-files state-file))))
+                      (backup-file state-file))
                     (migrate-file target state-file))))))
 
         (define (process-state-entry i)
