@@ -374,8 +374,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
 (define-system-comp (stateless #:key
                                persist-dir
                                machine-dir
-                               who
-                               hes)
+                               who)
   (initrd (lambda (file-systems . rest)
             (apply (operating-system-initrd os) file-systems
                    #:volatile-root? #t
@@ -393,7 +392,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
         (operating-system-file-systems os)))
   (users
    (map (lambda (account)
-          (if (member (user-account-name account) who)
+          (if (member (user-account-name account) (map car who))
               (user-account
                (inherit account)
                (create-home-directory? #f))
@@ -408,10 +407,10 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                 (#:machine-dir . ,machine-dir)
                 (#:homes . ,(->> users
                                  (filter (lambda (account)
-                                           (member (user-account-name account) who)))
+                                           (member (user-account-name account) (map car who))))
                                  (map (lambda (account)
                                         `(,(user-account-name account) . ,(user-account-home-directory account))))))
-                (#:hes . ,(map cons who hes))))
+                (#:hes . ,who)))
      (simple-service
       'stateless-system-state
       stateless-service-type
@@ -6479,51 +6478,48 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (frostfire
-            pharcosyle
-            pcoulson
-            gandalf))
+            primary
+            aux
+            guest))
 
 (define* (os #:key
-             hes
+             primary-name
              primary-full-name
-             aux-full-name)
-  (let ((primary-name "pharcosyle")
-        (aux-name "pcoulson")
-        (guest-name "gandalf"))
-    (with-shared-opts
-     base-os
-     #:host-name "frostfire"
-     #:timezone "America/Los_Angeles"
-     #:users-info `(((#:name . ,primary-name)
-                     (#:comment . ,primary-full-name)
-                     (#:admin? . #t)
-                     (#:password . "mellon")) ; TODO remove this
-                    ((#:name . ,aux-name)
-                     (#:comment . ,aux-full-name)
-                     (#:admin? . #t)
-                     (#:password . "mellon")) ; TODO remove this
-                    ((#:name . ,guest-name)
-                     (#:comment . "Speak Friend and Enter")
-                     (#:password . "mellon")
-                     (#:admin? . #t))) ; TODO remove this
-     #:disk-encryption? #t
-     #:luks-uuid "<<frostfire-luks-uuid>>"
-     #:stateless-users (list primary-name
-                             aux-name
-                             guest-name)
-     #:stateless-hes hes
-     #:kmonad? #t
-     #:kmonad-users (list primary-name
-                          aux-name)
-     #:bluetooth? #t
-     #:bluetooth-users (list primary-name
-                             aux-name
-                             guest-name)
-     ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
-     #:sessions '(#:session/gnome
-                  #:session/sway)
-     #:laptop? #t
-     #:macbook? #t)))
+             aux-name
+             aux-full-name
+             guest-name
+             stateless-users)
+  (with-shared-opts
+   base-os
+   #:host-name "frostfire"
+   #:timezone "America/Los_Angeles"
+   #:users-info `(((#:name . ,primary-name)
+                   (#:comment . ,primary-full-name)
+                   (#:admin? . #t)
+                   (#:password . "mellon")) ; TODO remove this
+                  ((#:name . ,aux-name)
+                   (#:comment . ,aux-full-name)
+                   (#:admin? . #t)
+                   (#:password . "mellon")) ; TODO remove this
+                  ((#:name . ,guest-name)
+                   (#:comment . "Speak Friend and Enter")
+                   (#:password . "mellon")
+                   (#:admin? . #t))) ; TODO remove this
+   #:disk-encryption? #t
+   #:luks-uuid "<<frostfire-luks-uuid>>"
+   #:stateless-users stateless-users
+   #:kmonad? #t
+   #:kmonad-users (list primary-name
+                        aux-name)
+   #:bluetooth? #t
+   #:bluetooth-users (list primary-name
+                           aux-name
+                           guest-name)
+   ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
+   #:sessions '(#:session/gnome
+                #:session/sway)
+   #:laptop? #t
+   #:macbook? #t))
 
 (define* (primary-he #:key full-name)
   (with-shared-opts
@@ -6569,21 +6565,27 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define primary-full-name "Krzysztof Baranowski")
 (define aux-full-name "Phil Coulson")
 
-(define pharcosyle
+(define primary
   (primary-he #:full-name primary-full-name))
 
-(define pcoulson
+(define aux
   (aux-he #:full-name aux-full-name))
 
-(define gandalf
+(define guest
   (guest-he))
 
 (define frostfire
-  (os #:hes (list pharcosyle
-                  pcoulson
-                  gandalf)
-      #:primary-full-name primary-full-name
-      #:aux-full-name aux-full-name))
+  (let ((primary-name "pharcosyle")
+        (aux-name "pcoulson")
+        (guest-name "gandalf"))
+    (os #:primary-name primary-name
+        #:primary-full-name primary-full-name
+        #:aux-name aux-name
+        #:aux-full-name aux-full-name
+        #:guest-name guest-name
+        #:stateless-users `((,primary-name . ,primary)
+                            (,aux-name . ,aux)
+                            (,guest-name . ,guest)))))
 #+end_src
 *** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
@@ -6782,8 +6784,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                 (if stateless?
                     (stateless $ #:persist-dir persist-dir
                                #:machine-dir machine-dir
-                               #:who stateless-users
-                               #:hes stateless-hes)
+                               #:who stateless-users)
                     $)))))))
 #+end_src
 ** Base HE
