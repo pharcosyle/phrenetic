@@ -1386,6 +1386,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (gcc-12))
   #:use-module (ebullient utils)
+  #:use-module ((srfi srfi-1) #:select (remove))
   #:export (;; emacs-fully-loaded
             emacs-fully-loaded-pgtk))
 
@@ -1397,8 +1398,8 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
 (define-public (with-emacs-latest emacs)
   (-> emacs
       (with-git-commit #:upstream-version "29.0.50"
-                       #:commit "d92fb1592a02f7e34fb82069fc8d61d85dac8a48"
-                       #:hash "12xhfiikz349vndfj992mkm0hjvbarc8l4731sk8i76a17nnfkz5")
+                       #:commit "06d7161476255c77defa119fffa842b7abaa0dcb"
+                       #:hash "099wp5bd21zmbjlfn58n5sp7l8xmskg3ai63xy9ijh5spkjl1q5q")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
 ***** Wayland =Super= fix
@@ -1456,6 +1457,47 @@ index 566fc1f03d..1cb4d5dac0 100644
 
        nbytes = event->key.length;
        if (nbytes > copy_bufsiz)
+#+end_src
+***** Epoch patch update
+#+begin_src scheme
+(define-public (with-epoch-patch-update emacs)
+  (package
+    (inherit emacs)
+    (source
+     (origin
+       (inherit (package-source emacs))
+       (patches
+        (->>(-> emacs package-source origin-patches)
+            (remove
+             (lambda (patch)
+               (string-suffix? "emacs-source-date-epoch.patch" patch)))
+            (cons
+             "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
+             ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch" ; (local-file "patches/emacs-source-date-epoch.patch") ; TODO why isn't this working with local-file?
+             )))))))
+#+end_src
+****** Patch
+#+begin_src diff :tangle (meta-in-dir "patches/emacs-source-date-epoch.patch")
+Honor SOURCE_DATE_EPOCH variable to avoid non-determinism in generated
+"autoloads" files.
+
+--- a/lisp/obsolete/autoload.el
++++ b/lisp/obsolete/autoload.el
+@@ -419,8 +419,12 @@
+   ;;              nil t))
+   ;;        (match-end 2))))
+   (insert generate-autoload-section-header)
+-  (prin1 `(autoloads ,autoloads ,load-name ,file ,time)
+-	 outbuf)
++  (let* ((env  (getenv "SOURCE_DATE_EPOCH"))
++         (time (if env
++                   (seconds-to-time (string-to-number env))
++                 time)))
++    (prin1 `(autoloads ,autoloads ,load-name ,file ,time)
++           outbuf))
+   (terpri outbuf)
+   ;; Break that line at spaces, to avoid very long lines.
+   ;; Make each sub-line into a comment.
 #+end_src
 ***** Native comp
 #+begin_src scheme
@@ -1523,7 +1565,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   (-> (if pgtk?
           (-> emacs-next-pgtk
               with-emacs-latest
-              with-wayland-super-fix)
+              with-wayland-super-fix
+              with-epoch-patch-update)
           emacs)
       with-native-comp
       with-findable-C-source
