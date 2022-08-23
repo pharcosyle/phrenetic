@@ -5444,7 +5444,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (effects? #t)
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
-                      (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
+                      ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
+                      (image "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/alucard_bg.png")
                       ;; (image wallpaper)
                       extra-config)
   (list
@@ -5463,10 +5464,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         (show-failed-attempts)
         (ignore-empty-password)
 
-        (indicator)
+        (indicator-idle-visible)
+        (indicator-caps-lock)
         (indicator-radius . "240")
         (indicator-thickness . "20")
-        (indicator-caps-lock)
 
         ;; TODO Source colors from color scheme.
         (key-hl-color . "880033")
