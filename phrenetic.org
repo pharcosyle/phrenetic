@@ -166,14 +166,14 @@ herd start cow-store /mnt
 # Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
 
 mkdir -p ~/.config/guix
-cp ~/projects/phrenetic/exuberant/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
+cp ~/work/phrenetic/exuberant/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
 guix pull
 hash guix
 
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/projects/phrenetic
+cd ~/work/phrenetic
 guix system --load-path=. init exuberant/exuberant/os/frostfire.scm /mnt
 #+end_src
 *** Post-installation
@@ -962,7 +962,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                        machine-dir
                        (extra-state '(((#:path . "org/")
                                        (#:store . #:persist))
-                                      ((#:path . "projects/")
+                                      ((#:path . "work/")
                                        (#:store . #:persist)))))
   (append
    (list
@@ -1412,7 +1412,7 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
        (patches
         (cons
          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/wayland-super-fix.patch"
-         ;; "/home/pharcosyle/projects/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
+         ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
               (-> emacs package-source origin-patches)))))))
 #+end_src
 ****** WAIT [#E] Remove the Wayland =Super= fix
@@ -1989,7 +1989,7 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
     (name "doom-emacs")
     (version "0")
     (source
-     (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t))
+     (local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t))
     (build-system (@ (guix build-system copy) copy-build-system))
     (synopsis "")
     (description "")
@@ -2058,10 +2058,10 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
               (setenv "HOME" "/tmp/asdfasdf")
               (mkdir-p "/tmp/asdfasdf")
 
-              ;; (symlink #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+              ;; (symlink #$(local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t)
               ;;            (string-append #$output "/temp-doom-emacs"))
               (let ((doom
-                     ;; #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                     ;; #$(local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t)
                      (assoc-ref %build-inputs "doom-emacs")
                      ;; (string-append #$output "/temp-doom-emacs")
                      ))
@@ -2118,11 +2118,11 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
 
          ;; TODO Consider making e.g. emacs, git not ungexped in a let but instead everywhere they're used (and move this let outside of the gexp). Then I could use file-append instead of string-append in places I guess. Which is better practice?
          (let ((doom-private #+(file-union "doom-private"
-                                           `(("init.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                           `(("init.el" ,(file-append (local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t)
                                                                       "/init.example.el"))
-                                             ("config.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                             ("config.el" ,(file-append (local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t)
                                                                         "/core/templates/config.example.el"))
-                                             ("packages.el" ,(file-append (local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t)
+                                             ("packages.el" ,(file-append (local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t)
                                                                           "/core/templates/packages.example.el")))))
                ;; (doom-private #$(local-file "doom-private" #:recursive? #t))
                (doom-local-dir (string-append #$output "/doom-local"))
@@ -2133,7 +2133,7 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
                (doom-emacs #+temp-doom-emacs)
                ;; (doom-emacs #+doom-emacs)
                ;; (doom-emacs (assoc-ref %build-inputs "doom-emacs"))
-               ;; (doom-emacs #$(local-file "/home/pharcosyle/projects/dotfiles/doom-emacs" #:recursive? #t))
+               ;; (doom-emacs #$(local-file "/home/pharcosyle/work/dotfiles/doom-emacs" #:recursive? #t))
                )
            (mkdir-p doom-local-dir)
 
@@ -2165,7 +2165,7 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
            ;; temporary straight.el experimentation
            ;; (mkdir-p "/tmp/asdfasdf/123456")
            (mkdir-p (string-append doom-local-dir "/straight/repos"))
-           (symlink #+(local-file "/home/pharcosyle/projects/dotfiles/straight.el" #:recursive? #t)
+           (symlink #+(local-file "/home/pharcosyle/work/dotfiles/straight.el" #:recursive? #t)
                     (string-append doom-local-dir "/straight/repos/straight.el"))
 
            ;; (copy-file #$(local-file "nixpkgs-config.nix") (string-append doom-local-dir "/asdf.txt"))
@@ -2838,7 +2838,7 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 
 
 #_(defn parse-doom-packages []
-  (as-> (slurp "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el") $
+  (as-> (slurp "/home/pharcosyle/work/phrenetic/doom-packaging/my-doom-packages.el") $
     (edn/read-string $)
     (map parse-doom-package $)
     ;; TODO later: this is Doom-specific, move it out of the main "guix-emacs-generator"
@@ -3020,7 +3020,7 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 
 
 (require '[clojure.java.shell :refer [sh]])
-(def eb-dir "/home/pharcosyle/projects/phrenetic/ebullient")
+(def eb-dir "/home/pharcosyle/work/phrenetic/ebullient")
 (def guix-repl-cmd ["guix" "repl" "-L" "." "--" "ebullient/home/packaging-runner.scm"])
 (defn sh-call [f & args]
   (apply sh (concat guix-repl-cmd
@@ -3078,9 +3078,9 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 
 
 
-;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages.el")
-;; (def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-edited.el")
-(def my-doom-packages-test "/home/pharcosyle/projects/phrenetic/doom-packaging/my-doom-packages-small.el")
+;; (def my-doom-packages-test "/home/pharcosyle/work/phrenetic/doom-packaging/my-doom-packages.el")
+;; (def my-doom-packages-test "/home/pharcosyle/work/phrenetic/doom-packaging/my-doom-packages-edited.el")
+(def my-doom-packages-test "/home/pharcosyle/work/phrenetic/doom-packaging/my-doom-packages-small.el")
 
 (defn test-packages []
   (let [data (-> my-doom-packages-test
@@ -3387,7 +3387,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
 
 (defun m-process ()
-  (-as-> (m-slurp "~/projects/phrenetic/doom-packaging/my-doom-packages.el") $
+  (-as-> (m-slurp "~/work/phrenetic/doom-packaging/my-doom-packages.el") $
          (read $)
          (-map #'-first-item $)
          (-map #'symbol-name $)))
@@ -3417,7 +3417,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     (-map (lambda (x)
             (cons (car x)
                   (if-let ((y (cdr x)))
-                      (if (not (equal y "/home/pharcosyle/projects/dotfiles/donnager"))
+                      (if (not (equal y "/home/pharcosyle/work/dotfiles/donnager"))
                           (repo-commit y)
                         nil)
                     y)))
@@ -3897,7 +3897,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
 (after! org
   (setq org-agenda-files `(,biome--org-dir
                            ,biome--org-gcal-dir
-                           ,(concat biome--org-dir "/projects"))
+                           ,(concat biome--org-dir "/work"))
         org-log-done 'time
         org-priority-lowest ?E
         org-priority-default ?C)
@@ -4419,7 +4419,7 @@ Can be an integer to determine the exact padding."
 ****** Projects
 ******* Phrenetic :path:
 #+begin_src elisp
-(load "~/projects/phrenetic/meta" 'noerror 'nomessage)
+(load "~/work/phrenetic/meta" 'noerror 'nomessage)
 
 (pushnew! safe-local-variable-values
           '(eval . (with-eval-after-load 'geiser-guile
@@ -4475,14 +4475,14 @@ Can be an integer to determine the exact padding."
   :name "Amplify Mock"
   :command "amplify"
   :args '("mock")
-  :cwd "~/projects/Krush/hyperdrive/apps/singularity"
+  :cwd "~/work/Krush/hyperdrive/apps/singularity"
   :kill-process-buffer-on-stop t)
 
 (prodigy-define-service
   :name "Datomic Access (exogenesis)"
   :command "bash"
   :args '("datomic" "client" "access" "exogenesis")
-  :cwd "~/projects/Krush/hyperdrive/ion/team"
+  :cwd "~/work/Krush/hyperdrive/ion/team"
   :kill-process-buffer-on-stop t)
 #+end_src
 ******* Massrealty :path:
@@ -4576,7 +4576,7 @@ Can be an integer to determine the exact padding."
 ******* phrenetic auto-tangle :path:
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
-;; (setq biome--phrenetic-dir "~/projects/phrenetic")
+;; (setq biome--phrenetic-dir "~/work/phrenetic")
 
 ;; (add-hook! 'org-mode-hook
 ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
@@ -4593,7 +4593,7 @@ Can be an integer to determine the exact padding."
 ;;   :hook ((org-mode . org-tanglesync-mode)
 ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
 ;;   :config
-;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/projects/phrenetic/phrenetic.org")))
+;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
 #+end_src
 ******* Temporary copypasta from bloodhound
 Copying this here for now, for convenience.
@@ -4630,7 +4630,7 @@ Probably move these to ~after!~ blocks
 ****** Out-of-band
 Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
 #+begin_src elisp :var oob-dir=(meta-get-dir)
-(let ((oob-dir (concat "~/projects/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
+(let ((oob-dir (concat "~/work/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
   (let* ((file "out-of-band"))
     (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
         (load! file nil 'noerror))))
@@ -5444,7 +5444,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (effects? #t)
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
-                      (image "/home/pharcosyle/projects/phrenetic/ebullient/home/alucard_bg.png")
+                      (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
                       ;; (image wallpaper)
                       extra-config)
   (list
@@ -6609,7 +6609,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 
 ;; (cons* (channel
 ;;         (name 'phrenetic)
-;;         (url "file:///home/pharcosyle/projects/phrenetic")
+;;         (url "file:///home/pharcosyle/work/phrenetic")
 ;;         (branch "tangled"))
 ;;        %default-channels)
 #+end_src
@@ -6667,7 +6667,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
       ;; (channel
       ;;   (name 'phrenetic)
-      ;;   (url "file:///home/pharcosyle/projects/phrenetic")
+      ;;   (url "file:///home/pharcosyle/work/phrenetic")
       ;;   (branch "tangled")
       ;;   (commit
       ;;     "6ace11ddf9e03eefa85495ab5463e0a000240587"))
