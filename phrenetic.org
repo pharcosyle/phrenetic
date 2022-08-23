@@ -6420,18 +6420,31 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                  (lambda (file)
                    (let* ((backup-dir (string-append
                                        state-dir
+                                       (if #$home?
+                                           (getenv "HOME") "")
                                        "/stateless-backup-" (number->string timestamp)))
                           (backup-file (string-append
-                                        backup-dir "/" (string-drop file (string-length state-dir)))))
+                                        backup-dir "/"
+                                        (let* ((string-drop-prefix (lambda (s prefix)
+                                                                     (string-drop s (string-length prefix))))
+                                               (without-state-dir (lambda (file)
+                                                                    (string-drop-prefix file state-dir)))
+                                               (without-home-dir (lambda (file)
+                                                                   (string-drop-prefix file (getenv "HOME")))))
+                                          ((compose (if #$home?
+                                                        without-home-dir identity)
+                                                    without-state-dir)
+                                           file)))))
                      (mkdir-p (dirname backup-file))
                      (rename-file file backup-file)))))
             (when (no-follow-file-exists? target)
               (if (symlink-to-state? target)
                   (delete-file target)
                   (begin
-                    (when (and (no-follow-file-exists? state-file)
-                               (not (nil? (find-files state-file))))
-                      (backup-file state-file))
+                    (when (no-follow-file-exists? state-file)
+                      (if (nil? (find-files state-file))
+                          (delete-file-recursively state-file)
+                          (backup-file state-file)))
                     (migrate-file target state-file))))))
 
         (define (process-state-entry i)
