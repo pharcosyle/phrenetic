@@ -233,7 +233,7 @@ guix pull
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
-  #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
   #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
@@ -1178,7 +1178,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
-  #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
   #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
@@ -6302,8 +6302,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    #:hash "0f9571blnn7lg317js1j1spc5smz69i5aw6zkhskkm5m633rrpqq"))
 #+end_src
 *** KMonad :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "kmonad.scm")
-(define-module (ebullient packages kmonad)
+#+begin_src scheme :tangle (meta-in-dir "haskell-apps.scm")
+(define-module (ebullient packages haskell-apps)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
