@@ -217,7 +217,6 @@ guix pull
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
   ;; #:use-module ((gnu packages shells) #:select (zsh))
-  #:use-module ((gnu packages wm) #:select (swaylock))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -235,6 +234,7 @@ guix pull
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -793,7 +793,7 @@ Must succeed "Accounts" component.
 ***** Swaylock
 #+begin_src scheme
 (define swaylock-service
-  (screen-locker-service swaylock))
+  (screen-locker-service swaylock-effects "swaylock"))
 #+end_src
 **** Backlight
 ***** Brightnessctl
@@ -1164,7 +1164,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (mako swaylock swaylock-effects swayidle waybar))
+  #:use-module ((gnu packages wm) #:select (mako swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module (gnu services shepherd)
@@ -1179,6 +1179,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded-pgtk))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
+  #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map concatenate))
@@ -5760,7 +5761,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 ***** Swaylock
 #+begin_src scheme
 (define* (he-swaylock #:key
-                      (effects? #t)
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
                       ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
@@ -5771,9 +5771,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    (service
     home-swaylock-service-type
     (home-swaylock-configuration
-     (swaylock (if effects?
-                   swaylock-effects
-                   swaylock))
+     (swaylock swaylock-effects)
      (config
       `((daemonize)
 
@@ -5783,6 +5781,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         (show-failed-attempts)
         (ignore-empty-password)
 
+        (indicator)
         (indicator-idle-visible)
         (indicator-caps-lock)
         (indicator-radius . "240")
@@ -5812,12 +5811,12 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         (text-ver-color . "d9d8d800")
         (text-wrong-color . "ee2e2400")
 
-        ,@(if effects?
-              `((grace . "10")
-                (effect-blur . 7x5)
-                (clock)
-                (fade-in . "0.2"))
-              '())
+        ;; Effects
+
+        (grace . "15")
+        (effect-blur . 7x5)
+        (clock)
+        (fade-in . "0.2")
 
         ,@(if extra-config
               extra-config '())))))))
@@ -6289,11 +6288,21 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 :PROPERTIES:
 :meta-dir+: /packages
 :END:
-*** KMonad :upstream:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "kmonad.scm")
-:END:
-#+begin_src scheme
+*** Swaylock Effects :package:version:
+#+begin_src scheme :tangle (meta-in-dir "wm.scm")
+(define-module (ebullient packages wm)
+  #:use-module ((gnu packages wm) #:select (swaylock-effects) #:prefix wm:)
+  #:use-module (ebullient utils))
+
+(define-public swaylock-effects
+  (with-git-commit
+   wm:swaylock-effects
+   #:upstream-version "1.6-3"
+   #:commit "a8fc557b86e70f2f7a30ca9ff9b3124f89e7f204"
+   #:hash "0f9571blnn7lg317js1j1spc5smz69i5aw6zkhskkm5m633rrpqq"))
+#+end_src
+*** KMonad :package:version:upstream:
+#+begin_src scheme :tangle (meta-in-dir "kmonad.scm")
 (define-module (ebullient packages kmonad)
   #:use-module (guix gexp)
   #:use-module (guix packages)
