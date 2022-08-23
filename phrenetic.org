@@ -207,6 +207,7 @@ guix pull
 (define-module (ebullient system components)
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix gexp)
+  #:use-module (guix packages)
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
@@ -230,7 +231,7 @@ guix pull
   #:use-module (gnu system file-systems)
   #:use-module (gnu system keyboard)
   #:use-module (gnu system mapped-devices)
-  #:use-module ((nongnu packages linux) #:select (linux-lts linux-firmware broadcom-sta broadcom-bt-firmware))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages kmonad) #:select (kmonad))
@@ -336,7 +337,7 @@ guix pull
 *** Linux nonfree
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
-  (kernel linux-lts) ; TODO make this just `linux` again once nonguix fixes the broadcom-sta patch.
+  (kernel linux)
   (initrd microcode-initrd)
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
@@ -813,7 +814,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define-system-comp (macbook-wireless #:key bluetooth?)
   (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
                                     "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
-  (kernel-loadable-modules (cons* broadcom-sta
+  (kernel-loadable-modules (cons* (broadcom-with-patch-updates broadcom-sta)
                                   (operating-system-kernel-loadable-modules os)))
   (firmware (append
              (if bluetooth? (list broadcom-bt-firmware) '())
@@ -832,6 +833,280 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                  arg))
            kernel-args)
       (cons* (string-append blacklist-param "=" new) kernel-args)))
+#+end_src
+***** Broadcom STA
+#+begin_src scheme
+(define-public (broadcom-with-patch-updates broadcom)
+  (package
+    (inherit broadcom)
+    (source
+     (origin
+       (inherit (package-source broadcom))
+       (patches
+        (append
+         (-> broadcom package-source origin-patches)
+         (list
+          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-linux-5.17.patch"
+          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-linux-5.18.patch"
+          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-pedantic-fix.patch")))))))
+#+end_src
+****** Patches
+:PROPERTIES:
+:meta-dir+: /patches
+:END:
+******* Linux 5.17
+#+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-5.17.patch")
+From 31b7849092c43805c7fbaf7518b99874aa1b310c Mon Sep 17 00:00:00 2001
+From: Joan Bruguera <joanbrugueram@gmail.com>
+Date: Wed, 12 Jan 2022 20:49:20 +0100
+Subject: [PATCH] Tentative fix for broadcom-wl 6.30.223.271 driver for Linux 5.17-rc1
+
+Set netdev->dev_addr through dev_addr_mod + PDE_DATA fix
+
+Since Linux 5.17 netdev->dev_addr is const and must be changed through
+dev_addr_mod, otherwise a warning is logged in dmesg and bad things may happen.
+
+NB: The #if is not wrong, dev_addr_mod is defined since Linux 5.15-rc1
+
+Plus a trivial fix for PDE_DATA.
+
+Applies on top of all the patches applied to broadcom-wl-dkms 6.30.223.271-28 on Arch Linux.
+
+See also: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=adeef3e32146a8d2a73c399dc6f5d76a449131b1
+          https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=359745d78351c6f5442435f81549f0207ece28aa
+---
+ src/wl/sys/wl_linux.c | 16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+diff --git a/src/wl/sys/wl_linux.c b/src/wl/sys/wl_linux.c
+index e491df7..e4614fb 100644
+--- a/src/wl/sys/wl_linux.c
++++ b/src/wl/sys/wl_linux.c
+@@ -93,6 +93,10 @@ struct iw_statistics *wl_get_wireless_stats(struct net_device *dev);
+ 
+ #include <wlc_wowl.h>
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
++#define PDE_DATA pde_data
++#endif
++
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
+ static void wl_timer(struct timer_list *tl);
+ #else
+@@ -490,6 +494,12 @@ wl_if_setup(struct net_device *dev)
+ #endif
+ }
+ 
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0)
++static inline void eth_hw_addr_set(struct net_device *dev, const void *addr) {
++	memcpy(dev->dev_addr, addr, ETHER_ADDR_LEN);
++}
++#endif
++
+ static wl_info_t *
+ wl_attach(uint16 vendor, uint16 device, ulong regs,
+ 	uint bustype, void *btparam, uint irq, uchar* bar1_addr, uint32 bar1_size)
+@@ -634,7 +644,7 @@ wl_attach(uint16 vendor, uint16 device, ulong regs,
+ 			WL_ERROR(("wl%d: Error setting MAC ADDRESS\n", unit));
+ 	}
+ #endif 
+-	bcopy(&wl->pub->cur_etheraddr, dev->dev_addr, ETHER_ADDR_LEN);
++	eth_hw_addr_set(dev, wl->pub->cur_etheraddr.octet);
+ 
+ 	online_cpus = 1;
+ 
+@@ -1835,7 +1845,7 @@ wl_set_mac_address(struct net_device *dev, void *addr)
+ 
+ 	WL_LOCK(wl);
+ 
+-	bcopy(sa->sa_data, dev->dev_addr, ETHER_ADDR_LEN);
++	eth_hw_addr_set(dev, sa->sa_data);
+ 	err = wlc_iovar_op(wl->wlc, "cur_etheraddr", NULL, 0, sa->sa_data, ETHER_ADDR_LEN,
+ 		IOV_SET, (WL_DEV_IF(dev))->wlcif);
+ 	WL_UNLOCK(wl);
+@@ -3010,7 +3020,7 @@ _wl_add_monitor_if(wl_task_t *task)
+ 	else
+ 		dev->type = ARPHRD_IEEE80211_RADIOTAP;
+ 
+-	bcopy(wl->dev->dev_addr, dev->dev_addr, ETHER_ADDR_LEN);
++	eth_hw_addr_set(dev, wl->dev->dev_addr);
+ 
+ #if defined(WL_USE_NETDEV_OPS)
+ 	dev->netdev_ops = &wl_netdev_monitor_ops;
+-- 
+2.35.1
+
+#+end_src
+******* Linux 5.18
+#+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-5.18.patch")
+diff -u -r a/src/shared/linux_osl.c b/src/shared/linux_osl.c
+--- a/src/shared/linux_osl.c	2022-05-24 20:51:15.662604980 +0000
++++ b/src/shared/linux_osl.c	2022-05-24 21:13:38.264472425 +0000
+@@ -599,6 +599,8 @@
+ 	va = kmalloc(size, GFP_ATOMIC | __GFP_ZERO);
+ 	if (va)
+ 		,*pap = (ulong)__virt_to_phys(va);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++	va = dma_alloc_coherent(&((struct pci_dev *)osh->pdev)->dev, size, (dma_addr_t*)pap, GFP_ATOMIC);
+ #else
+ 	va = pci_alloc_consistent(osh->pdev, size, (dma_addr_t*)pap);
+ #endif
+@@ -612,6 +614,8 @@
+ 
+ #ifdef __ARM_ARCH_7A__
+ 	kfree(va);
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++	dma_free_coherent(&((struct pci_dev *)osh->pdev)->dev, size, va, (dma_addr_t)pa);
+ #else
+ 	pci_free_consistent(osh->pdev, size, va, (dma_addr_t)pa);
+ #endif
+@@ -623,7 +627,11 @@
+ 	int dir;
+ 
+ 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++	dir = (direction == DMA_TX)? DMA_TO_DEVICE: DMA_FROM_DEVICE;
++#else
+ 	dir = (direction == DMA_TX)? PCI_DMA_TODEVICE: PCI_DMA_FROMDEVICE;
++#endif
+ 
+ #if defined(__ARM_ARCH_7A__) && defined(BCMDMASGLISTOSL)
+ 	if (dmah != NULL) {
+@@ -641,7 +649,11 @@
+ 				ASSERT(totsegs + nsegs <= MAX_DMA_SEGS);
+ 				sg->page_link = 0;
+ 				sg_set_buf(sg, PKTDATA(osh, skb), PKTLEN(osh, skb));
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++				dma_map_single(&((struct pci_dev *)osh->pdev)->dev, PKTDATA(osh, skb), PKTLEN(osh, skb), dir);
++#else
+ 				pci_map_single(osh->pdev, PKTDATA(osh, skb), PKTLEN(osh, skb), dir);
++#endif
+ 			}
+ 			totsegs += nsegs;
+ 			totlen += PKTLEN(osh, skb);
+@@ -656,7 +668,11 @@
+ 	}
+ #endif 
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++	return (dma_map_single(&((struct pci_dev *)osh->pdev)->dev, va, size, dir));
++#else
+ 	return (pci_map_single(osh->pdev, va, size, dir));
++#endif
+ }
+ 
+ void BCMFASTPATH
+@@ -665,8 +681,13 @@
+ 	int dir;
+ 
+ 	ASSERT((osh && (osh->magic == OS_HANDLE_MAGIC)));
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
++	dir = (direction == DMA_TX)? DMA_TO_DEVICE: DMA_FROM_DEVICE;
++	dma_unmap_single(&((struct pci_dev *)osh->pdev)->dev, (uint32)pa, size, dir);
++#else
+ 	dir = (direction == DMA_TX)? PCI_DMA_TODEVICE: PCI_DMA_FROMDEVICE;
+ 	pci_unmap_single(osh->pdev, (uint32)pa, size, dir);
++#endif
+ }
+ 
+ #if defined(BCMDBG_ASSERT)
+#+end_src
+******* Pedantic fix
+#+begin_src diff :tangle (meta-in-dir "broadcom-sta-pedantic-fix.patch")
+diff --git a/src/shared/linux_osl.c b/shared/linux_osl.c
+index 711b771..5a2636a 100644
+--- a/src/shared/linux_osl.c
++++ b/src/shared/linux_osl.c
+@@ -1105,7 +1105,7 @@ osl_os_get_image_block(char *buf, int len, void *image)
+ 	if (!image)
+ 		return 0;
+ 
+-	rdlen = kernel_read(fp, fp->f_pos, buf, len);
++	rdlen = kernel_read(fp, (void *)fp->f_pos, (size_t)len, (loff_t *)buf);
+ 	if (rdlen > 0)
+ 		fp->f_pos += rdlen;
+ 
+diff --git a/src/wl/sys/wl_cfg80211_hybrid.c b/wl/sys/wl_cfg80211_hybrid.c
+index 41c16d8..d39d9de 100644
+--- a/src/wl/sys/wl_cfg80211_hybrid.c
++++ b/src/wl/sys/wl_cfg80211_hybrid.c
+@@ -790,6 +790,7 @@ wl_set_auth_type(struct net_device *dev, struct cfg80211_connect_params *sme)
+ 		break;
+ 	case NL80211_AUTHTYPE_NETWORK_EAP:
+ 		WL_DBG(("network eap\n"));
++		break;
+ 	default:
+ 		val = 2;
+ 		WL_ERR(("invalid auth type (%d)\n", sme->auth_type));
+@@ -2347,21 +2348,20 @@ wl_bss_roaming_done(struct wl_cfg80211_priv *wl, struct net_device *ndev,
+                     const wl_event_msg_t *e, void *data)
+ {
+ 	struct wl_cfg80211_connect_info *conn_info = wl_to_conn(wl);
++	s32 err = 0;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+ 	struct cfg80211_bss *bss;
+ 	struct wlc_ssid *ssid;
++	struct cfg80211_roam_info roam_info;
+ 	ssid = &wl->profile->ssid;
+ 	bss = cfg80211_get_bss(wl_to_wiphy(wl), NULL, (s8 *)&wl->bssid,
+ 	ssid->SSID, ssid->SSID_len, WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
+-	struct cfg80211_roam_info roam_info = {
+-		.bss = bss,
+-		.req_ie = conn_info->req_ie,
+-		.req_ie_len = conn_info->req_ie_len,
+-		.resp_ie = conn_info->resp_ie,
+-		.resp_ie_len = conn_info->resp_ie_len,
+-	};
++	roam_info.bss = bss;
++	roam_info.req_ie = conn_info->req_ie;
++	roam_info.req_ie_len = conn_info->req_ie_len;
++	roam_info.resp_ie = conn_info->resp_ie;
++	roam_info.resp_ie_len = conn_info->resp_ie_len;
+ #endif
+-	s32 err = 0;
+ 
+ 	wl_get_assoc_ies(wl);
+ 	memcpy(wl->profile->bssid, &e->addr, ETHER_ADDR_LEN);
+diff --git a/src/wl/sys/wl_iw.h b/wl/sys/wl_iw.h
+index 3ab084f..471d11f 100644
+--- a/src/wl/sys/wl_iw.h
++++ b/src/wl/sys/wl_iw.h
+@@ -70,7 +70,6 @@ struct cntry_locales_custom {
+ #define	WL_IW_RSSI_EXCELLENT	-57	
+ #define	WL_IW_RSSI_INVALID	 0	
+ #define MAX_WX_STRING 80
+-#define isprint(c) bcm_isprint(c)
+ #define WL_IW_SET_ACTIVE_SCAN	(SIOCIWFIRSTPRIV+1)
+ #define WL_IW_GET_RSSI			(SIOCIWFIRSTPRIV+3)
+ #define WL_IW_SET_PASSIVE_SCAN	(SIOCIWFIRSTPRIV+5)
+diff --git a/src/wl/sys/wl_linux.c b/wl/sys/wl_linux.c
+index d13fb98..97ae2a6 100644
+--- a/src/wl/sys/wl_linux.c
++++ b/src/wl/sys/wl_linux.c
+@@ -797,14 +797,15 @@ wl_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+ 	pci_read_config_dword(pdev, 0x40, &val);
+ 	if ((val & 0x0000ff00) != 0)
+ 		pci_write_config_dword(pdev, 0x40, val & 0xffff00ff);
+-		bar1_size = pci_resource_len(pdev, 2);
+-		#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+-		bar1_addr = (uchar *)ioremap(pci_resource_start(pdev, 2),
+-			bar1_size);
+-		#else
+-		bar1_addr = (uchar *)ioremap_nocache(pci_resource_start(pdev, 2),
+-			bar1_size);
+-		#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0) */
++
++	bar1_size = pci_resource_len(pdev, 2);
++	#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
++	bar1_addr = (uchar *)ioremap(pci_resource_start(pdev, 2),
++		bar1_size);
++	#else
++	bar1_addr = (uchar *)ioremap_nocache(pci_resource_start(pdev, 2),
++		bar1_size);
++	#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0) */
+ 	wl = wl_attach(pdev->vendor, pdev->device, pci_resource_start(pdev, 0), PCI_BUS, pdev,
+ 		pdev->irq, bar1_addr, bar1_size);
+ 
 #+end_src
 **** Power key
 Make the power key suspend instead of power off. It's part of they keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
