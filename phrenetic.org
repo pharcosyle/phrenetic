@@ -425,7 +425,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
 **** Service
 ***** Populate
 #+begin_src scheme
-(define (populate-gexp _)
+(define populate-gexp
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
                             '((gnu build install)))
@@ -444,49 +444,36 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
             (unless system-1-exists?
               (delete-file system-1-path)))))))
 #+end_src
-***** Activate
-#+begin_src scheme
-(define (system-activate-stateless-gexp config)
-  (activate-stateless-gexp
-   (assoc-ref config #:persist-dir)
-   (assoc-ref config #:machine-dir)
-   (assoc-ref config #:state)))
-#+end_src
 ***** Users
 #+begin_src scheme
-(define (user-homes-shepherd-service config)
-  (let ((user-homes (assoc-ref config #:homes))
-        (state-dirs (list
-                     (assoc-ref config #:persist-dir)
-                     (assoc-ref config #:machine-dir))))
+(define (user-homes-shepherd-service user-homes state-dirs)
+  (shepherd-service
+   (provision '(stateless-user-homes))
+   (requirement '(file-systems))
+   (one-shot? #t)
+   (start (with-imported-modules (source-module-closure
+                                  '((guix build utils)))
+            #~(lambda ()
+                (let ((mkdirp-user-home
+                       (lambda (dir uid gid)
+                         (mkdir-p dir)
+                         (chmod dir #o700)
+                         (chown dir uid gid))))
+                  (for-each
+                   (lambda (user-home)
+                     (let* ((pw (getpwnam (car user-home)))
+                            (uid (passwd:uid pw))
+                            (gid (passwd:gid pw))
+                            (home (cdr user-home)))
+                       (mkdirp-user-home home uid gid)
+                       (for-each
+                        (lambda (state-dir)
+                          (mkdirp-user-home (string-append state-dir home) uid gid))
+                        '#$state-dirs)))
+                   '#$user-homes))
+                #t)))))
 
-    (shepherd-service
-     (provision '(stateless-user-homes))
-     (requirement '(file-systems))
-     (one-shot? #t)
-     (start (with-imported-modules (source-module-closure
-                                    '((guix build utils)))
-              #~(lambda ()
-                  (let ((mkdirp-user-home
-                         (lambda (dir uid gid)
-                           (mkdir-p dir)
-                           (chmod dir #o700)
-                           (chown dir uid gid))))
-                    (for-each
-                     (lambda (user-home)
-                       (let* ((pw (getpwnam (car user-home)))
-                              (uid (passwd:uid pw))
-                              (gid (passwd:gid pw))
-                              (home (cdr user-home)))
-                         (mkdirp-user-home home uid gid)
-                         (for-each
-                          (lambda (state-dir)
-                            (mkdirp-user-home (string-append state-dir home) uid gid))
-                          '#$state-dirs)))
-                     '#$user-homes))
-                  #t))))))
-
-(define (activate-home-shepherd-services config)
+(define (activate-home-shepherd-services hes)
   (let ((svc
          (lambda (user he)
            (shepherd-service
@@ -504,7 +491,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
     (map (match-lambda
            ((user . he)
             (svc user he)))
-         (assoc-ref config #:hes))))
+         hes)))
 #+end_src
 ***** Service type
 #+begin_src scheme
@@ -513,13 +500,22 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
    (name 'stateless)
    (extensions
     (list (service-extension boot-service-type
-                             populate-gexp)
+                             (const populate-gexp))
           (service-extension activation-service-type
-                             system-activate-stateless-gexp)
+                             (lambda (config)
+                               (activate-stateless-gexp
+                                (assoc-ref config #:persist-dir)
+                                (assoc-ref config #:machine-dir)
+                                (assoc-ref config #:state))))
           (service-extension shepherd-root-service-type
                              (lambda (config)
-                               (cons* (user-homes-shepherd-service config)
-                                      (activate-home-shepherd-services config))))))
+                               (cons* (user-homes-shepherd-service
+                                       (assoc-ref config #:homes)
+                                       (list
+                                        (assoc-ref config #:persist-dir)
+                                        (assoc-ref config #:machine-dir)))
+                                      (activate-home-shepherd-services
+                                       (assoc-ref config #:hes)))))))
    (compose concatenate)
    (extend (lambda (config state)
              (acons #:state state config)))
@@ -1285,23 +1281,18 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
    (stateless-skeletons)))
 #+end_src
 **** Service
-***** Activate
-#+begin_src scheme
-(define (home-activate-stateless-gexp config)
-  (activate-stateless-gexp
-   (assoc-ref config #:persist-dir)
-   (assoc-ref config #:machine-dir)
-   (assoc-ref config #:state)
-   #:home? #t))
-#+end_src
-***** Service type
 #+begin_src scheme
 (define home-stateless-service-type
   (service-type
    (name 'home-stateless)
-   (extensions (list (service-extension
-                      home-activation-service-type
-                      home-activate-stateless-gexp)))
+   (extensions
+    (list (service-extension home-activation-service-type
+                             (lambda (config)
+                               (activate-stateless-gexp
+                                (assoc-ref config #:persist-dir)
+                                (assoc-ref config #:machine-dir)
+                                (assoc-ref config #:state)
+                                #:home? #t)))))
    (compose concatenate)
    (extend (lambda (config state)
              (acons #:state state config)))
