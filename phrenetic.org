@@ -1218,6 +1218,23 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
             rofi-application-launcher
             he-alacritty
             alacritty-terminal))
+
+(define stateless-ensure-profiles-gexp
+  (with-imported-modules '((guix build utils))
+    #~(lambda (profiles)
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (let ((no-follow-file-exists? (lambda (file)
+                                        (false-if-exception (lstat file)))))
+          (for-each
+           (lambda (i)
+             (let ((link (car i))
+                   (profile (cdr i)))
+               (when (and (no-follow-file-exists? profile)
+                          (not (no-follow-file-exists? link)))
+                 (mkdir-p (dirname link))
+                 (symlink profile link))))
+           profiles)))))
 #+end_src
 *** Packages
 #+begin_src scheme
@@ -1242,14 +1259,6 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                                        (#:store . #:persist)))))
   (append
    (list
-    (simple-service
-     'stateless-guix-ensure-profiles
-     home-activation-service-type
-     #~(#$stateless-ensure-profiles-gexp
-        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-          `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
-            (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix"))))))
-
     (service home-stateless-service-type
              `((#:persist-dir . ,persist-dir)
                (#:machine-dir . ,machine-dir)))
@@ -1263,11 +1272,20 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
          (#:mode . #o700))
         ("guix/" #:xdg-base "XDG_CACHE_HOME")
         ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-      extra-state)))
+      extra-state))
+
+    (simple-service
+     'stateless-guix-ensure-profiles
+     home-activation-service-type
+     #~(#$stateless-ensure-profiles-gexp
+        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+          `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
+            (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix")))))))
 
    (stateless-skeletons)))
 #+end_src
 **** Service
+***** Activate
 #+begin_src scheme
 (define (home-activate-stateless-gexp config)
   (activate-stateless-gexp
@@ -1275,7 +1293,9 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
    (assoc-ref config #:machine-dir)
    (assoc-ref config #:state)
    #:home? #t))
-
+#+end_src
+***** Service type
+#+begin_src scheme
 (define home-stateless-service-type
   (service-type
    (name 'home-stateless)
@@ -1286,25 +1306,6 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
    (extend (lambda (config state)
              (acons #:state state config)))
    (description "Initialize a stateless home.")))
-#+end_src
-**** Ensure profiles
-#+begin_src scheme
-(define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils))
-    #~(lambda (profiles)
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-
-        (let ((no-follow-file-exists? (lambda (file)
-                                        (false-if-exception (lstat file)))))
-          (for-each
-           (lambda (i)
-             (let ((link (car i))
-                   (profile (cdr i)))
-               (when (and (no-follow-file-exists? profile)
-                          (not (no-follow-file-exists? link)))
-                 (mkdir-p (dirname link))
-                 (symlink profile link))))
-           profiles)))))
 #+end_src
 **** Skeletons
 #+begin_src scheme
