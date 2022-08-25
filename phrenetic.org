@@ -235,11 +235,11 @@ guix pull
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
   #:use-module ((ebullient packages wm) #:select (swaylock-effects))
-  #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
+  #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
-  #:use-module ((srfi srfi-1) #:select (any append-map concatenate remove iota))
+  #:use-module ((srfi srfi-1) #:select (any append-map remove iota))
   #:export (barebones-os
             host-info
             grub-efi
@@ -495,6 +495,12 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
 #+end_src
 ***** Service type
 #+begin_src scheme
+(define normalize-state
+  (stateless:normalize-state-fn stateless:normalize))
+
+(define normalize-ignore
+  (stateless:normalize-ignore-fn stateless:normalize))
+
 (define stateless-service-type
   (service-type
    (name 'stateless)
@@ -503,10 +509,11 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                              (const populate-gexp))
           (service-extension activation-service-type
                              (lambda (config)
-                               (activate-stateless-gexp
+                               (stateless:activate-gexp
+                                #~(#$normalize-state '#$(assoc-ref config #:state))
+                                #f
                                 (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir)
-                                (assoc-ref config #:state))))
+                                (assoc-ref config #:machine-dir))))
           (service-extension shepherd-root-service-type
                              (lambda (config)
                                (cons* (user-homes-shepherd-service
@@ -516,9 +523,8 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                                         (assoc-ref config #:machine-dir)))
                                       (activate-home-shepherd-services
                                        (assoc-ref config #:hes)))))))
-   (compose concatenate)
-   (extend (lambda (config state)
-             (acons #:state state config)))
+   (compose identity)
+   (extend stateless:extend-proc)
    (description "Initialize a stateless system.")))
 #+end_src
 *** File systems
@@ -1176,9 +1182,9 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
   #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
   #:use-module ((ebullient packages wm) #:select (swaylock-effects))
-  #:use-module ((ebullient stateless) #:select (activate-stateless-gexp))
+  #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
-  #:use-module ((srfi srfi-1) #:select (append-map concatenate))
+  #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (he-packages
             he-stateless
             he-shells
@@ -1257,45 +1263,105 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
    (list
     (service home-stateless-service-type
              `((#:persist-dir . ,persist-dir)
-               (#:machine-dir . ,machine-dir)))
+               (#:machine-dir . ,machine-dir))))
 
-    (simple-service
-     'stateless-home-state
-     home-stateless-service-type
-     (append
-      '((#:xdg-base "XDG_LOG_HOME")
-        ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-         (#:mode . #o700))
-        ("guix/" #:xdg-base "XDG_CACHE_HOME")
-        ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-      extra-state))
+   (let ((guix-profile ".guix-profile")
+         (guix-current "guix/current"))
+     (list
+      (simple-service
+       'stateless-home-state
+       home-stateless-service-type
+       `((#:state . ,(append
+                      '((#:xdg-base "XDG_LOG_HOME")
+                        ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
+                         (#:mode . #o700))
+                        ("guix/" #:xdg-base "XDG_CACHE_HOME")
+                        ("guile/" #:xdg-base "XDG_CACHE_HOME"))
+                      extra-state))
+         (#:ignore . ,(list ".guix-home"
+                            guix-profile
+                            guix-current))))
 
-    (simple-service
-     'stateless-guix-ensure-profiles
-     home-activation-service-type
-     #~(#$stateless-ensure-profiles-gexp
-        (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-          `((,(string-append (getenv "HOME") "/.guix-profile") . ,(string-append user-profiles-dir "/guix-profile"))
-            (,(string-append (getenv "XDG_CONFIG_HOME") "/guix/current") . ,(string-append user-profiles-dir "/current-guix")))))))
+      (simple-service
+       'stateless-guix-ensure-profiles
+       home-activation-service-type
+       #~(#$stateless-ensure-profiles-gexp
+          (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+            `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
+              (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))))
 
    (stateless-skeletons)))
 #+end_src
 **** Service
+***** Diff tool
 #+begin_src scheme
+(define guix-home-files
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (find-files)))
+
+        (let ((home-files
+               (let* ((home-dir (getenv "HOME"))
+                      (guix-home-dir (string-append
+                                      home-dir "/.guix-home/" #$home-files-directory "/")))
+                 (map (lambda (file)
+                        (string-append
+                         home-dir
+                         (string-drop file (string-length guix-home-dir))))
+                      (find-files guix-home-dir)))))
+          (make-known home-files symlink-to-store?)))))
+#+end_src
+***** Service type
+#+begin_src scheme
+(define home-normalize
+  (let ((stateless-normalize stateless:normalize)) ; Gexps can't handle namespace prefixes I guess.
+    #~(lambda (state-or-ignore)
+        (map (lambda (i)
+               (acons
+                #:path
+                (let ((path (assoc-ref i #:path)))
+                  (cond
+                   ((string? path) (string-append (getenv "HOME") "/" path))
+                   ((list? path)
+                    (apply
+                     (lambda* (#:optional tail #:key xdg-base)
+                       (string-append (getenv xdg-base) "/" (or tail "")))
+                     path))))
+                i))
+             (#$stateless-normalize state-or-ignore)))))
+
+(define home-normalize-state
+  (stateless:normalize-state-fn home-normalize))
+
+(define home-normalize-ignore
+  (stateless:normalize-ignore-fn home-normalize))
+
+(define home-base-dir #~(getenv "HOME"))
+
 (define home-stateless-service-type
   (service-type
    (name 'home-stateless)
    (extensions
     (list (service-extension home-activation-service-type
                              (lambda (config)
-                               (activate-stateless-gexp
+                               (stateless:activate-gexp
+                                #~(#$home-normalize-state '#$(assoc-ref config #:state))
+                                home-base-dir
                                 (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir)
-                                (assoc-ref config #:state)
-                                #:home? #t)))))
-   (compose concatenate)
-   (extend (lambda (config state)
-             (acons #:state state config)))
+                                (assoc-ref config #:machine-dir))))
+          (service-extension home-files-service-type
+                             (lambda (config)
+                               `(("diff-tool"
+                                  ,(stateless:diff-tool
+                                    #~(#$home-normalize-state '#$(assoc-ref config #:state))
+                                    #~(#$home-normalize-ignore '#$(assoc-ref config #:ignore))
+                                    home-base-dir
+                                    (assoc-ref config #:persist-dir)
+                                    (assoc-ref config #:machine-dir)
+                                    #:additional-known
+                                    guix-home-files)))))))
+   (compose identity)
+   (extend stateless:extend-proc)
    (description "Initialize a stateless home.")))
 #+end_src
 **** Skeletons
@@ -1518,20 +1584,24 @@ SAVEHIST=$HISTSIZE
         ,nixpkgs-config))))
 
    (if stateless?
-     (list
-      (simple-service
-       'stateless-nix-ensure-profiles
-       home-activation-service-type
-       #~(#$stateless-ensure-profiles-gexp
-          (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-            `((,(string-append (getenv "HOME") "/.nix-profile") . ,(string-append user-profiles-dir "/profile"))
-              (,(string-append (getenv "HOME") "/.nix-defexpr/channels") . ,(string-append user-profiles-dir "/channels"))))))
+       (let ((nix-profile ".nix-profile")
+             (nix-channels ".nix-defexpr/channels"))
+         (list
+          (simple-service
+           'stateless-nix-ensure-profiles
+           home-activation-service-type
+           #~(#$stateless-ensure-profiles-gexp
+              (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+                `((,(string-append (getenv "HOME") "/" #$nix-profile) . ,(string-append user-profiles-dir "/profile"))
+                  (,(string-append (getenv "HOME") "/" #$nix-channels) . ,(string-append user-profiles-dir "/channels"))))))
 
-      (simple-service
-       'nix-stateless
-       home-stateless-service-type
-       '(("nix/" #:xdg-base "XDG_CACHE_HOME"))))
-     '())
+          (simple-service
+           'nix-stateless
+           home-stateless-service-type
+           `((#:state . (("nix/" #:xdg-base "XDG_CACHE_HOME")))
+             (#:ignore . ,(list nix-profile
+                                nix-channels))))))
+       '())
 
    (google-chrome-services #:stateless? stateless?)))
 #+end_src
@@ -6324,58 +6394,100 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
      #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
 #+end_src
 ** Stateless
-#+begin_src scheme :tangle (meta-in-dir "stateless.scm")
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "stateless.scm")
+:END:
+#+begin_src scheme
 (define-module (ebullient stateless)
   #:use-module (guix gexp)
-  #:export (stateless-persist-dir
-            stateless-machine-dir
-            activate-stateless-gexp))
+  #:use-module (ebullient utils)
+  #:use-module ((srfi srfi-1) #:select (append-map every))
+  #:export (persist-dir
+            machine-dir
+            normalize
+            normalize-state-fn
+            normalize-ignore-fn
+            extend-proc
+            activate-gexp
+            diff-tool))
 
-(define stateless-persist-dir "/.persist")
-(define stateless-machine-dir "/.machine")
+(define state-dir-lookup
+  #~(lambda (persist-dir machine-dir)
+      (lambda (k)
+        (case k
+          ((#:persist) persist-dir)
+          ((#:machine) machine-dir)))))
 
-(define* (activate-stateless-gexp persist-dir
-                                  machine-dir
-                                  state
-                                  #:key
-                                  home?)
+(define symlink-to-state-fn
+  (with-imported-modules '((guix build utils))
+    #~(lambda (state-dirs)
+        (lambda (file)
+          (use-modules ((guix build utils) #:select (symbolic-link?))
+                       ((srfi srfi-1) #:select (any)))
+
+          (and (symbolic-link? file)
+               (any (lambda (state-dir)
+                      (string-prefix? state-dir (readlink file)))
+                    state-dirs))))))
+#+end_src
+*** Variables
+#+begin_src scheme
+(define persist-dir "/.persist")
+(define machine-dir "/.machine")
+#+end_src
+*** Normalization
+#+begin_src scheme
+(define normalize
+  #~(lambda* (state)
+      (use-modules ((srfi srfi-1) #:select (every)))
+
+      (define (alist? x)
+        (and (list? x) (every pair? x)))
+
+      (map (lambda (i)
+             (if (alist? i)
+                 i `((#:path . ,i))))
+           state)))
+
+(define (normalize-state-fn normalize-fn)
+  #~(lambda (state)
+      (map (lambda (i)
+             (if (assoc-ref i #:store)
+                 i (acons #:store #:machine i)))
+           (#$normalize-fn state))))
+
+(define (normalize-ignore-fn normalize-fn)
+  #~(lambda (state)
+      (#$normalize-fn state)))
+#+end_src
+*** Extend procedure
+#+begin_src scheme
+(define (extend-proc config additional)
+  (let* ((field (lambda (k)
+                  (append-map (lambda (i)
+                                (or (assoc-ref (normalize-extension i) k) '()))
+                              additional))))
+    (->> config
+         (acons #:state (field #:state))
+         (acons #:ignore (field #:ignore)))))
+
+(define (alist? x)
+  (and (list? x) (every pair? x)))
+
+(define (normalize-extension ext)
+  (if (alist? ext)
+      ext
+      `((#:state . ,ext))))
+#+end_src
+*** Activate
+#+begin_src scheme
+(define (activate-gexp state
+                       base-dir
+                       persist-dir
+                       machine-dir)
   (with-imported-modules '((guix build utils))
     #~(begin
-        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p symbolic-link?))
-                     ((srfi srfi-1) #:select (any every)))
-
-        (define (alist? x)
-          (and (list? x) (every pair? x)))
-
-        (define (normalize-state state)
-          (let ((as-alist
-                 (lambda (i)
-                   (cond
-                    ((alist? i) i)
-                    ((or (string? i) (list? i)) `((#:path . ,i))))))
-                (with-default-store
-                 (lambda (i)
-                   (if (assoc-ref i #:store)
-                       i
-                       (acons #:store #:machine i))))
-                (with-home-expansions
-                 (lambda (i)
-                   (acons
-                    #:path
-                    (let ((path (assoc-ref i #:path)))
-                      (cond
-                       ((string? path) (string-append (getenv "HOME") "/" path))
-                       ((list? path)
-                        (apply
-                         (lambda* (#:optional tail #:key xdg-base)
-                           (string-append (getenv xdg-base) "/" (or tail "")))
-                         path))))
-                    i))))
-            (map (compose (if #$home?
-                              with-home-expansions identity)
-                          with-default-store
-                          as-alist)
-                 state)))
+        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p)))
 
         (define (mkdirp-perms dir perms)
           (mkdir-p dir)
@@ -6396,24 +6508,16 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
         (define timestamp (current-time))
 
         (define (cleanup-and-migrate target state-file state-dir)
-          (let ((symlink-to-state?
-                 (lambda (file)
-                   (and (symbolic-link? file)
-                        (any (lambda (state-dir)
-                               (string-prefix? state-dir (readlink file)))
-                             (list
-                              #$persist-dir
-                              #$machine-dir)))))
-                (migrate-file
+          (let ((migrate-file
                  (lambda (source dest)
                    (copy-recursively source dest)
                    (delete-file-recursively source)))
                 (backup-file
                  (lambda (file)
-                   (let* ((backup-dir (string-append
+                   (let* ((base-dir (or #$base-dir ""))
+                          (backup-dir (string-append
                                        state-dir
-                                       (if #$home?
-                                           (getenv "HOME") "")
+                                       base-dir
                                        "/stateless-backup-" (number->string timestamp)))
                           (backup-file (string-append
                                         backup-dir "/"
@@ -6421,16 +6525,17 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                                                      (string-drop s (string-length prefix))))
                                                (without-state-dir (lambda (file)
                                                                     (string-drop-prefix file state-dir)))
-                                               (without-home-dir (lambda (file)
-                                                                   (string-drop-prefix file (getenv "HOME")))))
-                                          ((compose (if #$home?
-                                                        without-home-dir identity)
+                                               (without-base-dir (lambda (file)
+                                                                   (string-drop-prefix file base-dir))))
+                                          ((compose without-base-dir
                                                     without-state-dir)
                                            file)))))
                      (mkdir-p (dirname backup-file))
                      (rename-file file backup-file)))))
             (when (no-follow-file-exists? target)
-              (if (symlink-to-state? target)
+              (if ((#$symlink-to-state-fn (list #$persist-dir
+                                                #$machine-dir))
+                   target)
                   (delete-file target)
                   (begin
                     (when (no-follow-file-exists? state-file)
@@ -6444,9 +6549,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                  (directory-target? (string-suffix? "/" path))
                  (target (if directory-target?
                              (string-drop-right path 1) path))
-                 (state-dir (case (assoc-ref i #:store)
-                         ((#:persist) #$persist-dir)
-                         ((#:machine) #$machine-dir))))
+                 (state-dir ((#$state-dir-lookup #$persist-dir #$machine-dir)
+                             (assoc-ref i #:store))))
             (let ((parent-dir (dirname path))
                   (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
               (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
@@ -6458,7 +6562,104 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
               (when (no-follow-file-exists? state-file)
                 (symlink state-file target)))))
 
-        (for-each process-state-entry (normalize-state '#$state)))))
+        (for-each process-state-entry #$state))))
+#+end_src
+*** Diff tool
+#+begin_src scheme
+(define* (diff-tool state
+                    ignore
+                    base-dir
+                    persist-dir
+                    machine-dir
+                    #:key
+                    additional-known)
+  (program-file
+   "diff-tool"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
+                      ((ice-9 ftw) #:select (file-system-fold))
+                      ((srfi srfi-1) #:select (any)))
+
+         (define* (find-diff dir known)
+           (let ((results
+                  (file-system-fold
+                   (let ((known-paths (map car known)))
+                     (lambda (dir _ _*)
+                       (any (lambda (known-path)
+                              (string-prefix? dir known-path))
+                            known-paths)))
+                   (lambda (file _ result)
+                     (let ((pred (assoc-ref known file)))
+                       (if (and pred (pred file))
+                           result
+                           (cons file result))))
+                   (lambda (_ _* result)
+                     result)
+                   (lambda (_ _* result)
+                     result)
+                   (lambda (dir _ result)
+                     (cons (string-append dir "/") result))
+                   (lambda (path _ errno result)
+                     (format (current-error-port) "~a: ~a~%" path (strerror errno))
+                     result)
+                   '()
+                   dir)))
+             (sort results string<?)))
+
+         (define (make-known files pred)
+           (map (lambda (file)
+                  (cons file pred))
+                files))
+
+         (define (->paths state-or-ignore)
+           (map (lambda (entry)
+                  (assoc-ref entry #:path))
+                state-or-ignore))
+
+         (define (symlink-to-store? file)
+           (and (symbolic-link? file)
+                (store-file-name? (readlink file))))
+
+         (define (diff-live)
+           (find-diff
+            #$base-dir
+            (append
+             (make-known (->paths #$state) (#$symlink-to-state-fn (list #$persist-dir
+                                                                        #$machine-dir)))
+             (make-known (->paths #$ignore) (const #t))
+             (or #$additional-known '()))))
+
+         (define (diff-state)
+           (let ((finder
+                  (lambda (store state)
+                    (let ((state-dir ((#$state-dir-lookup #$persist-dir #$machine-dir)
+                                      store)))
+                      (find-diff
+                       (string-append state-dir #$base-dir)
+                       (make-known (map (lambda (path)
+                                          (string-append state-dir path))
+                                        (->paths
+                                         (filter (lambda (entry)
+                                                   (eq? (assoc-ref entry #:store) store))
+                                                 #$state)))
+                                   (const #t)))))))
+             (append
+              (finder #:persist #$state)
+              (finder #:machine #$state))))
+
+         (define (run-mode)
+           (string->symbol
+            (or
+             (false-if-exception (cadr (command-line)))
+             "live")))
+
+         (for-each
+          (lambda (path)
+            (display (string-append path "\n")))
+          (case (run-mode)
+            ((live) (diff-live))
+            ((state) (diff-state))))))))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -6806,7 +7007,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
-  #:use-module ((ebullient stateless) #:select (stateless-persist-dir stateless-machine-dir))
+  #:use-module ((ebullient stateless) #:select (persist-dir machine-dir) #:prefix stateless:)
   #:use-module (exuberant base-he)
   #:use-module (exuberant base-os)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -6874,8 +7075,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 
 (define shared-opts
   `((#:stateless? . #t)
-    (#:stateless-persist-dir . ,stateless-persist-dir)
-    (#:stateless-machine-dir . ,stateless-machine-dir)
+    (#:stateless-persist-dir . ,stateless:persist-dir)
+    (#:stateless-machine-dir . ,stateless:machine-dir)
     (#:nix? . #t)
     (#:console? . #t)
     (#:desktop? . #t)
