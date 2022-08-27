@@ -199,6 +199,23 @@ guix pull
 :PROPERTIES:
 :meta-dir+: /ebullient/system
 :END:
+#+begin_src scheme :tangle (meta-in-dir "../system.scm")
+(define-module (ebullient system)
+  #:use-module (gnu system)
+  #:use-module (gnu system file-systems)
+  #:export (create-os))
+
+(define (create-os os-fn)
+  (os-fn blank-os))
+
+(define blank-os
+  (operating-system
+    (host-name #f)
+    (timezone #f)
+    (bootloader #f)
+    (services '())
+    (file-systems %base-file-systems)))
+#+end_src
 ** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -240,8 +257,7 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any append-map remove iota))
-  #:export (barebones-os
-            host-info
+  #:export (host-info
             grub-efi
             base-services
             nss
@@ -280,16 +296,6 @@ guix pull
        (with-syntax ((os (datum->syntax x 'os)))
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
-#+end_src
-*** Barebones OS
-#+begin_src scheme
-(define barebones-os
-  (operating-system
-    (host-name #f)
-    (timezone #f)
-    (bootloader #f)
-    (services '())
-    (file-systems %base-file-systems)))
 #+end_src
 *** Host info
 #+begin_src scheme
@@ -1142,6 +1148,17 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
 :PROPERTIES:
 :meta-dir+: /ebullient/home
 :END:
+#+begin_src scheme :tangle (meta-in-dir "../home.scm")
+(define-module (ebullient home)
+  #:use-module (gnu home)
+  #:use-module (gnu services)
+  #:export (create-he))
+
+(define (create-he services)
+  (home-environment
+   (services
+    (filter service? services))))
+#+end_src
 ** Components
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
@@ -7252,6 +7269,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 ** Base OS
 #+begin_src scheme :tangle (meta-in-dir "base-os.scm")
 (define-module (exuberant base-os)
+  #:use-module (ebullient system)
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (base-os))
@@ -7283,72 +7301,73 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   macbook?
                   (kb-layout (if macbook?
                                  macbook-kb-layout #f)))
-  (-> barebones-os
-      (host-info #:host-name host-name
-                 #:timezone timezone
-                 #:locale locale)
-      grub-efi
-      base-services
-      nss
-      (accounts #:users-info users-info)
-      nonguix-substitutes
-      linux-nonfree
-      (as-> $
-        (if nix?
-            (nix $) $)
-        (if console?
-            (-> $
-                (console-keyboard-layouts #:kb-layout kb-layout)
-                hidpi-console-font
-                (as-> $
-                  (if kmonad?
-                      (kmonad-tool $ #:who kmonad-users) $)))
-            $)
-        (if desktop?
-            (-> $
-                desktop-services
-                (as-> $
-                  (if pipewire?
-                      (pipewire-multimedia $) $)
-                  (network-manager $ #:stateless? stateless?)
-                  (if bluetooth?
-                      (bluetooth $ #:who bluetooth-users
-                                 #:stateless? stateless?)
-                      $)
-                  (if gdm?
-                      (gdm $ #:auto-login (if disk-encryption?
-                                              gdm-auto-login #f)))
-                  (if (member #:session/gnome (or sessions '()))
-                      (gnome-desktop $) $)
-                  (if (member #:session/sway (or sessions '()))
-                      (sway-wm $ #:laptop? laptop?) $)))
-            $)
-        (if macbook?
-            (macbook $ #:bluetooth? bluetooth?) $)
-        (let* ((persist-dir stateless-persist-dir)
-               (machine-dir stateless-machine-dir)
-               (subvols (btrfs-subvols #:stateless? stateless?
-                                       #:persist-dir persist-dir
-                                       #:machine-dir machine-dir
-                                       #:nix? nix?)))
-          (-> $
-              (btrfs #:subvols subvols)
-              (as-> $
-                (if disk-encryption?
-                    (disk-encryption $ #:source-uuid luks-uuid
-                                     #:encrypted-mount-points (map cdr subvols))
-                    $)
-                (if stateless?
-                    (stateless $ #:persist-dir persist-dir
-                               #:machine-dir machine-dir
-                               #:who stateless-users)
-                    $)))))))
+  (create-os
+   (lambda (blank-os)
+     (-> blank-os
+         (host-info #:host-name host-name
+                    #:timezone timezone
+                    #:locale locale)
+         grub-efi
+         base-services
+         nss
+         (accounts #:users-info users-info)
+         nonguix-substitutes
+         linux-nonfree
+         (as-> $
+           (if nix?
+               (nix $) $)
+           (if console?
+               (-> $
+                   (console-keyboard-layouts #:kb-layout kb-layout)
+                   hidpi-console-font
+                   (as-> $
+                     (if kmonad?
+                         (kmonad-tool $ #:who kmonad-users) $)))
+               $)
+           (if desktop?
+               (-> $
+                   desktop-services
+                   (as-> $
+                     (if pipewire?
+                         (pipewire-multimedia $) $)
+                     (network-manager $ #:stateless? stateless?)
+                     (if bluetooth?
+                         (bluetooth $ #:who bluetooth-users
+                                    #:stateless? stateless?)
+                         $)
+                     (if gdm?
+                         (gdm $ #:auto-login (if disk-encryption?
+                                                 gdm-auto-login #f)))
+                     (if (member #:session/gnome (or sessions '()))
+                         (gnome-desktop $) $)
+                     (if (member #:session/sway (or sessions '()))
+                         (sway-wm $ #:laptop? laptop?) $)))
+               $)
+           (if macbook?
+               (macbook $ #:bluetooth? bluetooth?) $)
+           (let* ((persist-dir stateless-persist-dir)
+                  (machine-dir stateless-machine-dir)
+                  (subvols (btrfs-subvols #:stateless? stateless?
+                                          #:persist-dir persist-dir
+                                          #:machine-dir machine-dir
+                                          #:nix? nix?)))
+             (-> $
+                 (btrfs #:subvols subvols)
+                 (as-> $
+                   (if disk-encryption?
+                       (disk-encryption $ #:source-uuid luks-uuid
+                                        #:encrypted-mount-points (map cdr subvols))
+                       $)
+                   (if stateless?
+                       (stateless $ #:persist-dir persist-dir
+                                  #:machine-dir machine-dir
+                                  #:who stateless-users)
+                       $)))))))))
 #+end_src
 ** Base HE
 #+begin_src scheme :tangle (meta-in-dir "base-he.scm")
 (define-module (exuberant base-he)
-  #:use-module (gnu home)
-  #:use-module (gnu services)
+  #:use-module (ebullient home)
   #:use-module (ebullient home components)
   #:use-module (ebullient utils)
   #:export (base-he))
@@ -7369,99 +7388,96 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   pipewire?
                   gdm?
                   sessions)
-  (home-environment
-   (services
-    (filter
-     service?
-     (let ((theme #:theme/dark)
-           (font-mono font-mono)
-           (font-sans font-sans)
-           (font-serif font-serif)
-           (font-unicode font-unicode)
-           (font-variable-pitch font-sans))
-       (append
-        (he-packages)
-        (if stateless?
-            (he-stateless #:persist-dir stateless-persist-dir
-                          #:machine-dir stateless-machine-dir)
-            '())
-        (he-shells #:stateless? stateless?
-                   #:login-shell login-shell
-                   #:interactive-shell interactive-shell)
-        (if nix?
-            (he-nix #:stateless? stateless?) '())
-        (if developer?
-            (append
-             (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-             (he-doom #:stateless? stateless?
-                      #:console? console?
-                      #:email email
+  (create-he
+   (let ((theme #:theme/dark)
+         (font-mono font-mono)
+         (font-sans font-sans)
+         (font-serif font-serif)
+         (font-unicode font-unicode)
+         (font-variable-pitch font-sans))
+     (append
+      (he-packages)
+      (if stateless?
+          (he-stateless #:persist-dir stateless-persist-dir
+                        #:machine-dir stateless-machine-dir)
+          '())
+      (he-shells #:stateless? stateless?
+                 #:login-shell login-shell
+                 #:interactive-shell interactive-shell)
+      (if nix?
+          (he-nix #:stateless? stateless?) '())
+      (if developer?
+          (append
+           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+           (he-doom #:stateless? stateless?
+                    #:console? console?
+                    #:email email
+                    #:theme theme
+                    #:font font-mono
+                    #:font-variable-pitch font-variable-pitch
+                    #:font-unicode font-unicode
+                    #:font-serif font-serif)
+           (he-git #:email email)
+           (he-ssh)
+           (he-direnv #:stateless? stateless?
+                      #:shell interactive-shell))
+          '())
+      (if console?
+          (append
+           (he-fonts #:stateless? stateless?
+                     #:fonts (list font-mono
+                                   font-sans
+                                   font-serif
+                                   font-unicode))
+           (if kmonad?
+               (he-kmonad) '()))
+          '())
+      (if desktop?
+          (append
+           (he-mesa #:stateless? stateless?)
+           (if gdm?
+               (he-gdm #:stateless? stateless?) '())
+           (let ((wayland? #t)
+                 (sway? (member #:session/sway (or sessions '()))))
+             (append
+              (he-desktop-packages)
+              (he-xdg #:stateless? stateless?)
+              (he-gtk #:stateless? stateless?
                       #:theme theme
-                      #:font font-mono
-                      #:font-variable-pitch font-variable-pitch
-                      #:font-unicode font-unicode
-                      #:font-serif font-serif)
-             (he-git #:email email)
-             (he-ssh)
-             (he-direnv #:stateless? stateless?
-                        #:shell interactive-shell))
-            '())
-        (if console?
-            (append
-             (he-fonts #:stateless? stateless?
-                       #:fonts (list font-mono
-                                     font-sans
-                                     font-serif
-                                     font-unicode))
-             (if kmonad?
-                 (he-kmonad) '()))
-            '())
-        (if desktop?
-            (append
-             (he-mesa #:stateless? stateless?)
-             (if gdm?
-                 (he-gdm #:stateless? stateless?) '())
-             (let ((wayland? #t)
-                   (sway? (member #:session/sway (or sessions '()))))
-               (append
-                (he-desktop-packages)
-                (he-xdg #:stateless? stateless?)
-                (he-gtk #:stateless? stateless?
-                        #:theme theme
-                        #:font font-variable-pitch
-                        #:font-monospace font-mono)
-                (if pipewire?
-                    (he-pipewire #:stateless? stateless?
-                                 #:sway? sway?)
-                    '())
-                (he-flatpak #:stateless? stateless?
-                            #:wayland? wayland?)
-                (if sway?
-                    (let ((screen-locker (swaylock-screen-locker)))
-                      (append
-                       (he-wm-common #:sway? #t)
-                       (he-sway #:pipewire? pipewire?
-                                #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                                #:screen-locker screen-locker
-                                #:idle-manager (swayidle-idle-manager)
-                                #:application-launcher (rofi-application-launcher #:wayland? #t)
-                                #:default-terminal (alacritty-terminal))
-                       (he-swaylock #:font font-variable-pitch)
-                       (he-swayidle #:sway? #t
-                                    #:screen-locker screen-locker)
-                       (he-mako #:sway? #t
-                                #:menu (rofi-menu #:wayland? #t)
+                      #:font font-variable-pitch
+                      #:font-monospace font-mono)
+              (if pipewire?
+                  (he-pipewire #:stateless? stateless?
+                               #:sway? sway?)
+                  '())
+              (he-flatpak #:stateless? stateless?
+                          #:wayland? wayland?)
+              (if sway?
+                  (let ((screen-locker (swaylock-screen-locker)))
+                    (append
+                     (he-wm-common #:sway? #t)
+                     (he-sway #:pipewire? pipewire?
+                              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                              #:screen-locker screen-locker
+                              #:idle-manager (swayidle-idle-manager)
+                              #:application-launcher (rofi-application-launcher #:wayland? #t)
+                              #:default-terminal (alacritty-terminal))
+                     (he-swaylock #:font font-variable-pitch)
+                     (he-swayidle #:sway? #t
+                                  #:screen-locker screen-locker)
+                     (he-mako #:sway? #t
+                              #:menu (rofi-menu #:wayland? #t)
+                              #:theme theme
+                              #:font font-variable-pitch)
+                     (he-waybar #:sway? #t
                                 #:theme theme
                                 #:font font-variable-pitch)
-                       (he-waybar #:sway? #t
-                                  #:theme theme
-                                  #:font font-variable-pitch)
-                       (he-rofi #:stateless? stateless?
-                                #:wayland? #t
-                                #:theme theme)
-                       (he-alacritty #:font font-mono)))
-                    '()))))
-            '())))))))
+                     (he-rofi #:stateless? stateless?
+                              #:wayland? #t
+                              #:theme theme)
+                     (he-alacritty #:font font-mono)))
+                  '()))))
+          '())))))
 #+end_src
 ** Scripts WIP
 TODO Are the double-quotes I have around --expression args okay?
