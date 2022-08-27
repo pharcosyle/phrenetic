@@ -221,6 +221,7 @@ guix pull
 :END:
 #+begin_src scheme
 (define-module (ebullient system components)
+  #:use-module ((guix hash) #:select (vcs-file?))
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix gexp)
   #:use-module (guix packages)
@@ -256,7 +257,8 @@ guix pull
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any append-map remove iota))
-  #:export (host-info
+  #:export (source
+            host-info
             grub-efi
             base-services
             nss
@@ -295,6 +297,21 @@ guix pull
        (with-syntax ((os (datum->syntax x 'os)))
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
+#+end_src
+*** Source
+#+begin_src scheme
+(define-system-comp (source #:key path)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (simple-service
+      'config-source
+      etc-service-type
+      `(("config-source" ,(local-file
+                           path
+                           #:recursive? #t
+                           #:select? (negate vcs-file?)))))))))
 #+end_src
 *** Host info
 #+begin_src scheme
@@ -7076,6 +7093,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
              stateless-users)
   (with-shared-opts
    base-os
+   #:source? #t
+   #:source-path "/.persist/home/pharcosyle/phrenetic_for_now"
    #:host-name "frostfire"
    #:timezone "America/Los_Angeles"
    #:users-info `(((#:name . ,primary-name)
@@ -7305,6 +7324,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:export (base-os))
 
 (define* (base-os #:key
+                  source?
+                  source-path
                   host-name
                   timezone
                   locale
@@ -7334,6 +7355,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   (create-os
    (lambda (blank-os)
      (-> blank-os
+         (as-> $
+           (if source?
+               (source $ #:path source-path) $))
          (host-info #:host-name host-name
                     #:timezone timezone
                     #:locale locale)
