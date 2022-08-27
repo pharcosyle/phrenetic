@@ -865,6 +865,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 ****** Patches
 :PROPERTIES:
 :meta-dir+: /patches
+:VISIBILITY: content
 :END:
 ******* Linux 5.17
 #+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-5.17.patch")
@@ -6357,10 +6358,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 :meta-dir+: /packages
 :END:
 *** Fonts :package:version:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "fonts.scm")
-:END:
-#+begin_src scheme
+#+begin_src scheme :tangle (meta-in-dir "fonts.scm")
 (define-module (ebullient home packages fonts)
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
   #:use-module (ebullient utils))
@@ -6380,19 +6378,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 :PROPERTIES:
 :meta-dir+: /packages
 :END:
-*** Swaylock Effects :package:version:
-#+begin_src scheme :tangle (meta-in-dir "wm.scm")
-(define-module (ebullient packages wm)
-  #:use-module ((gnu packages wm) #:select (swaylock-effects) #:prefix wm:)
-  #:use-module (ebullient utils))
-
-(define-public swaylock-effects
-  (with-git-commit
-   wm:swaylock-effects
-   #:upstream-version "1.6-3"
-   #:commit "a8fc557b86e70f2f7a30ca9ff9b3124f89e7f204"
-   #:hash "0f9571blnn7lg317js1j1spc5smz69i5aw6zkhskkm5m633rrpqq"))
-#+end_src
 *** KMonad :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "haskell-apps.scm")
 (define-module (ebullient packages haskell-apps)
@@ -6422,6 +6407,19 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                 hspec-discover))))
      #:commit commit
      #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
+#+end_src
+*** Swaylock effects :package:version:
+#+begin_src scheme :tangle (meta-in-dir "wm.scm")
+(define-module (ebullient packages wm)
+  #:use-module ((gnu packages wm) #:select (swaylock-effects) #:prefix wm:)
+  #:use-module (ebullient utils))
+
+(define-public swaylock-effects
+  (with-git-commit
+   wm:swaylock-effects
+   #:upstream-version "1.6-3"
+   #:commit "a8fc557b86e70f2f7a30ca9ff9b3124f89e7f204"
+   #:hash "0f9571blnn7lg317js1j1spc5smz69i5aw6zkhskkm5m633rrpqq"))
 #+end_src
 ** Stateless
 :PROPERTIES:
