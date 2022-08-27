@@ -816,12 +816,11 @@ Must succeed "Accounts" component.
 #+end_src
 ***** Sway
 #+begin_src scheme
-(define* (sway-wm os #:key laptop?)
+(define* (sway-wm os)
   (wm os
       #:package sway
       #:services (cons* swaylock-service
-                        (if laptop?
-                            (list brightnessctl-udev-rules) '()))))
+                        (list brightnessctl-udev-rules))))
 #+end_src
 **** Screen lockers
 ***** Swaylock
@@ -7122,7 +7121,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
    #:sessions '(#:session/gnome
                 #:session/sway)
-   #:laptop? #t
    #:macbook? #t))
 
 (define* (primary-he)
@@ -7342,7 +7340,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   gdm?
                   gdm-auto-login
                   sessions
-                  laptop?
                   macbook?
                   (kb-layout (if macbook?
                                  macbook-kb-layout #f)))
@@ -7389,7 +7386,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                      (if (member #:session/gnome (or sessions '()))
                          (gnome-desktop $) $)
                      (if (member #:session/sway (or sessions '()))
-                         (sway-wm $ #:laptop? laptop?) $)))
+                         (sway-wm $) $)))
                $)
            (if macbook?
                (macbook $ #:bluetooth? bluetooth?) $)
