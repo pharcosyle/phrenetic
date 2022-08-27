@@ -26,7 +26,6 @@
   - [[#frostfire][Frostfire]]
   - [[#base-os][Base OS]]
   - [[#base-he][Base HE]]
-  - [[#scripts-wip][Scripts WIP]]
 - [[#channel][Channel]]
 - [[#dev][Dev]]
   - [[#git-config][Git config]]
@@ -7478,34 +7477,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                      (he-alacritty #:font font-mono)))
                   '()))))
           '())))))
-#+end_src
-** Scripts WIP
-TODO Are the double-quotes I have around --expression args okay?
-#+begin_src sh :var os_name="" os_dir=(meta-get-dir)
-sudo guix time-machine \
-	--channels="$os_dir"/$os_name-channels-lock \
-	-- \
-	system \
-	--load-path=. \
-	--expression="(@ (exuberant os $os_name) os)" \
-	reconfigure
-#+end_src
-
-#+begin_src sh :var he_name="" he_dir=(meta-get-dir)
-guix pull --channels="$he_dir"/$he_name-channels-lock
-#+end_src
-#+begin_src sh :var he_name=""
-guix home \
-	--load-path=. \
-	--expression="(@ (exuberant he $he_name) he)" \
-	reconfigure
-#+end_src
-
-#+begin_src sh :var name="" dir=""
-guix time-machine \
-	--channels="$dir"/$name-channels \
-	-- \
-	describe --format=channels > "$dir"/$name-channels-lock
 #+end_src
 * Channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
