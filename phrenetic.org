@@ -7133,13 +7133,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    #:kmonad? #t
    #:sessions '(#:session/sway)))
 
-(define* (aux-he)
-  (with-shared-opts
-   base-he
-   #:email "pharcosyle+phil_coulson@gmail.com"
-   #:developer? #t
-   #:kmonad? #t
-   #:sessions '(#:session/sway)))
+(define aux-he primary-he)
 
 (define (guest-he)
   (with-shared-opts base-he))
