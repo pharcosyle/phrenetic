@@ -24,8 +24,8 @@
   - [[#packages-2][Packages]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
-  - [[#base-os][Base OS]]
-  - [[#base-he][Base HE]]
+  - [[#operating-systems][Operating systems]]
+  - [[#home-environments][Home environments]]
 - [[#channel][Channel]]
 - [[#dev][Dev]]
   - [[#git-config][Git config]]
@@ -202,10 +202,14 @@ guix pull
 (define-module (ebullient system)
   #:use-module (gnu system)
   #:use-module (gnu system file-systems)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:export (create-os))
 
-(define (create-os os-fn)
-  (os-fn blank-os))
+(define (create-os fns)
+  (fold (lambda (f os)
+          (f os))
+        blank-os
+        fns))
 
 (define blank-os
   (operating-system
@@ -219,6 +223,7 @@ guix pull
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "components.scm")
 :END:
+*** General
 #+begin_src scheme
 (define-module (ebullient system components)
   #:use-module ((guix hash) #:select (vcs-file?))
@@ -283,8 +288,7 @@ guix pull
             sway-wm
             macbook
             macbook-kb-layout))
-#+end_src
-#+begin_src scheme
+
 (define-syntax-rule (system-comp os field ...)
   (operating-system
     (inherit os)
@@ -298,7 +302,7 @@ guix pull
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 #+end_src
-*** Source
+**** Source
 #+begin_src scheme
 (define-system-comp (source #:key path)
   (services
@@ -313,7 +317,7 @@ guix pull
                            #:recursive? #t
                            #:select? (negate vcs-file?)))))))))
 #+end_src
-*** Host info
+**** Host info
 #+begin_src scheme
 (define-system-comp (host-info #:key
                                host-name
@@ -323,10 +327,10 @@ guix pull
   (timezone timezone)
   (locale (or locale "en_US.utf8")))
 #+end_src
-*** Boot
-**** Grub
+**** Boot
+***** Grub
 ...
-**** Grub EFI
+***** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key
                               (label "genesis")
@@ -342,21 +346,21 @@ guix pull
             (type "vfat"))
           (operating-system-file-systems os))))
 #+end_src
-*** Base services
+**** Base services
 #+begin_src scheme
 (define-system-comp (base-services)
   (services
    (append %base-services
            (operating-system-user-services os))))
 #+end_src
-*** NSS
+**** NSS
 #+begin_src scheme
 (define-system-comp (nss)
   (packages
    (cons* nss-certs
           (operating-system-packages os))))
 #+end_src
-*** Linux nonfree
+**** Linux nonfree
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
   (kernel linux)
@@ -364,7 +368,7 @@ guix pull
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
 #+end_src
-*** Disk encryption
+**** Disk encryption
 #+begin_src scheme
 (define* (disk-encryption os
                           #:key
@@ -390,7 +394,7 @@ guix pull
                  fs))
            (operating-system-file-systems os))))))
 #+end_src
-*** Stateless
+**** Stateless
 Must succeed "File systems" and "Accounts" components. Probably should succeed /all/ other components.
 - The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
 #+begin_src scheme
@@ -448,8 +452,8 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                      (#:store . #:machine)
                      (#:parent-dir-perms . ((#:mode . #o111))))))))))))
 #+end_src
-**** Service
-***** Populate
+***** Service
+****** Populate
 #+begin_src scheme
 (define populate-gexp
   (with-extensions (list guile-gcrypt)
@@ -470,7 +474,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
             (unless system-1-exists?
               (delete-file system-1-path)))))))
 #+end_src
-***** Users
+****** Users
 #+begin_src scheme
 (define (user-homes-shepherd-service user-homes state-dirs)
   (shepherd-service
@@ -518,7 +522,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
             (svc user he)))
          hes)))
 #+end_src
-***** Service type
+****** Service type
 #+begin_src scheme
 (define stateless-service-type
   (service-type
@@ -556,10 +560,10 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
    (extend stateless:extend-proc)
    (description "Initialize a stateless system.")))
 #+end_src
-*** File systems
-**** Ext4
+**** File systems
+***** Ext4
 ...
-**** Btrfs
+***** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key
                            (label "firmament")
@@ -594,7 +598,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
    (if nix?
        '(("nix" . "/nix")) '())))
 #+end_src
-*** Accounts
+**** Accounts
 #+begin_src scheme
 (define-system-comp (accounts #:key users-info)
   (users
@@ -629,7 +633,7 @@ Must succeed "File systems" and "Accounts" components. Probably should succeed /
                  (crypt password (or salt "toosimple"))
                  #f))))
 #+end_src
-*** Nonguix substitutes
+**** Nonguix substitutes
 This could be done using the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] but it works fine now so I won't change it.
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
@@ -646,22 +650,22 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
         (append (guix-configuration-authorized-keys config)
                 (list (local-file "substitutes.nonguix.org.pub")))))))))
 #+end_src
-**** Signing key
+***** Signing key
 #+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-*** Nix
+**** Nix
 #+begin_src scheme
 (define-system-comp (nix)
   (services
    (cons* (service nix-service-type)
           (operating-system-user-services os))))
 #+end_src
-*** Console
-**** Console keyboard layouts
+**** Console
+***** Console keyboard layouts
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key kb-layout)
   (keyboard-layout kb-layout)
@@ -669,7 +673,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
                (inherit (operating-system-bootloader os))
                (keyboard-layout kb-layout))))
 #+end_src
-**** HiDPI console font
+***** HiDPI console font
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
   (services
@@ -681,7 +685,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
                    (file-append font-terminus "/share/consolefonts/ter-132n")))
            config)))))
 #+end_src
-**** KMonad
+***** KMonad
 Must succeed "Accounts" component.
 #+begin_src scheme
 (define-system-comp (kmonad-tool #:key who)
@@ -701,14 +705,14 @@ Must succeed "Accounts" component.
    (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
           (operating-system-user-services os))))
 #+end_src
-*** Desktop
+**** Desktop
 #+begin_src scheme
 (define (remove-services services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
 #+end_src
-**** Desktop services
+***** Desktop services
 #+begin_src scheme
 (define-system-comp (desktop-services)
   (services
@@ -721,7 +725,7 @@ Must succeed "Accounts" component.
                    gdm-service-type
                    screen-locker-service-type))))))
 #+end_src
-**** Pipewire
+***** Pipewire
 #+begin_src scheme
 (define-system-comp (pipewire-multimedia)
   (services
@@ -732,8 +736,8 @@ Must succeed "Accounts" component.
                                     pipewire-0.3)
                 $))))
 #+end_src
-**** Network
-***** Network manager
+***** Network
+****** Network manager
 #+begin_src scheme
 (define-system-comp (network-manager #:key stateless?)
   (services
@@ -753,7 +757,7 @@ Must succeed "Accounts" component.
                          (#:parent-dir-perms . ((#:mode . #o700)))))))))
         '()))))
 #+end_src
-**** Bluetooth
+***** Bluetooth
 #+begin_src scheme
 (define-system-comp (bluetooth #:key
                                who
@@ -782,8 +786,8 @@ Must succeed "Accounts" component.
                          (#:mode . #o700)))))))
         '()))))
 #+end_src
-**** Display managers
-***** GDM
+***** Display managers
+****** GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key
                          (wayland? #t)
@@ -796,15 +800,15 @@ Must succeed "Accounts" component.
                     (wayland? wayland?)))
           (operating-system-user-services os))))
 #+end_src
-**** Desktop environments
-***** Gnome
+***** Desktop environments
+****** Gnome
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
    (cons* (service gnome-desktop-service-type)
           (operating-system-user-services os))))
 #+end_src
-**** Window managers
+***** Window managers
 #+begin_src scheme
 (define-system-comp (wm #:key package services)
   (packages
@@ -814,7 +818,7 @@ Must succeed "Accounts" component.
    (append services
            (operating-system-user-services os))))
 #+end_src
-***** Sway
+****** Sway
 #+begin_src scheme
 (define* (sway-wm os)
   (wm os
@@ -822,26 +826,27 @@ Must succeed "Accounts" component.
       #:services (cons* swaylock-service
                         (list brightnessctl-udev-rules))))
 #+end_src
-**** Screen lockers
-***** Swaylock
+***** Screen lockers
+****** Swaylock
 #+begin_src scheme
 (define swaylock-service
   (screen-locker-service swaylock-effects "swaylock"))
 #+end_src
-**** Backlight
-***** Brightnessctl
+***** Backlight
+****** Brightnessctl
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
-*** Macbook
+*** Hardware-specific
+**** Macbook
 #+begin_src scheme
 (define* (macbook os #:key bluetooth?)
   (-> os
       (macbook-wireless #:bluetooth? bluetooth?)
       macbook-power-key))
 #+end_src
-**** Wireless
+***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in linux-libre.
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
@@ -867,7 +872,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
            kernel-args)
       (cons* (string-append blacklist-param "=" new) kernel-args)))
 #+end_src
-***** Broadcom STA
+****** Broadcom STA
 #+begin_src scheme
 (define-public (broadcom-with-patch-updates broadcom)
   (package
@@ -883,12 +888,12 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
           "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-linux-5.18.patch"
           "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-pedantic-fix.patch")))))))
 #+end_src
-****** Patches
+******* Patches
 :PROPERTIES:
 :meta-dir+: /patches
 :VISIBILITY: content
 :END:
-******* Linux 5.17
+******** Linux 5.17
 #+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-5.17.patch")
 From 31b7849092c43805c7fbaf7518b99874aa1b310c Mon Sep 17 00:00:00 2001
 From: Joan Bruguera <joanbrugueram@gmail.com>
@@ -971,7 +976,7 @@ index e491df7..e4614fb 100644
 2.35.1
 
 #+end_src
-******* Linux 5.18
+******** Linux 5.18
 #+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-5.18.patch")
 diff -u -r a/src/shared/linux_osl.c b/src/shared/linux_osl.c
 --- a/src/shared/linux_osl.c	2022-05-24 20:51:15.662604980 +0000
@@ -1045,7 +1050,7 @@ diff -u -r a/src/shared/linux_osl.c b/src/shared/linux_osl.c
  
  #if defined(BCMDBG_ASSERT)
 #+end_src
-******* Pedantic fix
+******** Pedantic fix
 #+begin_src diff :tangle (meta-in-dir "broadcom-sta-pedantic-fix.patch")
 diff --git a/src/shared/linux_osl.c b/shared/linux_osl.c
 index 711b771..5a2636a 100644
@@ -1142,7 +1147,7 @@ index d13fb98..97ae2a6 100644
  		pdev->irq, bar1_addr, bar1_size);
  
 #+end_src
-**** Power key
+***** Power key
 Make the power key suspend instead of power off. It's part of they keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
 #+begin_src scheme
 (define-system-comp (macbook-power-key)
@@ -1154,7 +1159,7 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
        (inherit config)
        (handle-power-key 'suspend))))))
 #+end_src
-**** Keyboard layout
+***** Keyboard layout
 #+begin_src scheme
 (define macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
@@ -7074,9 +7079,12 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
+  #:use-module (ebullient home)
+  #:use-module (ebullient system)
+  #:use-module (ebullient utils)
   #:use-module ((ebullient stateless) #:select (persist-dir machine-dir) #:prefix stateless:)
-  #:use-module (exuberant base-he)
-  #:use-module (exuberant base-os)
+  #:use-module (exuberant he)
+  #:use-module (exuberant os)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (frostfire
@@ -7084,13 +7092,14 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             aux
             guest))
 
-(define* (os #:key
-             primary-name
-             aux-name
-             guest-name
-             stateless-users)
+(define* (os-main #:key
+                  primary-name
+                  aux-name
+                  guest-name
+                  stateless-users
+                  bluetooth?)
   (with-shared-opts
-   base-os
+   os-base
    #:source? #t
    #:source-path "/.persist/home/pharcosyle/phrenetic_for_now"
    #:host-name "frostfire"
@@ -7113,27 +7122,28 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
    #:kmonad? #t
    #:kmonad-users (list primary-name
                         aux-name)
-   #:bluetooth? #t
+   #:bluetooth? bluetooth?
    #:bluetooth-users (list primary-name
                            aux-name
                            guest-name)
    ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
    #:sessions '(#:session/gnome
-                #:session/sway)
-   #:macbook? #t))
+                #:session/sway)))
 
 (define* (primary-he)
-  (with-shared-opts
-   base-he
-   #:email "pharcosyle@gmail.com"
-   #:developer? #t
-   #:kmonad? #t
-   #:sessions '(#:session/sway)))
+  (create-he
+   (with-shared-opts
+    he-base
+    #:email "pharcosyle@gmail.com"
+    #:developer? #t
+    #:kmonad? #t
+    #:sessions '(#:session/sway))))
 
 (define aux-he primary-he)
 
 (define (guest-he)
-  (with-shared-opts base-he))
+  (create-he
+   (with-shared-opts he-base)))
 
 (define shared-opts
   `((#:stateless? . #t)
@@ -7145,30 +7155,38 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
     (#:pipewire? . #t)
     (#:gdm? . #t)))
 
-(define* (with-shared-opts f #:rest args)
-  (apply f (append
-            (append-map
-             (match-lambda
-               ((k . v)
-                (list k v)))
-             shared-opts)
-            args)))
+(define* (with-shared-opts f #:rest opts)
+  (->> (append-map (match-lambda
+                     ((k . v)
+                      (list k v)))
+                   shared-opts)
+       (append opts)
+       (apply f)))
 
 
 (define primary (primary-he))
 (define aux (aux-he))
 (define guest (guest-he))
 
-(define frostfire
+(define bluetooth? #t)
+
+(define (os-with-users)
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "gandalf"))
-    (os #:primary-name primary-name
-        #:aux-name aux-name
-        #:guest-name guest-name
-        #:stateless-users `((,primary-name . ,primary)
-                            (,aux-name . ,aux)
-                            (,guest-name . ,guest)))))
+    (os-main #:primary-name primary-name
+             #:aux-name aux-name
+             #:guest-name guest-name
+             #:stateless-users `((,primary-name . ,primary)
+                                 (,aux-name . ,aux)
+                                 (,guest-name . ,guest))
+             #:bluetooth? bluetooth?)))
+
+(define frostfire
+  (create-os
+   (list
+    (os-with-users)
+    (os-for-macbook #:bluetooth? bluetooth?))))
 #+end_src
 *** LUKS UUID :external_state:
 #+name: frostfire-luks-uuid
@@ -7306,15 +7324,15 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (commit
         "bbc78abdfee8daf0e43b4348b7452ffe9340fb5c")))
 #+end_src
-** Base OS
-#+begin_src scheme :tangle (meta-in-dir "base-os.scm")
-(define-module (exuberant base-os)
-  #:use-module (ebullient system)
+** Operating systems
+#+begin_src scheme :tangle (meta-in-dir "os.scm")
+(define-module (exuberant os)
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
-  #:export (base-os))
+  #:export (os-base
+            os-for-macbook))
 
-(define* (base-os #:key
+(define* (os-base #:key
                   source?
                   source-path
                   host-name
@@ -7330,6 +7348,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   stateless-hes
                   nix?
                   console?
+                  kb-layout
                   kmonad?
                   kmonad-users
                   desktop?
@@ -7338,85 +7357,83 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   bluetooth-users
                   gdm?
                   gdm-auto-login
-                  sessions
-                  macbook?
-                  (kb-layout (if macbook?
-                                 macbook-kb-layout #f)))
-  (create-os
-   (lambda (blank-os)
-     (-> blank-os
-         (as-> $
-           (if source?
-               (source $ #:path source-path) $))
-         (host-info #:host-name host-name
-                    #:timezone timezone
-                    #:locale locale)
-         grub-efi
-         base-services
-         nss
-         (accounts #:users-info users-info)
-         nonguix-substitutes
-         linux-nonfree
-         (as-> $
-           (if nix?
-               (nix $) $)
-           (if console?
-               (-> $
-                   (console-keyboard-layouts #:kb-layout kb-layout)
-                   hidpi-console-font
-                   (as-> $
-                     (if kmonad?
-                         (kmonad-tool $ #:who kmonad-users) $)))
-               $)
-           (if desktop?
-               (-> $
-                   desktop-services
-                   (as-> $
-                     (if pipewire?
-                         (pipewire-multimedia $) $)
-                     (network-manager $ #:stateless? stateless?)
-                     (if bluetooth?
-                         (bluetooth $ #:who bluetooth-users
-                                    #:stateless? stateless?)
-                         $)
-                     (if gdm?
-                         (gdm $ #:auto-login (if disk-encryption?
-                                                 gdm-auto-login #f)))
-                     (if (member #:session/gnome (or sessions '()))
-                         (gnome-desktop $) $)
-                     (if (member #:session/sway (or sessions '()))
-                         (sway-wm $) $)))
-               $)
-           (if macbook?
-               (macbook $ #:bluetooth? bluetooth?) $)
-           (let* ((persist-dir stateless-persist-dir)
-                  (machine-dir stateless-machine-dir)
-                  (subvols (btrfs-subvols #:stateless? stateless?
-                                          #:persist-dir persist-dir
-                                          #:machine-dir machine-dir
-                                          #:nix? nix?)))
-             (-> $
-                 (btrfs #:subvols subvols)
-                 (as-> $
-                   (if disk-encryption?
-                       (disk-encryption $ #:source-uuid luks-uuid
-                                        #:encrypted-mount-points (map cdr subvols))
-                       $)
-                   (if stateless?
-                       (stateless $ #:persist-dir persist-dir
-                                  #:machine-dir machine-dir
-                                  #:who stateless-users)
-                       $)))))))))
-#+end_src
-** Base HE
-#+begin_src scheme :tangle (meta-in-dir "base-he.scm")
-(define-module (exuberant base-he)
-  #:use-module (ebullient home)
-  #:use-module (ebullient home components)
-  #:use-module (ebullient utils)
-  #:export (base-he))
+                  sessions)
+   (lambda (os)
+    (-> os
+        (as-> $
+          (if source?
+              (source $ #:path source-path) $))
+        (host-info #:host-name host-name
+                   #:timezone timezone
+                   #:locale locale)
+        grub-efi
+        base-services
+        nss
+        (accounts #:users-info users-info)
+        nonguix-substitutes
+        linux-nonfree
+        (as-> $
+          (if nix?
+              (nix $) $)
+          (if console?
+              (-> $
+                  (console-keyboard-layouts #:kb-layout kb-layout)
+                  hidpi-console-font
+                  (as-> $
+                    (if kmonad?
+                        (kmonad-tool $ #:who kmonad-users) $)))
+              $)
+          (if desktop?
+              (-> $
+                  desktop-services
+                  (as-> $
+                    (if pipewire?
+                        (pipewire-multimedia $) $)
+                    (network-manager $ #:stateless? stateless?)
+                    (if bluetooth?
+                        (bluetooth $ #:who bluetooth-users
+                                   #:stateless? stateless?)
+                        $)
+                    (if gdm?
+                        (gdm $ #:auto-login (if disk-encryption?
+                                                gdm-auto-login #f)))
+                    (if (member #:session/gnome (or sessions '()))
+                        (gnome-desktop $) $)
+                    (if (member #:session/sway (or sessions '()))
+                        (sway-wm $) $)))
+              $)
+          (let* ((persist-dir stateless-persist-dir)
+                 (machine-dir stateless-machine-dir)
+                 (subvols (btrfs-subvols #:stateless? stateless?
+                                         #:persist-dir persist-dir
+                                         #:machine-dir machine-dir
+                                         #:nix? nix?)))
+            (-> $
+                (btrfs #:subvols subvols)
+                (as-> $
+                  (if disk-encryption?
+                      (disk-encryption $ #:source-uuid luks-uuid
+                                       #:encrypted-mount-points (map cdr subvols))
+                      $)
+                  (if stateless?
+                      (stateless $ #:persist-dir persist-dir
+                                 #:machine-dir machine-dir
+                                 #:who stateless-users)
+                      $))))))))
 
-(define* (base-he #:key
+(define* (os-for-macbook #:key bluetooth?)
+  (lambda (os)
+    (-> os
+        (console-keyboard-layouts #:kb-layout macbook-kb-layout)
+        (macbook #:bluetooth? bluetooth?))))
+#+end_src
+** Home environments
+#+begin_src scheme :tangle (meta-in-dir "he.scm")
+(define-module (exuberant he)
+  #:use-module (ebullient home components)
+  #:export (he-base))
+
+(define* (he-base #:key
                   email
                   stateless?
                   stateless-persist-dir
@@ -7432,96 +7449,95 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   pipewire?
                   gdm?
                   sessions)
-  (create-he
-   (let ((theme #:theme/dark)
-         (font-mono font-mono)
-         (font-sans font-sans)
-         (font-serif font-serif)
-         (font-unicode font-unicode)
-         (font-variable-pitch font-sans))
-     (append
-      (he-packages)
-      (if stateless?
-          (he-stateless #:persist-dir stateless-persist-dir
-                        #:machine-dir stateless-machine-dir)
-          '())
-      (he-shells #:stateless? stateless?
-                 #:login-shell login-shell
-                 #:interactive-shell interactive-shell)
-      (if nix?
-          (he-nix #:stateless? stateless?) '())
-      (if developer?
-          (append
-           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-           (he-doom #:stateless? stateless?
-                    #:console? console?
-                    #:email email
-                    #:theme theme
-                    #:font font-mono
-                    #:font-variable-pitch font-variable-pitch
-                    #:font-unicode font-unicode
-                    #:font-serif font-serif)
-           (he-git #:email email)
-           (he-ssh)
-           (he-direnv #:stateless? stateless?
-                      #:shell interactive-shell))
-          '())
-      (if console?
-          (append
-           (he-fonts #:stateless? stateless?
-                     #:fonts (list font-mono
-                                   font-sans
-                                   font-serif
-                                   font-unicode))
-           (if kmonad?
-               (he-kmonad) '()))
-          '())
-      (if desktop?
-          (append
-           (he-mesa #:stateless? stateless?)
-           (if gdm?
-               (he-gdm #:stateless? stateless?) '())
-           (let ((wayland? #t)
-                 (sway? (member #:session/sway (or sessions '()))))
-             (append
-              (he-desktop-packages)
-              (he-xdg #:stateless? stateless?)
-              (he-gtk #:stateless? stateless?
-                      #:theme theme
-                      #:font font-variable-pitch
-                      #:font-monospace font-mono)
-              (if pipewire?
-                  (he-pipewire #:stateless? stateless?
-                               #:sway? sway?)
-                  '())
-              (he-flatpak #:stateless? stateless?
-                          #:wayland? wayland?)
-              (if sway?
-                  (let ((screen-locker (swaylock-screen-locker)))
-                    (append
-                     (he-wm-common #:sway? #t)
-                     (he-sway #:pipewire? pipewire?
-                              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                              #:screen-locker screen-locker
-                              #:idle-manager (swayidle-idle-manager)
-                              #:application-launcher (rofi-application-launcher #:wayland? #t)
-                              #:default-terminal (alacritty-terminal))
-                     (he-swaylock #:font font-variable-pitch)
-                     (he-swayidle #:sway? #t
-                                  #:screen-locker screen-locker)
-                     (he-mako #:sway? #t
-                              #:menu (rofi-menu #:wayland? #t)
-                              #:theme theme
-                              #:font font-variable-pitch)
-                     (he-waybar #:sway? #t
-                                #:theme theme
-                                #:font font-variable-pitch)
-                     (he-rofi #:stateless? stateless?
-                              #:wayland? #t
-                              #:theme theme)
-                     (he-alacritty #:font font-mono)))
-                  '()))))
-          '())))))
+  (let ((theme #:theme/dark)
+        (font-mono font-mono)
+        (font-sans font-sans)
+        (font-serif font-serif)
+        (font-unicode font-unicode)
+        (font-variable-pitch font-sans))
+    (append
+     (he-packages)
+     (if stateless?
+         (he-stateless #:persist-dir stateless-persist-dir
+                       #:machine-dir stateless-machine-dir)
+         '())
+     (he-shells #:stateless? stateless?
+                #:login-shell login-shell
+                #:interactive-shell interactive-shell)
+     (if nix?
+         (he-nix #:stateless? stateless?) '())
+     (if developer?
+         (append
+          (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+          (he-doom #:stateless? stateless?
+                   #:console? console?
+                   #:email email
+                   #:theme theme
+                   #:font font-mono
+                   #:font-variable-pitch font-variable-pitch
+                   #:font-unicode font-unicode
+                   #:font-serif font-serif)
+          (he-git #:email email)
+          (he-ssh)
+          (he-direnv #:stateless? stateless?
+                     #:shell interactive-shell))
+         '())
+     (if console?
+         (append
+          (he-fonts #:stateless? stateless?
+                    #:fonts (list font-mono
+                                  font-sans
+                                  font-serif
+                                  font-unicode))
+          (if kmonad?
+              (he-kmonad) '()))
+         '())
+     (if desktop?
+         (append
+          (he-mesa #:stateless? stateless?)
+          (if gdm?
+              (he-gdm #:stateless? stateless?) '())
+          (let ((wayland? #t)
+                (sway? (member #:session/sway (or sessions '()))))
+            (append
+             (he-desktop-packages)
+             (he-xdg #:stateless? stateless?)
+             (he-gtk #:stateless? stateless?
+                     #:theme theme
+                     #:font font-variable-pitch
+                     #:font-monospace font-mono)
+             (if pipewire?
+                 (he-pipewire #:stateless? stateless?
+                              #:sway? sway?)
+                 '())
+             (he-flatpak #:stateless? stateless?
+                         #:wayland? wayland?)
+             (if sway?
+                 (let ((screen-locker (swaylock-screen-locker)))
+                   (append
+                    (he-wm-common #:sway? #t)
+                    (he-sway #:pipewire? pipewire?
+                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                             #:screen-locker screen-locker
+                             #:idle-manager (swayidle-idle-manager)
+                             #:application-launcher (rofi-application-launcher #:wayland? #t)
+                             #:default-terminal (alacritty-terminal))
+                    (he-swaylock #:font font-variable-pitch)
+                    (he-swayidle #:sway? #t
+                                 #:screen-locker screen-locker)
+                    (he-mako #:sway? #t
+                             #:menu (rofi-menu #:wayland? #t)
+                             #:theme theme
+                             #:font font-variable-pitch)
+                    (he-waybar #:sway? #t
+                               #:theme theme
+                               #:font font-variable-pitch)
+                    (he-rofi #:stateless? stateless?
+                             #:wayland? #t
+                             #:theme theme)
+                    (he-alacritty #:font font-mono)))
+                 '()))))
+         '()))))
 #+end_src
 * Channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
