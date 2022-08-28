@@ -275,7 +275,6 @@ guix pull
             accounts
             nonguix-substitutes
             nix
-            console-keyboard-layouts
             hidpi-console-font
             kmonad-tool
             desktop-services
@@ -286,6 +285,7 @@ guix pull
             gnome-desktop
             wm
             sway-wm
+            console-keyboard-layouts
             macbook
             macbook-kb-layout))
 
@@ -665,14 +665,6 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
           (operating-system-user-services os))))
 #+end_src
 **** Console
-***** Console keyboard layouts
-#+begin_src scheme
-(define-system-comp (console-keyboard-layouts #:key kb-layout)
-  (keyboard-layout kb-layout)
-  (bootloader (bootloader-configuration
-               (inherit (operating-system-bootloader os))
-               (keyboard-layout kb-layout))))
-#+end_src
 ***** HiDPI console font
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
@@ -839,6 +831,16 @@ Must succeed "Accounts" component.
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
 *** Hardware-specific
+**** Console
+***** Console keyboard layouts
+Must succeed "Bootloader" component.
+#+begin_src scheme
+(define-system-comp (console-keyboard-layouts #:key kb-layout)
+  (keyboard-layout kb-layout)
+  (bootloader (bootloader-configuration
+               (inherit (operating-system-bootloader os))
+               (keyboard-layout kb-layout))))
+#+end_src
 **** Macbook
 #+begin_src scheme
 (define* (macbook os #:key bluetooth?)
@@ -7348,7 +7350,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   stateless-hes
                   nix?
                   console?
-                  kb-layout
                   kmonad?
                   kmonad-users
                   desktop?
@@ -7377,7 +7378,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
               (nix $) $)
           (if console?
               (-> $
-                  (console-keyboard-layouts #:kb-layout kb-layout)
                   hidpi-console-font
                   (as-> $
                     (if kmonad?
