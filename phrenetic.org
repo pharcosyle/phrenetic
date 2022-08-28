@@ -56,10 +56,10 @@
 #+end_src
 * Installation
 ** Create bootable USB
-Download (or create) a Guix installation ISO
-- I'm using the [[https://github.com/SystemCrafters/guix-installer/releases/latest][System Crafters Guix Installer]] since it's kept up-to-date which should speed things up a bit.
-- Run ~lsblk~ to find the usb device.
+Run ~lsblk~ to find the usb device.
 #+begin_src sh
+guix system image --image-type=iso9660 --load-path=. --expression='(@ (exuberant frostfire) frostfire)'
+
 iso_file=guix-system-install-1.3.0.x86_64-linux.iso
 usb_device=/dev/sdc
 dd if=$iso_file of=$usb_device status=progress bs=4M
