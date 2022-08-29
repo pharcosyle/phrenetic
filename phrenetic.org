@@ -6,7 +6,6 @@
 - [[#meta][Meta]]
   - [[#path-hierarchy][Path hierarchy]]
 - [[#installation][Installation]]
-  - [[#create-bootable-usb][Create bootable USB]]
   - [[#install][Install]]
 - [[#system][System]]
   - [[#components][Components]]
@@ -55,16 +54,6 @@
   (concat (meta-get-dir) "/" sub-path))
 #+end_src
 * Installation
-** Create bootable USB
-Run ~lsblk~ to find the usb device.
-#+begin_src sh
-guix system image --image-type=iso9660 --load-path=. --expression='(@ (exuberant frostfire) frostfire)'
-
-iso_file=guix-system-install-1.3.0.x86_64-linux.iso
-usb_device=/dev/sdc
-dd if=$iso_file of=$usb_device status=progress bs=4M
-sync
-#+end_src
 ** Install
 *** Partitioning
 #+begin_src sh
@@ -78,19 +67,17 @@ parted $device align-check optimal 2
 parted $device set 1 esp on
 
 efi_system_partition="$device"1
-efi_label=genesis
 
-mkfs.fat -F 32 -n $efi_label $efi_system_partition
+mkfs.fat -F 32 -n genesis $efi_system_partition
 
 root_partition="$device"2
-root_label=firmament
 crypt_name=deciphered-new
 crypt_mapping=/dev/mapper/$crypt_name
 
 cryptsetup luksFormat --type luks2 --pbkdf pbkdf2 --label ciphered $root_partition
 cryptsetup open $root_partition $crypt_name
 
-mkfs.btrfs --label $root_label $crypt_mapping
+mkfs.btrfs --label firmament $crypt_mapping
 #+end_src
 *** Set up subvolumes
 #+begin_src sh
@@ -119,15 +106,9 @@ mkdir -p /mnt/gnu/store
 mount -o subvol=guix-store,compress=zstd,autodefrag,noatime $crypt_mapping /mnt/gnu/store
 mkdir -p /mnt/var/guix
 mount -o subvol=guix-var,compress=zstd,autodefrag $crypt_mapping /mnt/var/guix
-mkdir -p /mnt/var/log
-mount -o subvol=log,compress=zstd,autodefrag $crypt_mapping /mnt/var/log
 
 mkdir -p /mnt/boot/efi
 mount $efi_system_partition /mnt/boot/efi
-#+end_src
-*** Proceeding with installation
-#+begin_src sh
-herd start cow-store /mnt
 #+end_src
 *** System configuration
 #+begin_src sh
@@ -139,8 +120,9 @@ guix time-machine \
 	-- \
 	system \
 	--load-path=/etc/config-source \
-	--expression='(@ (exuberant frostfire) frostfire)' \
-	init /mnt
+	init \
+	/etc/config-source/exuberant/frostfire \
+	/mnt
 #+end_src
 * System
 :PROPERTIES:
