@@ -66,46 +66,25 @@ dd if=$iso_file of=$usb_device status=progress bs=4M
 sync
 #+end_src
 ** Install
-Boot from the installation medium, select your language and country, and select "Install using the shell based process" when prompted.
-*** Keyboard layout
-This messed up the keyboard when I tried it on mac, not doing ~loadkeys~ at all was fine.
-#+begin_src sh
-# keysfile=mac-us
-# loadkeys $keysfile
-#+end_src
-*** Networking
-#+begin_src sh
-# List network interfaces and find one to use.
-ifconfig -a
-
-# Is this necessary if the interface is already activated?
-interface=usb0
-ifconfig $interface up
-
-dhclient -v $interface
-
-# Test that networking is up and working.
-ping -c 3 gnu.org
-#+end_src
 *** Partitioning
 #+begin_src sh
-# Check out the current block devices and partitions if you want.
-lsblk
-
 device=/dev/sda
 
-# Make two partitions, partition types should be "EFI system partition" and "Linux x86-64 root (/)". For EFI I'm gonna do 1GB to be on the safe side, second should be remainder of free space.
-cfdisk $device
+parted $device mklabel gpt
+parted --align optimal $device mkpart sky 0% 1GB
+parted --align optimal $device mkpart earth 1GB 100%
+parted $device align-check optimal 1
+parted $device align-check optimal 2
 parted $device set 1 esp on
 
 efi_system_partition="$device"1
 efi_label=genesis
 
-mkfs.fat -F32 -n $efi_label $efi_system_partition
+mkfs.fat -F 32 -n $efi_label $efi_system_partition
 
 root_partition="$device"2
 root_label=firmament
-crypt_name=deciphered
+crypt_name=deciphered-new
 crypt_mapping=/dev/mapper/$crypt_name
 
 cryptsetup luksFormat --type luks2 --pbkdf pbkdf2 --label ciphered $root_partition
@@ -115,25 +94,22 @@ mkfs.btrfs --label $root_label $crypt_mapping
 #+end_src
 *** Set up subvolumes
 #+begin_src sh
-# I don't know if the types argument is necessary but that's how Andrew Tropin had it.
-mount --types btrfs LABEL=$root_label /mnt
+mount $crypt_mapping /mnt
 
 btrfs subvolume create /mnt/root
 btrfs subvolume create /mnt/boot
 btrfs subvolume create /mnt/guix-store
 btrfs subvolume create /mnt/guix-var
 btrfs subvolume create /mnt/log
-btrfs subvolume create /mnt/home
-btrfs subvolume create /mnt/persist
 btrfs subvolume create /mnt/nix
+btrfs subvolume create /mnt/persist
+btrfs subvolume create /mnt/machine
 
-# Take an empty readonly snapshot of the root subvolume (might be useful later for rolling back or comparison)
 btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
 
 umount /mnt
 #+end_src
 *** Mount
-NB: ~$crypt_mapping~ can/"should" be ~LABEL=$root_label~
 #+begin_src sh
 mount -o subvol=root,compress=zstd,autodefrag $crypt_mapping /mnt
 
@@ -145,13 +121,9 @@ mkdir -p /mnt/var/guix
 mount -o subvol=guix-var,compress=zstd,autodefrag $crypt_mapping /mnt/var/guix
 mkdir -p /mnt/var/log
 mount -o subvol=log,compress=zstd,autodefrag $crypt_mapping /mnt/var/log
-mkdir /mnt/home
-mount -o subvol=home,compress=zstd,autodefrag $crypt_mapping /mnt/home
-mkdir /mnt/.persist
-mount -o subvol=persist,compress=zstd,autodefrag $crypt_mapping /mnt/.persist
 
 mkdir -p /mnt/boot/efi
-mount LABEL=$efi_label /mnt/boot/efi
+mount $efi_system_partition /mnt/boot/efi
 #+end_src
 *** Proceeding with installation
 #+begin_src sh
@@ -159,40 +131,16 @@ herd start cow-store /mnt
 #+end_src
 *** System configuration
 #+begin_src sh
-# Grab my dotfiles, from github if I put them up at some point or maybe from a USB or another computer with `woof`, into the current directory (the one I'm already in, not `/mnt`).
-# git clone https://github.com/pharcosyle/phrenetic
-# guix environment --ad-hoc woof -- woof -U
-# Important: `woof` didn't work for me over the local network, I had to have my other computer offer it over the public internet with localtunnel.
-
-mkdir -p ~/.config/guix
-cp ~/work/phrenetic/exuberant/exuberant/he/solitude/solitude-channels-lock ~/.config/guix
-guix pull
-hash guix
-
 # Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
 cryptsetup luksUUID $root_partition
 
-cd ~/work/phrenetic
-guix system --load-path=. init exuberant/exuberant/os/frostfire.scm /mnt
-#+end_src
-*** Post-installation
-#+begin_src sh
-# Reboot the system, take out the installation medium, and login as root when faced with a login prompt.
-
-# Set the password for the root account.
-passwd
-# Set the password for my user.
-my_user=pharcosyle
-passwd $my_user
-
-# Log out and log in to my user account.
-
-# Grab my dotfiles again.
-
-# Ensure my channels file is in `~/.config/guix` and update my channels.
-guix pull
-
-# Run a system reconfigure, home reconfigure, install manifests, and deploy `home-state.git`. Copy over all my old data.
+guix time-machine \
+	--channels=/etc/config-source/exuberant/channels-lock \
+	-- \
+	system \
+	--load-path=/etc/config-source \
+	--expression='(@ (exuberant frostfire) frostfire)' \
+	init /mnt
 #+end_src
 * System
 :PROPERTIES:
