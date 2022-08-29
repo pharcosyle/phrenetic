@@ -108,15 +108,15 @@ root_label=firmament
 crypt_name=deciphered
 crypt_mapping=/dev/mapper/$crypt_name
 
-cryptsetup luksFormat --type luks2 --pbkdf pbkdf2 --label=ciphered $root_partition
+cryptsetup luksFormat --type luks2 --pbkdf pbkdf2 --label ciphered $root_partition
 cryptsetup open $root_partition $crypt_name
 
-mkfs.btrfs -L $root_label $crypt_mapping
+mkfs.btrfs --label $root_label $crypt_mapping
 #+end_src
 *** Set up subvolumes
 #+begin_src sh
-# I don't know if the type argument is necessary but that's how Andrew Tropin had it.
-mount -t btrfs LABEL=$root_label /mnt
+# I don't know if the types argument is necessary but that's how Andrew Tropin had it.
+mount --types btrfs LABEL=$root_label /mnt
 
 btrfs subvolume create /mnt/root
 btrfs subvolume create /mnt/boot
