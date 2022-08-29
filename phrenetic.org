@@ -366,7 +366,7 @@ guix pull
 (define* (disk-encryption os
                           #:key
                           source-uuid
-                          (target "ciphered")
+                          (target "deciphered")
                           encrypted-mount-points)
   (let ((encrypted-device (mapped-device
                            (source (uuid source-uuid))
