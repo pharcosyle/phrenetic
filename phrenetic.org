@@ -1623,7 +1623,7 @@ nix-env --upgrade
 ***** how to pin packages?
 Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
 ***** [2022-08-21 Sun] stateless first install
-Maybe make a simple home-activation-service that ensures the nix profile packages are installed so I don't have to do it manually after a fresh computer install.
+Maybe make a simple home-activation-service that ensures the nix profile packages are installed so I don't have to do it manually after a fresh computer install (better reproducability!). Mount the nix subvolume in the installation script.
 **** Google Chrome
 #+begin_src scheme
 (define* (google-chrome-services #:key stateless?)
@@ -7110,7 +7110,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
          #:bluetooth? bluetooth?)))
 
 (define frostfire
-  (os-for-macbook (os) #:bluetooth? bluetooth?))
+  (os-with-macbook-hardware (os) #:bluetooth? bluetooth?))
 
 frostfire
 #+end_src
@@ -7256,7 +7256,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (os-base
-            os-for-macbook))
+            os-with-macbook-hardware))
 
 (define* (os-base os
                   #:key
@@ -7345,7 +7345,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                                 #:who stateless-users)
                      $)))))))
 
-(define* (os-for-macbook os #:key bluetooth?)
+(define* (os-with-macbook-hardware os #:key bluetooth?)
   (-> os
       (console-keyboard-layouts #:kb-layout macbook-kb-layout)
       (macbook #:bluetooth? bluetooth?)))
