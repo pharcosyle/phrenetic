@@ -5,8 +5,7 @@
 * Table of Contents :TOC:
 - [[#meta][Meta]]
   - [[#path-hierarchy][Path hierarchy]]
-- [[#installation][Installation]]
-  - [[#install][Install]]
+- [[#install][Install]]
 - [[#system][System]]
   - [[#components][Components]]
 - [[#home][Home]]
@@ -53,74 +52,160 @@
 (defun meta-in-dir (sub-path)
   (concat (meta-get-dir) "/" sub-path))
 #+end_src
-* Installation
-** Install
-*** Partitioning
-#+begin_src sh
-device=/dev/sda
+* Install
+Run with ~sudo~.
+#+begin_src scheme :tangle (meta-in-dir "ebullient/install.scm")
+(define-module (ebullient install)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages base) #:select (coreutils))
+  #:use-module ((gnu packages cryptsetup) #:select (cryptsetup))
+  #:use-module ((gnu packages disk) #:select (dosfstools parted))
+  #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
+  #:use-module ((gnu packages package-management) #:select (guix))
+  #:export (installer-package))
 
-parted $device mklabel gpt
-parted --align optimal $device mkpart sky 0% 1GB
-parted --align optimal $device mkpart earth 1GB 100%
-parted $device align-check optimal 1
-parted $device align-check optimal 2
-parted $device set 1 esp on
+(define installer-gexp
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        ;; (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
+        ;;              ((ice-9 ftw) #:select (file-system-fold))
+        ;;              ((srfi srfi-1) #:select (any)))
 
-efi_system_partition="$device"1
+        (use-modules ((ice-9 match) #:select (match-lambda))
+                     ((ice-9 readline) #:select (readline)))
 
-mkfs.fat -F 32 -n genesis $efi_system_partition
+        (define* (cmd command #:rest args)
+          (display (string-join (cons (basename command) args) " "))
+          (newline)
+          ;; (apply system* (cons command args))
+          )
 
-root_partition="$device"2
-crypt_name=deciphered-new
-crypt_mapping=/dev/mapper/$crypt_name
+        (define* (read-user-input prompt #:key default)
+          (let ((input (readline (string-append prompt
+                                                (if default
+                                                    (string-append "(default " default ")") "")
+                                                ": "))))
+            (if (string-null? input)
+                (or default (exit))
+                input)))
 
-cryptsetup luksFormat --type luks2 --pbkdf pbkdf2 --label ciphered $root_partition
-cryptsetup open $root_partition $crypt_name
+        (define (display-block-devices)
+          (display "Block devices:")
+          (newline)
+          (system* #$(file-append util-linux+udev "/bin/lsblk"))
+          (newline))
 
-mkfs.btrfs --label firmament $crypt_mapping
-#+end_src
-*** Set up subvolumes
-#+begin_src sh
-mount $crypt_mapping /mnt
 
-btrfs subvolume create /mnt/root
-btrfs subvolume create /mnt/boot
-btrfs subvolume create /mnt/guix-store
-btrfs subvolume create /mnt/guix-var
-btrfs subvolume create /mnt/log
-btrfs subvolume create /mnt/nix
-btrfs subvolume create /mnt/persist
-btrfs subvolume create /mnt/machine
+        (display-block-devices)
+        (define device (read-user-input "Enter device (for exmple, /dev/sda)"))
 
-btrfs subvolume snapshot -r /mnt/root /mnt/root-blank
+        (let ((parted-bin #$(file-append parted "/sbin/parted"))
+              (align "optimal")
+              (esp-size "1GB"))
+          (cmd parted-bin device "mklabel" "gpt")
+          (for-each (match-lambda
+                      ((label start end)
+                       (cmd parted-bin "--align" align device "mkpart" label start end)))
+                    `(("sky" "0%" ,esp-size)
+                      ("earth" ,esp-size "100%")))
+          (cmd parted-bin device "set" "1" "esp" "on")
+          (for-each (lambda (n)
+                      (cmd parted-bin device "align-check" align n))
+                    '("1" "2")))
+        (readline "Check that disks are aligned. Press enter to continue.")
 
-umount /mnt
-#+end_src
-*** Mount
-#+begin_src sh
-mkdir /mnt/boot
-mount -o subvol=boot,compress=zstd,autodefrag $crypt_mapping /mnt/boot
-mkdir -p /mnt/gnu/store
-mount -o subvol=guix-store,compress=zstd,autodefrag,noatime $crypt_mapping /mnt/gnu/store
-mkdir -p /mnt/var/guix
-mount -o subvol=guix-var,compress=zstd,autodefrag $crypt_mapping /mnt/var/guix
+        (display-block-devices)
+        (define esp-default (string-append device "1"))
+        (define efi-system-partition (read-user-input (string-append "Enter EFI system partition")
+                                                      #:default esp-default))
+        (define rp-default (string-append device "2"))
+        (define root-partition (read-user-input (string-append "Enter root partition")
+                                                #:default rp-default))
 
-mkdir -p /mnt/boot/efi
-mount $efi_system_partition /mnt/boot/efi
-#+end_src
-*** System configuration
-#+begin_src sh
-# Find the LUKS UUID to update it in the system config. Make sure to update in the dotfiles upstream later.
-cryptsetup luksUUID $root_partition
+        (cmd #$(file-append dosfstools "/sbin/mkfs.fat") "-F" "32" "-n" "genesis" efi-system-partition)
 
-guix time-machine \
-	--channels=/etc/config-source/exuberant/channels-lock \
-	-- \
-	system \
-	--load-path=/etc/config-source \
-	init \
-	/etc/config-source/exuberant/frostfire \
-	/mnt
+        (define crypt-name "deciphered-new")
+        (define crypt-mapping (string-append "/dev/mapper/" crypt-name))
+
+        (let ((cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
+          (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" "ciphered" root-partition)
+          (cmd cryptsetup-bin "open" root-partition crypt-name))
+
+        (cmd #$(file-append btrfs-progs "/bin/mkfs.btrfs") "--label" "firmament" crypt-mapping)
+
+
+
+        (define mount-dir "/mnt")
+
+        (define mount-bin "/run/setuid-programs/mount")
+        (define umount-bin "/run/setuid-programs/umount")
+
+        (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
+          (cmd mount-bin crypt-mapping mount-dir)
+          (for-each (lambda (subvol)
+                      (cmd btrfs-bin "subvolume" "create" (string-append mount-dir "/" subvol)))
+                    '("root"
+                      "boot"
+                      "guix-store"
+                      "guix-var"
+                      "log"
+                      "nix"
+                      "persist"
+                      "machine"))
+          (cmd btrfs-bin "subvolume" "snapshot" "-r" (string-append mount-dir "/root") (string-append mount-dir "/root-blank"))
+          (cmd umount-bin mount-dir))
+
+        (let ((mkdir-bin #$(file-append coreutils "/bin/mkdir")))
+          (for-each (match-lambda
+                      ((subvol path*)
+                       (let ((path (string-append mount-dir path*)))
+                         (cmd mkdir-bin "-p" path)
+                         (cmd mount-bin "-o" (string-append "subvol=" subvol ",compress=zstd,autodefrag,noatime") crypt-mapping path))))
+                    '(("boot" "/boot")
+                      ("guix-store" "/gnu/store")
+                      ("guix-var" "/var/guix")))
+
+          (let ((boot-efi-dir (string-append mount-dir "/boot/efi")))
+            (cmd mkdir-bin "-p" boot-efi-dir)
+            (cmd mount-bin efi-system-partition boot-efi-dir)))
+
+        (cmd #$(file-append cryptsetup "/bin/cryptsetup") "luksUUID" root-partition)
+
+        (cmd #$(file-append guix "/bin/guix") "time-machine"
+             "--channels=/etc/config-source/exuberant/channels-lock"
+             "--"
+             "system"
+             "--load-path=/etc/config-source"
+             "init"
+             "/etc/config-source/exuberant/frostfire"
+             mount-dir))))
+
+(define* installer-program
+  (program-file "installer" installer-gexp))
+
+
+
+(use-modules (guix build-system trivial))
+
+(define (installer-package)
+  (package
+    (name "installer")
+    (version "0")
+    (source installer-program)
+    (build-system trivial-build-system)
+    (arguments
+     `(#:modules ((guix build utils))
+       #:builder
+       ,#~(begin
+            (use-modules ((guix build utils) #:select (mkdir-p)))
+            (let* ((bin (string-append #$output "/bin")))
+              (mkdir-p bin)
+              (symlink #$source (string-append bin "/install"))))))
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
 #+end_src
 * System
 :PROPERTIES:
@@ -7005,6 +7090,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
   #:use-module (ebullient home)
+  #:use-module (ebullient install)
   #:use-module (ebullient system)
   #:use-module (ebullient utils)
   #:use-module ((ebullient stateless) #:select (persist-dir machine-dir) #:prefix stateless:)
@@ -7013,6 +7099,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (frostfire
+            installer
             primary
             aux
             guest))
@@ -7110,6 +7197,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 
 (define frostfire
   (os-with-macbook-hardware (os) #:bluetooth? bluetooth?))
+
+(define installer
+  (installer-package))
 
 frostfire
 #+end_src
