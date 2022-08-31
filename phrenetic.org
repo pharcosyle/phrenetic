@@ -6,6 +6,8 @@
 - [[#meta][Meta]]
   - [[#path-hierarchy][Path hierarchy]]
 - [[#install][Install]]
+  - [[#program][Program]]
+  - [[#package][Package]]
 - [[#system][System]]
   - [[#components][Components]]
 - [[#home][Home]]
@@ -53,9 +55,13 @@
   (concat (meta-get-dir) "/" sub-path))
 #+end_src
 * Install
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "ebullient/install.scm")
+:END:
 Run with ~sudo~.
-#+begin_src scheme :tangle (meta-in-dir "ebullient/install.scm")
+#+begin_src scheme
 (define-module (ebullient install)
+  #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((gnu packages base) #:select (coreutils))
@@ -63,149 +69,189 @@ Run with ~sudo~.
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
   #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
   #:use-module ((gnu packages package-management) #:select (guix))
+  #:use-module (ebullient utils)
   #:export (installer-package))
+#+end_src
+** Program
+#+begin_src scheme
+(define* (installer-program #:key
+                            os-name
+                            efi?
+                            boot-label
+                            boot-target
+                            root-label
+                            disk-encryption?
+                            luks-label
+                            filesystem
+                            mountables
+                            btrfs-mount-flags
+                            btrfs-mount-options)
+  (program-file
+   "installer"
+   #~(begin
+       (use-modules ((ice-9 match) #:select (match-lambda))
+                    ((ice-9 readline) #:select (readline)))
 
-(define installer-gexp
-  (with-imported-modules '((guix build utils))
-    #~(begin
-        ;; (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
-        ;;              ((ice-9 ftw) #:select (file-system-fold))
-        ;;              ((srfi srfi-1) #:select (any)))
+       (define* (cmd command #:rest args)
+         (display (string-join (cons (basename command) args) " "))
+         (newline)
+         (apply system* (cons command args)))
 
-        (use-modules ((ice-9 match) #:select (match-lambda))
-                     ((ice-9 readline) #:select (readline)))
+       (define* (read-user-input prompt #:key default)
+         (let ((input (readline (string-append prompt
+                                               (if default
+                                                   (string-append " (default " default ")") "")
+                                               ": "))))
+           (if (string-null? input)
+               (or default (exit))
+               input)))
 
-        (define* (cmd command #:rest args)
-          (display (string-join (cons (basename command) args) " "))
-          (newline)
-          ;; (apply system* (cons command args))
-          )
+       (define (user-pause text)
+         (readline (string-append text " Press enter to continue.")))
 
-        (define* (read-user-input prompt #:key default)
-          (let ((input (readline (string-append prompt
-                                                (if default
-                                                    (string-append "(default " default ")") "")
-                                                ": "))))
-            (if (string-null? input)
-                (or default (exit))
-                input)))
+       (define (display-block-devices)
+         (display "Block devices:")
+         (newline)
+         (system* #$(file-append util-linux+udev "/bin/lsblk"))
+         (newline))
 
-        (define (display-block-devices)
-          (display "Block devices:")
-          (newline)
-          (system* #$(file-append util-linux+udev "/bin/lsblk"))
-          (newline))
+       (display-block-devices)
+       (define device
+         (read-user-input "Enter device (for exmple, /dev/sda)"))
 
+       (let ((parted-bin #$(file-append parted "/sbin/parted"))
+             (align "optimal")
+             (boot-size "1GB"))
+         (cmd parted-bin device "mklabel" "gpt")
+         (for-each (match-lambda
+                     ((label start end)
+                      (cmd parted-bin "--align" align device "mkpart" label start end)))
+                   `(("sky" "0%" ,boot-size)
+                     ("earth" ,boot-size "100%")))
+         (cmd parted-bin device "set" "1" (if #$efi? "esp" "bios_grub") "on")
+         (for-each (lambda (n)
+                     (cmd parted-bin device "align-check" align n))
+                   '("1" "2")))
+       (user-pause "Check that disks are aligned.")
 
-        (display-block-devices)
-        (define device (read-user-input "Enter device (for exmple, /dev/sda)"))
+       (display-block-devices)
+       (define boot-partition
+         (read-user-input (string-append "Boot partition")
+                          #:default (string-append device "1")))
+       (define root-partition
+         (read-user-input (string-append "Root partition")
+                          #:default (string-append device "2")))
 
-        (let ((parted-bin #$(file-append parted "/sbin/parted"))
-              (align "optimal")
-              (esp-size "1GB"))
-          (cmd parted-bin device "mklabel" "gpt")
-          (for-each (match-lambda
-                      ((label start end)
-                       (cmd parted-bin "--align" align device "mkpart" label start end)))
-                    `(("sky" "0%" ,esp-size)
-                      ("earth" ,esp-size "100%")))
-          (cmd parted-bin device "set" "1" "esp" "on")
-          (for-each (lambda (n)
-                      (cmd parted-bin device "align-check" align n))
-                    '("1" "2")))
-        (readline "Check that disks are aligned. Press enter to continue.")
+       (cmd #$(file-append dosfstools "/sbin/mkfs.fat") "-F" "32" "-n" #$boot-label boot-partition)
 
-        (display-block-devices)
-        (define esp-default (string-append device "1"))
-        (define efi-system-partition (read-user-input (string-append "Enter EFI system partition")
-                                                      #:default esp-default))
-        (define rp-default (string-append device "2"))
-        (define root-partition (read-user-input (string-append "Enter root partition")
-                                                #:default rp-default))
+       (define system-root
+         (if #$disk-encryption?
+             (let* ((crypt-name "deciphered-new")
+                    (crypt-mapping (string-append "/dev/mapper/" crypt-name))
+                    (cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
+               (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" #$luks-label root-partition)
+               (cmd cryptsetup-bin "open" root-partition crypt-name)
+               (cmd cryptsetup-bin "luksUUID" root-partition)
+               (user-pause "Take note of your LUKS UUID.")
+               crypt-mapping)
+             root-partition))
 
-        (cmd #$(file-append dosfstools "/sbin/mkfs.fat") "-F" "32" "-n" "genesis" efi-system-partition)
+       (case #$filesystem
+         ;; ((#:filesystem/ext4)
+         ;;  (cmd #$(file-append e2fsprogs "/sbin/mkfs.ext4") "-L" #$root-label system-root))
+         ((#:filesystem/btrfs)
+          (cmd #$(file-append btrfs-progs "/bin/mkfs.btrfs") "--label" #$root-label system-root)))
 
-        (define crypt-name "deciphered-new")
-        (define crypt-mapping (string-append "/dev/mapper/" crypt-name))
+       (define mount-dir
+         (read-user-input (string-append "Mount directory")
+                          #:default "/mnt"))
 
-        (let ((cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
-          (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" "ciphered" root-partition)
-          (cmd cryptsetup-bin "open" root-partition crypt-name))
+       (define mount-bin "/run/setuid-programs/mount")
+       (define umount-bin "/run/setuid-programs/umount")
 
-        (cmd #$(file-append btrfs-progs "/bin/mkfs.btrfs") "--label" "firmament" crypt-mapping)
+       (when (eq? #$filesystem #:filesystem/btrfs)
+         (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
+           (cmd mount-bin system-root mount-dir)
+           (for-each (lambda (subvol)
+                       (cmd btrfs-bin "subvolume" "create" (string-append mount-dir "/" subvol)))
+                     ;; TODO Awful hack.
+                     (map (lambda (subvol)
+                            (if (equal? subvol "root-blank")
+                                "root" subvol))
+                          (map car '#$mountables)))
+           (cmd btrfs-bin "subvolume" "snapshot" "-r" (string-append mount-dir "/root") (string-append mount-dir "/root-blank"))
+           (cmd umount-bin mount-dir)))
 
+       (let* ((mkdir-bin #$(file-append coreutils "/bin/mkdir"))
+              (mkdirp-cmd (lambda (dir)
+                            (cmd mkdir-bin "-p" dir))))
+         (case #$filesystem
+           ;; ((#:filesystem/ext4)
+           ;;  (cmd mount-bin system-root mount-dir))
+           ((#:filesystem/btrfs)
+            (for-each
+             (match-lambda
+               ((subvol . mount-point)
+                (let ((path-on-mount (string-append mount-dir mount-point)))
+                  (mkdirp-cmd path-on-mount)
+                  (cmd mount-bin "-o"
+                       (string-append
+                        "subvol=" subvol
+                        (let ((opts (append
+                                     (or '#$btrfs-mount-options '())
+                                     (map (lambda (flag)
+                                            (string-replace-substring (symbol->string flag) "-" ""))
+                                          (or '#$btrfs-mount-flags '())))))
+                          (if (null? opts)
+                              ""
+                              (string-append "," (string-join opts ",")))))
+                       system-root path-on-mount))))
+             ;; TODO Awful hack.
+             (filter (lambda (subvol+path)
+                       (not (equal? (car subvol+path) "root-blank")))
+                     '#$mountables))))
+         (let ((boot-target-on-mount (string-append mount-dir #$boot-target)))
+           (mkdirp-cmd boot-target-on-mount)
+           (cmd mount-bin boot-partition boot-target-on-mount)))
 
+       (let ((source-dir "/etc/config-source"))
+         (cmd #$(file-append guix "/bin/guix") "time-machine"
+              (string-append "--channels=" source-dir "/exuberant/channels-lock")
+              "--"
+              "system"
+              (string-append "--load-path=" source-dir)
+              "init"
+              (string-append source-dir "/exuberant/" #$os-name)
+              mount-dir))
 
-        (define mount-dir "/mnt")
-
-        (define mount-bin "/run/setuid-programs/mount")
-        (define umount-bin "/run/setuid-programs/umount")
-
-        (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
-          (cmd mount-bin crypt-mapping mount-dir)
-          (for-each (lambda (subvol)
-                      (cmd btrfs-bin "subvolume" "create" (string-append mount-dir "/" subvol)))
-                    '("root"
-                      "boot"
-                      "guix-store"
-                      "guix-var"
-                      "log"
-                      "nix"
-                      "persist"
-                      "machine"))
-          (cmd btrfs-bin "subvolume" "snapshot" "-r" (string-append mount-dir "/root") (string-append mount-dir "/root-blank"))
-          (cmd umount-bin mount-dir))
-
-        (let ((mkdir-bin #$(file-append coreutils "/bin/mkdir")))
-          (for-each (match-lambda
-                      ((subvol path*)
-                       (let ((path (string-append mount-dir path*)))
-                         (cmd mkdir-bin "-p" path)
-                         (cmd mount-bin "-o" (string-append "subvol=" subvol ",compress=zstd,autodefrag,noatime") crypt-mapping path))))
-                    '(("boot" "/boot")
-                      ("guix-store" "/gnu/store")
-                      ("guix-var" "/var/guix")))
-
-          (let ((boot-efi-dir (string-append mount-dir "/boot/efi")))
-            (cmd mkdir-bin "-p" boot-efi-dir)
-            (cmd mount-bin efi-system-partition boot-efi-dir)))
-
-        (cmd #$(file-append cryptsetup "/bin/cryptsetup") "luksUUID" root-partition)
-
-        (cmd #$(file-append guix "/bin/guix") "time-machine"
-             "--channels=/etc/config-source/exuberant/channels-lock"
-             "--"
-             "system"
-             "--load-path=/etc/config-source"
-             "init"
-             "/etc/config-source/exuberant/frostfire"
-             mount-dir))))
-
-(define* installer-program
-  (program-file "installer" installer-gexp))
-
-
-
-(use-modules (guix build-system trivial))
-
-(define (installer-package)
+       (cmd umount-bin (string-append mount-dir #$boot-target))
+       (case #$filesystem
+         ;; ((#:filesystem/ext4)
+         ;;  (cmd umount-bin mount-dir))
+         ((#:filesystem/btrfs)
+          (for-each
+           (lambda (mount-point)
+             (cmd umount-bin (string-append mount-dir mount-point)))
+           ;; TODO Awful hack.
+           (filter (lambda (mount-point)
+                     (not (equal? (car mount-point) "/")))
+                   (map cdr '#$mountables))))))))
+#+end_src
+** Package
+#+begin_src scheme
+(define* (installer-package #:rest opts)
   (package
+    (inherit blank-package)
     (name "installer")
-    (version "0")
-    (source installer-program)
+    (source (apply installer-program opts))
     (build-system trivial-build-system)
     (arguments
-     `(#:modules ((guix build utils))
-       #:builder
+     `(#:builder
        ,#~(begin
-            (use-modules ((guix build utils) #:select (mkdir-p)))
             (let* ((bin (string-append #$output "/bin")))
-              (mkdir-p bin)
-              (symlink #$source (string-append bin "/install"))))))
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
+              (mkdir #$output)
+              (mkdir bin)
+              (symlink #$source (string-append bin "/install"))))))))
 #+end_src
 * System
 :PROPERTIES:
@@ -239,12 +285,10 @@ Run with ~sudo~.
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
-  ;; #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
-  ;; #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -269,15 +313,9 @@ Run with ~sudo~.
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any append-map remove iota))
   #:export (source
-            host-info
-            grub-efi
             base-services
             nss
             linux-nonfree
-            disk-encryption
-            stateless
-            btrfs
-            btrfs-subvols
             accounts
             nonguix-substitutes
             nix
@@ -291,6 +329,11 @@ Run with ~sudo~.
             gnome-desktop
             wm
             sway-wm
+            host-info
+            grub-efi
+            btrfs
+            disk-encryption
+            stateless
             console-keyboard-layouts
             macbook
             macbook-kb-layout))
@@ -323,35 +366,6 @@ Run with ~sudo~.
                            #:recursive? #t
                            #:select? (negate vcs-file?)))))))))
 #+end_src
-**** Host info
-#+begin_src scheme
-(define-system-comp (host-info #:key
-                               host-name
-                               timezone
-                               locale)
-  (host-name host-name)
-  (timezone timezone)
-  (locale (or locale "en_US.utf8")))
-#+end_src
-**** Boot
-***** Grub
-...
-***** Grub EFI
-#+begin_src scheme
-(define-system-comp (grub-efi #:key
-                              (label "genesis")
-                              (target "/boot/efi"))
-  (bootloader (bootloader-configuration
-               (bootloader grub-efi-bootloader)
-               (targets (list target))
-               (timeout 1)))
-  (file-systems
-   (cons* (file-system
-            (device (file-system-label label))
-            (mount-point target)
-            (type "vfat"))
-          (operating-system-file-systems os))))
-#+end_src
 **** Base services
 #+begin_src scheme
 (define-system-comp (base-services)
@@ -373,236 +387,6 @@ Run with ~sudo~.
   (initrd microcode-initrd)
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
-#+end_src
-**** Disk encryption
-#+begin_src scheme
-(define* (disk-encryption os
-                          #:key
-                          source-uuid
-                          (target "deciphered")
-                          encrypted-mount-points)
-  (let ((encrypted-device (mapped-device
-                           (source (uuid source-uuid))
-                           (targets (list target))
-                           (type luks-device-mapping))))
-    (system-comp
-     os
-     (mapped-devices
-      (cons* encrypted-device
-             (operating-system-mapped-devices os)))
-     (file-systems
-      (map (lambda (fs)
-             (if (member (file-system-mount-point fs) encrypted-mount-points)
-                 (file-system
-                   (inherit fs)
-                   (dependencies (cons* encrypted-device
-                                        (file-system-dependencies fs))))
-                 fs))
-           (operating-system-file-systems os))))))
-#+end_src
-**** Stateless
-Must succeed "File systems" and "Accounts" components. Probably should succeed /all/ other components.
-- The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
-#+begin_src scheme
-(define-system-comp (stateless #:key
-                               persist-dir
-                               machine-dir
-                               who)
-  (initrd (lambda (file-systems . rest)
-            (apply (operating-system-initrd os) file-systems
-                   #:volatile-root? #t
-                   rest)))
-  (file-systems
-   (map (lambda (fs)
-          (if (member (file-system-mount-point fs)
-                      `("/var/guix"
-                        "/var/log"
-                        ,persist-dir))
-              (file-system
-                (inherit fs)
-                (needed-for-boot? #t))
-              fs))
-        (operating-system-file-systems os)))
-  (users
-   (map (lambda (account)
-          (if (member (user-account-name account) (map car who))
-              (user-account
-               (inherit account)
-               (create-home-directory? #f))
-              account))
-        (operating-system-users os)))
-  (services
-   (append
-    (operating-system-user-services os)
-    (list
-     (service stateless-service-type
-              `((#:persist-dir . ,persist-dir)
-                (#:machine-dir . ,machine-dir)
-                (#:homes . ,(->> users
-                                 (filter (lambda (account)
-                                           (member (user-account-name account) (map car who))))
-                                 (map (lambda (account)
-                                        `(,(user-account-name account) . ,(user-account-home-directory account))))))
-                (#:hes . ,who)))
-     (simple-service
-      'stateless-system-state
-      stateless-service-type
-      '((#:state . (((#:path . "/etc/machine-id")
-                     (#:store . #:machine))
-                    ((#:path . "/var/lib/random-seed")
-                     (#:store . #:machine))
-                    ((#:path . "/etc/guix/signing-key.pub")
-                     (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o111))))
-                    ((#:path . "/etc/guix/signing-key.sec")
-                     (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o111))))))))))))
-#+end_src
-***** Service
-****** Populate
-#+begin_src scheme
-(define populate-gexp
-  (with-extensions (list guile-gcrypt)
-    (with-imported-modules (source-module-closure
-                            '((gnu build install)))
-      #~(begin
-          (use-modules ((gnu build install) #:select (populate-root-file-system)))
-
-          (let* ((system-path "/var/guix/profiles/system")
-                 (system-1-path "/var/guix/profiles/system-1-link")
-                 (system-1-exists? (file-exists? system-1-path))
-                 (system-link (readlink system-path))
-                 (system-1-link (if system-1-exists?
-                                    (readlink system-1-path)
-                                    system-link)))
-            (populate-root-file-system system-1-link ""
-                                       #:extras `((,system-path -> ,system-link)))
-            (unless system-1-exists?
-              (delete-file system-1-path)))))))
-#+end_src
-****** Users
-#+begin_src scheme
-(define (user-homes-shepherd-service user-homes state-dirs)
-  (shepherd-service
-   (provision '(stateless-user-homes))
-   (requirement '(file-systems))
-   (one-shot? #t)
-   (start (with-imported-modules '((guix build utils))
-            #~(lambda ()
-                (let ((mkdirp-user-home
-                       (lambda (dir uid gid)
-                         (mkdir-p dir)
-                         (chmod dir #o700)
-                         (chown dir uid gid))))
-                  (for-each
-                   (lambda (user-home)
-                     (let* ((pw (getpwnam (car user-home)))
-                            (uid (passwd:uid pw))
-                            (gid (passwd:gid pw))
-                            (home (cdr user-home)))
-                       (mkdirp-user-home home uid gid)
-                       (for-each
-                        (lambda (state-dir)
-                          (mkdirp-user-home (string-append state-dir home) uid gid))
-                        '#$state-dirs)))
-                   '#$user-homes))
-                #t)))))
-
-(define (activate-home-shepherd-services hes)
-  (let ((svc
-         (lambda (user he)
-           (shepherd-service
-            (provision (list (symbol-append 'stateless-home- (string->symbol user))))
-            (requirement '(stateless-user-homes))
-            (one-shot? #t)
-            (start #~(make-forkexec-constructor
-                      '(#$(file-append he "/activate"))
-                      #:user #$user
-                      #:group (group:name (getgrgid (passwd:gid (getpw #$user))))
-                      #:log-file (string-append "/var/log/stateless-home-" #$user ".log")
-                      #:environment-variables
-                      (list (string-append "HOME=" (passwd:dir (getpw #$user))))))
-            (stop #~(make-kill-destructor))))))
-    (map (match-lambda
-           ((user . he)
-            (svc user he)))
-         hes)))
-#+end_src
-****** Service type
-#+begin_src scheme
-(define stateless-service-type
-  (service-type
-   (name 'stateless)
-   (extensions
-    (list (service-extension boot-service-type
-                             (const populate-gexp))
-          (service-extension activation-service-type
-                             (lambda (config)
-                               (stateless:activate-gexp
-                                `',(assoc-ref config #:state)
-                                ""
-                                (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir))))
-          (service-extension shepherd-root-service-type
-                             (lambda (config)
-                               (cons* (user-homes-shepherd-service
-                                       (assoc-ref config #:homes)
-                                       (list
-                                        (assoc-ref config #:persist-dir)
-                                        (assoc-ref config #:machine-dir)))
-                                      (activate-home-shepherd-services
-                                       (assoc-ref config #:hes)))))
-          (service-extension profile-service-type
-                             (lambda (config)
-                               (list (stateless:diff-tool-package
-                                      "stateless-diff"
-                                      (stateless:diff-tool-program
-                                       `',(assoc-ref config #:state)
-                                       `',(assoc-ref config #:ignore)
-                                       "/"
-                                       (assoc-ref config #:persist-dir)
-                                       (assoc-ref config #:machine-dir))))))))
-   (compose identity)
-   (extend stateless:extend-proc)
-   (description "Initialize a stateless system.")))
-#+end_src
-**** File systems
-***** Ext4
-...
-***** Btrfs
-#+begin_src scheme
-(define-system-comp (btrfs #:key
-                           (label "firmament")
-                           subvols)
-  (file-systems
-   (append
-    (map (match-lambda
-           ((subvol . mount-point)
-            (file-system
-              (device (file-system-label label))
-              (mount-point mount-point)
-              (type "btrfs")
-              (options (string-append "subvol=" subvol ",compress=zstd,autodefrag")))))
-         subvols)
-    (operating-system-file-systems os))))
-
-(define* (btrfs-subvols #:key
-                        stateless?
-                        persist-dir
-                        machine-dir
-                        nix?)
-  (append
-   '(("root-blank" . "/")
-     ("boot" . "/boot")
-     ("guix-store" . "/gnu/store")
-     ("guix-var" . "/var/guix")
-     ("log" . "/var/log"))
-   (if stateless?
-       `(("persist" . ,persist-dir)
-         ("machine" . ,machine-dir))
-       '())
-   (if nix?
-       '(("nix" . "/nix")) '())))
 #+end_src
 **** Accounts
 #+begin_src scheme
@@ -835,6 +619,265 @@ Must succeed "Accounts" component.
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
+#+end_src
+*** Device-specific
+**** Host
+#+begin_src scheme
+(define-system-comp (host-info #:key
+                               host-name
+                               timezone
+                               locale)
+  (host-name host-name)
+  (timezone timezone)
+  (locale (or locale "en_US.utf8")))
+#+end_src
+**** File systems and boot
+***** Bootloader
+****** COMMENT Grub
+****** Grub EFI
+#+begin_src scheme
+(define-system-comp (grub-efi #:key
+                              label
+                              target)
+  (bootloader (bootloader-configuration
+               (bootloader grub-efi-bootloader)
+               (targets (list target))
+               (timeout 1)))
+  (file-systems
+   (cons* (file-system
+            (device (file-system-label label))
+            (mount-point target)
+            (type "vfat"))
+          (operating-system-file-systems os))))
+#+end_src
+***** File systems
+****** COMMENT Ext4
+#+begin_src scheme
+(define-system-comp (ext4 #:key label)
+  (file-systems
+   (cons* (file-system
+            (device (file-system-label label))
+            (mount-point "/")
+            (type "ext4"))
+          (operating-system-file-systems os))))
+#+end_src
+****** Btrfs
+#+begin_src scheme
+(define-system-comp (btrfs #:key
+                           label
+                           subvols
+                           flags
+                           options)
+  (file-systems
+   (append
+    (map (match-lambda
+           ((subvol . mount-point)
+            (file-system
+              (device (file-system-label label))
+              (mount-point mount-point)
+              (type "btrfs")
+              (flags (or flags '()))
+              (options (string-append
+                        "subvol=" subvol
+                        (if options
+                            (string-append "," (string-join options ","))
+                            ""))))))
+         subvols)
+    (operating-system-file-systems os))))
+#+end_src
+***** Disk encryption
+Must succeed "File systems" component.
+#+begin_src scheme
+(define* (disk-encryption os
+                          #:key
+                          label
+                          source-uuid
+                          (target "deciphered")
+                          encrypted-mount-points)
+  (let ((encrypted-device (mapped-device
+                           (source (uuid source-uuid))
+                           (targets (list target))
+                           (type luks-device-mapping))))
+    (system-comp
+     os
+     (mapped-devices
+      (cons* encrypted-device
+             (operating-system-mapped-devices os)))
+     (file-systems
+      (map (lambda (fs)
+             (if (member (file-system-mount-point fs) encrypted-mount-points)
+                 (file-system
+                   (inherit fs)
+                   (dependencies (cons* encrypted-device
+                                        (file-system-dependencies fs))))
+                 fs))
+           (operating-system-file-systems os))))))
+#+end_src
+***** Stateless
+Must succeed "File systems" and "Accounts" components. Probably should succeed /all/ other components.
+- The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
+#+begin_src scheme
+(define-system-comp (stateless #:key
+                               persist-dir
+                               machine-dir
+                               who)
+  (initrd (lambda (file-systems . rest)
+            (apply (operating-system-initrd os) file-systems
+                   #:volatile-root? #t
+                   rest)))
+  (file-systems
+   (map (lambda (fs)
+          (if (member (file-system-mount-point fs)
+                      `("/var/guix"
+                        "/var/log"
+                        ,persist-dir
+                        ,machine-dir))
+              (file-system
+                (inherit fs)
+                (needed-for-boot? #t))
+              fs))
+        (operating-system-file-systems os)))
+  (users
+   (map (lambda (account)
+          (if (member (user-account-name account) (map car who))
+              (user-account
+               (inherit account)
+               (create-home-directory? #f))
+              account))
+        (operating-system-users os)))
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (service stateless-service-type
+              `((#:persist-dir . ,persist-dir)
+                (#:machine-dir . ,machine-dir)
+                (#:homes . ,(->> users
+                                 (filter (lambda (account)
+                                           (member (user-account-name account) (map car who))))
+                                 (map (lambda (account)
+                                        `(,(user-account-name account) . ,(user-account-home-directory account))))))
+                (#:hes . ,who)))
+     (simple-service
+      'stateless-system-state
+      stateless-service-type
+      '((#:state . (((#:path . "/etc/machine-id")
+                     (#:store . #:machine))
+                    ((#:path . "/var/lib/random-seed")
+                     (#:store . #:machine))
+                    ((#:path . "/etc/guix/signing-key.pub")
+                     (#:store . #:machine)
+                     (#:parent-dir-perms . ((#:mode . #o111))))
+                    ((#:path . "/etc/guix/signing-key.sec")
+                     (#:store . #:machine)
+                     (#:parent-dir-perms . ((#:mode . #o111))))))))))))
+#+end_src
+****** Service
+******* Populate
+#+begin_src scheme
+(define populate-gexp
+  (with-extensions (list guile-gcrypt)
+    (with-imported-modules (source-module-closure
+                            '((gnu build install)))
+      #~(begin
+          (use-modules ((gnu build install) #:select (populate-root-file-system)))
+
+          (let* ((system-path "/var/guix/profiles/system")
+                 (system-1-path "/var/guix/profiles/system-1-link")
+                 (system-1-exists? (file-exists? system-1-path))
+                 (system-link (readlink system-path))
+                 (system-1-link (if system-1-exists?
+                                    (readlink system-1-path)
+                                    system-link)))
+            (populate-root-file-system system-1-link ""
+                                       #:extras `((,system-path -> ,system-link)))
+            (unless system-1-exists?
+              (delete-file system-1-path)))))))
+#+end_src
+******* Users
+#+begin_src scheme
+(define (user-homes-shepherd-service user-homes state-dirs)
+  (shepherd-service
+   (provision '(stateless-user-homes))
+   (requirement '(file-systems))
+   (one-shot? #t)
+   (start (with-imported-modules '((guix build utils))
+            #~(lambda ()
+                (let ((mkdirp-user-home
+                       (lambda (dir uid gid)
+                         (mkdir-p dir)
+                         (chmod dir #o700)
+                         (chown dir uid gid))))
+                  (for-each
+                   (lambda (user-home)
+                     (let* ((pw (getpwnam (car user-home)))
+                            (uid (passwd:uid pw))
+                            (gid (passwd:gid pw))
+                            (home (cdr user-home)))
+                       (mkdirp-user-home home uid gid)
+                       (for-each
+                        (lambda (state-dir)
+                          (mkdirp-user-home (string-append state-dir home) uid gid))
+                        '#$state-dirs)))
+                   '#$user-homes))
+                #t)))))
+
+(define (activate-home-shepherd-services hes)
+  (let ((svc
+         (lambda (user he)
+           (shepherd-service
+            (provision (list (symbol-append 'stateless-home- (string->symbol user))))
+            (requirement '(stateless-user-homes))
+            (one-shot? #t)
+            (start #~(make-forkexec-constructor
+                      '(#$(file-append he "/activate"))
+                      #:user #$user
+                      #:group (group:name (getgrgid (passwd:gid (getpw #$user))))
+                      #:log-file (string-append "/var/log/stateless-home-" #$user ".log")
+                      #:environment-variables
+                      (list (string-append "HOME=" (passwd:dir (getpw #$user))))))
+            (stop #~(make-kill-destructor))))))
+    (map (match-lambda
+           ((user . he)
+            (svc user he)))
+         hes)))
+#+end_src
+******* Service type
+#+begin_src scheme
+(define stateless-service-type
+  (service-type
+   (name 'stateless)
+   (extensions
+    (list (service-extension boot-service-type
+                             (const populate-gexp))
+          (service-extension activation-service-type
+                             (lambda (config)
+                               (stateless:activate-gexp
+                                `',(assoc-ref config #:state)
+                                ""
+                                (assoc-ref config #:persist-dir)
+                                (assoc-ref config #:machine-dir))))
+          (service-extension shepherd-root-service-type
+                             (lambda (config)
+                               (cons* (user-homes-shepherd-service
+                                       (assoc-ref config #:homes)
+                                       (list
+                                        (assoc-ref config #:persist-dir)
+                                        (assoc-ref config #:machine-dir)))
+                                      (activate-home-shepherd-services
+                                       (assoc-ref config #:hes)))))
+          (service-extension profile-service-type
+                             (lambda (config)
+                               (list (stateless:diff-tool-package
+                                      "stateless-diff"
+                                      `',(assoc-ref config #:state)
+                                      `',(assoc-ref config #:ignore)
+                                      "/"
+                                      (assoc-ref config #:persist-dir)
+                                      (assoc-ref config #:machine-dir)))))))
+   (compose identity)
+   (extend stateless:extend-proc)
+   (description "Initialize a stateless system.")))
 #+end_src
 *** Hardware-specific
 **** Console
@@ -1201,7 +1244,6 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
-  ;; #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
@@ -1410,14 +1452,13 @@ Make the power key suspend instead of power off. It's part of they keyboard on M
                              (lambda (config)
                                (list (stateless:diff-tool-package
                                       "home-stateless-diff"
-                                      (stateless:diff-tool-program
-                                       #~(#$state-with-home-expansions '#$(assoc-ref config #:state))
-                                       #~(#$ignore-with-home-expansions '#$(assoc-ref config #:ignore))
-                                       homedir-gexp
-                                       (assoc-ref config #:persist-dir)
-                                       (assoc-ref config #:machine-dir)
-                                       #:additional-known
-                                       guix-home-files)))))))
+                                      #~(#$state-with-home-expansions '#$(assoc-ref config #:state))
+                                      #~(#$ignore-with-home-expansions '#$(assoc-ref config #:ignore))
+                                      homedir-gexp
+                                      (assoc-ref config #:persist-dir)
+                                      (assoc-ref config #:machine-dir)
+                                      #:additional-known
+                                      guix-home-files))))))
    (compose identity)
    (extend stateless:extend-proc)
    (description "Initialize a stateless home.")))
@@ -6478,11 +6519,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module (guix packages)
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
-  #:export (persist-dir
-            machine-dir
-            extend-proc
+  #:export (extend-proc
             activate-gexp
-            diff-tool-program
             diff-tool-package))
 
 (define state-dir-lookup
@@ -6503,11 +6541,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                (any (lambda (state-dir)
                       (string-prefix? state-dir (readlink file)))
                     state-dirs))))))
-#+end_src
-*** Variables
-#+begin_src scheme
-(define persist-dir "/.persist")
-(define machine-dir "/.machine")
 #+end_src
 *** Extend procedure
 #+begin_src scheme
@@ -6724,24 +6757,19 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 #+end_src
 **** Package
 #+begin_src scheme
-(define (diff-tool-package bin-name program)
+(define* (diff-tool-package bin-name #:rest opts)
   (package
+    (inherit blank-package)
     (name "stateless-diff-tool")
-    (version "0")
-    (source program)
+    (source (apply diff-tool-program opts))
     (build-system trivial-build-system)
     (arguments
-     `(#:modules ((guix build utils))
-       #:builder
+     `(#:builder
        ,#~(begin
-            (use-modules ((guix build utils) #:select (mkdir-p)))
             (let* ((bin (string-append #$output "/bin")))
-              (mkdir-p bin)
-              (symlink #$source (string-append bin "/" #$bin-name))))))
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
+              (mkdir #$output)
+              (mkdir bin)
+              (symlink #$source (string-append bin "/" #$bin-name))))))))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -6760,6 +6788,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             ->
             ->>
             as->
+            blank-package
             with-git-version
             with-git-commit
             with-git-url))
@@ -6813,6 +6842,17 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 #+end_src
 ** Guix
 #+begin_src scheme
+(define blank-package
+  (package
+    (name #f)
+    (version "0")
+    (source #f)
+    (build-system #f)
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
+
 (define* (with-git pkg
                    #:key
                    upstream-version
@@ -7089,34 +7129,28 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
-  #:use-module (ebullient home)
+  #:use-module ((ebullient home) #:prefix home:)
   #:use-module (ebullient install)
-  #:use-module (ebullient system)
+  #:use-module ((ebullient system) #:prefix system:)
   #:use-module (ebullient utils)
-  #:use-module ((ebullient stateless) #:select (persist-dir machine-dir) #:prefix stateless:)
-  #:use-module (exuberant he)
-  #:use-module (exuberant os)
-  #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (append-map))
+  #:use-module ((exuberant he) #:prefix he:)
+  #:use-module ((exuberant os) #:prefix os:)
   #:export (frostfire
             installer
             primary
             aux
             guest))
 
-(define* (os* #:key
-              primary-name
-              aux-name
-              guest-name
-              stateless-users
-              bluetooth?)
-  (with-shared-opts
-   os-base
-   blank-os
+(define* (os-base #:key
+                  primary-name
+                  aux-name
+                  guest-name
+                  bluetooth?)
+  (apply
+   os:os-base
+   system:blank-os
    #:source? #t
    #:source-path "/.persist/home/pharcosyle/phrenetic_for_now"
-   #:host-name "frostfire"
-   #:timezone "America/Los_Angeles"
    #:users-info `(((#:name . ,primary-name)
                    (#:comment . "Krzysztof Baranowski")
                    (#:admin? . #t)
@@ -7129,9 +7163,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                    (#:comment . "Speak Friend and Enter")
                    (#:password . "mellon")
                    (#:admin? . #t))) ; TODO remove this
-   #:disk-encryption? #t
-   #:luks-uuid "<<frostfire-luks-uuid>>"
-   #:stateless-users stateless-users
    #:kmonad? #t
    #:kmonad-users (list primary-name
                         aux-name)
@@ -7141,65 +7172,108 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                            guest-name)
    ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
    #:sessions '(#:session/gnome
-                #:session/sway)))
+                #:session/sway)
+   os+he-shared-opts))
+
 
 (define* (primary-he)
-  (create-he
-   (with-shared-opts
-    he-base
+  (home:create-he
+   (apply
+    he:he-base
     #:email "pharcosyle@gmail.com"
     #:developer? #t
     #:kmonad? #t
-    #:sessions '(#:session/sway))))
+    #:sessions '(#:session/sway)
+    he-shared-opts)))
 
 (define aux-he primary-he)
 
 (define (guest-he)
-  (create-he
-   (with-shared-opts he-base)))
+  (home:create-he
+   (apply he:he-base he-shared-opts)))
 
-(define shared-opts
-  `((#:stateless? . #t)
-    (#:stateless-persist-dir . ,stateless:persist-dir)
-    (#:stateless-machine-dir . ,stateless:machine-dir)
-    (#:nix? . #t)
-    (#:console? . #t)
-    (#:desktop? . #t)
-    (#:pipewire? . #t)
-    (#:gdm? . #t)))
 
-(define* (with-shared-opts f #:rest opts)
-  (->> (append-map (match-lambda
-                     ((k . v)
-                      (list k v)))
-                   shared-opts)
-       (append opts)
-       (apply f)))
+(define nix? #t)
+(define stateless? #t)
+(define stateless-persist-dir os:stateless-persist-dir)
+(define stateless-machine-dir os:stateless-machine-dir)
 
+(define os+he-shared-opts
+  `(#:stateless? ,stateless?
+    #:nix? ,nix?
+    #:console? #t
+    #:desktop? #t
+    #:pipewire? #t
+    #:gdm? #t))
+
+(define he-shared-opts
+  (append
+   os+he-shared-opts
+   `(#:stateless-persist-dir ,stateless-persist-dir
+     #:stateless-machine-dir ,stateless-machine-dir)))
+
+
+(define efi? #t)
+(define boot-label os:boot-label)
+(define boot-target os:efi-boot-target)
+(define filesystem #:filesystem/btrfs)
+(define root-label os:root-label)
+(define mountables (os:stateless-mountables
+                    #:persist-dir stateless-persist-dir
+                    #:machine-dir stateless-machine-dir
+                    #:nix? nix?))
+(define btrfs-mount-flags #f) ; TODO os:btrfs-mount-flags
+(define btrfs-mount-options os:btrfs-mount-options)
+(define disk-encryption? #t)
+(define luks-label os:luks-label)
+
+
+(define frostfire
+  (let ((primary-name "pharcosyle")
+        (aux-name "pcoulson")
+        (guest-name "gandalf")
+        (bluetooth? #t))
+    (-> (os-base #:primary-name primary-name
+                 #:aux-name aux-name
+                 #:guest-name guest-name
+                 #:bluetooth? bluetooth?)
+        (os:with-host-info #:host-name "frostfire"
+                           #:timezone "America/Los_Angeles")
+        (os:with-bootloader #:efi? efi?
+                            #:boot-label boot-label
+                            #:boot-target boot-target)
+        (os:with-filesystems #:filesystem filesystem
+                             #:root-label root-label
+                             #:mountables mountables
+                             #:btrfs-mount-flags btrfs-mount-flags
+                             #:btrfs-mount-options btrfs-mount-options
+                             #:disk-encryption? disk-encryption?
+                             #:luks-label luks-label
+                             #:luks-uuid "<<frostfire-luks-uuid>>"
+                             #:stateless? stateless?
+                             #:stateless-persist-dir stateless-persist-dir
+                             #:stateless-machine-dir stateless-machine-dir
+                             #:stateless-users `((,primary-name . ,(primary-he))
+                                                 (,aux-name . ,(aux-he))
+                                                 (,guest-name . ,(guest-he))))
+        (os:with-macbook-hardware #:bluetooth? bluetooth?))))
+
+(define installer
+  (installer-package #:os-name "frostfire"
+                     #:efi? efi?
+                     #:boot-label boot-label
+                     #:boot-target boot-target
+                     #:root-label root-label
+                     #:disk-encryption? disk-encryption?
+                     #:luks-label luks-label
+                     #:filesystem filesystem
+                     #:mountables mountables
+                     #:btrfs-mount-flags btrfs-mount-flags
+                     #:btrfs-mount-options btrfs-mount-options))
 
 (define primary (primary-he))
 (define aux (aux-he))
 (define guest (guest-he))
-
-(define bluetooth? #t)
-
-(define (os)
-  (let ((primary-name "pharcosyle")
-        (aux-name "pcoulson")
-        (guest-name "gandalf"))
-    (os* #:primary-name primary-name
-         #:aux-name aux-name
-         #:guest-name guest-name
-         #:stateless-users `((,primary-name . ,primary)
-                             (,aux-name . ,aux)
-                             (,guest-name . ,guest))
-         #:bluetooth? bluetooth?)))
-
-(define frostfire
-  (os-with-macbook-hardware (os) #:bluetooth? bluetooth?))
-
-(define installer
-  (installer-package))
 
 frostfire
 #+end_src
@@ -7345,23 +7419,26 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
   #:export (os-base
-            os-with-macbook-hardware))
+            with-host-info
+            with-bootloader
+            with-filesystems
+            with-macbook-hardware
+            boot-label
+            efi-boot-target
+            root-label
+            btrfs-mount-flags
+            btrfs-mount-options
+            luks-label
+            stateless-mountables
+            stateless-persist-dir
+            stateless-machine-dir))
 
 (define* (os-base os
                   #:key
+                  stateless?
                   source?
                   source-path
-                  host-name
-                  timezone
-                  locale
                   users-info
-                  disk-encryption?
-                  luks-uuid
-                  stateless?
-                  stateless-persist-dir
-                  stateless-machine-dir
-                  stateless-users
-                  stateless-hes
                   nix?
                   console?
                   kmonad?
@@ -7373,71 +7450,122 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                   gdm?
                   gdm-auto-login
                   sessions)
-    (-> os
-       (as-> $
-         (if source?
-             (source $ #:path source-path) $))
-       (host-info #:host-name host-name
-                  #:timezone timezone
-                  #:locale locale)
-       grub-efi
-       base-services
-       nss
-       (accounts #:users-info users-info)
-       nonguix-substitutes
-       linux-nonfree
-       (as-> $
-         (if nix?
-             (nix $) $)
-         (if console?
-             (-> $
-                 hidpi-console-font
-                 (as-> $
-                   (if kmonad?
-                       (kmonad-tool $ #:who kmonad-users) $)))
-             $)
-         (if desktop?
-             (-> $
-                 desktop-services
-                 (as-> $
-                   (if pipewire?
-                       (pipewire-multimedia $) $)
-                   (network-manager $ #:stateless? stateless?)
-                   (if bluetooth?
-                       (bluetooth $ #:who bluetooth-users
-                                  #:stateless? stateless?)
-                       $)
-                   (if gdm?
-                       (gdm $ #:auto-login (if disk-encryption?
-                                               gdm-auto-login #f)))
-                   (if (member #:session/gnome (or sessions '()))
-                       (gnome-desktop $) $)
-                   (if (member #:session/sway (or sessions '()))
-                       (sway-wm $) $)))
-             $)
-         (let* ((persist-dir stateless-persist-dir)
-                (machine-dir stateless-machine-dir)
-                (subvols (btrfs-subvols #:stateless? stateless?
-                                        #:persist-dir persist-dir
-                                        #:machine-dir machine-dir
-                                        #:nix? nix?)))
-           (-> $
-               (btrfs #:subvols subvols)
-               (as-> $
-                 (if disk-encryption?
-                     (disk-encryption $ #:source-uuid luks-uuid
-                                      #:encrypted-mount-points (map cdr subvols))
-                     $)
-                 (if stateless?
-                     (stateless $ #:persist-dir persist-dir
-                                #:machine-dir machine-dir
-                                #:who stateless-users)
-                     $)))))))
+  (-> os
+      (as-> $
+        (if source?
+            (source $ #:path source-path) $))
+      base-services
+      nss
+      (accounts #:users-info users-info)
+      nonguix-substitutes
+      linux-nonfree
+      (as-> $
+        (if nix?
+            (nix $) $)
+        (if console?
+            (-> $
+                hidpi-console-font
+                (as-> $
+                  (if kmonad?
+                      (kmonad-tool $ #:who kmonad-users) $)))
+            $)
+        (if desktop?
+            (-> $
+                desktop-services
+                (as-> $
+                  (if pipewire?
+                      (pipewire-multimedia $) $)
+                  (network-manager $ #:stateless? stateless?)
+                  (if bluetooth?
+                      (bluetooth $ #:who bluetooth-users
+                                 #:stateless? stateless?)
+                      $)
+                  (if gdm?
+                      (gdm $ #:auto-login gdm-auto-login))
+                  (if (member #:session/gnome (or sessions '()))
+                      (gnome-desktop $) $)
+                  (if (member #:session/sway (or sessions '()))
+                      (sway-wm $) $)))
+            $))))
 
-(define* (os-with-macbook-hardware os #:key bluetooth?)
+(define with-host-info host-info)
+
+(define* (with-bootloader os
+                          #:key
+                          efi?
+                          boot-label
+                          boot-target)
+  ((if efi?
+       grub-efi
+       ;; grub
+       )
+   os
+   #:label boot-label
+   #:target boot-target))
+
+(define* (with-filesystems os
+                           #:key
+                           filesystem
+                           root-label
+                           mountables
+                           btrfs-mount-flags
+                           btrfs-mount-options
+                           disk-encryption?
+                           luks-label
+                           luks-uuid
+                           stateless?
+                           stateless-persist-dir
+                           stateless-machine-dir
+                           stateless-users)
+  (as-> os $
+    (case filesystem
+      ;; ((#:filesystem/ext4)
+      ;;  (ext4 $ #:label root-label))
+      ((#:filesystem/btrfs)
+       (btrfs $ #:label root-label
+              #:subvols mountables
+              #:flags btrfs-mount-flags
+              #:options btrfs-mount-options)))
+    (if disk-encryption?
+        (disk-encryption $ #:label luks-label
+                         #:source-uuid luks-uuid
+                         #:encrypted-mount-points (case filesystem
+                                                    ;; ((#:filesystem/ext4)
+                                                    ;;  ...)
+                                                    ((#:filesystem/btrfs)
+                                                     (map cdr mountables))))
+        $)
+    (if stateless?
+        (stateless $ #:persist-dir stateless-persist-dir
+                   #:machine-dir stateless-machine-dir
+                   #:who stateless-users)
+        $)))
+
+(define* (with-macbook-hardware os #:key bluetooth?)
   (-> os
       (console-keyboard-layouts #:kb-layout macbook-kb-layout)
       (macbook #:bluetooth? bluetooth?)))
+
+
+(define boot-label "genesis")
+(define efi-boot-target "/boot/efi")
+(define root-label "firmament")
+(define btrfs-mount-flags '(no-atime))
+(define btrfs-mount-options '("compress=zstd" "autodefrag"))
+(define luks-label "ciphered")
+(define* (stateless-mountables #:key persist-dir machine-dir nix?)
+  (append
+   `(("root-blank" . "/")
+     ("boot" . "/boot")
+     ("guix-store" . "/gnu/store")
+     ("guix-var" . "/var/guix")
+     ("log" . "/var/log")
+     ("persist" . ,persist-dir)
+     ("machine" . ,machine-dir))
+   (if nix?
+       '(("nix" . "/nix")) '())))
+(define stateless-persist-dir "/.persist")
+(define stateless-machine-dir "/.machine")
 #+end_src
 ** Home environments
 #+begin_src scheme :tangle (meta-in-dir "he.scm")
@@ -8331,6 +8459,7 @@ The default git config on my Guix system.
   - an alternative approach to setting up geiser for a project: [[https://github.com/guix-mirror/guix/blob/master/.dir-locals.el#L21][guix/.dir-locals.el at master · guix-mirror/guix · GitHub]]
     Maybe try that or something like it.
     - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
+      - update [2022-08-31 Wed]: the .dir-locals approach isn't recommended any more?: https://github.com/flatwhatson/flycheck-guile/commit/e58ceb8b511cd395b9be69f4a1ff85305fbb51c3
   - update [2022-03-26 Sat]: this won't work as-is any more
     I have multiple directories to load (ebullient, exuberant...)
 #+begin_src elisp :tangle (meta-in-dir ".dir-locals.el")
