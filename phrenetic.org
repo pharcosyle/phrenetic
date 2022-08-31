@@ -98,8 +98,6 @@ umount /mnt
 #+end_src
 *** Mount
 #+begin_src sh
-mount -o subvol=root,compress=zstd,autodefrag $crypt_mapping /mnt
-
 mkdir /mnt/boot
 mount -o subvol=boot,compress=zstd,autodefrag $crypt_mapping /mnt/boot
 mkdir -p /mnt/gnu/store
