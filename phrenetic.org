@@ -67,7 +67,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages cryptsetup) #:select (cryptsetup))
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
-  #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
+  #:use-module ((gnu packages linux) #:select (btrfs-progs e2fsprogs util-linux+udev))
   #:use-module ((gnu packages package-management) #:select (guix))
   #:use-module (ebullient utils)
   #:export (installer-package))
@@ -85,7 +85,9 @@ Run with ~sudo~.
                             filesystem
                             mountables
                             btrfs-mount-flags
-                            btrfs-mount-options)
+                            btrfs-mount-options
+                            swapfile
+                            swapfile-size)
   (program-file
    "installer"
    #~(begin
@@ -206,6 +208,14 @@ Run with ~sudo~.
            (mkdirp-cmd boot-target-on-mount)
            (cmd mount-bin boot-partition boot-target-on-mount)))
 
+       (let ((swapfile-on-mount (string-append mount-dir #$swapfile)))
+         (cmd #$(file-append coreutils "/bin/truncate") "--size" "0" swapfile-on-mount)
+         (when (eq? #$filesystem #:filesystem/btrfs)
+           (cmd #$(file-append e2fsprogs "/bin/chattr") "+C" swapfile-on-mount))
+         (cmd #$(file-append util-linux+udev "/bin/fallocate") "--length" #$swapfile-size swapfile-on-mount)
+         (chmod swapfile-on-mount #o600)
+         (cmd #$(file-append util-linux+udev "/sbin/mkswap") swapfile-on-mount))
+
        (let ((source-dir "/etc/config-source"))
          (cmd #$(file-append guix "/bin/guix") "time-machine"
               (string-append "--channels=" source-dir "/exuberant/channels-lock")
@@ -322,6 +332,7 @@ Run with ~sudo~.
             grub-efi
             btrfs
             disk-encryption
+            swap
             stateless
             console-keyboard-layouts
             macbook
@@ -704,6 +715,15 @@ Must succeed "File systems" component.
                                         (file-system-dependencies fs))))
                  fs))
            (operating-system-file-systems os))))))
+#+end_src
+***** Swap
+Must succeed "File systems" component. No dependencies are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
+#+begin_src scheme
+(define-system-comp (swap #:key swapfile)
+  (swap-devices
+   (list
+    (swap-space
+     (target swapfile)))))
 #+end_src
 ***** Stateless
 Must succeed "File systems" and "Accounts" components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
@@ -1909,14 +1929,14 @@ index 566fc1f03d..1cb4d5dac0 100644
      (origin
        (inherit (package-source emacs))
        (patches
-        (->>(-> emacs package-source origin-patches)
-            (remove
-             (lambda (patch)
-               (string-suffix? "emacs-source-date-epoch.patch" patch)))
-            (cons
-             "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
-             ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch" ; (local-file "patches/emacs-source-date-epoch.patch") ; TODO why isn't this working with local-file?
-             )))))))
+        (->> (-> emacs package-source origin-patches)
+             (remove
+              (lambda (patch)
+                (string-suffix? "emacs-source-date-epoch.patch" patch)))
+             (cons
+              "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
+              ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch" ; (local-file "patches/emacs-source-date-epoch.patch") ; TODO why isn't this working with local-file?
+              )))))))
 #+end_src
 ****** Patch
 #+begin_src diff :tangle (meta-in-dir "patches/emacs-source-date-epoch.patch")
@@ -7225,6 +7245,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define btrfs-mount-options os:btrfs-mount-options)
 (define disk-encryption? #t)
 (define luks-label os:luks-label)
+(define swapfile (os:stateless-swapfile stateless-machine-dir))
 
 
 (define frostfire
@@ -7249,6 +7270,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                              #:disk-encryption? disk-encryption?
                              #:luks-label luks-label
                              #:luks-uuid "<<frostfire-luks-uuid>>"
+                             #:swapfile swapfile
                              #:stateless? stateless?
                              #:stateless-persist-dir stateless-persist-dir
                              #:stateless-machine-dir stateless-machine-dir
@@ -7268,7 +7290,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                      #:filesystem filesystem
                      #:mountables mountables
                      #:btrfs-mount-flags btrfs-mount-flags
-                     #:btrfs-mount-options btrfs-mount-options))
+                     #:btrfs-mount-options btrfs-mount-options
+                     #:swapfile swapfile
+                     #:swapfile-size "24G"))
 
 (define primary (primary-he))
 (define aux (aux-he))
@@ -7430,7 +7454,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
             luks-label
             stateless-mountables
             stateless-persist-dir
-            stateless-machine-dir))
+            stateless-machine-dir
+            stateless-swapfile))
 
 (define* (os-base os
                   #:key
@@ -7512,6 +7537,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                            disk-encryption?
                            luks-label
                            luks-uuid
+                           swapfile
                            stateless?
                            stateless-persist-dir
                            stateless-machine-dir
@@ -7534,6 +7560,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
                                                     ((#:filesystem/btrfs)
                                                      (map cdr mountables))))
         $)
+    (swap $ #:swapfile swapfile)
     (if stateless?
         (stateless $ #:persist-dir stateless-persist-dir
                    #:machine-dir stateless-machine-dir
@@ -7563,6 +7590,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        '(("nix" . "/nix")) '())))
 (define stateless-persist-dir "/.persist")
 (define stateless-machine-dir "/.machine")
+(define (stateless-swapfile machine-dir)
+  (string-append machine-dir "/.swap"))
 #+end_src
 ** Home environments
 #+begin_src scheme :tangle (meta-in-dir "he.scm")
