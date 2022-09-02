@@ -722,7 +722,6 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
         (map (lambda (fs)
                (if (member (file-system-mount-point fs)
                            `("/var/guix"
-                             "/var/log"
                              ,persist-dir
                              ,machine-dir))
                    (file-system
@@ -767,12 +766,14 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
 ****** Service
 ******* Populate
 #+begin_src scheme
-(define populate-gexp
+(define (populate-gexp log-state-dir)
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
-                            '((gnu build install)))
+                            '((guix build utils)
+                              (gnu build install)))
       #~(begin
-          (use-modules ((gnu build install) #:select (populate-root-file-system)))
+          (use-modules ((guix build utils) #:select (mkdir-p))
+                       ((gnu build install) #:select (populate-root-file-system)))
 
           (let* ((system-path "/var/guix/profiles/system")
                  (system-1-path "/var/guix/profiles/system-1-link")
@@ -784,7 +785,13 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
             (populate-root-file-system system-1-link ""
                                        #:extras `((,system-path -> ,system-link)))
             (unless system-1-exists?
-              (delete-file system-1-path)))))))
+              (delete-file system-1-path)))
+
+          (let* ((dir "/var/log")
+                 (state-dir (string-append #$log-state-dir dir)))
+            (rmdir dir) ; It already exists, created by `populate-root-file-system'.
+            (mkdir-p state-dir)
+            (symlink state-dir dir))))))
 #+end_src
 ******* Users
 #+begin_src scheme
@@ -841,7 +848,8 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
    (name 'stateless)
    (extensions
     (list (service-extension boot-service-type
-                             (const populate-gexp))
+                             (lambda (config)
+                               (populate-gexp (assoc-ref config #:machine-dir))))
           (service-extension activation-service-type
                              (lambda (config)
                                (stateless:activate-gexp
@@ -7549,7 +7557,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
    `(("boot" . "/boot")
      ("guix-store" . "/gnu/store")
      ("guix-var" . "/var/guix")
-     ("log" . "/var/log")
      ("persist" . ,persist-dir)
      ("machine" . ,machine-dir))
    (if nix?
