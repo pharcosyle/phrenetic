@@ -4,7 +4,6 @@
 
 * Table of Contents :TOC:
 - [[#meta][Meta]]
-  - [[#path-hierarchy][Path hierarchy]]
 - [[#install][Install]]
   - [[#program][Program]]
   - [[#package][Package]]
@@ -36,14 +35,9 @@
   - [[#emacs-directory-local-variables][Emacs directory-local variables]]
 
 * Meta
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "meta.el")
-:END:
-#+begin_src elisp
+#+begin_src elisp :tangle (meta-in-dir "meta.el")
 ;;; -*- lexical-binding: t; -*-
-#+end_src
-** Path hierarchy
-#+begin_src elisp
+
 (setq meta--base-dir ".")
 
 (defun meta-get-dir ()
