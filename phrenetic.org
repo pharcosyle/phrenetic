@@ -622,7 +622,10 @@ Must succeed "Accounts" component.
 #+end_src
 **** File systems and boot
 ***** Bootloader
-****** COMMENT Grub
+****** Grub
+#+begin_src scheme
+;; ...
+#+end_src
 ****** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key
@@ -640,15 +643,15 @@ Must succeed "Accounts" component.
           (operating-system-file-systems os))))
 #+end_src
 ***** File systems
-****** COMMENT Ext4
+****** Ext4
 #+begin_src scheme
-(define-system-comp (ext4 #:key label)
-  (file-systems
-   (cons* (file-system
-            (device (file-system-label label))
-            (mount-point "/")
-            (type "ext4"))
-          (operating-system-file-systems os))))
+;; (define-system-comp (ext4 #:key label)
+;;   (file-systems
+;;    (cons* (file-system
+;;             (device (file-system-label label))
+;;             (mount-point "/")
+;;             (type "ext4"))
+;;           (operating-system-file-systems os))))
 #+end_src
 ****** Btrfs
 #+begin_src scheme
@@ -703,8 +706,7 @@ Must succeed "File systems" component.
            (operating-system-file-systems os))))))
 #+end_src
 ***** Stateless
-Must succeed "File systems" and "Accounts" components. Probably should succeed /all/ other components.
-- The stateless service should come after base/desktop services (potentially others as well) so its state gets installed before theirs during activation. To this end the ~stateless-service-type~ is appended, not prepended, to operating system services.
+Must succeed "File systems" and "Accounts" components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
 #+begin_src scheme
 (define-system-comp (stateless #:key
                                persist-dir
@@ -1189,7 +1191,7 @@ index d13fb98..97ae2a6 100644
  
 #+end_src
 ***** Power key
-Make the power key suspend instead of power off. It's part of they keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
+Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
 #+begin_src scheme
 (define-system-comp (macbook-power-key)
   (services
@@ -1820,8 +1822,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages gcc) #:select (gcc-12))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (remove))
-  #:export (;; emacs-fully-loaded
-            emacs-fully-loaded-pgtk))
+  #:export (emacs-fully-loaded-pgtk))
 
 (define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
@@ -6520,7 +6521,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
           ((#:persist) persist-dir)
           ((#:machine) machine-dir)))))
 
-(define symlink-to-state-fn
+(define symlink-to-state?
   (with-imported-modules '((guix build utils))
     #~(lambda (state-dirs)
         (lambda (file)
@@ -6596,8 +6597,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                      (mkdir-p (dirname backup-file))
                      (rename-file file backup-file)))))
             (when (no-follow-file-exists? target)
-              (if ((#$symlink-to-state-fn (list #$persist-dir
-                                                #$machine-dir))
+              (if ((#$symlink-to-state? (list #$persist-dir
+                                              #$machine-dir))
                    target)
                   (delete-file target)
                   (begin
@@ -6708,8 +6709,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                 (if (string-suffix? "/" path)
                                     (string-drop-right path 1) path))
                               (state->paths #$state))
-                         (#$symlink-to-state-fn (list #$persist-dir
-                                                      #$machine-dir)))
+                         (#$symlink-to-state? (list #$persist-dir
+                                                    #$machine-dir)))
              (make-known-files+dirs #$ignore)
              (or #$additional-known '()))))
 
