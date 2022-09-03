@@ -2196,7 +2196,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 #+begin_src scheme
 (define* (he-doom #:key
                   stateless?
-                  console?
+                  desktop?
                   (doom-private (local-file "doom-private" #:recursive? #t))
                   email
                   theme
@@ -2226,7 +2226,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   "params.el"
                   (serialize-elisp-config
                    #f
-                   `((setq param-console? ,(if console? 't 'nil)
+                   `((setq param-desktop? ,(if desktop? 't 'nil)
                            param-email ,email
                            param-theme ,(symbol-append ': (keyword->symbol theme))
                            param-font-name ,(assoc-ref font #:font/name)
@@ -4427,7 +4427,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (after! evil
   (map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
 
-  (when param-console?
+  (when param-desktop?
     (defun biome--set-theme-cursor-color-symbols ()
       (put 'cursor 'evil-normal-color (biome--color :gold))
       (put 'cursor 'evil-emacs-color  (biome--color :pink)))
@@ -4527,7 +4527,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
   (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
   :config
   (set-ligatures! 'clojure-mode :lambda "fn")
-  (when param-console?
+  (when param-desktop?
     (custom-theme-set-faces! biome--nuclear-theme
       `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))))
 #+end_src
@@ -4568,7 +4568,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
         org-priority-lowest ?E
         org-priority-default ?C)
 
-  (when param-console?
+  (when param-desktop?
     (setq org-priority-faces `((?A . ,(doom-color 'red))
                                (?B . ,(doom-color 'orange))
                                (?C . ,(doom-color 'blue))
@@ -4686,7 +4686,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******** rainbow-delimiters :theming:
 #+begin_src elisp
-(when param-console?
+(when param-desktop?
   (after! rainbow-delimiters
     (let ((default-max rainbow-delimiters-max-face-count))
       (defun biome-set-rainbow-delimiters-max-face-count ()
@@ -4778,7 +4778,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ****** Theming :theming:
 #+begin_src elisp
-(when param-console?
+(when param-desktop?
   (setq doom-theme
         (pcase param-theme
           (:theme/light 'doom-one-light)
@@ -4790,7 +4790,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******* Font
 #+begin_src elisp
-(when param-console?
+(when param-desktop?
   (defun biome--set-font-safe (sym font)
     (when (find-font font)
       (set sym font)))
@@ -6658,7 +6658,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
          (append
           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
           (he-doom #:stateless? stateless?
-                   #:console? console?
+                   #:desktop? desktop?
                    #:email email
                    #:theme theme
                    #:font font-mono
