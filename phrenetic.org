@@ -1455,16 +1455,16 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-git
             he-ssh
             he-direnv
-            he-fonts
-            font-mono
-            font-sans
-            font-serif
-            font-unicode
             he-kmonad
             he-xdg
             he-mesa
             he-gtk
             he-desktop-packages
+            he-fonts
+            font-mono
+            font-sans
+            font-serif
+            font-unicode
             he-pipewire
             he-flatpak
             he-gdm
@@ -5398,54 +5398,6 @@ Probably move these to ~after!~ blocks
                      (#:store . #:persist)))))))))
 #+end_src
 *** Console
-**** Fonts
-#+begin_src scheme
-(define* (he-fonts #:key
-                   stateless?
-                   fonts
-                   (extra-font-packages (list font-noto-color-emoji
-                                              font-liberation)))
-  (list
-   (simple-service
-    'fonts-add-packages
-    home-profile-service-type
-    (append
-     (map (lambda (font)
-            (assoc-ref font #:font/package))
-          fonts)
-     extra-font-packages))
-
-   (when stateless?
-     (simple-service
-      'fonts-stateless
-      home-stateless-service-type
-      '((#:state . (((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
-                     (#:store . #:machine)))))))))
-
-(define font-size 10)
-
-(define font-mono
-  `((#:font/name . "Source Code Pro")
-    (#:font/size . ,font-size)
-    (#:font/weight . ,'medium)
-    (#:font/package . ,font-adobe-source-code-pro)))
-
-(define font-sans
-  `((#:font/name . "Iosevka Aile")
-    (#:font/size . ,font-size)
-    (#:font/package . ,font-iosevka-aile)))
-
-(define font-serif
-  `((#:font/name . "Iosevka Etoile")
-    (#:font/package . ,font-iosevka-etoile)))
-
-(define font-unicode
-  `((#:font/name . "Unifont")
-    (#:font/package . ,font-gnu-unifont)))
-#+end_src
-***** TODO [#D] Alternative fonts
-- =font-unifont-gnu= sucks, find a replacement?
-- Try out =font-adobe-source-sans-pro= in place of =font-iosevka-aile=?
 **** KMonad
 #+begin_src scheme
 (define* (he-kmonad #:key
@@ -5511,6 +5463,54 @@ Probably move these to ~after!~ blocks
     home-profile-service-type
     packages)))
 #+end_src
+**** Fonts
+#+begin_src scheme
+(define* (he-fonts #:key
+                   stateless?
+                   fonts
+                   (extra-font-packages (list font-noto-color-emoji
+                                              font-liberation)))
+  (list
+   (simple-service
+    'fonts-add-packages
+    home-profile-service-type
+    (append
+     (map (lambda (font)
+            (assoc-ref font #:font/package))
+          fonts)
+     extra-font-packages))
+
+   (when stateless?
+     (simple-service
+      'fonts-stateless
+      home-stateless-service-type
+      '((#:state . (((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
+                     (#:store . #:machine)))))))))
+
+(define font-size 10)
+
+(define font-mono
+  `((#:font/name . "Source Code Pro")
+    (#:font/size . ,font-size)
+    (#:font/weight . ,'medium)
+    (#:font/package . ,font-adobe-source-code-pro)))
+
+(define font-sans
+  `((#:font/name . "Iosevka Aile")
+    (#:font/size . ,font-size)
+    (#:font/package . ,font-iosevka-aile)))
+
+(define font-serif
+  `((#:font/name . "Iosevka Etoile")
+    (#:font/package . ,font-iosevka-etoile)))
+
+(define font-unicode
+  `((#:font/name . "Unifont")
+    (#:font/package . ,font-gnu-unifont)))
+#+end_src
+***** TODO [#D] Alternative fonts
+- =font-unifont-gnu= sucks, find a replacement?
+- Try out =font-adobe-source-sans-pro= in place of =font-iosevka-aile=?
 **** XDG
 #+begin_src scheme
 (define* (he-xdg
@@ -6651,14 +6651,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                      #:shell interactive-shell))
          '())
      (if console?
-         (append
-          (he-fonts #:stateless? stateless?
-                    #:fonts (list font-mono
-                                  font-sans
-                                  font-serif
-                                  font-unicode))
-          (if kmonad?
-              (he-kmonad) '()))
+         (if kmonad?
+             (he-kmonad) '())
          '())
      (if desktop?
          (append
@@ -6669,6 +6663,11 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                 (sway? (member #:session/sway (or sessions '()))))
             (append
              (he-desktop-packages)
+             (he-fonts #:stateless? stateless?
+                       #:fonts (list font-mono
+                                     font-sans
+                                     font-serif
+                                     font-unicode))
              (he-xdg #:stateless? stateless?)
              (he-gtk #:stateless? stateless?
                      #:theme theme
