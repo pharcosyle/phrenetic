@@ -5134,17 +5134,6 @@ Probably move these to ~after!~ blocks
   :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
                     "://"))
 #+end_src
-****** Out-of-band
-Useful for making quick configuration additions if the the active Doomdir isn't writable (for example if it's symlinked to the Guix store).
-#+begin_src elisp :var oob-dir=(meta-get-dir)
-(let ((oob-dir (concat "~/work/phrenetic/" oob-dir))) ; TODO currently `meta-get-dir' returns a path relative to the phrenetic dir. That might change but regardless don't hardcode the path here eventually.
-  (let* ((file "out-of-band"))
-    (or (load (concat oob-dir "/" file) 'noerror 'nomessage)
-        (load! file nil 'noerror))))
-#+end_src
-******* File
-#+begin_src elisp :tangle (meta-in-dir "out-of-band.el")
-#+end_src
 ***** Packages :version:
 #+begin_src elisp :tangle (meta-in-dir "packages.el")
 ;; -*- no-byte-compile: t; -*-
