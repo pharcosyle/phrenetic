@@ -1456,6 +1456,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-ssh
             he-direnv
             he-kmonad
+            he-pipewire
+            he-gdm
             he-xdg
             he-mesa
             he-gtk
@@ -1465,9 +1467,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             font-sans
             font-serif
             font-unicode
-            he-pipewire
             he-flatpak
-            he-gdm
             he-wm-common
             he-sway
             he-swaylock
@@ -5444,6 +5444,150 @@ Probably move these to ~after!~ blocks
 
 (define wallpaper (local-file "alucard_bg.png"))
 #+end_src
+**** Pipewire
+#+begin_src scheme
+(define* (he-pipewire #:key
+                      stateless?
+                      sway?)
+  (append
+   (pipewire-services #:stateless? stateless?
+                      #:sway? sway?)
+   (wireplumber-services #:stateless? stateless?
+                         #:sway? sway?)))
+
+(define* (pipewire-services #:key
+                            stateless?
+                            sway?)
+  (list
+   (simple-service
+    'pipewire-add-package
+    home-profile-service-type
+    (list pipewire-0.3))
+
+   (simple-service
+    'pipewire-add-shepherd-daemons
+    home-shepherd-service-type
+    (list
+     (shepherd-service
+      (provision '(pipewire))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append pipewire-0.3 "/bin/pipewire"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/pipewire.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))
+     (shepherd-service
+      (provision '(pipewire-pulse pulseaudio))
+      (requirement '(pipewire pipewire-media-session))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/pipewire-pulse.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))))
+
+   (simple-service
+    'pipewire-add-alsa-config
+    home-xdg-configuration-files-service-type
+    `(("alsa/asoundrc"
+       ,(mixed-text-file
+         "asoundrc"
+         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
+         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
+         "\n"
+         "pcm_type.pipewire {" "\n"
+         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
+         "}" "\n"
+         "\n"
+         "ctl_type.pipewire {" "\n"
+         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
+         "}" "\n"))))
+
+   (when sway?
+     (simple-service
+      'pipewire-sway-start
+      home-sway-service-type
+      '((exec herd start pipewire)
+        (exec herd start pipewire-pulse))))
+
+   (when stateless?
+     (simple-service
+      'pipewire-stateless
+      home-stateless-service-type
+      '((#:state . (((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
+                     (#:store . #:machine)
+                     (#:parent-dir-perms . ((#:mode . #o700)))))))))))
+#+end_src
+***** Wireplumber
+#+begin_src scheme
+(define* (wireplumber-services #:key
+                               stateless?
+                               sway?)
+  (list
+   (simple-service
+    'wireplumber-add-package
+    home-profile-service-type
+    (list wireplumber))
+
+   (simple-service
+    'wireplumber-add-shepherd-daemon
+    home-shepherd-service-type
+    (list
+     (shepherd-service
+      (provision '(wireplumber pipewire-media-session))
+      (requirement '(pipewire))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append wireplumber "/bin/wireplumber"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/wireplumber.log")
+                #:environment-variables
+                (append (list "DISABLE_RTKIT=1")
+                        (default-environment-variables))))
+      (stop  #~(make-kill-destructor))
+      (auto-start? #f))))
+
+   (when sway?
+     (simple-service
+      'wireplumber-sway-start
+      home-sway-service-type
+      '((exec herd start wireplumber))))
+
+   (when stateless?
+     (simple-service
+      'wireplumber-stateless
+      home-stateless-service-type
+      '((#:state . (((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
+                     (#:store . #:machine)
+                     (#:mode . #o700)))))))))
+#+end_src
+**** Display managers
+***** GDM
+#+begin_src scheme
+(define* (he-gdm #:key stateless?)
+  (list
+   (when stateless?
+     (simple-service
+      'gdm-stateless
+      home-stateless-service-type
+      '((#:state . (((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
+                     (#:store . #:machine)
+                     (#:mode . #o700)))))))))
+#+end_src
 **** Desktop packages
 #+begin_src scheme
 (define* (he-desktop-packages
@@ -5634,137 +5778,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
 #+end_src
-**** Pipewire
-#+begin_src scheme
-(define* (he-pipewire #:key
-                      stateless?
-                      sway?)
-  (append
-   (pipewire-services #:stateless? stateless?
-                      #:sway? sway?)
-   (wireplumber-services #:stateless? stateless?
-                         #:sway? sway?)))
-
-(define* (pipewire-services #:key
-                            stateless?
-                            sway?)
-  (list
-   (simple-service
-    'pipewire-add-package
-    home-profile-service-type
-    (list pipewire-0.3))
-
-   (simple-service
-    'pipewire-add-shepherd-daemons
-    home-shepherd-service-type
-    (list
-     (shepherd-service
-      (provision '(pipewire))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/pipewire.log")
-                #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))
-     (shepherd-service
-      (provision '(pipewire-pulse pulseaudio))
-      (requirement '(pipewire pipewire-media-session))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/pipewire-pulse.log")
-                #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))))
-
-   (simple-service
-    'pipewire-add-alsa-config
-    home-xdg-configuration-files-service-type
-    `(("alsa/asoundrc"
-       ,(mixed-text-file
-         "asoundrc"
-         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
-         "\n"
-         "pcm_type.pipewire {" "\n"
-         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-         "}" "\n"
-         "\n"
-         "ctl_type.pipewire {" "\n"
-         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-         "}" "\n"))))
-
-   (when sway?
-     (simple-service
-      'pipewire-sway-start
-      home-sway-service-type
-      '((exec herd start pipewire)
-        (exec herd start pipewire-pulse))))
-
-   (when stateless?
-     (simple-service
-      'pipewire-stateless
-      home-stateless-service-type
-      '((#:state . (((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
-                     (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o700)))))))))))
-#+end_src
-***** Wireplumber
-#+begin_src scheme
-(define* (wireplumber-services #:key
-                               stateless?
-                               sway?)
-  (list
-   (simple-service
-    'wireplumber-add-package
-    home-profile-service-type
-    (list wireplumber))
-
-   (simple-service
-    'wireplumber-add-shepherd-daemon
-    home-shepherd-service-type
-    (list
-     (shepherd-service
-      (provision '(wireplumber pipewire-media-session))
-      (requirement '(pipewire))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append wireplumber "/bin/wireplumber"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/wireplumber.log")
-                #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))))
-
-   (when sway?
-     (simple-service
-      'wireplumber-sway-start
-      home-sway-service-type
-      '((exec herd start wireplumber))))
-
-   (when stateless?
-     (simple-service
-      'wireplumber-stateless
-      home-stateless-service-type
-      '((#:state . (((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
-                     (#:store . #:machine)
-                     (#:mode . #o700)))))))))
-#+end_src
 **** Flatpak
 #+begin_src scheme
 (define* (he-flatpak #:key
@@ -5807,19 +5820,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 Some cursorily-googled intel:
 - [[https://github.com/flatpak/flatpak/issues/3097][flatpak/flatpak#3097 Is there a way to install a specific version?]]
 - [[https://discourse.flathub.org/t/install-an-older-version-of-an-app/320/3][Install an older version of an app - #3 by gjanssens - Flathub Discourse]]
-**** Display managers
-***** GDM
-#+begin_src scheme
-(define* (he-gdm #:key stateless?)
-  (list
-   (when stateless?
-     (simple-service
-      'gdm-stateless
-      home-stateless-service-type
-      '((#:state . (((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
-                     (#:store . #:machine)
-                     (#:mode . #o700)))))))))
-#+end_src
 **** Window managers
 ***** Common
 #+begin_src scheme
@@ -6655,55 +6655,54 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
              (he-kmonad) '())
          '())
      (if desktop?
-         (append
-          (he-mesa #:stateless? stateless?)
-          (if gdm?
-              (he-gdm #:stateless? stateless?) '())
-          (let ((wayland? #t)
-                (sway? (member #:session/sway (or sessions '()))))
-            (append
-             (he-desktop-packages)
-             (he-fonts #:stateless? stateless?
-                       #:fonts (list font-mono
-                                     font-sans
-                                     font-serif
-                                     font-unicode))
-             (he-xdg #:stateless? stateless?)
-             (he-gtk #:stateless? stateless?
-                     #:theme theme
-                     #:font font-variable-pitch
-                     #:font-monospace font-mono)
-             (if pipewire?
-                 (he-pipewire #:stateless? stateless?
-                              #:sway? sway?)
-                 '())
-             (he-flatpak #:stateless? stateless?
-                         #:wayland? wayland?)
-             (if sway?
-                 (let ((screen-locker (swaylock-screen-locker)))
-                   (append
-                    (he-wm-common #:sway? #t)
-                    (he-sway #:pipewire? pipewire?
-                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                             #:screen-locker screen-locker
-                             #:idle-manager (swayidle-idle-manager)
-                             #:application-launcher (rofi-application-launcher #:wayland? #t)
-                             #:default-terminal (alacritty-terminal))
-                    (he-swaylock #:font font-variable-pitch)
-                    (he-swayidle #:sway? #t
-                                 #:screen-locker screen-locker)
-                    (he-mako #:sway? #t
-                             #:menu (rofi-menu #:wayland? #t)
-                             #:theme theme
-                             #:font font-variable-pitch)
-                    (he-waybar #:sway? #t
-                               #:theme theme
-                               #:font font-variable-pitch)
-                    (he-rofi #:stateless? stateless?
-                             #:wayland? #t
-                             #:theme theme)
-                    (he-alacritty #:font font-mono)))
-                 '()))))
+         (let ((wayland? #t)
+               (sway? (member #:session/sway (or sessions '()))))
+           (append
+            (if pipewire?
+                (he-pipewire #:stateless? stateless?
+                             #:sway? sway?)
+                '())
+            (if gdm?
+                (he-gdm #:stateless? stateless?) '())
+            (he-desktop-packages)
+            (he-fonts #:stateless? stateless?
+                      #:fonts (list font-mono
+                                    font-sans
+                                    font-serif
+                                    font-unicode))
+            (he-xdg #:stateless? stateless?)
+            (he-mesa #:stateless? stateless?)
+            (he-gtk #:stateless? stateless?
+                    #:theme theme
+                    #:font font-variable-pitch
+                    #:font-monospace font-mono)
+            (he-flatpak #:stateless? stateless?
+                        #:wayland? wayland?)
+            (if sway?
+                (let ((screen-locker (swaylock-screen-locker)))
+                  (append
+                   (he-wm-common #:sway? #t)
+                   (he-sway #:pipewire? pipewire?
+                            #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                            #:screen-locker screen-locker
+                            #:idle-manager (swayidle-idle-manager)
+                            #:application-launcher (rofi-application-launcher #:wayland? #t)
+                            #:default-terminal (alacritty-terminal))
+                   (he-swaylock #:font font-variable-pitch)
+                   (he-swayidle #:sway? #t
+                                #:screen-locker screen-locker)
+                   (he-mako #:sway? #t
+                            #:menu (rofi-menu #:wayland? #t)
+                            #:theme theme
+                            #:font font-variable-pitch)
+                   (he-waybar #:sway? #t
+                              #:theme theme
+                              #:font font-variable-pitch)
+                   (he-rofi #:stateless? stateless?
+                            #:wayland? #t
+                            #:theme theme)
+                   (he-alacritty #:font font-mono)))
+                '())))
          '()))))
 #+end_src
 * Common
