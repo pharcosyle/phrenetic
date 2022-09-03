@@ -1263,7 +1263,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
-  #:use-module ((gnu packages freedesktop) #:select (udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (dconf network-manager-applet))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme))
@@ -5696,7 +5696,7 @@ Some cursorily-googled intel:
                   (kb-repeat-delay 250)
                   (kb-repeat-rate 35)
                   (xwayland? #t)
-                  (screen-locker "loginctl lock-session")
+                  (screen-locker #~(string-append #$(file-append elogind "/bin/loginctl") "lock-session"))
                   idle-manager
                   application-launcher
                   default-terminal
