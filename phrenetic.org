@@ -7402,7 +7402,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
         "bbc78abdfee8daf0e43b4348b7452ffe9340fb5c")))
 #+end_src
 ** Operating systems
-#+begin_src scheme :tangle (meta-in-dir "os.scm")
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "os.scm")
+:END:
+#+begin_src scheme
 (define-module (exuberant os)
   #:use-module (ebullient system components)
   #:use-module (ebullient utils)
@@ -7536,8 +7539,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
   (-> os
       (console-keyboard-layouts #:kb-layout macbook-kb-layout)
       (macbook #:bluetooth? bluetooth?)))
-
-
+#+end_src
+*** Defaults
+#+begin_src scheme
 (define boot-label "genesis")
 (define efi-boot-target "/boot/efi")
 (define root-label "firmament")
