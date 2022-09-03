@@ -1298,8 +1298,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (append-map))
-  #:export (he-packages
-            he-stateless
+  #:export (he-stateless
+            he-packages
             he-shells
             he-nix
             he-emacs
@@ -1350,18 +1350,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                  (mkdir-p (dirname link))
                  (symlink profile link))))
            profiles)))))
-#+end_src
-*** Packages
-#+begin_src scheme
-(define* (he-packages #:key
-                      (packages (list curl
-                                      zip
-                                      unzip)))
-  (list
-   (simple-service
-    'packages-add-packages
-    home-profile-service-type
-    packages)))
 #+end_src
 *** Stateless
 #+begin_src scheme
@@ -1503,6 +1491,18 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if strip-dot?
         (local-file file (substring file* 1))
         (local-file file))))
+#+end_src
+*** Packages
+#+begin_src scheme
+(define* (he-packages #:key
+                      (packages (list curl
+                                      zip
+                                      unzip)))
+  (list
+   (simple-service
+    'packages-add-packages
+    home-profile-service-type
+    packages)))
 #+end_src
 *** Shells
 #+begin_src scheme
@@ -7587,11 +7587,11 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
         (font-unicode font-unicode)
         (font-variable-pitch font-sans))
     (append
-     (he-packages)
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
                        #:machine-dir stateless-machine-dir)
          '())
+     (he-packages)
      (he-shells #:stateless? stateless?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
