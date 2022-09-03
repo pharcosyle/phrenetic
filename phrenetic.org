@@ -5054,6 +5054,12 @@ Can be an integer to determine the exact padding."
 (after! vertico
   (setq vertico-count 20  ; Trying out, maybe too big.
         vertico-scroll-margin 7))
+
+(map! (:leader
+       "A" #'embark-dwim)
+      ;; Trying out cycling (temp)
+      "C-:" #'embark-act
+      "s-q" #'embark-cycle)
 #+end_src
 ******* keybinding ideas
 #+begin_src elisp
@@ -5101,17 +5107,6 @@ Can be an integer to determine the exact padding."
 ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
 ;;   :config
 ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
-#+end_src
-******* until I get semicolon working
-#+begin_src elisp
-(map! (:map minibuffer-local-map
-       "C-:" #'embark-act
-       "C-c C-:" #'embark-export)
-      (:leader
-       "A" #'embark-dwim)
-      ;; Trying out cycling (temp)
-      "C-:" #'embark-act
-      "s-q" #'embark-cycle)
 #+end_src
 ******* ligatures
 Probably move these to ~after!~ blocks
