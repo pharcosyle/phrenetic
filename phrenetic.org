@@ -6022,7 +6022,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
         `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
 
 (define (swayidle-idle-manager)
-  (file-append swayidle "/bin/swayidle -w"))
+  #~(string-append #$(file-append swayidle "/bin/swayidle") "-w"))
 #+end_src
 **** Notification daemons
 ***** Mako
@@ -6386,10 +6386,10 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                      (#:store . #:persist)))))))))
 
 (define* (rofi-menu #:key wayland?)
-  (file-append (get-rofi wayland?) "/bin/rofi -dmenu -p"))
+  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") "-dmenu -p"))
 
 (define* (rofi-application-launcher #:key wayland?)
-  (file-append (get-rofi wayland?) "/bin/rofi -show drun"))
+  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") "-show drun"))
 
 (define (get-rofi wayland?)
   (if wayland?
