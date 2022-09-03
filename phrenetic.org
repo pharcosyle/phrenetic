@@ -5102,20 +5102,6 @@ Can be an integer to determine the exact padding."
 ;;   :config
 ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
 #+end_src
-******* Temporary copypasta from bloodhound
-Copying this here for now, for convenience.
-#+begin_src elisp
-(setq my-dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/home-state.git")))
-;; (setq my-dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
-(map! "s-b" (cmd!
-             (pushnew! magit-git-global-arguments my-dotfiles-git-dir)
-             (magit-status "~")))
-(map! "s-B" (cmd!
-             ;; (delq! my-dotfiles-git-dir magit-git-global-arguments)
-             ;; Why is the above not working? Doing this for now:
-             ;; - Update: because `delq!' tests for equality with `eq'
-             (setq magit-git-global-arguments (remove my-dotfiles-git-dir magit-git-global-arguments))))
-#+end_src
 ******* until I get semicolon working
 #+begin_src elisp
 (map! (:map minibuffer-local-map
