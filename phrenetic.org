@@ -1447,7 +1447,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (create-he
             he-stateless
+            typical-state
             he-packages
+            utility-packages
             he-shells
             he-nix
             he-emacs
@@ -1462,12 +1464,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-mesa
             he-gtk
             he-desktop-packages
+            desktop-packages
             theme-dark-colors
             he-fonts
             font-mono
             font-sans
             font-serif
             font-unicode
+            useful-font-packages
             he-flatpak
             he-wm-common
             he-sway
@@ -1515,10 +1519,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 (define* (he-stateless #:key
                        persist-dir
                        machine-dir
-                       (extra-state '(((#:path . "org/")
-                                       (#:store . #:persist))
-                                      ((#:path . "work/")
-                                       (#:store . #:persist)))))
+                       extra-state)
   (append
    (list
     (service home-stateless-service-type
@@ -1541,7 +1542,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                          (#:store . #:machine))
                         ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
                          (#:store . #:machine)))
-                      extra-state))
+                      (or extra-state '())))
          (#:ignore . ,(list ".guix-home"
                             guix-profile
                             `(,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
@@ -1555,6 +1556,12 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))))
 
    (stateless-skeletons)))
+
+(define typical-state
+  '(((#:path . "org/")
+     (#:store . #:persist))
+    ((#:path . "work/")
+     (#:store . #:persist))))
 #+end_src
 **** Service
 ***** Diff tool
@@ -1653,15 +1660,17 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 *** Packages
 #+begin_src scheme
-(define* (he-packages #:key
-                      (packages (list curl
-                                      zip
-                                      unzip)))
+(define* (he-packages #:key packages)
   (list
    (simple-service
     'packages-add-packages
     home-profile-service-type
     packages)))
+
+(define utility-packages
+  (list curl
+        zip
+        unzip))
 #+end_src
 *** Shells
 #+begin_src scheme
@@ -5591,22 +5600,23 @@ Probably move these to ~after!~ blocks
 #+end_src
 **** Desktop packages
 #+begin_src scheme
-(define* (he-desktop-packages
-          #:key
-          (packages (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
-
-                          ;; nyxt
-                          ;; gst-libav
-                          ;; gst-plugins-bad
-                          ;; gst-plugins-base
-                          ;; gst-plugins-good
-                          ;; gst-plugins-ugly
-                          )))
+(define* (he-desktop-packages #:key packages)
   (list
    (simple-service
     'desktop-packages-add-packages
     home-profile-service-type
     packages)))
+
+(define desktop-packages
+  (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
+
+   ;; nyxt
+   ;; gst-libav
+   ;; gst-plugins-bad
+   ;; gst-plugins-base
+   ;; gst-plugins-good
+   ;; gst-plugins-ugly
+   ))
 #+end_src
 **** Theme
 #+begin_src scheme
@@ -5632,8 +5642,7 @@ Probably move these to ~after!~ blocks
 (define* (he-fonts #:key
                    stateless?
                    fonts
-                   (extra-font-packages (list font-noto-color-emoji
-                                              font-liberation)))
+                   extra-font-packages)
   (list
    (simple-service
     'fonts-add-packages
@@ -5671,6 +5680,10 @@ Probably move these to ~after!~ blocks
 (define font-unicode
   `((#:font/name . "Unifont")
     (#:font/package . ,font-gnu-unifont)))
+
+(define useful-font-packages
+  (list font-noto-color-emoji
+        font-liberation))
 #+end_src
 ***** TODO [#D] Alternative fonts
 - =font-unifont-gnu= sucks, find a replacement?
@@ -6646,9 +6659,10 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
-                       #:machine-dir stateless-machine-dir)
+                       #:machine-dir stateless-machine-dir
+                       #:extra-state typical-state)
          '())
-     (he-packages)
+     (he-packages #:packages utility-packages)
      (he-shells #:stateless? stateless?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
@@ -6684,12 +6698,13 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                 '())
             (if gdm?
                 (he-gdm #:stateless? stateless?) '())
-            (he-desktop-packages)
+            (he-desktop-packages #:packages desktop-packages)
             (he-fonts #:stateless? stateless?
                       #:fonts (list font-mono
                                     font-sans
                                     font-serif
-                                    font-unicode))
+                                    font-unicode)
+                      #:extra-font-packages useful-font-packages)
             (he-xdg #:stateless? stateless?)
             (he-mesa #:stateless? stateless?)
             (he-gtk #:stateless? stateless?
