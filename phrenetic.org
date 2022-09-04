@@ -1496,24 +1496,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (filter service? services))))
 #+end_src
 ** Components
-#+begin_src scheme
-(define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils))
-    #~(lambda (profiles)
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-
-        (let ((no-follow-file-exists? (lambda (file)
-                                        (false-if-exception (lstat file)))))
-          (for-each
-           (lambda (i)
-             (let ((link (car i))
-                   (profile (cdr i)))
-               (when (and (no-follow-file-exists? profile)
-                          (not (no-follow-file-exists? link)))
-                 (mkdir-p (dirname link))
-                 (symlink profile link))))
-           profiles)))))
-#+end_src
 *** Stateless
 #+begin_src scheme
 (define* (he-stateless #:key
@@ -1556,6 +1538,23 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))))
 
    (stateless-skeletons)))
+
+(define stateless-ensure-profiles-gexp
+  (with-imported-modules '((guix build utils))
+    #~(lambda (profiles)
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (let ((no-follow-file-exists? (lambda (file)
+                                        (false-if-exception (lstat file)))))
+          (for-each
+           (lambda (i)
+             (let ((link (car i))
+                   (profile (cdr i)))
+               (when (and (no-follow-file-exists? profile)
+                          (not (no-follow-file-exists? link)))
+                 (mkdir-p (dirname link))
+                 (symlink profile link))))
+           profiles)))))
 
 (define typical-state
   '(((#:path . "org/")
