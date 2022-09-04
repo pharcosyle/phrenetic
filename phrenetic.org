@@ -21,7 +21,8 @@
   - [[#stateless][Stateless]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
-  - [[#functions][Functions]]
+  - [[#threading][Threading]]
+  - [[#alists][Alists]]
   - [[#guix][Guix]]
 - [[#auxillary][Auxillary]]
   - [[#packages-2][Packages]]
@@ -288,7 +289,7 @@ Run with ~sudo~.
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
-  #:use-module ((srfi srfi-1) #:select (any append-map remove iota))
+  #:use-module ((srfi srfi-1) #:select (any remove iota))
   #:export (blank-os
             source
             base-services
@@ -402,11 +403,7 @@ Run with ~sudo~.
    (append
     (operating-system-users os)
     (map (lambda (user-info)
-           (apply account (append-map
-                           (match-lambda
-                             ((k . v)
-                              (list k v)))
-                           user-info)))
+           (apply account (alist->list user-info)))
          users-info))))
 
 (define* (account #:key
@@ -1435,8 +1432,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
-  #:use-module ((rde serializers elisp) #:select (serialize-elisp-config))
-  #:use-module ((rde serializers ini) #:select (serialize-ini-config))
+  #:use-module ((rde serializers elisp) #:select (elisp-serialize))
+  #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
@@ -1444,10 +1441,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
-  #:use-module ((srfi srfi-1) #:select (append-map))
+  #:use-module ((srfi srfi-1) #:select (append-map list-index))
   #:export (create-he
             he-stateless
-            typical-state
+            org+work-state
             he-packages
             utility-packages
             he-shells
@@ -1555,7 +1552,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                  (symlink profile link))))
            profiles)))))
 
-(define typical-state
+(define org+work-state
   '(((#:path . "org/")
      (#:store . #:persist))
     ((#:path . "work/")
@@ -1677,6 +1674,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+begin_src scheme
 (define* (he-shells #:key
                     stateless?
+                    doom?
                     login-shell
                     interactive-shell
                     (bashrc (local-file "bashrc"))
@@ -1717,7 +1715,28 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                  home-environment-variables-service-type
                  `(("SHELL" . ,(case interactive-shell
                                  ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                                 ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))))
+                                 ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))
+
+     (if doom?
+         (let ((name 'eshell))
+           (list
+            (doom-service
+             name
+             #:modules `((#:term
+                          eshell))
+             #:config '((after! eshell
+                                (setq eshell-history-size biome--very-big)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+
+            (when stateless?
+              (doom-stateless-service
+               name
+               #:state '(((#:path . ("eshell/history" #:doom-base #:data))
+                          (#:store . #:persist))
+                         ((#:path . ("eshell/lastdir" #:doom-base #:data))
+                          (#:store . #:persist))
+                         ((#:path . ("eshell/z" #:doom-base #:data))
+                          (#:store . #:persist)))))))
+         '()))))
 #+end_src
 **** Bash
 ***** Bashrc
@@ -1849,6 +1868,8 @@ SAVEHIST=$HISTSIZE
 #+begin_src scheme
 (define* (he-nix #:key
                  stateless?
+                 doom?
+                 doom-tree-sitter?
                  (nix-channels (local-file "nix-channels"))
                  (nixpkgs-config (local-file "nixpkgs-config.nix")))
   (append
@@ -1884,6 +1905,13 @@ SAVEHIST=$HISTSIZE
            #:ignore (list nix-profile
                           nix-channels))))
        '())
+
+   (list
+    (when doom?
+      (doom-service
+       'nix
+       #:modules `((#:lang
+                    (nix ,@(if doom-tree-sitter? '(+tree-sitter) '())))))))
 
    (google-chrome-services #:stateless? stateless?)))
 #+end_src
@@ -2201,84 +2229,306 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 #+begin_src scheme
 (define* (he-doom #:key
                   stateless?
-                  desktop?
-                  (doom-private (local-file "doom-private" #:recursive? #t))
-                  email
-                  theme
-                  font
-                  font-variable-pitch
-                  font-unicode
-                  font-serif)
-  (list
-   (simple-service
-    'doom-add-packages
-    home-profile-service-type
-    (list `(,doom-emacs "bin")))
+                  extra-doom)
+  (append
+   (list
+    (service doom-service-type))
 
-   (simple-service
-    'doom-add-config
-    home-xdg-configuration-files-service-type
-    `(("emacs"
-       ,doom-emacs)
-      ("doom"
-       ,(directory-union
-         "doom-private-with-params"
-         `(,doom-private
-           ,(file-union
-             "params-dir"
-             `(("params.el"
-                ,(mixed-text-file
-                  "params.el"
-                  (serialize-elisp-config
-                   #f
-                   `((setq param-desktop? ,(if desktop? 't 'nil)
-                           param-email ,email
-                           param-theme ,(symbol-append ': (keyword->symbol theme))
-                           param-font-name ,(assoc-ref font #:font/name)
-                           param-font-size ,(+ (assoc-ref font #:font/size) 2)
-                           param-font-weight ,(if-let ((weight (assoc-ref font #:font/weight)))
-                                                      `',weight
-                                                      'nil)
-                           param-font-variable-pitch-name ,(assoc-ref font-variable-pitch #:font/name)
-                           param-font-unicode-name ,(assoc-ref font-unicode #:font/name)
-                           param-font-serif-name ,(assoc-ref font-serif #:font/name)))))))))))))
+   (if extra-doom
+       extra-doom '())
 
    (when stateless?
-     (home-stateless-service
-      'doom
-      #:state `(((#:path . ("doom-local/" #:xdg-base "XDG_STATE_HOME"))
-                 (#:store . #:machine))
-                ,@(let* ((doom (lambda (subpath)
-                                 `(,(string-append "doom/" subpath) #:xdg-base "XDG_STATE_HOME")))
-                         (doom-persist (lambda (subpath)
-                                         `((#:path . ,(doom subpath))
-                                           (#:store . #:persist))))
-                         (doom-machine (lambda (subpath)
-                                         `((#:path . ,(doom subpath))
-                                           (#:store . #:machine)))))
-                    (list
-                     (doom-persist "cache/cider-repl-history")
-                     (doom-persist "cache/geiser-history.guile")
-                     (doom-persist "cache/projectile.projects")
-                     (doom-persist "cache/recentf")
-                     (doom-persist "cache/savehist")
-                     (doom-persist "cache/saveplace")
-                     (doom-persist "etc/bookmarks")
-                     (doom-persist "etc/eshell/history")
-                     (doom-persist "etc/eshell/lastdir")
-                     (doom-persist "etc/eshell/z")
-                     (doom-persist "etc/org-clock-save.el")
-                     (doom-persist "etc/scratch/")
-                     (doom-persist "etc/transient/history")
-                     (doom-machine "cache/autosave/")
-                     (doom-machine "cache/guix-packaging/")
-                     (doom-machine "cache/org-gcal/token.gpg")
-                     (doom-machine "cache/org/persist/")
-                     (doom-machine "cache/projectile.cache")
-                     (doom-machine "cache/tramp")
-                     (doom-machine "cache/undo-fu-session/")
-                     (doom-machine "etc/persist/org-gcal--sync-tokens")
-                     (doom-machine "etc/workspaces/autosave/"))))))))
+     (list
+      (home-stateless-service
+       'doom
+       #:state '(((#:path . ("doom-local/" #:xdg-base "XDG_STATE_HOME"))
+                  (#:store . #:machine)))))
+     '())))
+
+#!
+(when stateless?
+  (home-stateless-service
+   'doom
+   #:state (let* ((doom (lambda (subpath)
+                          `(,(string-append "doom/" subpath) #:xdg-base "XDG_STATE_HOME")))
+                  (doom-persist (lambda (subpath)
+                                  `((#:path . ,(doom subpath))
+                                    (#:store . #:persist))))
+                  (doom-machine (lambda (subpath)
+                                  `((#:path . ,(doom subpath))
+                                    (#:store . #:machine)))))
+             (list
+              (doom-persist "cache/cider-repl-history")
+              (doom-persist "cache/geiser-history.guile")
+              (doom-persist "cache/projectile.projects")
+              (doom-persist "cache/recentf")
+              (doom-persist "cache/savehist")
+              (doom-persist "cache/saveplace")
+              (doom-persist "etc/bookmarks")
+              (doom-persist "etc/org-clock-save.el")
+              (doom-persist "etc/scratch/")
+              (doom-persist "etc/transient/history")
+              (doom-machine "cache/autosave/")
+              (doom-machine "cache/guix-packaging/")
+              (doom-machine "cache/org-gcal/token.gpg")
+              (doom-machine "cache/org/persist/")
+              (doom-machine "cache/projectile.cache")
+              (doom-machine "cache/tramp")
+              (doom-machine "cache/undo-fu-session/")
+              (doom-machine "etc/persist/org-gcal--sync-tokens")
+              (doom-machine "etc/workspaces/autosave/")))))
+!#
+#+end_src
+**** Service
+#+begin_src scheme
+(define (doom-extend additional)
+  (let ((field (lambda (k)
+                 (map (lambda (i)
+                        (or (assoc-ref i k) '()))
+                      additional))))
+    ;; TODO maybe extract out common logic
+    `((#:init-file . ,(as-> (field #:modules) $
+                        (apply merge-with append $)
+                        (sort $ (lambda (a b)
+                                  (let ((idx (lambda (entry)
+                                               (list-index
+                                                (lambda (category)
+                                                  (eq? (car entry) category))
+                                                '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
+                                    (< (idx a) (idx b)))))
+                        (update-keys $ (lambda (category)
+                                         (symbol-append ': (keyword->symbol category))))
+                        (update-vals $ (lambda (modules)
+                                         (let ((name (lambda (m)
+                                                       (symbol->string
+                                                        (cond
+                                                         ((symbol? m) m)
+                                                         ((list? m) (car m)))))))
+                                           (sort modules (lambda (a b)
+                                                           (string<? (name a) (name b)))))))
+                        (apply append $)
+                        (elisp-serialize
+                         `(,#~";;; -*- lexical-binding: t; -*-\n"
+                           (doom! ,@$)))))
+      (#:config-file . ,(as-> (field #:config) $
+                                (apply append $)
+                                (elisp-serialize
+                                 (append
+                                  `(,#~";;; -*- lexical-binding: t; -*-\n")
+                                  $))))
+      (#:packages-file . ,(as-> (field #:packages) $
+                                (apply append $)
+                                (elisp-serialize
+                                 (append
+                                  `(,#~";; -*- no-byte-compile: t; -*-\n")
+                                  $)))))))
+
+(define doom-service-type
+  (service-type
+   (name 'home-doom)
+   (extensions
+    (list (service-extension home-profile-service-type
+                             (const
+                              (list `(,doom-emacs "bin"))))
+          (service-extension home-xdg-configuration-files-service-type
+                             (lambda (config)
+                               `(("emacs"
+                                  ,doom-emacs)
+                                 ("doom"
+                                  ,(file-union
+                                    "doom-private"
+                                    ;; TODO do these by mapping over a list if they stay so similiar.
+                                    `(("init.el" ,(mixed-text-file "doom-init" (assoc-ref config #:init-file)))
+                                      ("config.el" ,(mixed-text-file "doom-config" (assoc-ref config #:config-file)))
+                                      ("packages.el" ,(mixed-text-file "doom-packages" (assoc-ref config #:packages-file)))))))))))
+   (compose identity)
+   (extend (lambda (_ additional)
+             (doom-extend additional)))
+   (default-value #f)
+   (description "Install and configure Doom.")))
+
+(define* (doom-service name #:key modules packages config)
+  (simple-service
+   (symbol-append name '-doom)
+   doom-service-type
+   `((#:modules . ,modules)
+     (#:packages . ,packages)
+     (#:config . ,config))))
+
+
+
+;; old args:
+;;
+;; desktop?
+;; (doom-private (local-file "doom-private" #:recursive? #t))
+;; email
+;; theme
+;; font
+;; font-variable-pitch
+;; font-unicode
+;; font-serif
+;;
+;; #:desktop? desktop?
+;; #:email email
+;; #:theme theme
+;; #:font font-mono
+;; #:font-variable-pitch font-variable-pitch
+;; #:font-unicode font-unicode
+;; #:font-serif font-serif
+
+
+;; (mixed-text-file
+;;  "params.el"
+;;  (serialize-elisp-config
+;;   #f
+;;   `((setq param-desktop? ,(if desktop? 't 'nil)
+;;           param-email ,email
+;;           param-theme ,(symbol-append ': (keyword->symbol theme))
+;;           param-font-name ,(assoc-ref font #:font/name)
+;;           param-font-size ,(+ (assoc-ref font #:font/size) 2)
+;;           param-font-weight ,(if-let ((weight (assoc-ref font #:font/weight)))
+;;                                      `',weight
+;;                                      'nil)
+;;           param-font-variable-pitch-name ,(assoc-ref font-variable-pitch #:font/name)
+;;           param-font-unicode-name ,(assoc-ref font-unicode #:font/name)
+;;           param-font-serif-name ,(assoc-ref font-serif #:font/name)))))
+
+
+
+(define* (universal-doom #:key doom-tree-sitter?)
+  (list
+   (doom-service
+    'universal
+    #:modules
+    `((#:completion
+       (company +childframe)
+       (vertico +icons))
+
+      (#:ui
+       doom
+       doom-dashboard
+       (emoji +unicode)
+       hl-todo
+       hydra
+       indent-guides
+       (ligatures +extra)
+       modeline
+       nav-flash
+       ophints
+       (popup +defaults +all)
+       treemacs
+       (vc-gutter +pretty) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+       vi-tilde-fringe
+       window-select
+       workspaces)
+
+      (#:editor
+       (evil +everywhere)
+       file-templates
+       fold
+       format
+       lispy
+       multiple-cursors
+       rotate-text
+       snippets
+       word-wrap)
+
+      (#:emacs
+       (dired +icons)
+       electric
+       (ibuffer +icons)
+       undo
+       vc)
+
+      (#:term
+       vterm)
+
+      (#:checkers
+       (syntax +childframe))
+
+      (#:tools
+       (eval +overlay)
+       lookup
+       (magit +forge)
+       (pass +auth)
+       pdf
+       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
+       rgb
+       taskrunner
+       ,@(if doom-tree-sitter? '(tree-sitter) '())
+       upload) ; TODO dependency of massrealty/phucnet
+
+      (#:lang
+       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
+       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
+       data
+       emacs-lisp
+       ;; graphql ; TODO dependency of krush/hyperdrive
+       (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+       (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+       markdown
+       (org +journal)
+       (rest +jq)
+       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
+       (sh ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+       (web ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+       yaml) ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+
+      (#:app
+       calendar)
+
+      (#:config
+       (default +bindings +smartparens)))
+
+    #:packages
+    '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
+
+      (package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
+      (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+
+      (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+      (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
+      (package! guix-packaging ; REVIEW trying out
+                :recipe (:host github
+                         :repo "ryanprior/emacs-guix-packaging"
+                         :files (:defaults "snippets"))
+                :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
+
+      (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
+      (package! app-launcher
+                :recipe (:host github
+                         :repo "SebastienWae/app-launcher")
+                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
+
+      ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
+      ))))
+#+end_src
+**** Stateless
+#+begin_src scheme
+(define* (doom-stateless-service name #:key state ignore)
+  (home-stateless-service
+   (symbol-append name '-doom)
+   #:state (state-with-doom-dir state)
+   #:ignore ignore))
+
+(define (path-with-doom-dir path)
+  (let ((doom-dir
+         (lambda (base subpath)
+           `(,(string-append
+               "doom/"
+               (case base
+                 ((#:cache) "cache")
+                 ((#:data) "etc"))
+               "/" subpath)
+             #:xdg-base "XDG_STATE_HOME"))))
+    (apply (lambda* (tail #:key doom-base)
+             (doom-dir doom-base tail))
+           path)))
+
+(define (state-with-doom-dir state)
+  (map (lambda (i)
+         (acons #:path (path-with-doom-dir (assoc-ref i #:path)) i))
+       state))
 #+end_src
 **** Doom Emacs :package:version:
 :PROPERTIES:
@@ -4119,93 +4369,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 | gold              | #fdd94a |
 | pink              | #ff9999 |
 
-***** Init
-#+begin_src elisp :tangle (meta-in-dir "init.el")
-;;; -*- lexical-binding: t; -*-
-
-(doom! :completion
-       (company +childframe)
-       (vertico +icons)
-
-       :ui
-       doom
-       doom-dashboard
-       (emoji +unicode)
-       hl-todo
-       hydra
-       indent-guides
-       (ligatures +extra)
-       modeline
-       nav-flash
-       ophints
-       (popup +defaults +all)
-       treemacs
-       (vc-gutter +pretty) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b04b8173038eb2c2592298fb37451eb227
-       vi-tilde-fringe
-       window-select
-       workspaces
-
-       :editor
-       (evil +everywhere)
-       file-templates
-       fold
-       format
-       lispy
-       multiple-cursors
-       rotate-text
-       snippets
-       word-wrap
-
-       :emacs
-       (dired +icons)
-       electric
-       (ibuffer +icons)
-       undo
-       vc
-
-       :term
-       eshell
-       vterm
-
-       :checkers
-       (syntax +childframe)
-
-       :tools
-       direnv ; TODO should be contributed by direnv component
-       (eval +overlay)
-       lookup
-       (magit +forge)
-       (pass +auth)
-       pdf
-       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
-       rgb
-       taskrunner
-       tree-sitter
-       ;; upload ; TODO dependency of massrealty/phucnet
-
-       :lang
-       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
-       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
-       data
-       emacs-lisp
-       ;; graphql ; TODO dependency of krush/hyperdrive
-       (json +tree-sitter)
-       (javascript +tree-sitter)
-       markdown
-       (nix +tree-sitter) ; TODO this should be gated by Nix inclusion like system components do.
-       (org +journal)
-       (rest +jq)
-       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
-       (sh +tree-sitter)
-       (web +tree-sitter)
-       yaml ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
-
-       :app
-       calendar
-
-       :config
-       (default +bindings +smartparens))
-#+end_src
 ***** Config
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "config.el")
@@ -4507,12 +4670,6 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
     (defun require-dired-x-h ()
       (require 'dired-x))))
 #+end_src
-******* Term
-******** eshell :persistence:
-#+begin_src elisp
-(after! eshell
-  (setq eshell-history-size biome--very-big)) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
-#+end_src
 ******* Tools
 ******** Magit
 ********* magit :UI:
@@ -4535,7 +4692,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
     (custom-theme-set-faces! biome--nuclear-theme
       `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))))
 #+end_src
-********* cider :persistence:
+********* cider
 #+begin_src elisp
 (after! cider
   (setq cider-repl-history-size biome--very-big
@@ -4597,7 +4754,7 @@ Don't hide files in dired, remove the Doom module's hook. However, via the Doom 
 (after! scheme
   (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
 #+end_src
-********* geiser :persistence:path:guix:
+********* geiser :path:guix:
 Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
 #+begin_src elisp
 (use-package! geiser
@@ -4607,7 +4764,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 #+end_src
 ******* App
 ******** Calendar
-********* org-gcal :org:user:secret:persistence:path:
+********* org-gcal :org:user:secret:path:
 #+begin_src elisp
 (after! org-gcal
   (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
@@ -4665,7 +4822,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
 ;; TODO once I'm done packaging Doom figure out how to enable this
 ;; (use-package! guix-contributing)
 #+end_src
-******** guix-packaging :persistence:path:
+******** guix-packaging :path:
 #+begin_src elisp
 (use-package! guix-packaging
   :defer t
@@ -4711,7 +4868,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
       `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
       `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red)))))
 #+end_src
-******** recentf :persistence:
+******** recentf
 #+begin_src elisp
 (after! recentf
   (setq recentf-max-saved-items 500))
@@ -4752,7 +4909,7 @@ Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it
                (map! :map smartparens-strict-mode-map
                      :i "DEL" #'sp-backward-delete-char))))
 #+end_src
-******** transient :persistence:
+******** transient
 - TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
 #+begin_src elisp
 (after! transient
@@ -5278,40 +5435,6 @@ Probably move these to ~after!~ blocks
   :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
                     "://"))
 #+end_src
-***** Packages :version:
-#+begin_src elisp :tangle (meta-in-dir "packages.el")
-;; -*- no-byte-compile: t; -*-
-
-(package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
-(package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
-(package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-(package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
-
-(package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
-(package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
-(package! guix-packaging ; REVIEW trying out
-  :recipe (:host github
-           :repo "ryanprior/emacs-guix-packaging"
-           :files (:defaults "snippets"))
-  :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
-
-(package! bluetooth :pin "3a3c3c04437518f1ce0e940adf4a5e020b9755c3") ; TODO just maybe make this dependent on my "bluetooth feature"
-
-(package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117")
-
-(package! i3wm-config-mode :pin "3574d88241118ed6cc5a3022b6dde58d6f5af9dd") ; TODO maybe make this part of a Sway / Window Manager feature or introduced by my Dotfiles project
-
-(package! app-launcher
-  :recipe (:host github
-           :repo "SebastienWae/app-launcher")
-  :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
-
-(package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428")
-
-(package! kbd-mode
-  :recipe (:host github
-           :repo "kmonad/kbd-mode"))
-#+end_src
 *** Git
 #+begin_src scheme
 (define* (he-git #:key
@@ -5366,6 +5489,7 @@ Probably move these to ~after!~ blocks
 #+begin_src scheme
 (define* (he-direnv #:key
                     stateless?
+                    doom?
                     shell)
   (list
    ;; REVIEW This might not be necessary once I integrate emacs-envrc during my Doom/Straight/Guix integration (clarification: the envrc emacs package needs to have direnv on the command line, the emacs-direnv Guix package bakes it in)
@@ -5399,18 +5523,35 @@ Probably move these to ~after!~ blocks
      (home-stateless-service
       'direnv
       #:state '(((#:path . ("direnv/allow/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:persist)))))))
+                 (#:store . #:persist)))))
+
+   (when doom?
+     (doom-service
+      'direnv
+      #:modules `((#:tools
+                   direnv))))))
 #+end_src
 *** Console
 **** KMonad
 #+begin_src scheme
 (define* (he-kmonad #:key
+                    doom?
                     (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
                     ;; (kbd (local-file "config.kbd"))
                     (kbd (local-file "../../mine.kbd")))
   (list
-   (service kmonad-service-type kbd)))
+   (service kmonad-service-type kbd)
 
+   (when doom?
+     (doom-service
+      'kmonad
+      #:packages '((package! kbd-mode
+                             :recipe (:host github
+                                      :repo "kmonad/kbd-mode")
+                             :pin "4a26abcbfc04208f437fd6b6a5bf3217b124db84"))))))
+#+end_src
+***** Service
+#+begin_src scheme
 (define (kmonad-shepherd-service kbd)
   (list
    (shepherd-service
@@ -5435,8 +5576,8 @@ Probably move these to ~after!~ blocks
 *** Desktop
 #+begin_src scheme
 (define* (ini-config-file name config
-                          #:key (serialize-ini-config serialize-ini-config))
-  (apply mixed-text-file name (serialize-ini-config config)))
+                          #:key (ini-serialize ini-serialize))
+  (apply mixed-text-file name (ini-serialize config)))
 
 (define (font-value font)
   (string-join
@@ -5868,6 +6009,7 @@ Some cursorily-googled intel:
 ***** Sway
 #+begin_src scheme
 (define* (he-sway #:key
+                  doom?
                   pipewire?
                   (sway-mod 'Mod1)
                   kb-layout
@@ -6043,7 +6185,12 @@ Some cursorily-googled intel:
     `(("files/.config/sway/config"
        ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
-   (sway-screenshot-service)))
+   (sway-screenshot-service)
+
+   (when doom?
+     (doom-service
+      'sway
+      #:packages '((package! i3wm-config-mode :pin "3574d88241118ed6cc5a3022b6dde58d6f5af9dd"))))))
 #+end_src
 ****** TODO [#E] Conditionalize Sway environment variables
 These should only be set for Sway and might mess up other sessions, like Gnome.
@@ -6232,9 +6379,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                     (border-radius . ,(string->symbol "8"))))
            (urgency=low ((border-color . ,(string->symbol "#9fed9c"))))
            (urgency=high ((border-color . ,(string->symbol "#fb8578")))))
-         #:serialize-ini-config
+         #:ini-serialize
          (lambda (config)
-           (serialize-ini-config config #:equal-string "="))))))
+           (ini-serialize config #:equal-string "="))))))
 
    (when sway?
      (simple-service
@@ -6626,56 +6773,59 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                   stateless-persist-dir
                   stateless-machine-dir
                   (login-shell #:shell/bash)
+                  nix?
                   developer?
                   (interactive-shell (if developer?
                                          #:shell/zsh login-shell))
-                  nix?
                   console?
                   kmonad?
                   desktop?
                   pipewire?
                   gdm?
                   sessions)
-  (let ((theme #:theme/dark)
-        (font-mono font-mono)
-        (font-sans font-sans)
-        (font-serif font-serif)
-        (font-unicode font-unicode)
-        (font-variable-pitch font-sans))
+  (let* ((doom? developer?)
+         (doom-tree-sitter? doom?))
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
                        #:machine-dir stateless-machine-dir
-                       #:extra-state typical-state)
+                       #:extra-state org+work-state)
          '())
      (he-packages #:packages utility-packages)
      (he-shells #:stateless? stateless?
+                #:doom? doom?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
      (if nix?
-         (he-nix #:stateless? stateless?) '())
+         (he-nix #:stateless? stateless?
+                 #:doom? doom?
+                 #:doom-tree-sitter? doom-tree-sitter?)
+         '())
      (if developer?
          (append
           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-          (he-doom #:stateless? stateless?
-                   #:desktop? desktop?
-                   #:email email
-                   #:theme theme
-                   #:font font-mono
-                   #:font-variable-pitch font-variable-pitch
-                   #:font-unicode font-unicode
-                   #:font-serif font-serif)
+          (if doom?
+              (he-doom #:stateless? stateless?
+                       #:extra-doom (universal-doom #:doom-tree-sitter? doom-tree-sitter?))
+              '())
           (he-git #:email email)
           (he-ssh)
           (he-direnv #:stateless? stateless?
+                     #:doom? doom?
                      #:shell interactive-shell))
          '())
      (if console?
          (if kmonad?
-             (he-kmonad) '())
+             (he-kmonad #:doom? doom?) '())
          '())
      (if desktop?
-         (let ((wayland? #t)
+         (let ((theme #:theme/dark)
+               (font-mono font-mono)
+               (font-sans font-sans)
+               (font-serif font-serif)
+               (font-unicode font-unicode)
+               (font-variable-pitch font-sans)
+               (wayland? #t)
                (sway? (member #:session/sway (or sessions '()))))
            (append
             (if pipewire?
@@ -6703,7 +6853,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                 (let ((screen-locker (swaylock-screen-locker)))
                   (append
                    (he-wm-common #:sway? #t)
-                   (he-sway #:pipewire? pipewire?
+                   (he-sway #:doom? doom?
+                            #:pipewire? pipewire?
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                             #:screen-locker screen-locker
                             #:idle-manager (swayidle-idle-manager)
@@ -6821,8 +6972,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
     (simple-service
      (symbol-append name '-stateless)
      service-type
-     `((#:state . ,(or state '()))
-       (#:ignore . ,(or ignore '()))))))
+     `((#:state . ,state)
+       (#:ignore . ,ignore)))))
 #+end_src
 **** Extend procedure
 #+begin_src scheme
@@ -7062,7 +7213,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module ((srfi srfi-1) #:select (take drop))
+  #:use-module ((ice-9 match) #:select (match-lambda))
+  #:use-module ((srfi srfi-1) #:select (append-map fold take drop))
   #:export (when-let
             if-let
             when-not
@@ -7071,6 +7223,10 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             ->>
             as->
             list->alist
+            alist->list
+            merge-with
+            update-keys
+            update-vals
             blank-package
             with-git-version
             with-git-commit
@@ -7100,7 +7256,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-** Functions
+** Threading
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
@@ -7122,7 +7278,9 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
        (with-syntax ((x (datum->syntax #'form (syntax->datum #'name))))
          #'(let ((x exp))
              (as-> form name form* ...)))))))
-
+#+end_src
+** Alists
+#+begin_src scheme
 (define* (list->alist #:rest kvs)
   (let loop ((res '())
              (more kvs))
@@ -7133,6 +7291,45 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                           (apply cons $))
                     res)
               (drop more 2)))))
+
+(define (alist->list alist)
+  (append-map
+   (match-lambda
+     ((k . v)
+      (list k v)))
+   alist))
+
+(define* (merge-with f #:rest alists)
+  (fold
+   (lambda (a res)
+     (map
+      (lambda (k)
+        (cons k
+              (let ((res-v (assoc-ref res k))
+                    (v (assoc-ref a k)))
+                (if (and res-v v)
+                    (f res-v v)
+                    (or res-v v)))))
+      (let ((keys (lambda (alist)
+                    (map car alist))))
+        (append (keys res)
+                (filter (lambda (k)
+                          (not (member k (keys res))))
+                        (keys a))))))
+   '()
+   alists))
+
+(define (update-keys alist f)
+  (map (match-lambda
+         ((k . v)
+          (cons (f k) v)))
+       alist))
+
+(define (update-vals alist f)
+  (map (match-lambda
+         ((k . v)
+          (cons k (f v))))
+       alist))
 #+end_src
 ** Guix
 #+begin_src scheme
