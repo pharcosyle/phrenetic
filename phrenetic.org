@@ -1675,6 +1675,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 (define* (he-shells #:key
                     stateless?
                     doom?
+                    doom-tree-sitter?
                     login-shell
                     interactive-shell
                     (bashrc (local-file "bashrc"))
@@ -1718,24 +1719,31 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                  ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))
 
      (if doom?
-         (let ((name 'eshell))
-           (list
-            (doom-service
-             name
-             #:modules `((#:term
-                          eshell))
-             #:config '((after! eshell
-                                (setq eshell-history-size biome--very-big)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+         (append
+          (list
+           (doom-service
+            'sh
+            #:modules `((#:lang
+                         (sh ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
 
-            (when stateless?
-              (doom-stateless-service
-               name
-               #:state '(((#:path . ("eshell/history" #:doom-base #:data))
-                          (#:store . #:persist))
-                         ((#:path . ("eshell/lastdir" #:doom-base #:data))
-                          (#:store . #:persist))
-                         ((#:path . ("eshell/z" #:doom-base #:data))
-                          (#:store . #:persist)))))))
+          (let ((name 'eshell))
+            (list
+             (doom-service
+              name
+              #:modules '((#:term
+                           eshell))
+              #:config '((after! eshell
+                                 (setq eshell-history-size biome--very-big)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+
+             (when stateless?
+               (doom-stateless-service
+                name
+                #:state '(((#:path . ("eshell/history" #:doom-base #:data))
+                           (#:store . #:persist))
+                          ((#:path . ("eshell/lastdir" #:doom-base #:data))
+                           (#:store . #:persist))
+                          ((#:path . ("eshell/z" #:doom-base #:data))
+                           (#:store . #:persist))))))))
          '()))))
 #+end_src
 **** Bash
@@ -2244,40 +2252,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
        #:state '(((#:path . ("doom-local/" #:xdg-base "XDG_STATE_HOME"))
                   (#:store . #:machine)))))
      '())))
-
-#!
-(when stateless?
-  (home-stateless-service
-   'doom
-   #:state (let* ((doom (lambda (subpath)
-                          `(,(string-append "doom/" subpath) #:xdg-base "XDG_STATE_HOME")))
-                  (doom-persist (lambda (subpath)
-                                  `((#:path . ,(doom subpath))
-                                    (#:store . #:persist))))
-                  (doom-machine (lambda (subpath)
-                                  `((#:path . ,(doom subpath))
-                                    (#:store . #:machine)))))
-             (list
-              (doom-persist "cache/cider-repl-history")
-              (doom-persist "cache/geiser-history.guile")
-              (doom-persist "cache/projectile.projects")
-              (doom-persist "cache/recentf")
-              (doom-persist "cache/savehist")
-              (doom-persist "cache/saveplace")
-              (doom-persist "etc/bookmarks")
-              (doom-persist "etc/org-clock-save.el")
-              (doom-persist "etc/scratch/")
-              (doom-persist "etc/transient/history")
-              (doom-machine "cache/autosave/")
-              (doom-machine "cache/guix-packaging/")
-              (doom-machine "cache/org-gcal/token.gpg")
-              (doom-machine "cache/org/persist/")
-              (doom-machine "cache/projectile.cache")
-              (doom-machine "cache/tramp")
-              (doom-machine "cache/undo-fu-session/")
-              (doom-machine "etc/persist/org-gcal--sync-tokens")
-              (doom-machine "etc/workspaces/autosave/")))))
-!#
 #+end_src
 **** Service
 #+begin_src scheme
@@ -2288,34 +2262,34 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                       additional))))
     ;; TODO maybe extract out common logic
     `((#:init-file . ,(as-> (field #:modules) $
-                        (apply merge-with append $)
-                        (sort $ (lambda (a b)
-                                  (let ((idx (lambda (entry)
-                                               (list-index
-                                                (lambda (category)
-                                                  (eq? (car entry) category))
-                                                '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
-                                    (< (idx a) (idx b)))))
-                        (update-keys $ (lambda (category)
-                                         (symbol-append ': (keyword->symbol category))))
-                        (update-vals $ (lambda (modules)
-                                         (let ((name (lambda (m)
-                                                       (symbol->string
-                                                        (cond
-                                                         ((symbol? m) m)
-                                                         ((list? m) (car m)))))))
-                                           (sort modules (lambda (a b)
-                                                           (string<? (name a) (name b)))))))
-                        (apply append $)
-                        (elisp-serialize
-                         `(,#~";;; -*- lexical-binding: t; -*-\n"
-                           (doom! ,@$)))))
+                            (apply merge-with append $)
+                            (sort $ (lambda (a b)
+                                      (let ((idx (lambda (entry)
+                                                   (list-index
+                                                    (lambda (category)
+                                                      (eq? (car entry) category))
+                                                    '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
+                                        (< (idx a) (idx b)))))
+                            (update-keys $ (lambda (category)
+                                             (symbol-append ': (keyword->symbol category))))
+                            (update-vals $ (lambda (modules)
+                                             (let ((name (lambda (m)
+                                                           (symbol->string
+                                                            (cond
+                                                             ((symbol? m) m)
+                                                             ((list? m) (car m)))))))
+                                               (sort modules (lambda (a b)
+                                                               (string<? (name a) (name b)))))))
+                            (apply append $)
+                            (elisp-serialize
+                             `(,#~";;; -*- lexical-binding: t; -*-\n"
+                                  (doom! ,@$)))))
       (#:config-file . ,(as-> (field #:config) $
-                                (apply append $)
-                                (elisp-serialize
-                                 (append
-                                  `(,#~";;; -*- lexical-binding: t; -*-\n")
-                                  $))))
+                              (apply append $)
+                              (elisp-serialize
+                               (append
+                                `(,#~";;; -*- lexical-binding: t; -*-\n")
+                                $))))
       (#:packages-file . ,(as-> (field #:packages) $
                                 (apply append $)
                                 (elisp-serialize
@@ -2357,151 +2331,628 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
 
 
-;; old args:
-;;
-;; desktop?
-;; (doom-private (local-file "doom-private" #:recursive? #t))
-;; email
-;; theme
-;; font
-;; font-variable-pitch
-;; font-unicode
-;; font-serif
-;;
-;; #:desktop? desktop?
-;; #:email email
-;; #:theme theme
-;; #:font font-mono
-;; #:font-variable-pitch font-variable-pitch
-;; #:font-unicode font-unicode
-;; #:font-serif font-serif
+(define* (universal-doom #:key
+                         tree-sitter?
+                         (theming? #t))
+  (let ((name 'universal))
+    (list
+     (doom-service
+      name
+      #:modules
+      (let ((childframe? #t)
+            (icons? #t))
+        `((#:completion
+           (company ,@(if childframe? '(+childframe) '()))
+           (vertico ,@(if icons? '(+icons) '())))
+
+          (#:ui
+           doom
+           doom-dashboard
+           (emoji +unicode)
+           hl-todo
+           hydra
+           indent-guides
+           (ligatures +extra)
+           modeline
+           nav-flash
+           ophints
+           (popup +defaults +all)
+           treemacs
+           vi-tilde-fringe
+           window-select
+           workspaces)
+
+          (#:editor
+           (evil +everywhere)
+           file-templates
+           fold
+           format
+           lispy
+           multiple-cursors
+           rotate-text
+           snippets
+           word-wrap)
+
+          (#:emacs
+           (dired ,@(if icons? '(+icons) '()))
+           electric
+           (ibuffer ,@(if icons? '(+icons) '()))
+           undo)
+
+          (#:checkers
+           (syntax ,@(if childframe? '(+childframe) '())))
+
+          (#:tools
+           (eval +overlay)
+           lookup
+           (pass +auth)
+           pdf
+           prodigy
+           rgb
+           taskrunner
+           ,@(if tree-sitter? '(tree-sitter) '()))
+
+          (#:lang
+           (org +journal)
+           (rest +jq))
+
+          (#:config
+           (default +bindings +smartparens))))
+
+      #:packages
+      '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
+
+        (package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
+
+        (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+
+        (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
+        (package! app-launcher
+                  :recipe (:host github
+                           :repo "SebastienWae/app-launcher")
+                  :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
+
+        ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
+        )
+
+      #:config
+      '((after! doom-modeline
+                ;; (setq doom-modeline-checker-simple-format nil)
+                (setq doom-modeline-major-mode-icon t)
+                (setq doom-modeline-persp-name t))
+
+        (use-package! highlight-indent-guides
+                      :defer t
+                      :init
+                      ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+                      (remove-hook! '(prog-mode-hook
+                                      text-mode-hook
+                                      conf-mode-hook)
+                                    #'highlight-indent-guides-mode))
+
+        ;; TODO had :bindings:
+        (after! evil
+                (map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
+
+                ,@(if theming?
+                      '((defun biome--set-theme-cursor-color-symbols ()
+                          (put 'cursor 'evil-normal-color (biome--color :gold))
+                          (put 'cursor 'evil-emacs-color  (biome--color :pink)))
+
+                        (defadvice! biome-update-cursor-color-a (&rest _)
+                          :after #'+evil-update-cursor-color-h
+                          (when (memq biome--nuclear-theme custom-enabled-themes)
+                            (biome--set-theme-cursor-color-symbols))))
+                      '()))
+
+        (after! evil-multiedit
+                (setq evil-multiedit-follow-matches t))
+
+        (use-package! lispy
+                      :defer t
+                      :init
+                      ;; Not using lispy, remove all the Doom module's hooks.
+                      (remove-hook! '(lisp-mode-hook
+                                      emacs-lisp-mode-hook
+                                      ielm-mode-hook
+                                      scheme-mode-hook
+                                      racket-mode-hook
+                                      hy-mode-hook
+                                      lfe-mode-hook
+                                      dune-mode-hook
+                                      clojure-mode-hook
+                                      fennel-mode-hook)
+                                    #'lispy-mode)
+                      (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
+
+        ;; TODO had :bindings:
+        (use-package! lispyville
+                      :hook (prog-mode . lispyville-mode)
+                      :init
+                      (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
+                      :config
+                      (lispyville-set-key-theme
+                       '(operators
+                         c-w
+                         c-u
+                         commentary))
+                      (map! :map lispyville-mode-map
+                            "C-s-j" #'lispyville-beginning-of-next-defun
+                            "C-s-k" #'lispyville-beginning-of-defun
+                            "C-s-," #'lispyville-end-of-defun
+                            "C-s-a" #'lispyville-drag-backward
+                            "C-s-g" #'lispyville-drag-forward
+                            "C-s-p" #'lispyville-prettify
+                            (:prefix "C-s-;"
+                             "R" #'lispyville-raise-list)))
+
+        ;; Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
+        ;; - TODO dired buffers always marked modified
+        ;;   *wait to do this until I do my dired project*
+        ;;   Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
+        ;;   - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
+        ;;     Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
+        (use-package! dired-x
+                      :defer t
+                      :init
+                      (remove-hook! 'dired-mode-hook #'dired-omit-mode)
+                      (add-hook! 'dired-mode-hook
+                                 (defun require-dired-x-h ()
+                                   (require 'dired-x))))
+
+        (after! org
+                (setq org-agenda-files `(,biome--org-dir
+                                         ,biome--org-gcal-dir
+                                         ,(concat biome--org-dir "/work"))
+                      org-log-done 'time
+                      org-priority-lowest ?E
+                      org-priority-default ?C)
+
+                ,@(if theming?
+                      '((setq org-priority-faces `((?A . ,(doom-color 'red))
+                                                   (?B . ,(doom-color 'orange))
+                                                   (?C . ,(doom-color 'blue))
+                                                   (?D . ,(doom-color 'yellow))
+                                                   (?E . ,(doom-color 'green)))))
+                      '()))
+
+        (after! ob
+                (setq org-babel-noweb-error-all-langs t))
+
+        ;; TODO had :bindings:
+        (after! evil-org
+                (map! :map evil-org-mode-map
+                      :nv "C-j" #'outline-forward-same-level
+                      :nv "C-k" #'outline-backward-same-level))
+
+        ;; TODO had :bindings:
+        (use-package! expand-region
+                      :defer t
+                      :init
+                      (map! :nv "s-e" #'er/expand-region
+                            :nv "s-E" #'er/contract-region)
+                      :config
+                      (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+                      ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
+                      (defadvice! biome--quit-expand-region-a (&rest _)
+                        "Properly abort an expand-region region."
+                        :before '(evil-escape doom/escape)
+                        (when (memq last-command '(er/expand-region er/contract-region))
+                          (er/contract-region 0))))
+
+        ;; REVIEW Trying out not having this so I can use avy dispatch commands.
+        ;; (after! avy
+        ;;   (setq avy-single-candidate-jump t))
+
+        (after! paren
+                (setq! show-paren-delay 0))
+
+        (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
+
+        ,@(if theming?
+              '((after! rainbow-delimiters
+                        (let ((default-max rainbow-delimiters-max-face-count))
+                          (defun biome-set-rainbow-delimiters-max-face-count ()
+                            (setq rainbow-delimiters-max-face-count
+                                  (if (memq biome--nuclear-theme custom-enabled-themes)
+                                      8 default-max))))
+
+                        (biome-set-rainbow-delimiters-max-face-count)
+                        (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
+
+                        (custom-theme-set-faces! biome--nuclear-theme
+                                                 `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
+                                                 `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
+                                                 `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
+                                                 `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
+                                                 `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
+                                                 `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
+                                                 `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
+                                                 `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red)))))
+              '())
+
+        (after! recentf
+                (setq recentf-max-saved-items 500))
+
+        ;; TODO Had :bindings:
+        (after! smartparens
+                (map! :map smartparens-mode-map
+                      "C-s-h" #'sp-backward-sexp
+                      "C-s-l" #'sp-forward-sexp
+                      "C-s-u" #'sp-backward-up-sexp
+                      "C-s-o" #'sp-up-sexp
+                      :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
+                      "C-s-." #'sp-down-sexp
+                      "C-s-c" #'sp-splice-sexp
+                      "C-s-s" #'sp-splice-sexp-killing-backward
+                      "C-s-f" #'sp-splice-sexp-killing-forward
+                      "C-s-x" #'sp-backward-slurp-sexp
+                      "C-s-v" #'sp-forward-slurp-sexp
+                      "C-s-w" #'sp-backward-barf-sexp
+                      "C-s-r" #'sp-forward-barf-sexp
+                      (:prefix "C-s-;"
+                       "(" #'sp-wrap-round
+                       "[" #'sp-wrap-square
+                       "{" #'sp-wrap-curly
+                       "s" #'sp-split-sexp
+                       "j" #'sp-join-sexp
+                       "r" #'sp-raise-sexp
+                       "c" #'sp-convolute-sexp
+                       "w" #'sp-rewrap-sexp)))
+
+        ;; TODO was in a subheading "Hook" and had :bindings:
+        (defun biome-sp-strict-h ()
+          (add-hook! 'smartparens-enabled-hook :local
+                     #'turn-on-smartparens-strict-mode
+                     (defun biome-modify-sp-strict-mode-map-h ()
+                       (map! :map smartparens-strict-mode-map
+                             :i "DEL" #'sp-backward-delete-char))))
+
+        (after! transient
+                (setq transient-history-limit biome--very-big))
+
+        (after! undo-fu
+                (setq undo-fu-ignore-keyboard-quit t))
+
+        ;; (after! undo-tree
+        ;;   (setq undo-tree-visualizer-timestamps t))
+
+        (after! emojify
+                (setq emojify-display-style 'unicode))
+
+        ;; TODO had :bindings:
+        ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+        (define-key! :keymaps +default-minibuffer-maps
+          "s-J" #'scroll-up-command
+          "s-K" #'scroll-down-command)
 
 
-;; (mixed-text-file
-;;  "params.el"
-;;  (serialize-elisp-config
-;;   #f
-;;   `((setq param-desktop? ,(if desktop? 't 'nil)
-;;           param-email ,email
-;;           param-theme ,(symbol-append ': (keyword->symbol theme))
-;;           param-font-name ,(assoc-ref font #:font/name)
-;;           param-font-size ,(+ (assoc-ref font #:font/size) 2)
-;;           param-font-weight ,(if-let ((weight (assoc-ref font #:font/weight)))
-;;                                      `',weight
-;;                                      'nil)
-;;           param-font-variable-pitch-name ,(assoc-ref font-variable-pitch #:font/name)
-;;           param-font-unicode-name ,(assoc-ref font-unicode #:font/name)
-;;           param-font-serif-name ,(assoc-ref font-serif #:font/name)))))
+        ))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("projectile.projects" #:doom-base #:cache))
+                   (#:store . #:persist))
+                  ((#:path . ("recentf" #:doom-base #:cache))
+                   (#:store . #:persist))
+                  ((#:path . ("savehist" #:doom-base #:cache))
+                   (#:store . #:persist))
+                  ((#:path . ("saveplace" #:doom-base #:cache))
+                   (#:store . #:persist))
+                  ((#:path . ("bookmarks" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("org-clock-save.el" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("scratch/" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("autosave/" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("org/persist/" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("projectile.cache" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("tramp" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("undo-fu-session/" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("workspaces/autosave/" #:doom-base #:data))
+                   (#:store . #:machine))))))))
 
 
+(define* (doom-guix #:key stateless?)
+  (append
+   (doom-guile #:stateless stateless?)
+   (doom-guix* #:stateless stateless?)))
 
-(define* (universal-doom #:key doom-tree-sitter?)
+(define* (doom-guile #:key stateless?)
+  (let ((name 'guile))
+    (list
+     (doom-service
+      name
+      #:modules '((#:lang
+                   (scheme +guile)))
+      #:config
+      '((after! scheme
+                (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
+                   (#:store . #:persist))))))))
+
+;; TODO add :bindings: org tag
+(define* (doom-guix* #:key stateless?)
+  (let ((name 'guix))
+    (list
+     (doom-service
+      name
+      #:packages '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+                   (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
+                   (package! guix-packaging ; REVIEW trying out
+                             :recipe (:host github
+                                      :repo "ryanprior/emacs-guix-packaging"
+                                      :files (:defaults "snippets"))
+                             :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
+      #:config
+      '((use-package! geiser
+                      :defer t
+                      ;; Use `:init' to configure variables (as opposed to `:config', which seems like it'd be fine); hlissner does it this way for the Geiser package so I will too.
+                      :init
+                      (setq geiser-repl-current-project-function #'ignore)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
+
+        (after! guix
+                (set-popup-rules!
+                 '(("^\\*Guix" :height 0.5))))
+        (use-package! guix-devel
+                      :hook (scheme-mode . guix-devel-mode))
+        (use-package! guix-popup
+                      :defer t
+                      :init
+                      (map! :leader
+                            "l" #'guix))  ; REVIEW temporary binding?
+        (use-package! guix-prettify
+                      :hook (doom-first-buffer . global-guix-prettify-mode))
+
+        ;; TODO once I'm done packaging Doom figure out how to enable this
+        ;; (use-package! guix-contributing)
+
+        (use-package! guix-packaging
+                      :defer t
+                      :init
+                      (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
+                   (#:store . #:machine))))))))
+
+
+;; TODO add :bindings: org tag
+(define* (doom-clojure #:key
+                       stateless?
+                       (theming? #t))
+  (let ((name 'clojure))
+    (list
+     (doom-service
+      name
+      #:modules '((#:lang
+                   clojure))
+      #:config
+      '((use-package! clojure-mode
+                      :defer t
+                      :init
+                      (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
+                      :config
+                      (set-ligatures! 'clojure-mode :lambda "fn")
+                      ,@(if theming?
+                            '((custom-theme-set-faces! biome--nuclear-theme
+                                                       `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
+                            '()))
+
+        (after! cider
+                (setq cider-repl-history-size biome--very-big
+                      cider-print-options '(("length" 100))))
+
+        ;; REVIEW make sure this is still working after nesting in `after!'
+        (after! cider-repl
+                (add-hook! 'cider-repl-mode-hook
+                           #'goto-address-prog-mode
+                           #'highlight-numbers-mode
+                           #'rainbow-delimiters-mode
+                           #'yas-minor-mode-on
+                           #'biome-sp-strict-h))
+
+        (after! clj-refactor
+                (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
+                   (#:store . #:persist))))))))
+
+
+(define* (doom-calendar #:key stateless?)
+  (let ((name 'calendar))
+    (list
+     (doom-service
+      name
+      #:modules '((#:app
+                   calendar))
+      #:config
+      '((after! org-gcal
+                (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+                      org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+                      org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
+                                                  ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
+                                                  ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
+                      org-gcal-recurring-events-mode 'nested))))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
+                   (#:store . #:machine))
+                  ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
+                   (#:store . #:machine))))))))
+
+
+(define (doom-version-control)
   (list
    (doom-service
-    'universal
-    #:modules
-    `((#:completion
-       (company +childframe)
-       (vertico +icons))
+    'version-control
+    #:modules '((#:emacs
+                 vc)
+                (#:ui
+                 (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+                (#:tools
+                 (magit +forge)))
+    #:config
+    '((after! magit
+              (setq git-commit-style-convention-checks '(non-empty-second-line))
+              (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))))))
 
-      (#:ui
-       doom
-       doom-dashboard
-       (emoji +unicode)
-       hl-todo
-       hydra
-       indent-guides
-       (ligatures +extra)
-       modeline
-       nav-flash
-       ophints
-       (popup +defaults +all)
-       treemacs
-       (vc-gutter +pretty) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
-       vi-tilde-fringe
-       window-select
-       workspaces)
 
-      (#:editor
-       (evil +everywhere)
-       file-templates
-       fold
-       format
-       lispy
-       multiple-cursors
-       rotate-text
-       snippets
-       word-wrap)
+(define (doom-vterm)
+  (list
+   (doom-service
+    'vterm
+    #:modules '((#:term
+                 vterm)))))
 
-      (#:emacs
-       (dired +icons)
-       electric
-       (ibuffer +icons)
-       undo
-       vc)
 
-      (#:term
-       vterm)
+;; TODO make this included by doom-nix, doom-vc, others? and handle deuplicating doom and stateless.
+(define* (doom-transient #:key stateless?)
+  (let ((name 'transient))
+    (list
+     (doom-service
+      name
+      #:config
+      '((after! transient
+                (setq transient-history-limit biome--very-big))))
 
-      (#:checkers
-       (syntax +childframe))
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("transient/history" #:doom-base #:data))
+                   (#:store . #:persist))))))))
 
-      (#:tools
-       (eval +overlay)
-       lookup
-       (magit +forge)
-       (pass +auth)
-       pdf
-       prodigy ; TODO dependency of hyperdrive. Keep it enabled by default too.
-       rgb
-       taskrunner
-       ,@(if doom-tree-sitter? '(tree-sitter) '())
-       upload) ; TODO dependency of massrealty/phucnet
 
-      (#:lang
-       clojure ; TODO contribute this with some Clojure module/compnent /if I end up having one/ (maybe along with the WIP clojure manifest)
-       common-lisp ; TODO this should be contributed by Nyxt / my eventual nyxt project
-       data
-       emacs-lisp
-       ;; graphql ; TODO dependency of krush/hyperdrive
-       (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-       (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-       markdown
-       (org +journal)
-       (rest +jq)
-       (scheme +guile) ; TODO Should be contributed by some Guix component (also the guix-related packages.el entries and stuff in config)
-       (sh ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-       (web ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-       yaml) ; TODO this should probably be specific to the krush/hyperdrive/afterburner(?) project
+(define* (doom-langs #:key tree-sitter?)
+  (list
+   (doom-service
+    'langs
+    #:modules '((#:lang
+                 data
+                 emacs-lisp
+                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
+                 (javascript ,@(if tree-sitter? '(+tree-sitter) '()))
+                 markdown
+                 (web ,@(if tree-sitter? '(+tree-sitter) '()))))
+    #:config
+    '((after! elisp-mode
+              (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))))))
 
-      (#:app
-       calendar)
 
-      (#:config
-       (default +bindings +smartparens)))
+(define* (doom-theme+fonts #:key
+                           theme
+                           font
+                           font-variable-pitch
+                           font-unicode
+                           font-serif)
+  (list
+   (doom-service
+    'theme+fonts
+    #:config
+    `((setq doom-theme
+            (pcase ,(symbol-append ': (keyword->symbol theme))
+                   (:theme/light 'doom-one-light)
+                   (:theme/dark biome--nuclear-theme)))
 
-    #:packages
-    '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
+      (custom-theme-set-faces! biome--nuclear-theme
+                               `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
+                               `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 
-      (package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
-      (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+      (defun biome--set-font-safe (sym font)
+        (when (find-font font)
+          (set sym font)))
 
-      (package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
-      (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
-      (package! guix-packaging ; REVIEW trying out
-                :recipe (:host github
-                         :repo "ryanprior/emacs-guix-packaging"
-                         :files (:defaults "snippets"))
-                :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529")
+      (biome--set-font-safe
+       'doom-font
+       (font-spec :family ,(assoc-ref font #:font/name)
+                  :size ,(+ (assoc-ref font #:font/size) 2)
+                  :weight ',(or (assoc-ref font #:font/weight) 'normal)))
 
-      (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
-      (package! app-launcher
-                :recipe (:host github
-                         :repo "SebastienWae/app-launcher")
-                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
+      (biome--set-font-safe
+       'doom-variable-pitch-font
+       (font-spec :family ,(assoc-ref font-variable-pitch #:font/name)))
 
-      ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
-      ))))
+      (biome--set-font-safe
+       'doom-unicode-font
+       (font-spec :family ,(assoc-ref font-unicode #:font/name)))
+
+      (biome--set-font-safe
+       'doom-serif-font
+       (font-spec :family ,(assoc-ref font-serif #:font/name)))))))
+
+;; (doom-theme+fonts #:theme theme
+;;                   #:font font-mono
+;;                   #:font-variable-pitch font-variable-pitch
+;;                   #:font-unicode font-unicode
+;;                   #:font-serif font-serif)
+
+
+;; (define* (doom-NAME #:key stateless?)
+;;   (let ((name 'NAME))
+;;     (list
+;;      (doom-service
+;;       name
+;;       #:modules '()
+;;       #:config
+;;       '())
+
+;;      (when stateless?
+;;        (doom-stateless-service
+;;         name
+;;         #:state '(((#:path . ("" #:doom-base #:asdf))
+;;                    (#:store . #:asdf))))))))
+
+
+;; (define (doom-)
+;;   (list
+;;    (doom-service
+;;     '
+;;     #:modules '()
+;;     #:config
+;;     '())))
+
+
+
+;; (use-package-hook! ligature
+;;   :pre-config
+;;   (setq +ligatures-all-modes-list
+;;         '("www")
+;;         +ligatures-prog-mode-list
+;;         '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
+;;           "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
+;;           ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
+;;           "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
+;;           "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
+;;           "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
+;;           "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
+;;           "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
+;;           "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
+;;           "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
+;;           "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
+;;           ;; Doom defaults (just the ones not already present in Fira Code)
+;;           "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
+;;           "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
+;;           ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
+;;           "*)" "://"))
+;;   t)
 #+end_src
 **** Stateless
 #+begin_src scheme
@@ -4346,29 +4797,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ;; (write-current-commits)
 #+end_src
 **** Doom private
-:PROPERTIES:
-:meta-dir+: /doom-private
-:END:
-
-#+name: palette
-| Name              | Color   |
-|-------------------+---------|
-| fg                | #dee2f8 |
-| highlight         | #8496ff |
-| comments          | #63677f |
-| comment-delimiter | #939abd |
-| red               | #fb8578 |
-| orange            | #fdce5f |
-| green             | #9fed9c |
-| yellow            | #eddc91 |
-| blue              | #7db9fe |
-| dark-blue         | #5f68de |
-| magenta           | #e29bf7 |
-| violet            | #aeb9f3 |
-| cyan              | #75e0f9 |
-| gold              | #fdd94a |
-| pink              | #ff9999 |
-
 ***** Config
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "config.el")
@@ -4376,16 +4804,11 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src elisp
 ;;; -*- lexical-binding: t; -*-
 #+end_src
-****** Doom Guix module params
-#+begin_src elisp
-(load! "params")
-#+end_src
 ****** Requires
 #+begin_src elisp
 (use-package! dash)
-(use-package! s)
 #+end_src
-****** Personal Info :user:
+****** Personal Info
 #+begin_src elisp
 (setq user-mail-address param-email)
 #+end_src
@@ -4397,13 +4820,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (defconst biome--very-big 1000000)
 
 (defconst biome--nuclear-theme 'doom-nuclear)
-#+end_src
-#+begin_src elisp :var palette=palette
+
 (defun biome--color (color)
   (let ((k (-> color symbol-name (substring 1))))
-    (cadr (assoc k palette))))
+    (cadr (assoc k palette)))) ; TODO palette no longer provided
 #+end_src
-****** General :UI:path:
+****** General :path:
 #+begin_src elisp
 ;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
 (setq org-directory biome--org-dir)
@@ -4424,6 +4846,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ******* Doom
 #+begin_src elisp
 ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
+;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
+(use-package! s)
 (add-hook! 'doom-real-buffer-functions
   ;; (defun biome-new-buffer-p (buf)
   ;;   (s-matches?
@@ -4532,448 +4956,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         "s" #'org-gcal-sync
         "p" #'org-gcal-post-at-point)))
 #+end_src
-****** Modules
-******* UI
-******** Doom
-********* doom-themes
-- TODO get rid of this if I'm not going to try it out again
-#+begin_src elisp
-;; (after! doom-themes
-;;   (doom-themes-visual-bell-config))
-#+end_src
-******** Modeline
-********* doom-modeline
-#+begin_src elisp
-(after! doom-modeline
-  ;; (setq doom-modeline-checker-simple-format nil)
-  (setq doom-modeline-major-mode-icon t)
-  (setq doom-modeline-persp-name t))
-#+end_src
-******** Indent Guides
-********* highlight-indent-guides :prog_mode:
-#+begin_src elisp
-(use-package! highlight-indent-guides
-  :defer t
-  :init
-  ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-  (remove-hook! '(prog-mode-hook
-                  text-mode-hook
-                  conf-mode-hook)
-    #'highlight-indent-guides-mode))
-#+end_src
-******** Ligatures
-********* ligature
-#+begin_src elisp :tangle (meta-in-dir "init.el")
-;; (use-package-hook! ligature
-;;   :pre-config
-;;   (setq +ligatures-all-modes-list
-;;         '("www")
-;;         +ligatures-prog-mode-list
-;;         '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
-;;           "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-;;           ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-;;           "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-;;           "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-;;           "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-;;           "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-;;           "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-;;           "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-;;           "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-;;           "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
-;;           ;; Doom defaults (just the ones not already present in Fira Code)
-;;           "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
-;;           "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
-;;           ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
-;;           "*)" "://"))
-;;   t)
-#+end_src
-******* Editor
-******** Evil
-********* evil :bindings:theming:
-#+begin_src elisp
-(after! evil
-  (map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
-
-  (when param-desktop?
-    (defun biome--set-theme-cursor-color-symbols ()
-      (put 'cursor 'evil-normal-color (biome--color :gold))
-      (put 'cursor 'evil-emacs-color  (biome--color :pink)))
-
-    (defadvice! biome-update-cursor-color-a (&rest _)
-      :after #'+evil-update-cursor-color-h
-      (when (memq biome--nuclear-theme custom-enabled-themes)
-        (biome--set-theme-cursor-color-symbols)))))
-#+end_src
-******** Multiple Cursors
-********* evil-multiedit :evil:
-#+begin_src elisp
-(after! evil-multiedit
-  (setq evil-multiedit-follow-matches t))
-#+end_src
-******** Lisp
-********* lispy
-#+begin_src elisp
-(use-package! lispy
-  :defer t
-  :init
-  ;; Not using lispy, remove all the Doom module's hooks.
-  (remove-hook! '(lisp-mode-hook
-                  emacs-lisp-mode-hook
-                  ielm-mode-hook
-                  scheme-mode-hook
-                  racket-mode-hook
-                  hy-mode-hook
-                  lfe-mode-hook
-                  dune-mode-hook
-                  clojure-mode-hook
-                  fennel-mode-hook)
-    #'lispy-mode)
-  (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
-#+end_src
-********* lispyville :prog_mode:bindings:
-#+begin_src elisp
-(use-package! lispyville
-  :hook (prog-mode . lispyville-mode)
-  :init
-  (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
-  :config
-  (lispyville-set-key-theme
-   '(operators
-     c-w
-     c-u
-     commentary))
-  (map! :map lispyville-mode-map
-        "C-s-j" #'lispyville-beginning-of-next-defun
-        "C-s-k" #'lispyville-beginning-of-defun
-        "C-s-," #'lispyville-end-of-defun
-        "C-s-a" #'lispyville-drag-backward
-        "C-s-g" #'lispyville-drag-forward
-        "C-s-p" #'lispyville-prettify
-        (:prefix "C-s-;"
-         "R" #'lispyville-raise-list)))
-#+end_src
-******* Emacs
-******** Dired
-********* dired-x :UI:hidden:
-Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
-- TODO dired buffers always marked modified
-  *wait to do this until I do my dired project*
-  Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
-  - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
-    Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
-#+begin_src elisp
-(use-package! dired-x
-  :defer t
-  :init
-  (remove-hook! 'dired-mode-hook #'dired-omit-mode)
-  (add-hook! 'dired-mode-hook
-    (defun require-dired-x-h ()
-      (require 'dired-x))))
-#+end_src
-******* Tools
-******** Magit
-********* magit :UI:
-#+begin_src elisp
-(after! magit
-  (setq git-commit-style-convention-checks '(non-empty-second-line))
-  (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))
-#+end_src
-******* Lang
-******** Clojure
-********* clojure :bindings:theming:
-#+begin_src elisp
-(use-package! clojure-mode
-  :defer t
-  :init
-  (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
-  :config
-  (set-ligatures! 'clojure-mode :lambda "fn")
-  (when param-desktop?
-    (custom-theme-set-faces! biome--nuclear-theme
-      `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold))))
-#+end_src
-********* cider
-#+begin_src elisp
-(after! cider
-  (setq cider-repl-history-size biome--very-big
-        cider-print-options '(("length" 100))))
-
-;; REVIEW make sure this is still working after nesting in `after!'
-(after! cider-repl
-  (add-hook! 'cider-repl-mode-hook
-             #'goto-address-prog-mode
-             #'highlight-numbers-mode
-             #'rainbow-delimiters-mode
-             #'yas-minor-mode-on
-             #'biome-sp-strict-h))
-#+end_src
-********* clj-refactor :bindings:
-#+begin_src elisp
-(after! clj-refactor
-  (cljr-add-keybindings-with-prefix "s-M R")) ; REVIEW temporary binding
-#+end_src
-******** Emacs Lisp
-********* emacs-lisp
-#+begin_src elisp
-(after! elisp-mode
-  (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))
-#+end_src
-******** Org
-********* org :UI:path:theming:
-#+begin_src elisp
-(after! org
-  (setq org-agenda-files `(,biome--org-dir
-                           ,biome--org-gcal-dir
-                           ,(concat biome--org-dir "/work"))
-        org-log-done 'time
-        org-priority-lowest ?E
-        org-priority-default ?C)
-
-  (when param-desktop?
-    (setq org-priority-faces `((?A . ,(doom-color 'red))
-                               (?B . ,(doom-color 'orange))
-                               (?C . ,(doom-color 'blue))
-                               (?D . ,(doom-color 'yellow))
-                               (?E . ,(doom-color 'green))))))
-#+end_src
-********* ob
-#+begin_src elisp
-(after! ob
-  (setq org-babel-noweb-error-all-langs t))
-#+end_src
-********* evil-org :evil:bindings:
-#+begin_src elisp
-(after! evil-org
-  (map! :map evil-org-mode-map
-        :nv "C-j" #'outline-forward-same-level
-        :nv "C-k" #'outline-backward-same-level))
-#+end_src
-******** Scheme
-********* scheme
-#+begin_src elisp
-(after! scheme
-  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
-#+end_src
-********* geiser :path:guix:
-Use ~:init~ to configure variables (as opposed to ~:config~, which seems like it'd be fine) because hlissner does it this way for the Geiser package so I will too.
-#+begin_src elisp
-(use-package! geiser
-  :defer t
-  :init
-  (setq geiser-repl-current-project-function #'ignore)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
-#+end_src
-******* App
-******** Calendar
-********* org-gcal :org:user:secret:path:
-#+begin_src elisp
-(after! org-gcal
-  (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
-        org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-        org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
-                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
-                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
-        org-gcal-recurring-events-mode 'nested))
-#+end_src
-******* Config
-******** expand-region :bindings:
-#+begin_src elisp
-(use-package! expand-region
-  :defer t
-  :init
-  (map! :nv "s-e" #'er/expand-region
-        :nv "s-E" #'er/contract-region)
-  :config
-  (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-  ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
-  (defadvice! biome--quit-expand-region-a (&rest _)
-    "Properly abort an expand-region region."
-    :before '(evil-escape doom/escape)
-    (when (memq last-command '(er/expand-region er/contract-region))
-      (er/contract-region 0))))
-#+end_src
-******* Guix
-******** guix.el
-********* guix :UI:
-#+begin_src elisp
-(after! guix
-  (set-popup-rules!
-    '(("^\\*Guix" :height 0.5))))
-#+end_src
-********* guix-devel :scheme:
-#+begin_src elisp
-(use-package! guix-devel
-  :hook (scheme-mode . guix-devel-mode))
-#+end_src
-********* guix-popup :bindings:
-#+begin_src elisp
-(use-package! guix-popup
-  :defer t
-  :init
-  (map! :leader
-        "l" #'guix))  ; REVIEW temporary binding?
-#+end_src
-********* guix-prettify :UI:
-#+begin_src elisp
-(use-package! guix-prettify
-  :hook (doom-first-buffer . global-guix-prettify-mode))
-#+end_src
-******** guix-contributing
-#+begin_src elisp
-;; TODO once I'm done packaging Doom figure out how to enable this
-;; (use-package! guix-contributing)
-#+end_src
-******** guix-packaging :path:
-#+begin_src elisp
-(use-package! guix-packaging
-  :defer t
-  :init
-  (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
-#+end_src
-******* ?
-******** avy
-#+begin_src elisp
-;; REVIEW Trying out not having this so I can use avy dispatch commands.
-;; (after! avy
-;;   (setq avy-single-candidate-jump t))
-#+end_src
-******** paren :UI:
-#+begin_src elisp
-(after! paren
-  (setq! show-paren-delay 0))
-#+end_src
-******** prog-mode :prog_mode:
-#+begin_src elisp
-(add-hook! 'prog-mode-hook #'biome-sp-strict-h)
-#+end_src
-******** rainbow-delimiters :theming:
-#+begin_src elisp
-(when param-desktop?
-  (after! rainbow-delimiters
-    (let ((default-max rainbow-delimiters-max-face-count))
-      (defun biome-set-rainbow-delimiters-max-face-count ()
-        (setq rainbow-delimiters-max-face-count
-              (if (memq biome--nuclear-theme custom-enabled-themes)
-                  8 default-max))))
-
-    (biome-set-rainbow-delimiters-max-face-count)
-    (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
-
-    (custom-theme-set-faces! biome--nuclear-theme
-      `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
-      `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
-      `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
-      `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
-      `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
-      `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
-      `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
-      `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red)))))
-#+end_src
-******** recentf
-#+begin_src elisp
-(after! recentf
-  (setq recentf-max-saved-items 500))
-#+end_src
-******** smartparens :bindings:
-#+begin_src elisp
-(after! smartparens
-  (map! :map smartparens-mode-map
-        "C-s-h" #'sp-backward-sexp
-        "C-s-l" #'sp-forward-sexp
-        "C-s-u" #'sp-backward-up-sexp
-        "C-s-o" #'sp-up-sexp
-        :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
-        "C-s-." #'sp-down-sexp
-        "C-s-c" #'sp-splice-sexp
-        "C-s-s" #'sp-splice-sexp-killing-backward
-        "C-s-f" #'sp-splice-sexp-killing-forward
-        "C-s-x" #'sp-backward-slurp-sexp
-        "C-s-v" #'sp-forward-slurp-sexp
-        "C-s-w" #'sp-backward-barf-sexp
-        "C-s-r" #'sp-forward-barf-sexp
-        (:prefix "C-s-;"
-         "(" #'sp-wrap-round
-         "[" #'sp-wrap-square
-         "{" #'sp-wrap-curly
-         "s" #'sp-split-sexp
-         "j" #'sp-join-sexp
-         "r" #'sp-raise-sexp
-         "c" #'sp-convolute-sexp
-         "w" #'sp-rewrap-sexp)))
-#+end_src
-********* Hook :bindings:
-#+begin_src elisp
-(defun biome-sp-strict-h ()
-  (add-hook! 'smartparens-enabled-hook :local
-             #'turn-on-smartparens-strict-mode
-             (defun biome-modify-sp-strict-mode-map-h ()
-               (map! :map smartparens-strict-mode-map
-                     :i "DEL" #'sp-backward-delete-char))))
-#+end_src
-******** transient
-- TODO Not sure where this should be categorized, it's a helper package required by at least magit, forge, git-timemachine
-#+begin_src elisp
-(after! transient
-  (setq transient-history-limit biome--very-big))
-#+end_src
-******** undo-fu
-#+begin_src elisp
-(after! undo-fu
-  (setq undo-fu-ignore-keyboard-quit t))
-#+end_src
-******** undo-tree :UI:
-#+begin_src elisp
-;; (after! undo-tree
-;;   (setq undo-tree-visualizer-timestamps t))
-#+end_src
-******** emojify :UI:
-#+begin_src elisp
-(after! emojify
-  (setq emojify-display-style 'unicode))
-#+end_src
-******** asdf :bindings:
-- TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-#+begin_src elisp
-(define-key! :keymaps +default-minibuffer-maps
-  "s-J" #'scroll-up-command
-  "s-K" #'scroll-down-command)
-#+end_src
-****** Theming :theming:
-#+begin_src elisp
-(when param-desktop?
-  (setq doom-theme
-        (pcase param-theme
-          (:theme/light 'doom-one-light)
-          (:theme/dark biome--nuclear-theme)))
-
-  (custom-theme-set-faces! biome--nuclear-theme
-    `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
-    `(font-lock-doc-face :foreground ,(doom-color 'cyan))))
-#+end_src
-******* Font
-#+begin_src elisp
-(when param-desktop?
-  (defun biome--set-font-safe (sym font)
-    (when (find-font font)
-      (set sym font)))
-
-  (biome--set-font-safe
-   'doom-font
-   (font-spec :family param-font-name
-              :size param-font-size
-              :weight (or param-font-weight 'normal)))
-
-  (biome--set-font-safe
-   'doom-variable-pitch-font
-   (font-spec :family param-font-variable-pitch-name))
-
-  (biome--set-font-safe
-   'doom-unicode-font
-   (font-spec :family param-font-unicode-name))
-
-  (biome--set-font-safe
-   'doom-serif-font
-   (font-spec :family param-font-serif-name)))
-#+end_src
+****** Theming
 ******* Nuclear Theme
 
 #+call: gen-doom-theme() :results code :post unescape(*this*) :results_switches ":tangle (meta-in-dir \"themes/doom-nuclear-theme.el\")"
@@ -5243,84 +5226,6 @@ Can be an integer to determine the exact padding."
        (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
        (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
 #+end_src
-****** Projects
-******* Phrenetic :path:
-#+begin_src elisp
-(load "~/work/phrenetic/meta" 'noerror 'nomessage)
-
-(pushnew! safe-local-variable-values
-          '(eval . (with-eval-after-load 'geiser-guile
-                     (let ((root-dir
-                            (file-name-directory
-                             (locate-dominating-file default-directory ".dir-locals.el"))))
-                       (make-local-variable 'geiser-guile-load-path)
-                       (add-to-list 'geiser-guile-load-path root-dir)))))
-#+end_src
-******* Nyxt
-- TODO donno if I should keep this section in particular (it's not really impoportant), I'm just thinking I want to start trying out adding safe local variables for other codebases so I can get their advantages. Also the changes it makes persist (modify ~lisp-imenu-generic-expression~), I don't know if that's a good idae.
-#+begin_src elisp
-(pushnew! safe-local-variable-values
-          '(eval . (cl-flet ((enhance-imenu-lisp
-                              (&rest keywords)
-                              (dolist (keyword keywords)
-                                (add-to-list
-                                 'lisp-imenu-generic-expression
-                                 (list (purecopy (concat (capitalize keyword)
-                                                         (if (string= (substring-no-properties keyword -1) "s")
-                                                             "es"
-                                                           "s")))
-                                       (purecopy (concat "^\\s-*("
-                                                         (regexp-opt
-                                                          (list (concat "define-" keyword))
-                                                          t)
-                                                         "\\s-+\\(" lisp-mode-symbol-regexp "\\)"))
-                                       2)))))
-                     ;; This adds the argument to the list of imenu known keywords.
-                     (enhance-imenu-lisp
-                      "bookmarklet-command"
-                      "class"
-                      "command"
-                      "ffi-method"
-                      "function"
-                      "mode"
-                      "parenscript"
-                      "user-class"))))
-#+end_src
-******* Hyperdrive :path:
-#+begin_src elisp
-(pushnew! safe-local-variable-values
-          '(cider-preferred-build-tool . shadow-cljs)
-          '(cider-default-cljs-repl . shadow)
-          '(cider-shadow-default-options . ":app")
-          '(cider-offer-to-open-cljs-app-in-browser . nil)
-          '(cider-clojure-cli-global-options . "-A:dev")
-          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
-          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
-          '(cider-clojure-cli-global-options . nil))
-
-(prodigy-define-service
-  :name "Amplify Mock"
-  :command "amplify"
-  :args '("mock")
-  :cwd "~/work/Krush/hyperdrive/apps/singularity"
-  :kill-process-buffer-on-stop t)
-
-(prodigy-define-service
-  :name "Datomic Access (exogenesis)"
-  :command "bash"
-  :args '("datomic" "client" "access" "exogenesis")
-  :cwd "~/work/Krush/hyperdrive/ion/team"
-  :kill-process-buffer-on-stop t)
-#+end_src
-******* Massrealty :path:
-#+begin_src elisp
-;; (pushnew! safe-local-variable-values
-;;           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
-;;           '(ssh-deploy-automatically-detect-remote-changes . t))
-
-;; (after! org-gcal
-;;   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append))
-#+end_src
 ****** WIP
 #+begin_src elisp
 (after! org
@@ -5406,7 +5311,7 @@ Can be an integer to determine the exact padding."
 ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
 ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
 #+end_src
-******* phrenetic auto-tangle :path:
+******* phrenetic auto-tangle
 - TODO Might be easier to do this with file-local variables.
 #+begin_src elisp
 ;; (setq biome--phrenetic-dir "~/work/phrenetic")
@@ -5528,7 +5433,7 @@ Probably move these to ~after!~ blocks
    (when doom?
      (doom-service
       'direnv
-      #:modules `((#:tools
+      #:modules '((#:tools
                    direnv))))))
 #+end_src
 *** Console
@@ -6794,6 +6699,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
      (he-packages #:packages utility-packages)
      (he-shells #:stateless? stateless?
                 #:doom? doom?
+                #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
      (if nix?
@@ -8697,4 +8603,107 @@ The default git config on my Guix system.
                     (locate-dominating-file default-directory ".dir-locals.el"))))
               (make-local-variable 'geiser-guile-load-path)
               (add-to-list 'geiser-guile-load-path root-dir))))))
+#+end_src
+
+
+
+
+
+
+
+* COMMENT Work WIP
+** Phrenetic
+#+begin_src scheme
+(phrenetic-work #:doom? doom?
+                #:work-dir "~/work")
+
+(define* (phrenetic-work #:key
+                         doom?
+                         work-dir)
+  (list
+   (when doom?
+     (doom-service
+      'phrenetic-work
+      #:config
+      `((load ,(string-append work-dir "/phrenetic/meta") 'noerror 'nomessage))))))
+#+end_src
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(eval . (with-eval-after-load 'geiser-guile
+                     (let ((root-dir
+                            (file-name-directory
+                             (locate-dominating-file default-directory ".dir-locals.el"))))
+                       (make-local-variable 'geiser-guile-load-path)
+                       (add-to-list 'geiser-guile-load-path root-dir)))))
+#+end_src
+** Nyxt
+#+begin_src scheme
+(doom-service
+ 'nyxt-work
+ #:modules '((#:lang
+              common-lisp)))
+#+end_src
+** Hyperdrive
+#+begin_src scheme
+(hyperdrive-work #:doom? doom?
+                 #:work-dir "~/work")
+
+(define* (hyperdrive-work #:key
+                          doom?
+                          work-dir)
+  (list
+   (when doom?
+     (doom-service
+      'hyperdrive-work
+      #:modules '((#:lang
+                   graphql
+                   yaml))
+      #:config
+      (let ((hyperdrive-dir (string-append work-dir "/Krush/hyperdrive")))
+        `((prodigy-define-service
+           :name "Amplify Mock"
+           :command "amplify"
+           :args '("mock")
+           :cwd ,(string-append hyperdrive-dir "/apps/singularity")
+           :kill-process-buffer-on-stop t)
+
+          (prodigy-define-service
+           :name "Datomic Access (exogenesis)"
+           :command "bash"
+           :args '("datomic" "client" "access" "exogenesis")
+           :cwd ,(string-append hyperdrive-dir "/ion/team")
+           :kill-process-buffer-on-stop t)))))))
+#+end_src
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(cider-preferred-build-tool . shadow-cljs)
+          '(cider-default-cljs-repl . shadow)
+          '(cider-shadow-default-options . ":app")
+          '(cider-offer-to-open-cljs-app-in-browser . nil)
+          '(cider-clojure-cli-global-options . "-A:dev")
+          ;; [2022-09-05 Mon] These get set emacs-globally. This isn't the right way, it should be done with direnv.
+          '(eval . (setenv "DATOMIC_APP_INFO_MAP" "{:app-name \"neutrino\"}"))
+          '(eval . (setenv "DATOMIC_ENV_MAP" "{:env :dev}"))
+          '(cider-clojure-cli-global-options . nil))
+#+end_src
+** Massrealty
+#+begin_src scheme
+(massrealty-work #:doom? doom?)
+
+(define* (massrealty-work #:key doom?)
+  (list
+   (when doom?
+     (doom-service
+      'massrealty-work
+      #:modules '((#:tools
+                   upload))
+      #:config
+      ;; TODO depend on org-gcal in some way? The `after!' is probably sufficient for that but what about the use of `biome--org-gcal-dir'?
+      '((after! org-gcal
+                (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append)))))))
+#+end_src
+#+begin_src elisp
+(pushnew! safe-local-variable-values
+          '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
+          '(ssh-deploy-automatically-detect-remote-changes . t))
 #+end_src
