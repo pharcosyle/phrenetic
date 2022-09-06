@@ -2333,7 +2333,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
 (define* (universal-doom #:key
                          tree-sitter?
-                         (theming? #t))
+                         org-dir)
   (let ((name 'universal))
     (list
      (doom-service
@@ -2416,7 +2416,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
         )
 
       #:config
-      '((after! doom-modeline
+      `((after! doom-modeline
                 ;; (setq doom-modeline-checker-simple-format nil)
                 (setq doom-modeline-major-mode-icon t)
                 (setq doom-modeline-persp-name t))
@@ -2432,18 +2432,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
         ;; TODO had :bindings:
         (after! evil
-                (map! :m [C-i] nil) ; Remove Doom's binding for `evil-jump-forward'.
-
-                ,@(if theming?
-                      '((defun biome--set-theme-cursor-color-symbols ()
-                          (put 'cursor 'evil-normal-color (biome--color :gold))
-                          (put 'cursor 'evil-emacs-color  (biome--color :pink)))
-
-                        (defadvice! biome-update-cursor-color-a (&rest _)
-                          :after #'+evil-update-cursor-color-h
-                          (when (memq biome--nuclear-theme custom-enabled-themes)
-                            (biome--set-theme-cursor-color-symbols))))
-                      '()))
+                (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
 
         (after! evil-multiedit
                 (setq evil-multiedit-follow-matches t))
@@ -2503,18 +2492,11 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
         (use-package! org
                       :defer t
                       :init
-                      (setq org-directory "~/org")
+                      (setq org-directory ,org-dir)
                       :config
                       (setq org-log-done 'time
                             org-priority-lowest ?E
-                            org-priority-default ?C)
-                      ,@(if theming?
-                            '((setq org-priority-faces `((?A . ,(doom-color 'red))
-                                                         (?B . ,(doom-color 'orange))
-                                                         (?C . ,(doom-color 'blue))
-                                                         (?D . ,(doom-color 'yellow))
-                                                         (?E . ,(doom-color 'green)))))
-                            '()))
+                            org-priority-default ?C))
 
         (after! ob
                 (setq org-babel-noweb-error-all-langs t))
@@ -2548,28 +2530,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                 (setq! show-paren-delay 0))
 
         (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
-
-        ,@(if theming?
-              '((after! rainbow-delimiters
-                        (let ((default-max rainbow-delimiters-max-face-count))
-                          (defun biome-set-rainbow-delimiters-max-face-count ()
-                            (setq rainbow-delimiters-max-face-count
-                                  (if (memq biome--nuclear-theme custom-enabled-themes)
-                                      8 default-max))))
-
-                        (biome-set-rainbow-delimiters-max-face-count)
-                        (add-hook! 'doom-load-theme-hook #'biome-set-rainbow-delimiters-max-face-count)
-
-                        (custom-theme-set-faces! biome--nuclear-theme
-                                                 `(rainbow-delimiters-depth-1-face :foreground ,(doom-color 'fg))
-                                                 `(rainbow-delimiters-depth-2-face :foreground ,(doom-color 'magenta))
-                                                 `(rainbow-delimiters-depth-3-face :foreground ,(doom-color 'blue))
-                                                 `(rainbow-delimiters-depth-4-face :foreground ,(doom-color 'cyan))
-                                                 `(rainbow-delimiters-depth-5-face :foreground ,(doom-color 'green))
-                                                 `(rainbow-delimiters-depth-6-face :foreground ,(doom-color 'yellow))
-                                                 `(rainbow-delimiters-depth-7-face :foreground ,(doom-color 'orange))
-                                                 `(rainbow-delimiters-depth-8-face :foreground ,(doom-color 'red)))))
-              '())
 
         (after! recentf
                 (setq recentf-max-saved-items 500))
@@ -2731,9 +2691,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
 
 ;; TODO add :bindings: org tag
-(define* (doom-clojure #:key
-                       stateless?
-                       (theming? #t))
+(define* (doom-clojure #:key stateless?)
   (let ((name 'clojure))
     (list
      (doom-service
@@ -2746,11 +2704,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                       :init
                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
                       :config
-                      (set-ligatures! 'clojure-mode :lambda "fn")
-                      ,@(if theming?
-                            '((custom-theme-set-faces! biome--nuclear-theme
-                                                       `(clojure-character-face :foreground ,(doom-color 'violet) :weight bold)))
-                            '()))
+                      (set-ligatures! 'clojure-mode :lambda "fn"))
 
         (after! cider
                 (setq cider-repl-history-size biome--very-big
@@ -2872,10 +2826,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
             (pcase ,(symbol-append ': (keyword->symbol theme))
                    (:theme/light 'doom-one-light)
                    (:theme/dark biome--nuclear-theme)))
-
-      (custom-theme-set-faces! biome--nuclear-theme
-                               `(font-lock-comment-delimiter-face :foreground ,(biome--color :comment-delimiter))
-                               `(font-lock-doc-face :foreground ,(doom-color 'cyan)))
 
       (defun biome--set-font-safe (sym font)
         (when (find-font font)
@@ -4799,12 +4749,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 **** Doom private
 ***** Config
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "config.el")
-:END:
-#+begin_src elisp
-;;; -*- lexical-binding: t; -*-
-#+end_src
 ****** Requires
 #+begin_src elisp
 (use-package! dash)
@@ -4813,17 +4757,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src elisp
 (setq user-mail-address param-email)
 #+end_src
-****** Locals :path:
+****** Locals
 #+begin_src elisp
 (defconst biome--very-big 1000000)
 
 (defconst biome--nuclear-theme 'doom-nuclear)
-
-(defun biome--color (color)
-  (let ((k (-> color symbol-name (substring 1))))
-    (cadr (assoc k palette)))) ; TODO palette no longer provided
 #+end_src
-****** General :path:
+****** General
 #+begin_src elisp
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
