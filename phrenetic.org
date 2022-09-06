@@ -2331,10 +2331,27 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
 
 
-(define* (universal-doom #:key
-                         tree-sitter?
-                         org-dir)
-  (let ((name 'universal))
+(define (doom-globals)
+  (list
+   (doom-service
+    'globals
+    #:packages
+    '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341"))
+    #:config
+    '((use-package! dash)
+      (defconst biome--very-big 1000000)))))
+
+(define* (doom-user #:key email)
+  (list
+   (doom-service
+    'user
+    #:config
+    `((setq user-mail-address ,email)))))
+
+(define* (doom-general #:key
+                       tree-sitter?
+                       org-dir)
+  (let ((name 'general))
     (list
      (doom-service
       name
@@ -2400,23 +2417,28 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
            (default +bindings +smartparens))))
 
       #:packages
-      '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341") ; TODO make this be introduced by my doom config (where I need it)?
-
-        (package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
-
+      '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
         (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-
-        (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")
+        ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
         (package! app-launcher
                   :recipe (:host github
                            :repo "SebastienWae/app-launcher")
                   :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
-
-        ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
-        )
+        (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d"))
 
       #:config
-      `((after! doom-modeline
+      `((setq scroll-margin 10
+              save-interprogram-paste-before-kill t)
+
+        ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
+        ;; (setq display-line-numbers-type nil)
+
+        (setq-default indent-tabs-mode t) ; Doom sets this to nil, reset it.
+
+        ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+        ;; (setq-default cursor-in-non-selected-windows t)
+
+        (after! doom-modeline
                 ;; (setq doom-modeline-checker-simple-format nil)
                 (setq doom-modeline-major-mode-icon t)
                 (setq doom-modeline-persp-name t))
@@ -2586,8 +2608,124 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
           "s-J" #'scroll-up-command
           "s-K" #'scroll-down-command)
 
+        ((map! "s-A" #'app-launcher-run-app)
 
-        ))
+         ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
+         ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+         (map! "s-&" (lambda (command)
+                       (interactive (list (read-shell-command "$ ")))
+                       (call-process-shell-command command nil 0 nil)))
+
+         (map! :leader
+               "s-," (lookup-key doom-leader-map (kbd "<")))
+
+         (after! company
+                 (map! :map company-active-map
+                       "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+                       "s-]" #'company-show-location))
+
+         (after! evil-org
+                 (map! :map evil-org-mode-map
+                       (:prefix "g"
+                        :nv "{" #'evil-backward-paragraph
+                        :nv "}" #'evil-forward-paragraph)))
+
+         ;; TODO Maybe do this if popping to the side is too annoying
+         ;; (after! geiser-repl
+         ;;   (setq geiser-repl-use-other-window nil))
+
+         ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
+         (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
+
+         ;; `forward-char' in original definition is messing things up, do this for now
+         ;; (defun +eshell/search-history ()
+         ;;   (interactive)
+         ;;   (consult-history))
+         (after! esh-mode
+                 (map! :map eshell-mode-map
+                       "C-s" #'consult-history))
+
+         ;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
+         ;; TODO should this go in the Guix or Nix config section?
+         (use-package! nix-drv-mode
+                       :defer t
+                       :init
+                       (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
+
+         (after! vertico
+                 (setq vertico-count 20  ; Trying out, maybe too big.
+                       vertico-scroll-margin 7))
+
+         (map! (:leader
+                "A" #'embark-dwim)
+               ;; Trying out cycling (temp)
+               "C-:" #'embark-act
+               "s-q" #'embark-cycle)
+
+         ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
+         ;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
+         (use-package! s)
+         (add-hook! 'doom-real-buffer-functions
+                    ;; (defun biome-new-buffer-p (buf)
+                    ;;   (s-matches?
+                    ;;    (rx bol "*new*"
+                    ;;        (* "<" (+ digit) ">")
+                    ;;        eol)
+                    ;;    (buffer-name buf)))
+                    ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
+                    (defun biome-org-src-edit-buffer-p (buf)
+                      (s-matches?
+                       (rx bol "*Org Src " (+ anything) "*"
+                           (* "<" (+ digit) ">")
+                           eol)
+                       (buffer-name buf))))
+
+         ;; TODO Probably move these to ~after!~ blocks
+         (set-ligatures! '(html-mode nxml-mode web-mode)
+                         :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
+                                           "://"))
+
+         ;;  TODO Might be easier to do this with file-local variables.
+         ;; (setq biome--phrenetic-dir "~/work/phrenetic")
+
+         ;; (add-hook! 'org-mode-hook
+         ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
+         ;;     (add-hook! 'after-save-hook :local
+         ;;       (defun biome-autotangle-h ()
+         ;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
+         ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
+         ;;           (let ((org-confirm-babel-evaluate nil))
+         ;;             (org-babel-tangle)))))))
+
+         ;; (use-package! org-tanglesync
+         ;;   :hook ((org-mode . org-tanglesync-mode)
+         ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
+         ;;   :config
+         ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
+
+         ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+         ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
+         ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+         ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
+
+         ;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
+         (biome--trans "s-h" "C-h")
+
+         (map! "s-o" (lookup-key doom-leader-map (kbd "<")))
+         ;; Get rid of binding for =s-r=?
+         (map! "s-r" nil)
+
+         ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
+         (biome--trans "C-S-i" "<backtab>")
+         ;; Also messes with my sexp-movement bindings
+         ;; (map! "C-s-j" #'evil-scroll-down
+         ;;       "C-s-k" #'evil-scroll-up)
+
+         (after! evil
+                 (map! :map evil-motion-state-map
+                       ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
+                       "C-S-o" #'evil-jump-forward)))))
 
      (when stateless?
        (doom-stateless-service
@@ -2619,6 +2757,96 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   ((#:path . ("workspaces/autosave/" #:doom-base #:data))
                    (#:store . #:machine))))))))
 
+;; TODO had :bindings:
+(define (doom-keymaps)
+  (list
+   (doom-service
+    'keys
+    #:config
+    '((setq help-char (string-to-char "\C-_"))
+
+      (defun biome--trans (&rest rest)
+        (-each (-partition 2 rest)
+               (-lambda ((to from))
+                        (define-key key-translation-map (kbd to) (kbd from)))))
+
+      (biome--trans "C-h" "DEL"
+                    "C-?" "C-h"
+
+                    "s-h" "<left>"
+                    "s-j" "<down>"
+                    "s-k" "<up>"
+                    "s-l" "<right>")
+
+      (setq doom-leader-alt-key "s-SPC"
+            doom-localleader-key "s-m"
+            doom-localleader-alt-key "s-m")
+
+      (defalias 'original-yank-pop #'yank-pop)
+
+      ;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
+      (map! "s-V" #'original-yank-pop
+
+            "s-SPC" doom-leader-map
+
+            ;; Adapted from Doom macOS bindings: ~/.config/emacs/modules/config/default/config.el:263
+            "s-`" #'other-frame
+            "s-n" #'+default/new-buffer
+            "s-z" #'undo
+            "s-Z" #'redo
+            "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
+            "s-v" #'yank
+            "s-s" #'save-buffer
+            "s-x" #'execute-extended-command
+            ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
+            ;; :v "s-x" #'kill-region
+            "s-/" (cmd! (save-excursion (comment-line 1)))
+            :n "s-/" #'evilnc-comment-or-uncomment-lines
+            :v "s-/" #'evilnc-comment-operator
+
+            "s-t" (lookup-key doom-leader-map (kbd "`"))
+            "s-f" (lookup-key doom-leader-map (kbd "s b"))
+            "s-r" (lookup-key doom-leader-map (kbd "f r"))
+            "s-w" (lookup-key doom-leader-map (kbd "b k"))
+            "s-d w" (lookup-key doom-leader-map (kbd "w d"))
+            "s-d s-w" (cmd! (kill-current-buffer)
+                            (+workspace/close-window-or-workspace))
+            "s-g" (lookup-key doom-leader-map (kbd "g g"))
+            "s-," (lookup-key doom-leader-map (kbd "w w"))
+            "s-<" (lookup-key doom-leader-map (kbd "w W"))
+            "s-y" (lookup-key doom-leader-map (kbd "i y"))
+            "s-{" (lookup-key doom-leader-map (kbd "b p"))
+            "s-}" (lookup-key doom-leader-map (kbd "b n"))
+            "s-p" (lookup-key global-map (kbd "C-~")) ; TODO if I'm keeping this, improve it to first switch focus to a/the popup window if one isn't focused already
+
+            "s-u" (lookup-key doom-leader-map (kbd "u"))
+            "s-U" #'negative-argument ; REVIEW Trying this out.
+            (:map universal-argument-map
+             "s-u" #'universal-argument-more)
+
+            (:after evil-easymotion
+             "s-a" (lookup-key evilem-map (kbd "SPC")))
+
+            "s-." #'repeat
+
+            "s-J" #'evil-scroll-down
+            "s-K" #'evil-scroll-up
+
+            (:prefix "s-d"
+             "." #'repeat-complex-command
+
+             "h" #'git-gutter:popup-hunk
+             ;; "o" #'+macos/open-in-default-program ;; TODO consider a Guix alternative? Meh.
+             "r" #'projectile-replace
+             "t" #'tldr
+             "s" #'org-save-all-org-buffers
+             "a" #'link-hint-open-multiple-links
+             ;; "b" (cmd! (evil-local-mode 'toggle)
+             ;;           (when evil-local-mode (evil-normal-state)))
+             (:prefix "c"
+              "f" #'org-gcal-fetch
+              "s" #'org-gcal-sync
+              "p" #'org-gcal-post-at-point)))))))
 
 (define* (doom-guix #:key stateless?)
   (append
@@ -2648,13 +2876,14 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
     (list
      (doom-service
       name
-      #:packages '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
-                   (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
-                   (package! guix-packaging ; REVIEW trying out
-                             :recipe (:host github
-                                      :repo "ryanprior/emacs-guix-packaging"
-                                      :files (:defaults "snippets"))
-                             :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
+      #:packages
+      '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+        (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
+        (package! guix-packaging ; REVIEW trying out
+                  :recipe (:host github
+                           :repo "ryanprior/emacs-guix-packaging"
+                           :files (:defaults "snippets"))
+                  :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
       #:config
       '((use-package! geiser
                       :defer t
@@ -2817,7 +3046,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                            font
                            font-variable-pitch
                            font-unicode
-                           font-serif)
+                           font-serif
+                           dark-doom-theme-name)
   (list
    (doom-service
     'theme+fonts
@@ -2825,7 +3055,9 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
     `((setq doom-theme
             (pcase ,(symbol-append ': (keyword->symbol theme))
                    (:theme/light 'doom-one-light)
-                   (:theme/dark biome--nuclear-theme)))
+                   (:theme/dark (intern (concat
+                                         (symbol-name 'doom-)
+                                         ,dark-doom-theme-name)))))
 
       (defun biome--set-font-safe (sym font)
         (when (find-font font)
@@ -2879,6 +3111,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 ;;     #:modules '()
 ;;     #:config
 ;;     '())))
+
 
 
 
@@ -4749,148 +4982,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 **** Doom private
 ***** Config
-****** Requires
-#+begin_src elisp
-(use-package! dash)
-#+end_src
-****** Personal Info
-#+begin_src elisp
-(setq user-mail-address param-email)
-#+end_src
-****** Locals
-#+begin_src elisp
-(defconst biome--very-big 1000000)
-
-(defconst biome--nuclear-theme 'doom-nuclear)
-#+end_src
-****** General
-#+begin_src elisp
-(setq scroll-margin 10
-      save-interprogram-paste-before-kill t)
-
-;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
-;; (setq display-line-numbers-type nil)
-#+end_src
-******* Doom resets
-#+begin_src elisp
-(setq-default indent-tabs-mode t)
-
-;; I'd like to have this on but in the Doom code it says it's more efficient not to.
-;; (setq-default cursor-in-non-selected-windows t)
-#+end_src
-******* Doom
-#+begin_src elisp
-;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
-;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
-(use-package! s)
-(add-hook! 'doom-real-buffer-functions
-  ;; (defun biome-new-buffer-p (buf)
-  ;;   (s-matches?
-  ;;    (rx bol "*new*"
-  ;;        (* "<" (+ digit) ">")
-  ;;        eol)
-  ;;    (buffer-name buf)))
-  ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
-  (defun biome-org-src-edit-buffer-p (buf)
-    (s-matches?
-     (rx bol "*Org Src " (+ anything) "*"
-         (* "<" (+ digit) ">")
-         eol)
-     (buffer-name buf))))
-#+end_src
-****** Keybindings :bindings:
-#+begin_src elisp
-(setq help-char (string-to-char "\C-_"))
-#+end_src
-******* Translations
-#+begin_src elisp
-(defun biome--trans (&rest rest)
-  (-each (-partition 2 rest)
-    (-lambda ((to from))
-      (define-key key-translation-map (kbd to) (kbd from)))))
-
-(biome--trans "C-h" "DEL"
-              "C-?" "C-h"
-
-              "s-h" "<left>"
-              "s-j" "<down>"
-              "s-k" "<up>"
-              "s-l" "<right>")
-#+end_src
-******* Leader/localleader
-#+begin_src elisp
-(setq doom-leader-alt-key "s-SPC"
-      doom-localleader-key "s-m"
-      doom-localleader-alt-key "s-m")
-#+end_src
-******* General
-#+begin_src elisp
-(defalias 'original-yank-pop #'yank-pop)
-
-;; REVIEW Some of these should be in `:after' (or their respective package) sections but I'm not totally certain where I want to put bindings yet and I'm lazy.
-(map! "s-V" #'original-yank-pop
-
-      "s-SPC" doom-leader-map
-
-      ;; Adapted from Doom macOS bindings: ~/.config/emacs/modules/config/default/config.el:263
-      "s-`" #'other-frame
-      "s-n" #'+default/new-buffer
-      "s-z" #'undo
-      "s-Z" #'redo
-      "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
-      "s-v" #'yank
-      "s-s" #'save-buffer
-      "s-x" #'execute-extended-command
-      ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
-      ;; :v "s-x" #'kill-region
-      "s-/" (cmd! (save-excursion (comment-line 1)))
-      :n "s-/" #'evilnc-comment-or-uncomment-lines
-      :v "s-/" #'evilnc-comment-operator
-
-      "s-t" (lookup-key doom-leader-map (kbd "`"))
-      "s-f" (lookup-key doom-leader-map (kbd "s b"))
-      "s-r" (lookup-key doom-leader-map (kbd "f r"))
-      "s-w" (lookup-key doom-leader-map (kbd "b k"))
-      "s-d w" (lookup-key doom-leader-map (kbd "w d"))
-      "s-d s-w" (cmd! (kill-current-buffer)
-                      (+workspace/close-window-or-workspace))
-      "s-g" (lookup-key doom-leader-map (kbd "g g"))
-      "s-," (lookup-key doom-leader-map (kbd "w w"))
-      "s-<" (lookup-key doom-leader-map (kbd "w W"))
-      "s-y" (lookup-key doom-leader-map (kbd "i y"))
-      "s-{" (lookup-key doom-leader-map (kbd "b p"))
-      "s-}" (lookup-key doom-leader-map (kbd "b n"))
-      "s-p" (lookup-key global-map (kbd "C-~")) ; TODO if I'm keeping this, improve it to first switch focus to a/the popup window if one isn't focused already
-
-      "s-u" (lookup-key doom-leader-map (kbd "u"))
-      "s-U" #'negative-argument         ; Trying this out.
-      (:map universal-argument-map
-       "s-u" #'universal-argument-more)
-
-      (:after evil-easymotion
-       "s-a" (lookup-key evilem-map (kbd "SPC")))
-
-      "s-." #'repeat
-
-      "s-J" #'evil-scroll-down
-      "s-K" #'evil-scroll-up
-
-      (:prefix "s-d"
-       "." #'repeat-complex-command
-
-       "h" #'git-gutter:popup-hunk
-       ;; "o" #'+macos/open-in-default-program ;; TODO consider a Guix alternative? Meh.
-       "r" #'projectile-replace
-       "t" #'tldr
-       "s" #'org-save-all-org-buffers
-       "a" #'link-hint-open-multiple-links
-       ;; "b" (cmd! (evil-local-mode 'toggle)
-       ;;           (when evil-local-mode (evil-normal-state)))
-       (:prefix "c"
-        "f" #'org-gcal-fetch
-        "s" #'org-gcal-sync
-        "p" #'org-gcal-post-at-point)))
-#+end_src
 ****** Theming
 ******* Nuclear Theme
 
@@ -5160,117 +5251,6 @@ Can be an integer to determine the exact padding."
        (substring s 1 -1) ; Remove outer quotes.
        (replace-regexp-in-string (rx "\\n" ) "\n" $) ; Unescape newlines specifically before unescaping everything else (not how this works / why it's necessary).
        (replace-regexp-in-string (rx "\\" (group anything)) "\\1" $))
-#+end_src
-****** WIP
-#+begin_src elisp
-;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
-;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
-
-(map! "s-A" #'app-launcher-run-app)
-
-(map! "s-&" (lambda (command)
-              (interactive (list (read-shell-command "$ ")))
-              (call-process-shell-command command nil 0 nil)))
-
-(map! :leader
-      "s-," (lookup-key doom-leader-map (kbd "<")))
-
-(after! company
-  (map! :map company-active-map
-        "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-        "s-]" #'company-show-location))
-
-(after! evil-org
-  (map! :map evil-org-mode-map
-        (:prefix "g"
-         :nv "{" #'evil-backward-paragraph
-         :nv "}" #'evil-forward-paragraph)))
-
-;; TODO Maybe do this if popping to the side is too annoying
-;; (after! geiser-repl
-;;   (setq geiser-repl-use-other-window nil))
-
-;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
-(map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
-
-;; `forward-char' in original definition is messing things up, do this for now
-;; (defun +eshell/search-history ()
-;;   (interactive)
-;;   (consult-history))
-(after! esh-mode
-  (map! :map eshell-mode-map
-        "C-s" #'consult-history))
-
-;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
-;; TODO should this go in the Guix or Nix config section?
-(use-package! nix-drv-mode
-  :defer t
-  :init
-  (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
-
-(after! vertico
-  (setq vertico-count 20  ; Trying out, maybe too big.
-        vertico-scroll-margin 7))
-
-(map! (:leader
-       "A" #'embark-dwim)
-      ;; Trying out cycling (temp)
-      "C-:" #'embark-act
-      "s-q" #'embark-cycle)
-#+end_src
-******* keybinding ideas
-#+begin_src elisp
-;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
-(biome--trans "s-h" "C-h")
-
-(map! "s-o" (lookup-key doom-leader-map (kbd "<")))
-;; Get rid of binding for =s-r=?
-(map! "s-r" nil)
-
-;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
-(biome--trans "C-S-i" "<backtab>")
-;; Also messes with my sexp-movement bindings
-;; (map! "C-s-j" #'evil-scroll-down
-;;       "C-s-k" #'evil-scroll-up)
-
-(after! evil
-  (map! :map evil-motion-state-map
-        ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
-        "C-S-o" #'evil-jump-forward))
-
-;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
-;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
-;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
-;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
-#+end_src
-******* phrenetic auto-tangle
-- TODO Might be easier to do this with file-local variables.
-#+begin_src elisp
-;; (setq biome--phrenetic-dir "~/work/phrenetic")
-
-;; (add-hook! 'org-mode-hook
-;;   (defun biome-add-org-autotangle-after-save-hook-h ()
-;;     (add-hook! 'after-save-hook :local
-;;       (defun biome-autotangle-h ()
-;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
-;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
-;;           (let ((org-confirm-babel-evaluate nil))
-;;             (org-babel-tangle)))))))
-#+end_src
-******* org-tanglesync
-#+begin_src elisp
-;; (use-package! org-tanglesync
-;;   :hook ((org-mode . org-tanglesync-mode)
-;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
-;;   :config
-;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
-#+end_src
-******* ligatures
-Probably move these to ~after!~ blocks
-#+begin_src elisp
-(set-ligatures! '(html-mode nxml-mode web-mode)
-  :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
-                    "://"))
 #+end_src
 *** Git
 #+begin_src scheme
