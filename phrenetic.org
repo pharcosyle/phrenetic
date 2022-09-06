@@ -3163,41 +3163,24 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
        (((line-number &override) :foreground base4)
         ((line-number-current-line &override) :foreground violet)
-        (mode-line
-         :background modeline-bg :foreground modeline-fg)
-        (mode-line-inactive
-         :background modeline-bg-inactive :foreground modeline-fg-alt)
+        (mode-line :background modeline-bg :foreground modeline-fg)
+        (mode-line-inactive :background modeline-bg-inactive :foreground modeline-fg-alt)
         (mode-line-emphasis :foreground highlight)
-
-   ;;;; css-mode <built-in> / scss-mode
         (css-proprietary-property :foreground orange)
-        (css-property             :foreground green)
-        (css-selector             :foreground blue)
-   ;;;; doom-modeline
+        (css-property :foreground green)
+        (css-selector :foreground blue)
         (doom-modeline-bar :background highlight)
         (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
         (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
         (doom-modeline-buffer-project-root :foreground green :weight 'bold)
-   ;;;; elscreen
-        (elscreen-tab-other-screen-face :background "#353a42" :foreground "#1e2022")
-   ;; ;;;; ivy
-   ;;      (ivy-current-match :background dark-blue :distant-foreground base0 :weight 'normal)
-   ;;;; LaTeX-mode
         (font-latex-math-face :foreground green)
-   ;;;; markdown-mode
         (markdown-markup-face :foreground base5)
         (markdown-header-face :inherit 'bold :foreground red)
         ((markdown-code-face &override) :background (doom-lighten base3 0.05))
-   ;;;; rjsx-mode
         (rjsx-tag :foreground red)
         (rjsx-attr :foreground orange)
-   ;;;; solaire-mode
-        (solaire-mode-line-face
-         :inherit 'mode-line
-         :background modeline-bg-alt)
-        (solaire-mode-line-inactive-face
-         :inherit 'mode-line-inactive
-         :background modeline-bg-inactive-alt)))))))
+        (solaire-mode-line-face :inherit 'mode-line :background modeline-bg-alt)
+        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background modeline-bg-inactive-alt)))))))
 
 
 ;; (doom-themes+fonts #:theme theme
