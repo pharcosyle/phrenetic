@@ -2501,9 +2501,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                    (require 'dired-x))))
 
         (after! org
-                (setq org-agenda-files `(,biome--org-dir
-                                         ,biome--org-gcal-dir
-                                         ,(concat biome--org-dir "/work"))
+                (setq org-agenda-files `(,org-directory)
                       org-log-done 'time
                       org-priority-lowest ?E
                       org-priority-default ?C)
@@ -2786,9 +2784,10 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       '((after! org-gcal
                 (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
                       org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-                      org-gcal-fetch-file-alist `((user-mail-address . ,(concat biome--org-gcal-dir "/" user-mail-address ".org"))
-                                                  ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/contacts.org"))
-                                                  ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat biome--org-gcal-dir "/holidays.org")))
+                      org-gcal-fetch-file-alist (let ((cal-dir concat org-directory "/cal"))
+                                                  `((user-mail-address . ,(concat cal-dir "/" user-mail-address ".org"))
+                                                    ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat cal-dir "/contacts.org"))
+                                                    ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
                       org-gcal-recurring-events-mode 'nested))))
 
      (when stateless?
@@ -4814,9 +4813,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 ****** Locals :path:
 #+begin_src elisp
-(defconst biome--org-dir (concat org-directory "~/org"))
-(defconst biome--org-gcal-dir (concat biome--org-dir "/gcal"))
-
 (defconst biome--very-big 1000000)
 
 (defconst biome--nuclear-theme 'doom-nuclear)
@@ -4828,7 +4824,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ****** General :path:
 #+begin_src elisp
 ;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
-(setq org-directory biome--org-dir)
+(setq org-directory "~/org")
 
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
@@ -5228,9 +5224,6 @@ Can be an integer to determine the exact padding."
 #+end_src
 ****** WIP
 #+begin_src elisp
-(after! org
-  (add-to-list 'org-agenda-files (concat biome--org-dir "/spring_cleaning") 'append))
-
 ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
 ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
@@ -8659,20 +8652,24 @@ The default git config on my Guix system.
                    graphql
                    yaml))
       #:config
-      (let ((hyperdrive-dir (string-append work-dir "/Krush/hyperdrive")))
-        `((prodigy-define-service
-           :name "Amplify Mock"
-           :command "amplify"
-           :args '("mock")
-           :cwd ,(string-append hyperdrive-dir "/apps/singularity")
-           :kill-process-buffer-on-stop t)
+      `((setq hyperdrive-dir ,(string-append work-dir "/Krush/hyperdrive"))
 
-          (prodigy-define-service
-           :name "Datomic Access (exogenesis)"
-           :command "bash"
-           :args '("datomic" "client" "access" "exogenesis")
-           :cwd ,(string-append hyperdrive-dir "/ion/team")
-           :kill-process-buffer-on-stop t)))))))
+        (after! org
+                (add-to-list 'org-agenda-files (concat hyperdrive-dir "/hyperdrive.org") 'append))
+
+        (prodigy-define-service
+         :name "Amplify Mock"
+         :command "amplify"
+         :args '("mock")
+         :cwd (concat ,hyperdrive-dir "/apps/singularity")
+         :kill-process-buffer-on-stop t)
+
+        (prodigy-define-service
+         :name "Datomic Access (exogenesis)"
+         :command "bash"
+         :args '("datomic" "client" "access" "exogenesis")
+         :cwd (concat ,hyperdrive-dir "/ion/team")
+         :kill-process-buffer-on-stop t))))))
 #+end_src
 #+begin_src elisp
 (pushnew! safe-local-variable-values
@@ -8688,9 +8685,9 @@ The default git config on my Guix system.
 #+end_src
 ** Massrealty
 #+begin_src scheme
-(massrealty-work #:doom? doom?)
-
-(define* (massrealty-work #:key doom?)
+(define* (massrealty-work #:key
+                          doom?
+                          work-dir)
   (list
    (when doom?
      (doom-service
@@ -8698,9 +8695,14 @@ The default git config on my Guix system.
       #:modules '((#:tools
                    upload))
       #:config
-      ;; TODO depend on org-gcal in some way? The `after!' is probably sufficient for that but what about the use of `biome--org-gcal-dir'?
-      '((after! org-gcal
-                (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . ,(concat biome--org-gcal-dir "/krzysztof@massrealty.com.org")) 'append)))))))
+      `((setq massrealty-dir ,(string-append work-dir "/massrealty"))
+
+        (after! org
+                (add-to-list 'org-agenda-files (concat massrealty-dir "/massrealty.org") 'append))
+
+        ;; TODO Depend on / introduce my doom-calendar component?
+        (after! org-gcal
+                (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . (concat massrealty-dir "/cal/krzysztof@massrealty.com.org")) 'append)))))))
 #+end_src
 #+begin_src elisp
 (pushnew! safe-local-variable-values
