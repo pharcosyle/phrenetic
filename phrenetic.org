@@ -2500,18 +2500,21 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                  (defun require-dired-x-h ()
                                    (require 'dired-x))))
 
-        (after! org
-                (setq org-log-done 'time
-                      org-priority-lowest ?E
-                      org-priority-default ?C)
-
-                ,@(if theming?
-                      '((setq org-priority-faces `((?A . ,(doom-color 'red))
-                                                   (?B . ,(doom-color 'orange))
-                                                   (?C . ,(doom-color 'blue))
-                                                   (?D . ,(doom-color 'yellow))
-                                                   (?E . ,(doom-color 'green)))))
-                      '()))
+        (use-package! org
+                      :defer t
+                      :init
+                      (setq org-directory "~/org")
+                      :config
+                      (setq org-log-done 'time
+                            org-priority-lowest ?E
+                            org-priority-default ?C)
+                      ,@(if theming?
+                            '((setq org-priority-faces `((?A . ,(doom-color 'red))
+                                                         (?B . ,(doom-color 'orange))
+                                                         (?C . ,(doom-color 'blue))
+                                                         (?D . ,(doom-color 'yellow))
+                                                         (?E . ,(doom-color 'green)))))
+                            '()))
 
         (after! ob
                 (setq org-babel-noweb-error-all-langs t))
@@ -4822,9 +4825,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 ****** General :path:
 #+begin_src elisp
-;; hlissner says this must be set before org loads. I'm not sure if this is a requirement of org-mode but the Doom org config certainly does a lot of gymnastics with this variable so I'll just set this exactly like the example config does.
-(setq org-directory "~/org")
-
 (setq scroll-margin 10
       save-interprogram-paste-before-kill t)
 
