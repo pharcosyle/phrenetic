@@ -6898,6 +6898,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             list->alist
             alist->list
             merge-with
+            update-keys
+            update-vals
             blank-package
             with-git-version
             with-git-commit
@@ -6989,6 +6991,18 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                         (keys a))))))
    '()
    alists))
+
+(define (update-keys alist f)
+  (map (match-lambda
+         ((k . v)
+          (cons (f k) v)))
+       alist))
+
+(define (update-vals alist f)
+  (map (match-lambda
+         ((k . v)
+          (cons k (f v))))
+       alist))
 #+end_src
 ** Guix
 #+begin_src scheme
