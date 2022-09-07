@@ -1442,7 +1442,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (append-map list-index))
+  #:use-module ((srfi srfi-1) #:select (append-map delete-duplicates list-index))
   #:export (create-he
             he-stateless
             org-dir
@@ -1926,12 +1926,21 @@ SAVEHIST=$HISTSIZE
                           nix-channels))))
        '())
 
-   (list
-    (when doom?
-      (doom-service
-       'nix
-       #:modules `((#:lang
-                    (nix ,@(if doom-tree-sitter? '(+tree-sitter) '())))))))
+   (if doom?
+       (append
+        (list
+         (doom-service
+          'nix
+          #:modules `((#:lang
+                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))
+          #:config
+          '((use-package! nix-drv-mode
+                          :defer t
+                          :init
+                          (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))))) ; Remove the :mode set by the Doom module. It's unnecessary (`nix-drv-mode.el' already does this) and it shadows `guix-derivation-mode'.
+
+        (doom-transient #:stateless? stateless?))
+       '())
 
    (google-chrome-services #:stateless? stateless?)))
 #+end_src
@@ -2397,9 +2406,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
 
    (doom-guix #:stateless? stateless?)
    (doom-clojure #:stateless? stateless?)
-   (doom-version-control)
+   (doom-version-control #:stateless? stateless?)
    (doom-vterm)
-   (doom-transient #:stateless? stateless?)
    (let ((theme #:theme/dark))
      (doom-themes #:theme theme))
    (let ((font-variable-pitch font-sans))
@@ -2496,7 +2504,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       #:packages
       '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
         (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-        ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when serialized.
+        ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO The 0x0 symbol becomes #{0x0}# when elisp-serialized.
         (package! app-launcher
                   :recipe (:host github
                            :repo "SebastienWae/app-launcher")
@@ -2667,9 +2675,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                        (map! :map smartparens-strict-mode-map
                              :i "DEL" #'sp-backward-delete-char))))
 
-        (after! transient
-                (setq transient-history-limit ,very-big))
-
         (after! undo-fu
                 (setq undo-fu-ignore-keyboard-quit t))
 
@@ -2723,13 +2728,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                  (map! :map eshell-mode-map
                        "C-s" #'consult-history))
 
-         ;; Remove the :mode set by the Doom module. It's unnecessary (`guix-drv-mode.el' already does this, and for /nix/store drvs specifically) and it shadows `guix-derivation-mode'.
-         ;; TODO should this go in the Guix or Nix config section?
-         (use-package! nix-drv-mode
-                       :defer t
-                       :init
-                       (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))
-
          (after! vertico
                  (setq vertico-count 20  ; Trying out, maybe too big.
                        vertico-scroll-margin 7))
@@ -2758,14 +2756,8 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                            eol)
                        (buffer-name buf))))
 
-         ;; TODO Probably move these to ~after!~ blocks
-         (set-ligatures! '(html-mode nxml-mode web-mode)
-                         :font-ligatures '("<!--" "-->" "</>" "</" "/>" ; Fira Code
-                                           "://"))
-
          ;;  TODO Might be easier to do this with file-local variables.
          ;; (setq biome--phrenetic-dir "~/work/phrenetic")
-
          ;; (add-hook! 'org-mode-hook
          ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
          ;;     (add-hook! 'after-save-hook :local
@@ -2965,6 +2957,28 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                   ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
                    (#:store . #:machine))))))))
 
+
+
+
+
+(define* (doom-transient #:key stateless?)
+  (let ((name 'transient))
+    (list
+     (doom-service
+      name
+      #:config
+      `((after! transient
+                (setq transient-history-limit ,very-big))))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("transient/history" #:doom-base #:data))
+                   (#:store . #:persist))))))))
+
+
+
+
 ;; TODO add :bindings: org tag
 (define* (doom-guix #:key stateless?)
   (append
@@ -3016,21 +3030,24 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                     (#:store . #:machine)))))))))
 
 (define* (doom-guile #:key stateless?)
-  (let ((name 'guile))
-    (list
-     (doom-service
-      name
-      #:modules '((#:lang
-                   (scheme +guile)))
-      #:config
-      '((after! scheme
-                (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))))
+  (append
+   (let ((name 'guile))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    (scheme +guile)))
+       #:config
+       '((after! scheme
+                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))))
 
-     (when stateless?
-       (doom-stateless-service
-        name
-        #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
-                   (#:store . #:persist))))))))
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-transient #:stateless? stateless?)))
 
 ;; TODO add :bindings: org tag
 (define* (doom-clojure #:key stateless?)
@@ -3070,20 +3087,23 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
                    (#:store . #:persist))))))))
 
-(define (doom-version-control)
-  (list
-   (doom-service
-    'version-control
-    #:modules '((#:emacs
-                 vc)
-                (#:ui
-                 (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
-                (#:tools
-                 (magit +forge)))
-    #:config
-    '((after! magit
-              (setq git-commit-style-convention-checks '(non-empty-second-line))
-              (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))))))
+(define* (doom-version-control #:key stateless?)
+  (append
+   (list
+    (doom-service
+     'version-control
+     #:modules '((#:emacs
+                  vc)
+                 (#:ui
+                  (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+                 (#:tools
+                  (magit +forge)))
+     #:config
+     '((after! magit
+               (setq git-commit-style-convention-checks '(non-empty-second-line))
+               (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
+
+   (doom-transient #:stateless? stateless?)))
 
 (define (doom-vterm)
   (list
@@ -3091,22 +3111,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
     'vterm
     #:modules '((#:term
                  vterm)))))
-
-;; TODO make this included by doom-nix, doom-vc, others? and handle deuplicating doom and stateless.
-(define* (doom-transient #:key stateless?)
-  (let ((name 'transient))
-    (list
-     (doom-service
-      name
-      #:config
-      `((after! transient
-                (setq transient-history-limit ,very-big))))
-
-     (when stateless?
-       (doom-stateless-service
-        name
-        #:state '(((#:path . ("transient/history" #:doom-base #:data))
-                   (#:store . #:persist))))))))
 
 (define* (doom-themes #:key theme)
   (let ((dark-theme-name 'doom-nuclear))
@@ -3254,57 +3258,6 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       (biome--set-font-safe
        'doom-serif-font
        (font-spec :family ,(assoc-ref font-serif #:font/name)))))))
-
-
-;; (define* (doom-NAME #:key stateless?)
-;;   (let ((name 'NAME))
-;;     (list
-;;      (doom-service
-;;       name
-;;       #:modules '()
-;;       #:config
-;;       '())
-
-;;      (when stateless?
-;;        (doom-stateless-service
-;;         name
-;;         #:state '(((#:path . ("" #:doom-base #:asdf))
-;;                    (#:store . #:asdf))))))))
-
-
-;; (define (doom-)
-;;   (list
-;;    (doom-service
-;;     '
-;;     #:modules '()
-;;     #:config
-;;     '())))
-
-
-
-
-;; (use-package-hook! ligature
-;;   :pre-config
-;;   (setq +ligatures-all-modes-list
-;;         '("www")
-;;         +ligatures-prog-mode-list
-;;         '(;; Fira Code (from https://github.com/tonsky/FiraCode/wiki/Emacs-instructions#using-ligatureel)
-;;           "**" "***" "**/" "*>" "*/" "\\\\" "\\\\\\" "{-" "::"
-;;           ":::" ":=" "!!" "!=" "!==" "-}" "----" "-->" "->" "->>"
-;;           "-<" "-<<" "-~" "#{" "#[" "##" "###" "####" "#(" "#?" "#_"
-;;           "#_(" ".-" ".=" ".." "..<" "..." "?=" "??" ";;" "/*" "/**"
-;;           "/=" "/==" "/>" "//" "///" "&&" "||" "||=" "|=" "|>" "^=" "$>"
-;;           "++" "+++" "+>" "=:=" "==" "===" "==>" "=>" "=>>" "<="
-;;           "=<<" "=/=" ">-" ">=" ">=>" ">>" ">>-" ">>=" ">>>" "<*"
-;;           "<*>" "<|" "<|>" "<$" "<$>" "<!--" "<-" "<--" "<->" "<+"
-;;           "<+>" "<=" "<==" "<=>" "<=<" "<>" "<<" "<<-" "<<=" "<<<"
-;;           "<~" "<~~" "</" "</>" "~@" "~-" "~>" "~~" "~~>" "%%"
-;;           ;; Doom defaults (just the ones not already present in Fira Code)
-;;           "|||>" "<|||" "<==>" "||>" "::=" "=!=" "!!." ">->" "---" "<~>"
-;;           "<||" "<-<" "_|_" "~=" "|}" "|]" "|-" "{|" "[|" "]#" ":>" ":<"
-;;           ">:" "-|" "--" "<:" "#:" "#=" "#!" ".?" "?:" "?." "__" "(*"
-;;           "*)" "://"))
-;;   t)
 #+end_src
 **** Stateless
 #+begin_src scheme
