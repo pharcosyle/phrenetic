@@ -2300,7 +2300,18 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                       additional))))
     ;; TODO maybe extract out common logic
     `((#:init-file . ,(as-> (field #:modules) $
-                            (apply merge-with append $)
+                            (map (lambda (i)
+                                   (update-vals i (lambda (modules)
+                                                    (map (lambda (m)
+                                                           (cond
+                                                            ((symbol? m) (list m))
+                                                            ((list? m) m)))
+                                                         modules))))
+                                 $)
+                            (apply merge-with
+                                   (lambda (ms ms*)
+                                     (merge-with append ms ms*))
+                                   $)
                             (sort $ (lambda (a b)
                                       (let ((idx (lambda (entry)
                                                    (list-index
@@ -2308,21 +2319,24 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                                       (eq? (car entry) category))
                                                     '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
                                         (< (idx a) (idx b)))))
+                            (update-vals $ (lambda (modules)
+                                             (let ((name (lambda (m)
+                                                           (symbol->string (car m)))))
+                                               (sort modules (lambda (a b)
+                                                               (string<? (name a) (name b)))))))
                             (update-keys $ (lambda (category)
                                              (symbol-append ': (keyword->symbol category))))
                             (update-vals $ (lambda (modules)
-                                             (let ((name (lambda (m)
-                                                           (symbol->string
-                                                            (cond
-                                                             ((symbol? m) m)
-                                                             ((list? m) (car m)))))))
-                                               (sort modules (lambda (a b)
-                                                               (string<? (name a) (name b)))))))
+                                             (map (lambda (m)
+                                                    (if (= (length m) 1)
+                                                        (car m) m))
+                                                  modules)))
                             (apply append $)
                             (elisp-serialize
                              `(,#~";;; -*- lexical-binding: t; -*-\n"
                                   (doom! ,@$)))))
       (#:config-file . ,(as-> (field #:config) $
+                              (delete-duplicates $)
                               (map (lambda (x)
                                      (append x `(,#~""))) $)
                               (apply append $)
@@ -2331,6 +2345,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                 `(,#~";;; -*- lexical-binding: t; -*-\n")
                                 $))))
       (#:packages-file . ,(as-> (field #:packages) $
+                                (delete-duplicates $)
                                 (map (lambda (x)
                                        (append x `(,#~""))) $)
                                 (apply append $)
@@ -2921,7 +2936,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
   (list
    (doom-service
     'languages
-    #:modules '((#:lang
+    #:modules `((#:lang
                  data
                  emacs-lisp
                  (json ,@(if tree-sitter? '(+tree-sitter) '()))
