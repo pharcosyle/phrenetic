@@ -4446,7 +4446,15 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                       :config
                       (setq org-log-done 'time
                             org-priority-lowest ?E
-                            org-priority-default ?C))
+                            org-priority-default ?C
+                            org-priority-faces
+                            (-map (-lambda ((priority color))
+                                           (cons priority (doom-color color)))
+                                  '((?A red)
+                                    (?B orange)
+                                    (?C blue)
+                                    (?D yellow)
+                                    (?E green)))))
 
         (after! ob
                 (setq org-babel-noweb-error-all-langs t))
