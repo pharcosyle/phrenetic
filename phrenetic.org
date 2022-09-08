@@ -89,7 +89,8 @@ Run with ~sudo~.
    "installer"
    #~(begin
        (use-modules ((ice-9 match) #:select (match-lambda))
-                    ((ice-9 readline) #:select (readline)))
+                    ((ice-9 readline) #:select (readline))
+                    ((ice-9 string-fun) #:select (string-replace-substring)))
 
        (define* (cmd command #:rest args)
          (display (string-join (cons (basename command) args) " "))
@@ -1432,6 +1433,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
+  #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
@@ -1747,7 +1749,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               #:modules '((#:term
                            eshell))
               #:config `((after! eshell
-                                 (setq eshell-history-size ,biome--very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+                                 (setq eshell-history-size ,very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
 
              (when stateless?
                (doom-stateless-service
@@ -2337,14 +2339,14 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                                           (car m) m))
                                     modules)))
               (apply append $)
-              (elisp-serialize
+              (elisp-serialize*
                `(,#~";;; -*- lexical-binding: t; -*-"
                     (doom! ,@$)))))
       (#:config-file .
        ,(as-> (field #:config) $
               (delete-duplicates $)
               (apply append $)
-              (elisp-serialize
+              (elisp-serialize*
                (append
                 `(,#~";;; -*- lexical-binding: t; -*-")
                 $))))
@@ -2352,7 +2354,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
        ,(as-> (field #:packages) $
               (delete-duplicates $)
               (apply append $)
-              (elisp-serialize
+              (elisp-serialize*
                (append
                 `(,#~";; -*- no-byte-compile: t; -*-")
                 $))))
@@ -2366,37 +2368,14 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                            (apply (lambda (name defs extra-faces)
                                     `(,#~";;; -*- lexical-binding: t; no-byte-compile: t; -*-"
                                          (require 'doom-themes)
-                                         (def-doom-theme ,name ,name ,defs ,extra-faces))))
-                           elisp-serialize)))
+                                         (def-doom-theme ,name ,(symbol->string name) ,defs ,extra-faces))))
+                           elisp-serialize*)))
                    $))))))
 
-;; TODO FIXME experiment with this
-;; - do I need string-trim-right and the interpose suffix grammar?
-;; - do max-expr-width better. Do I even need pretty-print?
-;;   - for reference:
-;;     - https://www.gnu.org/software/guile/manual/html_node/Pretty-Printing.html
-;;     - https://git.savannah.gnu.org/cgit/guile.git/tree/module/ice-9/pretty-print.scm
-(define (elisp-serialize x)
-  (define (serialize-list-element elem)
-    (cond
-     ((gexp? elem) elem)
-     (else
-      #~(begin
-          (use-modules ((ice-9 pretty-print) #:select (pretty-print)))
-
-          (string-trim-right
-           (with-output-to-string
-             (lambda _
-               (pretty-print
-                '#$elem
-                #:width 100
-                #:max-expr-width 100)))
-           #\newline)))))
-
-  #~(string-append
-     #$@(interpose
-         (map serialize-list-element x)
-         "\n" 'suffix)))
+(define (elisp-serialize* exprs)
+  #~(begin
+      (use-modules ((ice-9 string-fun) #:select (string-replace-substring)))
+      (string-replace-substring #$(elisp-serialize exprs) "(syntax " "(function ")))
 #+end_src
 ***** Doom private
 #+begin_src scheme
@@ -4294,7 +4273,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-calendar #:stateless? stateless?
                   #:email email)
    (doom-guix #:stateless? stateless?)
-   (doom-clojure #:stateless? stateless?))) ; TODO Eventually don't include this here, have it be a dependency of project(s).
+   (doom-clojure #:stateless? stateless?))) ; TODO Eventually don't include this here, have it be a dependency of project(s) (or at least move it to `doom-languages').
 #+end_src
 ****** General :bindings:
 #+begin_src scheme
@@ -4404,7 +4383,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                                     #'highlight-indent-guides-mode))
 
         (after! evil
-                (map! :m [C-i] nil)) ; Remove Doom's binding for `evil-jump-forward'.
+                (map! :m (vector 'C-i) nil)) ; Remove Doom's binding for `evil-jump-forward'.
 
         (after! evil-multiedit
                 (setq evil-multiedit-follow-matches t))
@@ -4697,9 +4676,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     (doom-service
      'keymaps
      #:config
-     '(;; (setq help-char (string-to-char "\C-_")) ; TODO FIXME Guile doesn't like this.
-
-       (defun biome--trans (&rest rest)
+     '((defun biome--trans (&rest rest)
          (-each (-partition 2 rest)
                 (-lambda ((to from))
                          (define-key key-translation-map (kbd to) (kbd from)))))
@@ -4784,6 +4761,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
        ;; TODO wip stuff
        ;; If I keep this I can get rid of the "C-_" binding I have too. Update: maybe? Some places C-_ works and some s-h does (in vertico)? What about my key translation for C-? ? Straighten all this shit out.
+       ;; - update: Guile won't accept the help-char string escape the way it is so I've removed it for now:
+       ;;   (setq help-char (string-to-char "\C-_"))
        (biome--trans "s-h" "C-h")
        ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
        (biome--trans "C-S-i" "<backtab>"))))
@@ -4838,6 +4817,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
                     (#:store . #:machine)))))))
 
+   (doom-dash)
    (doom-user #:email email)))
 #+end_src
 ****** Guix :bindings:
@@ -8506,34 +8486,38 @@ The default git config on my Guix system.
                  #:work-dir "~/work")
 
 (define* (hyperdrive-work #:key
+                          stateless?
                           doom?
                           work-dir)
-  (list
-   (when doom?
-     (doom-service
-      'hyperdrive-work
-      #:modules '((#:lang
-                   graphql
-                   yaml))
-      #:config
-      `((setq hyperdrive-dir ,(string-append work-dir "/Krush/hyperdrive"))
+  (if doom?
+      (list
+       (doom-service
+        'hyperdrive-work
+        #:modules '((#:lang
+                     graphql
+                     yaml))
+        #:config
+        `((setq hyperdrive-dir ,(string-append work-dir "/Krush/hyperdrive"))
 
-        (after! org
-                (add-to-list 'org-agenda-files (concat hyperdrive-dir "/hyperdrive.org") 'append))
+          (after! org
+                  (add-to-list 'org-agenda-files (concat hyperdrive-dir "/hyperdrive.org") 'append))
 
-        (prodigy-define-service
-         :name "Amplify Mock"
-         :command "amplify"
-         :args '("mock")
-         :cwd (concat ,hyperdrive-dir "/apps/singularity")
-         :kill-process-buffer-on-stop t)
+          (prodigy-define-service
+           :name "Amplify Mock"
+           :command "amplify"
+           :args '("mock")
+           :cwd (concat ,hyperdrive-dir "/apps/singularity")
+           :kill-process-buffer-on-stop t)
 
-        (prodigy-define-service
-         :name "Datomic Access (exogenesis)"
-         :command "bash"
-         :args '("datomic" "client" "access" "exogenesis")
-         :cwd (concat ,hyperdrive-dir "/ion/team")
-         :kill-process-buffer-on-stop t))))))
+          (prodigy-define-service
+           :name "Datomic Access (exogenesis)"
+           :command "bash"
+           :args '("datomic" "client" "access" "exogenesis")
+           :cwd (concat ,hyperdrive-dir "/ion/team")
+           :kill-process-buffer-on-stop t)))
+
+       (doom-clojure #:stateless? stateless?))
+      '()))
 #+end_src
 #+begin_src elisp
 (pushnew! safe-local-variable-values
