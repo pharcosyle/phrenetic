@@ -6411,7 +6411,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 (define* (he-rofi #:key
                   stateless?
                   wayland?
-                  theme)
+                  theme
+                  font)
   (list
    (service
     home-rofi-service-type
@@ -6423,6 +6424,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
          ((modi . "run,ssh,drun")
           (drun-show-actions . #t)
           (show-icons . #t)
+          (font . ,(font-value font))
           (kb-row-tab . "")
           (kb-row-select . "Tab")
           (kb-secondary-paste . "Control+y")
@@ -6629,7 +6631,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                               #:font font-variable-pitch)
                    (he-rofi #:stateless? stateless?
                             #:wayland? #t
-                            #:theme theme)
+                            #:theme theme
+                            #:font font-variable-pitch)
                    (he-alacritty #:font font-mono)))
                 '())
             (if doom?
