@@ -814,7 +814,45 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
   (string-append machine-dir "/.swap"))
 #+end_src
 ****** Service
-******* Populate
+******* Service type
+#+begin_src scheme
+(define stateless-service-type
+  (service-type
+   (name 'stateless)
+   (extensions
+    (list (service-extension boot-service-type
+                             (lambda (config)
+                               (populate-gexp (assoc-ref config #:machine-dir))))
+          (service-extension activation-service-type
+                             (lambda (config)
+                               (stateless:activate-gexp
+                                `',(assoc-ref config #:state)
+                                ""
+                                (assoc-ref config #:persist-dir)
+                                (assoc-ref config #:machine-dir))))
+          (service-extension shepherd-root-service-type
+                             (lambda (config)
+                               (cons* (user-homes-shepherd-service
+                                       (assoc-ref config #:homes)
+                                       (list
+                                        (assoc-ref config #:persist-dir)
+                                        (assoc-ref config #:machine-dir)))
+                                      (activate-home-shepherd-services
+                                       (assoc-ref config #:hes)))))
+          (service-extension profile-service-type
+                             (lambda (config)
+                               (list (stateless:diff-tool-package
+                                      "stateless-diff"
+                                      `',(assoc-ref config #:state)
+                                      `',(assoc-ref config #:ignore)
+                                      "/"
+                                      (assoc-ref config #:persist-dir)
+                                      (assoc-ref config #:machine-dir)))))))
+   (compose identity)
+   (extend stateless:extend-proc)
+   (description "Initialize a stateless system.")))
+#+end_src
+******** Populate
 #+begin_src scheme
 (define (populate-gexp log-state-dir)
   (with-extensions (list guile-gcrypt)
@@ -843,7 +881,7 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
             (mkdir-p state-dir)
             (symlink state-dir dir))))))
 #+end_src
-******* Users
+******** Users
 #+begin_src scheme
 (define (user-homes-shepherd-service user-homes state-dirs)
   (shepherd-service
@@ -891,45 +929,7 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
             (svc user he)))
          hes)))
 #+end_src
-******* Service type
-#+begin_src scheme
-(define stateless-service-type
-  (service-type
-   (name 'stateless)
-   (extensions
-    (list (service-extension boot-service-type
-                             (lambda (config)
-                               (populate-gexp (assoc-ref config #:machine-dir))))
-          (service-extension activation-service-type
-                             (lambda (config)
-                               (stateless:activate-gexp
-                                `',(assoc-ref config #:state)
-                                ""
-                                (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir))))
-          (service-extension shepherd-root-service-type
-                             (lambda (config)
-                               (cons* (user-homes-shepherd-service
-                                       (assoc-ref config #:homes)
-                                       (list
-                                        (assoc-ref config #:persist-dir)
-                                        (assoc-ref config #:machine-dir)))
-                                      (activate-home-shepherd-services
-                                       (assoc-ref config #:hes)))))
-          (service-extension profile-service-type
-                             (lambda (config)
-                               (list (stateless:diff-tool-package
-                                      "stateless-diff"
-                                      `',(assoc-ref config #:state)
-                                      `',(assoc-ref config #:ignore)
-                                      "/"
-                                      (assoc-ref config #:persist-dir)
-                                      (assoc-ref config #:machine-dir)))))))
-   (compose identity)
-   (extend stateless:extend-proc)
-   (description "Initialize a stateless system.")))
-#+end_src
-******** Extension helper
+******* Extension helper
 #+begin_src scheme
 (define stateless-service
   (stateless:service-fn stateless-service-type))
@@ -1573,48 +1573,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
      (#:store . #:persist))))
 #+end_src
 **** Service
-***** Diff tool
-#+begin_src scheme
-(define guix-home-files
-  (with-imported-modules '((guix build utils))
-    #~(begin
-        (use-modules ((guix build utils) #:select (find-files)))
-
-        (let ((home-files
-               (let* ((home-dir (getenv "HOME"))
-                      (guix-home-dir (string-append
-                                      home-dir "/.guix-home/" #$home-files-directory "/")))
-                 (map (lambda (file)
-                        (string-append
-                         home-dir
-                         (string-drop file (string-length guix-home-dir))))
-                      (find-files guix-home-dir)))))
-          (make-known home-files symlink-to-store?)))))
-#+end_src
 ***** Service type
 #+begin_src scheme
-(define path-with-home-expansion
-  #~(lambda (path)
-      (cond
-       ((string? path) (string-append (getenv "HOME") "/" path))
-       ((list? path)
-        (apply
-         (lambda* (#:optional tail #:key xdg-base)
-           (string-append (getenv xdg-base) "/" (or tail "")))
-         path)))))
-
-(define state-with-home-expansions
-  #~(lambda (state)
-      (map (lambda (i)
-             (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
-           state)))
-
-(define ignore-with-home-expansions
-  #~(lambda (ignore)
-      (map #$path-with-home-expansion ignore)))
-
-(define homedir-gexp #~(getenv "HOME"))
-
 (define home-stateless-service-type
   (service-type
    (name 'home-stateless)
@@ -1640,8 +1600,48 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (compose identity)
    (extend stateless:extend-proc)
    (description "Initialize a stateless home.")))
+
+(define homedir-gexp #~(getenv "HOME"))
+
+(define path-with-home-expansion
+  #~(lambda (path)
+      (cond
+       ((string? path) (string-append (getenv "HOME") "/" path))
+       ((list? path)
+        (apply
+         (lambda* (#:optional tail #:key xdg-base)
+           (string-append (getenv xdg-base) "/" (or tail "")))
+         path)))))
+
+(define state-with-home-expansions
+  #~(lambda (state)
+      (map (lambda (i)
+             (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
+           state)))
+
+(define ignore-with-home-expansions
+  #~(lambda (ignore)
+      (map #$path-with-home-expansion ignore)))
 #+end_src
-****** Extension helper
+****** Diff tool
+#+begin_src scheme
+(define guix-home-files
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (find-files)))
+
+        (let ((home-files
+               (let* ((home-dir (getenv "HOME"))
+                      (guix-home-dir (string-append
+                                      home-dir "/.guix-home/" #$home-files-directory "/")))
+                 (map (lambda (file)
+                        (string-append
+                         home-dir
+                         (string-drop file (string-length guix-home-dir))))
+                      (find-files guix-home-dir)))))
+          (make-known home-files symlink-to-store?)))))
+#+end_src
+***** Extension helper
 #+begin_src scheme
 (define home-stateless-service
   (stateless:service-fn home-stateless-service-type))
@@ -2280,6 +2280,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
      '())))
 #+end_src
 **** Service
+***** Service type
 #+begin_src scheme
 (define doom-service-type
   (service-type
@@ -2298,7 +2299,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
    (default-value #f)
    (description "Install and configure Doom.")))
 #+end_src
-***** Extend
+****** Extend
 #+begin_src scheme
 (define (doom-extend additional)
   (let ((field (lambda (k)
@@ -2377,7 +2378,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
       (use-modules ((ice-9 string-fun) #:select (string-replace-substring)))
       (string-replace-substring #$(elisp-serialize exprs) "(syntax " "(function ")))
 #+end_src
-***** Doom private
+****** Doom private
 #+begin_src scheme
 (define (doom-private config)
   (file-union
