@@ -5526,32 +5526,30 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                      font-variable-pitch
                      font-unicode
                      font-serif)
-  (list
-   (doom-service
-    'fonts
-    #:config
-    `((defun biome--set-font-safe (sym font)
-        (when (find-font font)
-          (set sym font)))
+  (append
+   (list
+    (doom-service
+     'fonts
+     #:config
+     `((defun biome--set-font-safe (sym font)
+         (when (find-font font)
+           (set sym font)))
 
-      (biome--set-font-safe
-       'doom-font
-       (font-spec :family ,(assoc-ref font #:font/name)
-                  :size ,(+ (assoc-ref font #:font/size) 2)
-                  :weight ',(or (assoc-ref font #:font/weight) 'normal)))
+       (biome--set-font-safe
+        'doom-font
+        (font-spec :family ,(assoc-ref font #:font/name)
+                   :size ,(+ (assoc-ref font #:font/size) 2)
+                   :weight ',(or (assoc-ref font #:font/weight) 'normal)))
 
-      ;; TODO Rewrite to iterate over these.
-      (biome--set-font-safe
-       'doom-variable-pitch-font
-       (font-spec :family ,(assoc-ref font-variable-pitch #:font/name)))
+       (-each '((doom-variable-pitch-font ,(assoc-ref font-variable-pitch #:font/name))
+                (doom-unicode-font ,(assoc-ref font-unicode #:font/name))
+                (doom-serif-font ,(assoc-ref font-serif #:font/name)))
+              (-lambda ((font-sym family))
+                       (biome--set-font-safe
+                        font-sym
+                        (font-spec :family family)))))))
 
-      (biome--set-font-safe
-       'doom-unicode-font
-       (font-spec :family ,(assoc-ref font-unicode #:font/name)))
-
-      (biome--set-font-safe
-       'doom-serif-font
-       (font-spec :family ,(assoc-ref font-serif #:font/name)))))))
+   (doom-dash)))
 #+end_src
 **** XDG
 #+begin_src scheme
