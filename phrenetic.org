@@ -1567,9 +1567,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 (define* (org+work-state #:key
                          org-dir
                          work-dir)
-  `(((#:path . (string-append org-dir "/"))
+  `(((#:path . ,(string-append org-dir "/"))
      (#:store . #:persist))
-    ((#:path . (string-append work-dir "/"))
+    ((#:path . ,(string-append work-dir "/"))
      (#:store . #:persist))))
 #+end_src
 **** Service
