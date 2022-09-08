@@ -6702,7 +6702,6 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module (ebullient utils)
-  #:use-module ((srfi srfi-1) #:select (append-map))
   #:export (service-fn
             extend-proc
             activate-gexp
@@ -6741,13 +6740,10 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
 **** Extend procedure
 #+begin_src scheme
 (define (extend-proc config additional)
-  (let* ((field (lambda (k)
-                  (append-map (lambda (i)
-                                (or (assoc-ref i k) '()))
-                              additional))))
+  (let ((additional* (apply merge-with append additional)))
     (->> (apply list->alist config)
-         (acons #:state (field #:state))
-         (acons #:ignore (field #:ignore)))))
+         (acons #:state (assoc-ref additional* #:state))
+         (acons #:ignore (assoc-ref additional* #:ignore)))))
 #+end_src
 *** Activate
 #+begin_src scheme
