@@ -4841,7 +4841,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        :defer t
                        ;; Use `:init' to configure variables (as opposed to `:config', which seems like it'd be fine); hlissner does it this way for the Geiser package so I will too.
                        :init
-                       (setq geiser-repl-current-project-function #'ignore)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
+                       (setq geiser-repl-per-project-p nil)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store.
 
          (after! guix
                  (set-popup-rules!
