@@ -5394,7 +5394,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 **** Doom themes and fonts
 #+begin_src scheme
 (define* (he-doom-themes+fonts #:key
-                               initial-theme
+                               theme
                                light-colors
                                dark-colors
                                font
@@ -5402,7 +5402,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                                font-unicode
                                font-serif)
   (append
-   (doom-themes #:initial-theme initial-theme
+   (doom-themes #:theme theme
                 #:light-colors light-colors
                 #:dark-colors dark-colors)
    (doom-fonts #:font font
@@ -5413,7 +5413,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ***** Themes
 #+begin_src scheme
 (define* (doom-themes #:key
-                      initial-theme
+                      theme
                       light-colors
                       dark-colors)
   (let ((light-theme-name 'doom-one-light)
@@ -5422,7 +5422,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      (doom-service
       'themes
       #:config
-      `((setq doom-theme ',(case initial-theme
+      `((setq doom-theme ',(case theme
                              ((#:theme/light) light-theme-name)
                              ((#:theme/dark) dark-theme-name))))
       #:themes
@@ -6629,7 +6629,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                     font-unicode)
                       #:extra-font-packages useful-font-packages)
             (if doom?
-                (he-doom-themes+fonts #:initial-theme theme
+                (he-doom-themes+fonts #:theme theme
                                       #:light-colors light-colors
                                       #:dark-colors dark-colors
                                       #:font font-mono
