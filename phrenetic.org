@@ -6030,59 +6030,57 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     (home-swaylock-configuration
      (swaylock swaylock-effects)
      (config
-      `((daemonize)
+      (let ((clr (lambda* (color #:optional alpha)
+                   (as-> color $
+                         (assoc-ref colors $)
+                         (string-drop $ 1)
+                         (string-append $ (or alpha ""))))))
+        `((daemonize)
 
-        (font . ,(assoc-ref font #:font/name))
-        (image . ,image)
+          (font . ,(assoc-ref font #:font/name))
+          (image . ,image)
 
-        (show-failed-attempts)
-        (ignore-empty-password)
+          (indicator)
+          (indicator-idle-visible)
+          (indicator-caps-lock)
+          (indicator-radius . "150")
+          (indicator-thickness . "10")
 
-        (indicator)
-        (indicator-idle-visible)
-        (indicator-caps-lock)
-        (indicator-radius . "240")
-        (indicator-thickness . "20")
+          (key-hl-color . ,(clr #:color/green))
+          (bs-hl-color . ,(clr #:color/yellow))
+          (inside-color . ,(clr #:color/bg "7F"))
 
-        ;; TODO Source colors from color scheme.
-        (key-hl-color . "880033")
-        (bs-hl-color . "ee2e24FF")
-        (separator-color . "00000000")
+          (ring-color . ,(clr #:color/bg))
+          (ring-clear-color . ,(clr #:color/bg "7F"))
+          (ring-ver-color . ,(clr #:color/bg "7F"))
+          (ring-wrong-color . ,(clr #:color/bg "7F"))
 
-        (inside-color . "00000099")
-        (inside-clear-color . "ffd20400")
-        (inside-ver-color . "d9d8d800")
-        (inside-wrong-color . "ee2e2400")
+          (text-clear-color . ,(clr #:color/orange))
+          (text-ver-color . ,(clr #:color/blue))
+          (text-wrong-color . ,(clr #:color/red))
+          (inside-clear-color . ,(clr #:color/orange))
+          (inside-ver-color . ,(clr #:color/blue))
+          (inside-wrong-color . ,(clr #:color/red))
 
-        (ring-color . "231f20D9")
-        (ring-clear-color . "231f20D9")
-        (ring-ver-color . "231f20D9")
-        (ring-wrong-color . "231f20D9")
+          (text-color . ,(clr #:color/violet))
+          (separator-color . "00000000")
+          (line-uses-ring)
 
-        (line-color . "00000000")
-        (line-clear-color . "ffd204FF")
-        (line-ver-color . "d9d8d8FF")
-        (line-wrong-color . "ee2e24FF")
+          ;; Effects
 
-        (text-clear-color . "ffd20400")
-        (text-ver-color . "d9d8d800")
-        (text-wrong-color . "ee2e2400")
+          (grace . "15")
+          (effect-blur . 7x5)
+          (clock)
+          (fade-in . "2")
 
-        ;; Effects
-
-        (grace . "15")
-        (effect-blur . 7x5)
-        (clock)
-        (fade-in . "2")
-
-        ,@(if extra-config
-              extra-config '())))))))
+          ,@(if extra-config
+                extra-config '()))))))))
 
 (define (swaylock-screen-locker)
   "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved (which it is but in core-updates which as of [2022-08-23 Tue] hasn't been merged to master).
 
 (define (swaylock-screen-locker-manual)
-  (string-append (swaylock-screen-locker) " --grace=0"))
+  #~(string-append #$(swaylock-screen-locker) " --grace=0"))
 #+end_src
 **** Idle managers
 ***** Swayidle
