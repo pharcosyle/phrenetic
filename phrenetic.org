@@ -6126,7 +6126,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     'mako-add-packages
     home-profile-service-type
     (list mako
-          jq)) ; Required to use `makoctl menu'. Ideally this would be part of the Guix package.
+          jq)) ; Required to use `makoctl menu'. Ideally this would be part of the Guix package. ; TODO Make a custom Mako package (perhaps just adding `jq` to the propagated inputs initially).
 
    (simple-service
     'mako-config
