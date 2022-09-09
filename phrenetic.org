@@ -5442,8 +5442,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ****** Dark
 #+begin_src scheme
 (define* (doom-dark-theme #:key name colors)
-  (let ((clr (lambda (c)
-               (assoc-ref colors c))))
+  (let ((clr (lambda (color)
+               (assoc-ref colors color))))
     `((,name
        ((bg         '(,(clr #:color/bg) "black"       "black"  ))
         (fg         '(,(clr #:color/fg) "#bfbfbf"     "brightwhite"  ))
@@ -6016,6 +6016,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 ***** Swaylock
 #+begin_src scheme
 (define* (he-swaylock #:key
+                      colors
                       font
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
                       ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
@@ -6135,12 +6136,14 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     `(("mako/config"
        ,(ini-config-file
          "mako-config"
-         (let ((clr (lambda (c)
-                      (assoc-ref colors c))))
+         (let ((clr (lambda* (color #:optional alpha)
+                      (as-> color $
+                            (assoc-ref colors $)
+                            (string-append $ (or alpha ""))))))
            `((global ((font . ,(string->symbol (font-value font)))
                       (max-icon-size . ,(string->symbol "32"))
                       (text-color . ,(string->symbol (clr #:color/fg)))
-                      (background-color . ,(string->symbol (string-append (clr #:color/bg) "1A"))) ; TODO why isn't the transparency working right?
+                      (background-color . ,(string->symbol (clr #:color/bg "1A"))) ; TODO why isn't the transparency working right?
                       (border-color . ,(string->symbol (clr #:color/highlight)))
                       (border-size . ,(string->symbol "2"))
                       (border-radius . ,(string->symbol "8"))))
@@ -6659,7 +6662,8 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                             #:idle-manager (swayidle-idle-manager)
                             #:application-launcher (rofi-application-launcher #:wayland? #t)
                             #:default-terminal (alacritty-terminal))
-                   (he-swaylock #:font font-variable-pitch)
+                   (he-swaylock #:colors colors
+                                #:font font-variable-pitch)
                    (he-swayidle #:sway? #t
                                 #:screen-locker screen-locker)
                    (he-mako #:sway? #t
