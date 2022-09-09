@@ -1480,6 +1480,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-sway
             he-swaylock
             swaylock-screen-locker
+            swaylock-screen-locker-manual
             he-swayidle
             swayidle-idle-manager
             he-mako
@@ -6079,6 +6080,9 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 
 (define (swaylock-screen-locker)
   "/run/setuid-programs/swaylock") ; According to Andrew Tropin, this can be changed to a store path once https://issues.guix.gnu.org/53468 is resolved (which it is but in core-updates which as of [2022-08-23 Tue] hasn't been merged to master).
+
+(define (swaylock-screen-locker-manual)
+  (string-append (swaylock-screen-locker) " --grace=0"))
 #+end_src
 **** Idle managers
 ***** Swayidle
@@ -6652,32 +6656,31 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
             (if sway?
-                (let ((screen-locker (swaylock-screen-locker)))
-                  (append
-                   (he-wm-common #:sway? #t)
-                   (he-sway #:doom? doom?
-                            #:pipewire? pipewire?
-                            #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                            #:screen-locker screen-locker
-                            #:idle-manager (swayidle-idle-manager)
-                            #:application-launcher (rofi-application-launcher #:wayland? #t)
-                            #:default-terminal (alacritty-terminal))
-                   (he-swaylock #:colors colors
-                                #:font font-variable-pitch)
-                   (he-swayidle #:sway? #t
-                                #:screen-locker screen-locker)
-                   (he-mako #:sway? #t
-                            #:menu (rofi-menu #:wayland? #t)
-                            #:colors colors
-                            #:font font-variable-pitch)
-                   (he-waybar #:sway? #t
-                              #:theme theme
+                (append
+                 (he-wm-common #:sway? #t)
+                 (he-sway #:doom? doom?
+                          #:pipewire? pipewire?
+                          #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                          #:screen-locker (swaylock-screen-locker-manual)
+                          #:idle-manager (swayidle-idle-manager)
+                          #:application-launcher (rofi-application-launcher #:wayland? #t)
+                          #:default-terminal (alacritty-terminal))
+                 (he-swaylock #:colors colors
                               #:font font-variable-pitch)
-                   (he-rofi #:stateless? stateless?
-                            #:wayland? #t
+                 (he-swayidle #:sway? #t
+                              #:screen-locker (swaylock-screen-locker))
+                 (he-mako #:sway? #t
+                          #:menu (rofi-menu #:wayland? #t)
+                          #:colors colors
+                          #:font font-variable-pitch)
+                 (he-waybar #:sway? #t
                             #:theme theme
                             #:font font-variable-pitch)
-                   (he-alacritty #:font font-mono)))
+                 (he-rofi #:stateless? stateless?
+                          #:wayland? #t
+                          #:theme theme
+                          #:font font-variable-pitch)
+                 (he-alacritty #:font font-mono))
                 '())
             (if doom?
                 (he-doom-vterm) '())))
