@@ -5324,6 +5324,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
 (define dark-colors
   '((#:color/fg . "#dee2f8")
+    (#:color/bg . "#282c34")
     (#:color/highlight . "#8496ff")
     (#:color/comments . "#63677f")
     (#:color/comment-delimiter . "#939abd")
@@ -5444,7 +5445,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
   (let ((color (lambda (c)
                  (assoc-ref colors c))))
     `((,name
-       ((bg         '("#282c34"           "black"       "black"  ))
+       ((bg         '(,(color #:color/bg) "black"       "black"  ))
         (fg         '(,(color #:color/fg) "#bfbfbf"     "brightwhite"  ))
 
         ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
@@ -6119,7 +6120,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define* (he-mako #:key
                   sway?
                   menu
-                  theme ; TODO unused. Use it.
+                  colors
                   font)
   (list
    (simple-service
@@ -6136,13 +6137,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
          "mako-config"
          `((global ((font . ,(string->symbol (font-value font)))
                     (max-icon-size . ,(string->symbol "32"))
-                    (text-color . ,(string->symbol "#dee2f8"))
-                    (background-color . ,(string->symbol (string-append "#282c34" "1A"))) ; TODO why isn't the transparency working right?
-                    (border-color . ,(string->symbol "#8496ff"))
+                    (text-color . ,(string->symbol (assoc-ref colors #:color/fg)))
+                    (background-color . ,(string->symbol (string-append (assoc-ref colors #:color/bg) "1A"))) ; TODO why isn't the transparency working right?
+                    (border-color . ,(string->symbol (assoc-ref colors #:color/highlight)))
                     (border-size . ,(string->symbol "2"))
                     (border-radius . ,(string->symbol "8"))))
-           (urgency=low ((border-color . ,(string->symbol "#9fed9c"))))
-           (urgency=high ((border-color . ,(string->symbol "#fb8578")))))
+           (urgency=low ((border-color . ,(string->symbol (assoc-ref colors #:color/green)))))
+           (urgency=high ((border-color . ,(string->symbol (assoc-ref colors #:color/red))))))
          #:ini-serialize
          (lambda (config)
            (ini-serialize config #:equal-string "="))))))
@@ -6661,7 +6662,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                                 #:screen-locker screen-locker)
                    (he-mako #:sway? #t
                             #:menu (rofi-menu #:wayland? #t)
-                            #:theme theme
+                            #:colors colors
                             #:font font-variable-pitch)
                    (he-waybar #:sway? #t
                               #:theme theme
