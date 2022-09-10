@@ -1942,12 +1942,7 @@ SAVEHIST=$HISTSIZE
          (doom-service
           'nix
           #:modules `((#:lang
-                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))
-          #:config
-          '((use-package! nix-drv-mode
-                          :defer t
-                          :init
-                          (setq auto-mode-alist (delete '("\\.drv\\'" . nix-drv-mode) auto-mode-alist)))))) ; Remove the :mode set by the Doom module. It's unnecessary (`nix-drv-mode.el' already does this) and it shadows `guix-derivation-mode'.
+                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
 
         (doom-transient #:stateless? stateless?))
        '())
