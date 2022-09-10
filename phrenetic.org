@@ -6540,8 +6540,9 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
     home-alacritty-service-type
     (home-alacritty-configuration
      (config
-      `((window . ((padding . ((x . 10)
+      `((window . ((padding . ((x . 5)
                                (y . 5)))))
+        (background_opacity . 0.75) ; Change this to window.opacity when Guix updates Alacritty version.
         ,@(if font
               `((font . ((normal . ,(append
                                      `((family . ,(assoc-ref font #:font/name)))
