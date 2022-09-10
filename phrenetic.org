@@ -6532,7 +6532,9 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 #+end_src
 ***** Alacritty
 #+begin_src scheme
-(define* (he-alacritty #:key font)
+(define* (he-alacritty #:key
+                       colors
+                       font)
   (list
    (service
     home-alacritty-service-type
@@ -6546,7 +6548,19 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                                      (if-let ((weight (assoc-ref font #:font/weight)))
                                              `((style . ,(font-weight->style weight))) '())))
                          (size . ,(assoc-ref font #:font/size)))))
-              '())))))))
+              '())
+        ,@(let ((clr (lambda (color)
+                       (assoc-ref colors color))))
+            `((colors . ((primary . ((background . ,(clr #:color/bg))
+                                     (foreground . ,(clr #:color/fg))))
+                         (normal . ((black . ,(clr #:color/base0))
+                                    (white . ,(clr #:color/base8))
+                                    (red . ,(clr #:color/red))
+                                    (green . ,(clr #:color/green))
+                                    (yellow . ,(clr #:color/yellow))
+                                    (blue . ,(clr #:color/blue))
+                                    (magenta . ,(clr #:color/magenta))
+                                    (cyan . ,(clr #:color/cyan))))))))))))))
 
 (define (font-weight->style weight)
   (->> weight
@@ -6711,7 +6725,8 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                             #:wayland? wayland?
                             #:theme theme
                             #:font font-variable-pitch)
-                   (he-alacritty #:font font-mono)))
+                   (he-alacritty #:colors colors
+                                 #:font font-mono)))
                 '())
             (if doom?
                 (he-doom-vterm) '())))
