@@ -1474,6 +1474,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             font-serif
             font-unicode
             useful-font-packages
+            date-format
+            time-format
             he-doom-themes+fonts
             he-flatpak
             he-wm-common
@@ -5394,6 +5396,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ***** TODO [#D] Alternative fonts
 - =font-unifont-gnu= sucks, find a replacement?
 - Try out =font-adobe-source-sans-pro= in place of =font-iosevka-aile=?
+**** Date/time formats
+#+begin_src scheme
+(define date-format "%a %b %e")
+
+(define time-format "%-I:%M %p")
+#+end_src
 **** Doom themes and fonts
 #+begin_src scheme
 (define* (he-doom-themes+fonts #:key
@@ -6020,6 +6028,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 (define* (he-swaylock #:key
                       colors
                       font
+                      time-format
+                      date-format
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
                       ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
                       (image "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/alucard_bg.png")
@@ -6071,8 +6081,11 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 
           (grace . "15")
           (effect-blur . 7x5)
-          (clock)
           (fade-in . "2")
+
+          (clock)
+          (timestr . ,time-format)
+          (datestr . ,date-format)
 
           ,@(if extra-config
                 extra-config '()))))))))
@@ -6250,10 +6263,14 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
          (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
 
-(define* (waybar-modules #:key sway?)
+(define* (waybar-modules #:key
+                         sway?
+                         date-format
+                         time-format)
   (append
    (list
-    (waybar-clock))
+    (waybar-clock #:date-format date-format
+                  #:time-format time-format))
    (if sway?
        (list
         (waybar-sway-workspaces)
@@ -6346,11 +6363,12 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    '((format . " {percent}"))))
 
 (define* (waybar-clock #:key
-                       (format "{:%a %b %d %I:%M %p}"))
+                       date-format
+                       time-format)
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     (format . ,format))
+     (format . ,(string-append "{:" date-format "  " "%I:%M %p" "}")))
    '()
    #:placement 'modules-left))
 
@@ -6446,8 +6464,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-******* WAIT [#D] Remove zero-padding from clock hour
-Once Waybar is updated in Guix this should be doable (possibly with the format =%-i=). See https://github.com/Alexays/Waybar/issues/1452.
+******* WAIT [#D] Use the ~time-format~ parameter
+Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead of =%-I=. See https://github.com/Alexays/Waybar/issues/1452.
 **** Menus and launchers
 ***** Rofi
 #+begin_src scheme
@@ -6657,32 +6675,38 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
             (if sway?
-                (append
-                 (he-wm-common #:sway? sway?)
-                 (he-sway #:doom? doom?
-                          #:pipewire? pipewire?
-                          #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                          #:screen-locker (swaylock-screen-locker-manual)
-                          #:idle-manager (swayidle-idle-manager)
-                          #:application-launcher (rofi-application-launcher #:wayland? wayland?)
-                          #:default-terminal (alacritty-terminal))
-                 (he-swaylock #:colors colors
+                (let ((date-format date-format)
+                      (time-format time-format))
+                  (append
+                   (he-wm-common #:sway? sway?)
+                   (he-sway #:doom? doom?
+                            #:pipewire? pipewire?
+                            #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                            #:screen-locker (swaylock-screen-locker-manual)
+                            #:idle-manager (swayidle-idle-manager)
+                            #:application-launcher (rofi-application-launcher #:wayland? wayland?)
+                            #:default-terminal (alacritty-terminal))
+                   (he-swaylock #:colors colors
+                                #:font font-variable-pitch
+                                #:date-format date-format
+                                #:time-format time-format)
+                   (he-swayidle #:sway? sway?
+                                #:screen-locker (swaylock-screen-locker))
+                   (he-mako #:sway? sway?
+                            #:menu (rofi-menu #:wayland? wayland?)
+                            #:colors colors
+                            #:font font-variable-pitch)
+                   (he-waybar #:sway? sway?
+                              #:modules (waybar-modules #:sway? sway?
+                                                        #:date-format date-format
+                                                        #:time-format time-format)
+                              #:theme theme
                               #:font font-variable-pitch)
-                 (he-swayidle #:sway? sway?
-                              #:screen-locker (swaylock-screen-locker))
-                 (he-mako #:sway? sway?
-                          #:menu (rofi-menu #:wayland? wayland?)
-                          #:colors colors
-                          #:font font-variable-pitch)
-                 (he-waybar #:sway? sway?
-                            #:modules (waybar-modules #:sway? sway?)
+                   (he-rofi #:stateless? stateless?
+                            #:wayland? wayland?
                             #:theme theme
                             #:font font-variable-pitch)
-                 (he-rofi #:stateless? stateless?
-                          #:wayland? wayland?
-                          #:theme theme
-                          #:font font-variable-pitch)
-                 (he-alacritty #:font font-mono))
+                   (he-alacritty #:font font-mono)))
                 '())
             (if doom?
                 (he-doom-vterm) '())))
