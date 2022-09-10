@@ -1485,6 +1485,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             swayidle-idle-manager
             he-mako
             he-waybar
+            waybar-modules
             he-rofi
             rofi-menu
             rofi-application-launcher
@@ -6170,23 +6171,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 #+begin_src scheme
 (define* (he-waybar #:key
                     sway?
-                    (waybar-modules
-                     (append
-                      (list
-                       (waybar-clock))
-                      (if sway?
-                          (list
-                           (waybar-sway-workspaces)
-                           (waybar-sway-window))
-                          '())
-                      (list
-                       (waybar-tray)
-                       (waybar-idle-inhibitor)
-                       (waybar-audio)
-                       (waybar-backlight)
-                       (waybar-cpu)
-                       (waybar-memory)
-                       (waybar-battery))))
+                    modules
                     theme ; TODO unused. Use it.
                     (css (local-file "waybar-style.css"))
                     font
@@ -6240,7 +6225,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
             (.modules-right
              ((margin-right . 0.2em))))))))
 
-   waybar-modules
+   modules
 
    (list
     (simple-service
@@ -6264,6 +6249,24 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        home-sway-service-type
        `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
          (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
+
+(define* (waybar-modules #:key sway?)
+  (append
+   (list
+    (waybar-clock))
+   (if sway?
+       (list
+        (waybar-sway-workspaces)
+        (waybar-sway-window))
+       '())
+   (list
+    (waybar-tray)
+    (waybar-idle-inhibitor)
+    (waybar-audio)
+    (waybar-backlight)
+    (waybar-cpu)
+    (waybar-memory)
+    (waybar-battery))))
 #+end_src
 ****** CSS
 #+begin_src css :tangle (meta-in-dir "waybar-style.css")
@@ -6672,6 +6675,7 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                           #:colors colors
                           #:font font-variable-pitch)
                  (he-waybar #:sway? #t
+                            #:modules (waybar-modules #:sway? #t)
                             #:theme theme
                             #:font font-variable-pitch)
                  (he-rofi #:stateless? stateless?
