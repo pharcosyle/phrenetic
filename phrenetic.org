@@ -5344,6 +5344,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     (#:color/magenta . "#e29bf7")
     (#:color/violet . "#aeb9f3")
     (#:color/cyan . "#75e0f9")
+    (#:color/base0 . "#1b2229")
+    (#:color/base8 . "#dfdfdf")
     ;; TODO remove these if I'm not using them.
     ;; (#:color/gold . "#fdd94a")
     ;; (#:color/pink . "#ff9999")
@@ -5471,15 +5473,15 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         ;; These should represent a spectrum from bg to fg, where base0 is a starker
         ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
         ;; dark grey, base0 should be white and base8 should be black.
-        (base0      '("#1B2229" "black"       "black"        ))
-        (base1      '("#1c1f24" "#1e1e1e"     "brightblack"  ))
-        (base2      '("#202328" "#2e2e2e"     "brightblack"  ))
-        (base3      '("#23272e" "#262626"     "brightblack"  ))
-        (base4      '("#3f444a" "#3f3f3f"     "brightblack"  ))
-        (base5      '("#5B6268" "#525252"     "brightblack"  ))
-        (base6      '("#73797e" "#6b6b6b"     "brightblack"  ))
-        (base7      '("#9ca0a4" "#979797"     "brightblack"  ))
-        (base8      '("#DFDFDF" "#dfdfdf"     "white"        ))
+        (base0      '(,(clr #:color/base0) "black" "black"        ))
+        (base1      '("#1c1f24"            "#1e1e1e"  "brightblack"  ))
+        (base2      '("#202328"            "#2e2e2e"  "brightblack"  ))
+        (base3      '("#23272e"            "#262626"  "brightblack"  ))
+        (base4      '("#3f444a"            "#3f3f3f"  "brightblack"  ))
+        (base5      '("#5B6268"            "#525252"  "brightblack"  ))
+        (base6      '("#73797e"            "#6b6b6b"  "brightblack"  ))
+        (base7      '("#9ca0a4"            "#979797"  "brightblack"  ))
+        (base8      '(,(clr #:color/base8) "#dfdfdf" "white"        ))
 
         (grey       base4)
         (red        '(,(clr #:color/red)       "#ff6655" "red"          ))
