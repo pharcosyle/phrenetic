@@ -6658,28 +6658,28 @@ Once Waybar is updated in Guix this should be doable (possibly with the format =
                         #:wayland? wayland?)
             (if sway?
                 (append
-                 (he-wm-common #:sway? #t)
+                 (he-wm-common #:sway? sway?)
                  (he-sway #:doom? doom?
                           #:pipewire? pipewire?
                           #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                           #:screen-locker (swaylock-screen-locker-manual)
                           #:idle-manager (swayidle-idle-manager)
-                          #:application-launcher (rofi-application-launcher #:wayland? #t)
+                          #:application-launcher (rofi-application-launcher #:wayland? wayland?)
                           #:default-terminal (alacritty-terminal))
                  (he-swaylock #:colors colors
                               #:font font-variable-pitch)
-                 (he-swayidle #:sway? #t
+                 (he-swayidle #:sway? sway?
                               #:screen-locker (swaylock-screen-locker))
-                 (he-mako #:sway? #t
-                          #:menu (rofi-menu #:wayland? #t)
+                 (he-mako #:sway? sway?
+                          #:menu (rofi-menu #:wayland? wayland?)
                           #:colors colors
                           #:font font-variable-pitch)
-                 (he-waybar #:sway? #t
-                            #:modules (waybar-modules #:sway? #t)
+                 (he-waybar #:sway? sway?
+                            #:modules (waybar-modules #:sway? sway?)
                             #:theme theme
                             #:font font-variable-pitch)
                  (he-rofi #:stateless? stateless?
-                          #:wayland? #t
+                          #:wayland? wayland?
                           #:theme theme
                           #:font font-variable-pitch)
                  (he-alacritty #:font font-mono))
