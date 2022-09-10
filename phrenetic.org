@@ -2311,72 +2311,80 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
                  (map (lambda (i)
                         (or (assoc-ref i k) '()))
                       additional))))
-    `((#:init-file .
-       ,(as-> (field #:modules) $
-              (map (lambda (i)
-                     (update-vals i (lambda (modules)
-                                      (map (lambda (m)
-                                             (cond
-                                              ((symbol? m) (list m))
-                                              ((list? m) m)))
-                                           modules))))
-                   $)
-              (apply merge-with
-                     (lambda (ms ms*)
-                       (merge-with append ms ms*))
-                     $)
-              (sort $ (lambda (a b)
-                        (let ((idx (lambda (entry)
-                                     (list-index
-                                      (lambda (category)
-                                        (eq? (car entry) category))
-                                      '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
-                          (< (idx a) (idx b)))))
-              (update-vals $ (lambda (modules)
-                               (let ((name (lambda (m)
-                                             (symbol->string (car m)))))
-                                 (sort modules (lambda (a b)
-                                                 (string<? (name a) (name b)))))))
-              (update-keys $ (lambda (category)
-                               (symbol-append ': (keyword->symbol category))))
-              (update-vals $ (lambda (modules)
-                               (map (lambda (m)
-                                      (if (= (length m) 1)
-                                          (car m) m))
-                                    modules)))
-              (apply append $)
-              (elisp-serialize*
-               `(,#~";;; -*- lexical-binding: t; -*-"
-                    (doom! ,@$)))))
-      (#:config-file .
-       ,(as-> (field #:config) $
-              (delete-duplicates $)
-              (apply append $)
-              (elisp-serialize*
-               (append
-                `(,#~";;; -*- lexical-binding: t; -*-")
-                $))))
-      (#:packages-file .
-       ,(as-> (field #:packages) $
-              (delete-duplicates $)
-              (apply append $)
-              (elisp-serialize*
-               (append
-                `(,#~";; -*- no-byte-compile: t; -*-")
-                $))))
-      (#:theme-files .
-       ,(as-> (field #:themes) $
-              (apply append $)
-              (map (lambda (theme)
-                     (list
-                      (car theme)
-                      (->> theme
-                           (apply (lambda (name defs extra-faces)
-                                    `(,#~";;; -*- lexical-binding: t; no-byte-compile: t; -*-"
-                                         (require 'doom-themes)
-                                         (def-doom-theme ,name ,(symbol->string name) ,defs ,extra-faces))))
-                           elisp-serialize*)))
-                   $))))))
+    `((#:init-file . ,(init-file (field #:modules)))
+      (#:config-file . ,(config-file (field #:config)))
+      (#:packages-file . ,(packages-file (field #:packages)))
+      (#:theme-files . ,(theme-files (field #:themes))))))
+
+(define (init-file exts)
+  (as-> exts $
+    (map (lambda (i)
+           (update-vals i (lambda (modules)
+                            (map (lambda (m)
+                                   (cond
+                                    ((symbol? m) (list m))
+                                    ((list? m) m)))
+                                 modules))))
+         $)
+    (apply merge-with
+           (lambda (ms ms*)
+             (merge-with append ms ms*))
+           $)
+    (sort $ (lambda (a b)
+              (let ((idx (lambda (entry)
+                           (list-index
+                            (lambda (category)
+                              (eq? (car entry) category))
+                            '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
+                (< (idx a) (idx b)))))
+    (update-vals $ (lambda (modules)
+                     (let ((name (lambda (m)
+                                   (symbol->string (car m)))))
+                       (sort modules (lambda (a b)
+                                       (string<? (name a) (name b)))))))
+    (update-keys $ (lambda (category)
+                     (symbol-append ': (keyword->symbol category))))
+    (update-vals $ (lambda (modules)
+                     (map (lambda (m)
+                            (if (= (length m) 1)
+                                (car m) m))
+                          modules)))
+    (apply append $)
+    (elisp-serialize*
+     `(,#~";;; -*- lexical-binding: t; -*-"
+          (doom! ,@$)))))
+
+(define (config-file exts)
+  (as-> exts $
+    (delete-duplicates $)
+    (apply append $)
+    (elisp-serialize*
+     (append
+      `(,#~";;; -*- lexical-binding: t; -*-")
+      $))))
+
+(define (packages-file exts)
+  (as-> exts $
+    (delete-duplicates $)
+    (apply append $)
+    (elisp-serialize*
+     (append
+      `(,#~";; -*- no-byte-compile: t; -*-")
+      $))))
+
+(define (theme-files exts)
+  (as-> exts $
+    (apply append $)
+    (map (lambda (theme)
+           (list
+            (car theme)
+            (->> theme
+                 (apply (lambda (name defs extra-faces)
+                          `(,#~";;; -*- lexical-binding: t; no-byte-compile: t; -*-"
+                               (require 'doom-themes)
+                               (def-doom-theme ,name ,(symbol->string name) ,defs ,extra-faces))))
+                 elisp-serialize*)))
+         $)))
 
 (define (elisp-serialize* exprs)
   #~(begin
