@@ -6476,7 +6476,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 (define* (he-rofi #:key
                   stateless?
                   wayland?
-                  theme
+                  colors
                   font)
   (list
    (service
@@ -6490,6 +6490,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
           (drun-show-actions . #t)
           (show-icons . #t)
           (font . ,(font-value font))
+
           (kb-row-tab . "")
           (kb-row-select . "Tab")
           (kb-secondary-paste . "Control+y")
@@ -6498,9 +6499,21 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
           (kb-clear-line . "Control+slash")
           (kb-page-next . "Control+v")
           (kb-page-prev . "Alt+v")))
-        ,#~(format #f "@theme \"~a\"" #$(case theme
-                                          ((#:theme/light) "Arc")
-                                          ((#:theme/dark) "Arc-Dark")))))))
+
+        ,#~"@theme \"paper-float\""
+        ;; ,@(let ((clr (lambda* (color #:optional alpha)
+        ;;                (as-> color $
+        ;;                      (assoc-ref colors $)
+        ;;                      (string-append $ (or alpha ""))))))
+        ;;     `((*
+        ;;        (;; (white . ,(clr #:color/fg))
+        ;;         ;; (black . ,(clr #:color/bg))
+        ;;         ;; (grey . ,(clr #:color/comment-delimiter))
+        ;;         ;; (blue . ,(clr #:color/blue))
+        ;;         (background . "#000000BF")))))
+        ;; (window
+        ;;  ((transparency . "real")))
+        ))))
 
    (when stateless?
      (home-stateless-service
@@ -6723,7 +6736,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                                                         #:time-format time-format))
                    (he-rofi #:stateless? stateless?
                             #:wayland? wayland?
-                            #:theme theme
+                            #:colors colors
                             #:font font-variable-pitch)
                    (he-alacritty #:colors colors
                                  #:font font-mono)))
