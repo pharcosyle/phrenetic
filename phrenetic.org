@@ -4282,7 +4282,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-calendar #:stateless? stateless?
                   #:email email)
    (doom-guix #:stateless? stateless?)
-   (doom-clojure #:stateless? stateless?))) ; TODO Eventually don't include this here, have it be a dependency of project(s) (or at least move it to `doom-languages').
+   (doom-clojure #:stateless? stateless?))) ; TODO Eventually don't include this here, have it be a dependency of project(s) and more it to "Auxillary". Or at least move it to `doom-languages'.
 #+end_src
 ****** General :bindings:
 #+begin_src scheme
@@ -4966,7 +4966,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
         (after! cider
                 (setq cider-repl-history-size ,very-big-history
-                      cider-print-options '(("length" 100))))
+                      cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
 
         ;; REVIEW make sure this is still working after nesting in `after!'
         (after! cider-repl
