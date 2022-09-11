@@ -2069,12 +2069,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (gcc-12))
+  #:use-module ((gnu packages gcc) #:select (libgccjit libgccjit-12))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
-
-(define emacs-with-native-comp (@@ (flat packages emacs) emacs-with-native-comp))
 #+end_src
 ***** Emacs latest :version:
 Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
@@ -2082,8 +2080,8 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
 (define-public (with-emacs-latest emacs)
   (-> emacs
       (with-git-commit #:upstream-version "29.0.50"
-                       #:commit "06d7161476255c77defa119fffa842b7abaa0dcb"
-                       #:hash "099wp5bd21zmbjlfn58n5sp7l8xmskg3ai63xy9ijh5spkjl1q5q")
+                       #:commit "e425b7d231d02e76ec3e3790418121fc07877e70"
+                       #:hash "1i8i102v4pqaja7vak03f5anmjx4m384d25c2lh8jxi21wayb1nb")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
 ***** Wayland =Super= fix
@@ -2183,10 +2181,10 @@ Honor SOURCE_DATE_EPOCH variable to avoid non-determinism in generated
    ;; Break that line at spaces, to avoid very long lines.
    ;; Make each sub-line into a comment.
 #+end_src
-***** Native comp
+***** Libgccjit latest
 #+begin_src scheme
-(define-public (with-native-comp emacs)
-  (emacs-with-native-comp emacs gcc-12 'full-aot))
+(define with-libgccjit-latest
+  (package-input-rewriting `((,libgccjit . ,libgccjit-12))))
 #+end_src
 ***** Findable C source
 #+begin_src scheme
@@ -2252,7 +2250,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
               with-wayland-super-fix
               with-epoch-patch-update)
           emacs)
-      with-native-comp
+      with-libgccjit-latest
       with-findable-C-source
       with-zstd
       with-path-integration-improvements))
@@ -7642,14 +7640,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 *** Channels
 #+begin_src scheme :tangle (meta-in-dir "channels")
 (cons* (channel
-        (name 'flat)
-        (url "https://github.com/flatwhatson/guix-channel.git")
-        (introduction
-         (make-channel-introduction
-          "33f86a4b48205c0dc19d7c036c85393f0766f806"
-          (openpgp-fingerprint
-           "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
-       (channel
         (name 'rde)
         (url "https://git.sr.ht/~abcdw/rde")
         (introduction
@@ -7690,29 +7680,18 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://git.savannah.gnu.org/git/guix.git")
        (branch "master")
        (commit
-        "4c03f62ad04c2cbbfc7ed61c97b0ecf897383706")
+        "9b3124b2fc19e83c516606e84932a449e0b2b8a1")
        (introduction
         (make-channel-introduction
          "9edb3f66fd807b096b48283debdcddccfea34bad"
          (openpgp-fingerprint
           "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
       (channel
-       (name 'flat)
-       (url "https://github.com/flatwhatson/guix-channel.git")
-       (branch "master")
-       (commit
-        "bfc961929e93114bcbc230edca3a771070efad3e")
-       (introduction
-        (make-channel-introduction
-         "33f86a4b48205c0dc19d7c036c85393f0766f806"
-         (openpgp-fingerprint
-          "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
-      (channel
        (name 'rde)
        (url "https://git.sr.ht/~abcdw/rde")
        (branch "master")
        (commit
-        "8c40c5d37fc007bdfc012722324303b7c9120a5a")
+        "5f3f2e6b8e0cc0405ef76b38c867773356b4e928")
        (introduction
         (make-channel-introduction
          "257cebd587b66e4d865b3537a9a88cccd7107c95"
@@ -7723,7 +7702,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://gitlab.com/nonguix/nonguix")
        (branch "master")
        (commit
-        "9cf71573089c878d553314a3a5e51dc7487db449")
+        "bb2e6e65d137e42799bc67698da993de944e891e")
        (introduction
         (make-channel-introduction
          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
@@ -7775,14 +7754,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 (channel
  (version 0)
  (dependencies
-  (channel
-   (name flat)
-   (url "https://github.com/flatwhatson/guix-channel.git")
-   (introduction
-    (make-channel-introduction
-     "33f86a4b48205c0dc19d7c036c85393f0766f806"
-     (openpgp-fingerprint
-      "736A C00E 1254 378B A982  7AF6 9DBE 8265 81B6 4490"))))
   (channel
    (name rde)
    (url "https://git.sr.ht/~abcdw/rde")
