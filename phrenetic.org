@@ -990,9 +990,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         (append
          (-> broadcom package-source origin-patches)
          (list
-          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-linux-5.17.patch"
-          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-linux-5.18.patch"
-          "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/system/patches/broadcom-sta-pedantic-fix.patch")))))))
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-linux-5.17.patch"
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-linux-5.18.patch"
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-pedantic-fix.patch")))))))
 #+end_src
 ******* Patches
 :PROPERTIES:
@@ -2096,7 +2096,7 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
        (inherit (package-source emacs))
        (patches
         (cons
-         "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/wayland-super-fix.patch"
+         "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch"
          ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
               (-> emacs package-source origin-patches)))))))
 #+end_src
@@ -2156,7 +2156,7 @@ index 566fc1f03d..1cb4d5dac0 100644
               (lambda (patch)
                 (string-suffix? "emacs-source-date-epoch.patch" patch)))
              (cons
-              "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
+              "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
               ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch" ; (local-file "patches/emacs-source-date-epoch.patch") ; TODO why isn't this working with local-file?
               )))))))
 #+end_src
@@ -6037,7 +6037,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       date-format
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
                       ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
-                      (image "/.persist/home/pharcosyle/phrenetic_for_now/ebullient/home/alucard_bg.png")
+                      (image "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/alucard_bg.png")
                       ;; (image wallpaper)
                       extra-config)
   (list
@@ -7490,7 +7490,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
    os:os-base
    os:blank-os
    #:source? #t
-   #:source-path "/.persist/home/pharcosyle/phrenetic_for_now"
+   #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
    #:users-info `(((#:name . ,primary-name)
                    (#:comment . "Krzysztof Baranowski")
                    (#:admin? . #t)
