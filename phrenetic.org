@@ -6558,7 +6558,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                                      `((family . ,(assoc-ref font #:font/name)))
                                      (if-let ((weight (assoc-ref font #:font/weight)))
                                              `((style . ,(font-weight->style weight))) '())))
-                         (size . ,(assoc-ref font #:font/size)))))
+                         (size . ,(- (assoc-ref font #:font/size) 1)))))
               '())
         ,@(let ((clr (lambda (color)
                        (assoc-ref colors color))))
