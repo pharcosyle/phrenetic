@@ -6188,11 +6188,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
 ***** Waybar
 #+begin_src scheme
 (define* (he-waybar #:key
+                    colors
+                    font
                     sway?
                     modules
-                    theme ; TODO unused. Use it.
-                    (css (local-file "waybar-style.css"))
-                    font
                     transitions?)
   (append
    (list
@@ -6202,7 +6201,17 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       (config #(((position . top)
                  (name . main))))
       (style-css
-       `(,#~(format #f "@import \"~a\";\n" #$css)
+       `(,#~#$(->> `(("fg" . #:color/fg)
+                     ("bg" . #:color/bg)
+                     ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
+                     ("highlight" . #:color/highlight)
+                     ("green" . #:color/green)
+                     ("orange" . #:color/orange)
+                     ("red" . #:color/red))
+                   (map (match-lambda
+                          ((name . color)
+                           (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
+                   (apply string-append))
             (*
              ((font-family . #(FontAwesome
                                ,@(if font
@@ -6215,23 +6224,23 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
               (min-height . 0)))
 
             (tooltip
-             ((border . (solid @base02))
-              (background . @base01)
+             ((border . (solid @bg-alt))
+              (background . @bg)
               (opacity . 0.9)))
 
             ((tooltip label)
-             ((color . @base04)
+             ((color . @fg)
               (padding . 0)))
 
             (#{#waybar}#
-             ((color . @base04)
-              (background . @base01)))
+             ((color . @fg)
+              (background . @bg)))
 
             (#((.modules-right label)
                (.modules-right image))
              ((margin . (0.4em 0.2em))
               (padding . (0 0.4em))
-              (background . @base02)
+              (background . @bg-alt)
               (border-radius . 0.2em)))
 
             ;; To accommodate the crack in my screen.
@@ -6290,16 +6299,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     (waybar-memory)
     (waybar-battery))))
 #+end_src
-****** CSS
-#+begin_src css :tangle (meta-in-dir "waybar-style.css")
-@define-color base01 #282c34;
-@define-color base02 #3f444a;
-@define-color base04 #dee2f8;
-@define-color base05 #9fed9c;
-@define-color base07 #8496ff;
-@define-color base08 #fb8578;
-@define-color base09 #fdce5f;
-#+end_src
 ****** Modules
 #+begin_src scheme
 (define* (waybar-module name
@@ -6356,11 +6355,11 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
                       (high . )
                       (full . ))))
    `((#{#battery.discharging.empty}#
-      ((color . @base08)))
+      ((color . @red)))
      (#{#battery.discharging.low}#
-      ((color . @base09)))
+      ((color . @orange)))
      (#{#battery.full}#
-      ((color . @base05))))))
+      ((color . @green))))))
 
 (define (waybar-backlight)
   (waybar-module
@@ -6430,18 +6429,18 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (border-radius . 0.2em)
        (margin . (0.4em 0.2em))
        (padding . (0.1em 0.2em))
-       (color . @base04)))
+       (color . @fg)))
 
      ((#{#workspaces}# button:hover)
       ((background . none)
-       (border-color . @base07)))
+       (border-color . @highlight)))
 
      ((#{#workspaces}# button.focused)
-      ((background . @base02)
-       (color . @base07)))
+      ((background . @bg-alt)
+       (color . @highlight)))
 
      ((#{#workspaces}# button.urgent)
-      ((color . @base08))))
+      ((color . @red))))
    #:placement 'modules-left))
 
 (define (waybar-tray)
@@ -6449,10 +6448,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    'tray
    `()
    `(((#{#tray}# menu)
-      ((color . @base04)
-       (background . @base01)
+      ((color . @fg)
+       (background . @bg)
        (border . (solid 1px))
-       (border-color . @base02)))
+       (border-color . @bg-alt)))
 
      ((#{#tray}# menu menuitem)
       ((padding-top . 0px)
@@ -6464,7 +6463,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
       ((background . none)))
 
      ((#{#tray}# menu separator)
-      ((background . @base02)
+      ((background . @bg-alt)
        (padding-top . 1px)
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
@@ -6716,12 +6715,12 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                             #:menu (rofi-menu #:wayland? wayland?)
                             #:colors colors
                             #:font font-variable-pitch)
-                   (he-waybar #:sway? sway?
+                   (he-waybar #:colors colors
+                              #:font font-variable-pitch
+                              #:sway? sway?
                               #:modules (waybar-modules #:sway? sway?
                                                         #:date-format date-format
-                                                        #:time-format time-format)
-                              #:theme theme
-                              #:font font-variable-pitch)
+                                                        #:time-format time-format))
                    (he-rofi #:stateless? stateless?
                             #:wayland? wayland?
                             #:theme theme
