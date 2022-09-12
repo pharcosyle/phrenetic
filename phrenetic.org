@@ -4880,13 +4880,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
                     (#:store . #:machine)))))))
 
-   (doom-guile #:stateless? stateless?)))
+   (doom-guile-scheme #:stateless? stateless?)))
 #+end_src
-******* Guile
+******* Guile Scheme
 #+begin_src scheme
-(define* (doom-guile #:key stateless?)
+(define* (doom-guile-scheme #:key stateless?)
   (append
-   (let ((name 'guile))
+   (let ((name 'guile-scheme))
      (list
       (doom-service
        name
