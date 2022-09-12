@@ -29,9 +29,11 @@
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
 - [[#channel][Channel]]
+- [[#github][Github]]
+  - [[#readme][Readme]]
+  - [[#license][License]]
 - [[#dev][Dev]]
   - [[#git-ignore][Git ignore]]
-  - [[#github][Github]]
 
 * Meta
 #+begin_src elisp :tangle (meta-in-dir "meta.el")
@@ -7762,21 +7764,8 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
      (openpgp-fingerprint
       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
 #+end_src
-* Dev
-** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
-/*
-
-!phrenetic-dev.org
-
-!/ebullient/
-/ebullient/*
-!/ebullient/home/
-/ebullient/home/*
-!ebullient/home/alucard_bg.png
-#+end_src
-** Github
-*** Readme
+* Github
+** Readme
 #+begin_src org :tangle (meta-in-dir "README.org")
 ,* Phrenetic
 A configuration framework and collection of useful packages/services for [[https://guix.gnu.org/][GNU Guix]].
@@ -7804,7 +7793,7 @@ Pull requests welcome! Targeting =master= is ideal but if you aren't familiar wi
 ,* Acknowledgements
 This project incorporates code from Andrew Tropin's excellent [[https://github.com/abcdw/rde][RDE]], many thanks to him.
 #+end_src
-*** License
+** License
 :PROPERTIES:
 :VISIBILITY: folded
 :END:
@@ -8484,7 +8473,19 @@ the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 #+end_src
+* Dev
+** Git ignore
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore")
+/*
 
+!phrenetic-dev.org
+
+!/ebullient/
+/ebullient/*
+!/ebullient/home/
+/ebullient/home/*
+!ebullient/home/alucard_bg.png
+#+end_src
 
 
 
