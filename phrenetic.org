@@ -4569,10 +4569,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                         :nv "{" #'evil-backward-paragraph
                         :nv "}" #'evil-forward-paragraph)))
 
-         ;; TODO Maybe do this if popping to the side is too annoying
-         ;; (after! geiser-repl
-         ;;   (setq geiser-repl-use-other-window nil))
-
          ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
          (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
 
@@ -4898,7 +4894,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                     (scheme +guile)))
        #:config
        '((after! scheme
-                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))))
+                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+
+         ;; TODO Maybe do this if popping to the side is too annoying
+         ;; (after! geiser-repl
+         ;;   (setq geiser-repl-use-other-window nil))
+         ))
 
       (when stateless?
         (doom-stateless-service
