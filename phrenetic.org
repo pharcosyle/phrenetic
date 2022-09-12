@@ -35,7 +35,6 @@
   - [[#github][Github]]
 - [[#dev-local][Dev local]]
   - [[#git-config-1][Git config]]
-  - [[#emacs-directory-local-variables][Emacs directory-local variables]]
 
 * Meta
 #+begin_src elisp :tangle (meta-in-dir "meta.el")
@@ -4858,13 +4857,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                             :files (:defaults "snippets"))
                    :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
        #:config
-       '((use-package! geiser
-                       :defer t
-                       ;; Use `:init' to configure variables (as opposed to `:config', which seems like it'd be fine); hlissner does it this way for the Geiser package so I will too.
-                       :init
-                       (setq geiser-repl-per-project-p nil)) ; Reset this back to its default (don't have separate REPLs for projects) because it doesn't play nice with the Guix store. Alternatively I could override/wrap `geiser-repl-current-project-function` to resolve Guix store files specially.
-
-         (after! guix
+       '((after! guix
                  (set-popup-rules!
                   '(("^\\*Guix" :height 0.5))))
          (use-package! guix-devel
@@ -8517,23 +8510,6 @@ The default git config on my Guix system.
 	bare = false
 	logallrefupdates = true
 #+end_src
-** Emacs directory-local variables
-- TODO Causes gesier to fail to load outside of this directory
-  *don't do this until I figure out how I'm doing per-project Emcas config* I might not end up doing Geiser setup this way at all.
-  Since the ~with-eval-after-load~ body will get called wherever geiser-guile is first loaded, if the geiser library isn't loaded yet and I e.g. visit a file in this directory, then leave, then try to =M-x guix p e= while I'm viewing a file elsewhere it'll fail to run since it loads geiser internally and can't find a dominating .dir-locals.
-  - an alternative approach to setting up geiser for a project: [[https://github.com/guix-mirror/guix/blob/master/.dir-locals.el#L21][guix/.dir-locals.el at master · guix-mirror/guix · GitHub]]
-    Maybe try that or something like it.
-    - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
-      - update [2022-08-31 Wed]: the .dir-locals approach isn't recommended any more?: https://github.com/flatwhatson/flycheck-guile/commit/e58ceb8b511cd395b9be69f4a1ff85305fbb51c3
-#+begin_src elisp :tangle (meta-in-dir ".dir-locals.el")
-((nil
-  (eval . (with-eval-after-load 'geiser-guile
-            (let ((root-dir
-                   (file-name-directory
-                    (locate-dominating-file default-directory ".dir-locals.el"))))
-              (make-local-variable 'geiser-guile-load-path)
-              (add-to-list 'geiser-guile-load-path root-dir))))))
-#+end_src
 
 
 
@@ -8556,15 +8532,6 @@ The default git config on my Guix system.
       'phrenetic-project
       #:config
       `((load ,(string-append work-dir "/phrenetic/meta") 'noerror 'nomessage))))))
-#+end_src
-#+begin_src elisp
-(pushnew! safe-local-variable-values
-          '(eval . (with-eval-after-load 'geiser-guile
-                     (let ((root-dir
-                            (file-name-directory
-                             (locate-dominating-file default-directory ".dir-locals.el"))))
-                       (make-local-variable 'geiser-guile-load-path)
-                       (add-to-list 'geiser-guile-load-path root-dir)))))
 #+end_src
 ** Nyxt
 #+begin_src scheme
