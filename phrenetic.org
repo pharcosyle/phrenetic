@@ -30,11 +30,8 @@
   - [[#frostfire][Frostfire]]
 - [[#channel][Channel]]
 - [[#dev][Dev]]
-  - [[#git-config][Git config]]
   - [[#git-ignore][Git ignore]]
   - [[#github][Github]]
-- [[#dev-local][Dev local]]
-  - [[#git-config-1][Git config]]
 
 * Meta
 #+begin_src elisp :tangle (meta-in-dir "meta.el")
@@ -7766,19 +7763,11 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
       "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
 #+end_src
 * Dev
-** Git config
-#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
-[branch "master"]
-	remote = origin
-	merge = refs/heads/master
-
-[branch "tangled"]
-	remote = origin
-	merge = refs/heads/tangled
-#+end_src
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /*
+
+!phrenetic-dev.org
 
 !/ebullient/
 /ebullient/*
@@ -7787,12 +7776,6 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
 !ebullient/home/alucard_bg.png
 #+end_src
 ** Github
-*** Git config
-#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
-[remote "origin"]
-	url = https://github.com/pharcosyle/phrenetic.git
-	fetch = +refs/heads/*:refs/remotes/origin/*
-#+end_src
 *** Readme
 #+begin_src org :tangle (meta-in-dir "README.org")
 ,* Phrenetic
@@ -8500,16 +8483,6 @@ may consider it more useful to permit linking proprietary applications with
 the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
-#+end_src
-* Dev local
-** Git config
-The default git config on my Guix system.
-#+begin_src gitconfig :tangle (meta-in-dir ".git/config")
-[core]
-	repositoryformatversion = 0
-	filemode = true
-	bare = false
-	logallrefupdates = true
 #+end_src
 
 

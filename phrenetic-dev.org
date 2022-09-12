@@ -1,0 +1,31 @@
+#+title: Phrenetic Dev
+
+* Git
+:PROPERTIES:
+:header-args: :tangle .git/config
+:END:
+** Default
+The default git config on my Guix system.
+#+begin_src gitconfig
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+#+end_src
+** Branches
+#+begin_src gitconfig
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+
+[branch "tangled"]
+	remote = origin
+	merge = refs/heads/tangled
+#+end_src
+** Github
+#+begin_src gitconfig
+[remote "origin"]
+	url = https://github.com/pharcosyle/phrenetic.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+#+end_src
