@@ -1,6 +1,6 @@
 #+TITLE: Phrenetic
 #+PROPERTY: header-args :mkdirp yes
-#+PROPERTY: header-args:elisp :lexical t
+#+PROPERTY: header-args:emacs-lisp :lexical t
 
 * Table of Contents :TOC:
 - [[#meta][Meta]]
@@ -36,7 +36,7 @@
   - [[#git-ignore][Git ignore]]
 
 * Meta
-#+begin_src elisp :tangle (meta-in-dir "meta.el")
+#+begin_src emacs-lisp :tangle (meta-in-dir "meta.el")
 ;;; -*- lexical-binding: t; -*-
 
 (setq meta--base-dir ".")
@@ -2552,7 +2552,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
 #+end_src
 ******* Source
 Tempel snippets now available under =/etc/snippets/tempel= as of [2022-08-30 Tue] and this [[https://github.com/guix-mirror/guix/commit/c4acaf412064568a546034871a9e0d3888aa7937][commit]].
-#+begin_src elisp :tangle (meta-in-dir "guix-contributing.el")
+#+begin_src emacs-lisp :tangle (meta-in-dir "guix-contributing.el")
 (defvar guix-contributing-source-path "~/src/guix")
 
 (with-eval-after-load 'yasnippet
@@ -4208,7 +4208,7 @@ Had =tangle (meta-in-dir "test-scm.scm")=
 #+end_src
 ******* elisp
 Had =:tangle (meta-in-dir "parse-doom-packages.el")=
-#+begin_src elisp :tangle no
+#+begin_src emacs-lisp :tangle no
 (defun m-slurp (f)
   (with-temp-buffer
     (insert-file-contents f)
@@ -8557,7 +8557,7 @@ Public License instead of this License.  But first, please read
        (doom-clojure #:stateless? stateless?))
       '()))
 #+end_src
-#+begin_src elisp
+#+begin_src emacs-lisp
 (pushnew! safe-local-variable-values
           '(cider-preferred-build-tool . shadow-cljs)
           '(cider-default-cljs-repl . shadow)
@@ -8597,7 +8597,7 @@ Public License instead of this License.  But first, please read
                       #:email email))
       '()))
 #+end_src
-#+begin_src elisp
+#+begin_src emacs-lisp
 (pushnew! safe-local-variable-values
           '(ssh-deploy-root-remote . "/ssh:massrealty@35.196.144.73:/home/massrealty/deploy/homes/public_html/")
           '(ssh-deploy-automatically-detect-remote-changes . t))
