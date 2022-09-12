@@ -2051,7 +2051,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (libgccjit libgccjit-12))
+  #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (ebullient utils)
   #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
@@ -2165,8 +2165,12 @@ Honor SOURCE_DATE_EPOCH variable to avoid non-determinism in generated
 #+end_src
 ***** Libgccjit latest
 #+begin_src scheme
-(define with-libgccjit-latest
-  (package-input-rewriting `((,libgccjit . ,libgccjit-12))))
+(define (with-libgccjit-latest emacs)
+  (package
+    (inherit emacs)
+    (inputs
+     (modify-inputs (package-inputs emacs)
+       (replace "libgccjit" libgccjit-12)))))
 #+end_src
 ***** Findable C source
 #+begin_src scheme
