@@ -1,6 +1,5 @@
 #+TITLE: Phrenetic
 #+PROPERTY: header-args :mkdirp yes
-#+PROPERTY: header-args:emacs-lisp :lexical t
 
 * Table of Contents :TOC:
 - [[#meta][Meta]]
@@ -4208,6 +4207,7 @@ Had =tangle (meta-in-dir "test-scm.scm")=
 #+end_src
 ******* elisp
 Had =:tangle (meta-in-dir "parse-doom-packages.el")=
+- [2022-09-11 Sun] nb: I removed the global lexical arg to emacs-lisp code blocks. Probably doesn't matter.
 #+begin_src emacs-lisp :tangle no
 (defun m-slurp (f)
   (with-temp-buffer
