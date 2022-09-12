@@ -2,7 +2,6 @@
 #+PROPERTY: header-args :mkdirp yes
 
 * Table of Contents :TOC:
-- [[#meta][Meta]]
 - [[#install][Install]]
   - [[#program][Program]]
   - [[#package][Package]]
@@ -34,18 +33,6 @@
 - [[#dev][Dev]]
   - [[#git-ignore][Git ignore]]
 
-* Meta
-#+begin_src emacs-lisp :tangle (meta-in-dir "meta.el")
-(setq meta--base-dir ".")
-
-(defun meta-get-dir ()
-  (concat meta--base-dir
-          (when-let ((dirs (org-entry-get (point) "meta-dir" 'inherit)))
-            (thread-first dirs (split-string " /") (string-join "/")))))
-
-(defun meta-in-dir (sub-path)
-  (concat (meta-get-dir) "/" sub-path))
-#+end_src
 * Install
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "ebullient/install.scm")
@@ -8475,6 +8462,8 @@ Public License instead of this License.  But first, please read
 ** Git ignore
 #+begin_src gitignore :tangle (meta-in-dir ".gitignore")
 /*
+
+!/meta.el
 
 !/ebullient/
 /ebullient/*
