@@ -8525,8 +8525,6 @@ The default git config on my Guix system.
     Maybe try that or something like it.
     - here's where I got the original approach, for reference: [[https://github.com/flatwhatson/flycheck-guile#troubleshooting][GitHub - flatwhatson/flycheck-guile: A Flycheck checker for GNU Guile]]
       - update [2022-08-31 Wed]: the .dir-locals approach isn't recommended any more?: https://github.com/flatwhatson/flycheck-guile/commit/e58ceb8b511cd395b9be69f4a1ff85305fbb51c3
-  - update [2022-03-26 Sat]: this won't work as-is any more
-    I have multiple directories to load (ebullient, exuberant...)
 #+begin_src elisp :tangle (meta-in-dir ".dir-locals.el")
 ((nil
   (eval . (with-eval-after-load 'geiser-guile
