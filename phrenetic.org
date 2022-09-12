@@ -2163,7 +2163,8 @@ Honor SOURCE_DATE_EPOCH variable to avoid non-determinism in generated
    ;; Break that line at spaces, to avoid very long lines.
    ;; Make each sub-line into a comment.
 #+end_src
-***** Libgccjit latest
+***** HOLD Libgccjit latest
+This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Just hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
 #+begin_src scheme
 (define (with-libgccjit-latest emacs)
   (package
@@ -2236,7 +2237,7 @@ i.e. by using ~wrap-program~ on the emacs executable instead of just adding it t
               with-wayland-super-fix
               with-epoch-patch-update)
           emacs)
-      with-libgccjit-latest
+      ;; with-libgccjit-latest
       with-findable-C-source
       with-zstd
       with-path-integration-improvements))
