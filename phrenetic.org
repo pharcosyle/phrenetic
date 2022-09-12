@@ -8544,16 +8544,16 @@ The default git config on my Guix system.
 * COMMENT Work WIP
 ** Phrenetic
 #+begin_src scheme
-(phrenetic-work #:doom? doom?
-                #:work-dir "~/work")
+(phrenetic-project #:doom? doom?
+                   #:work-dir "~/work")
 
-(define* (phrenetic-work #:key
-                         doom?
-                         work-dir)
+(define* (phrenetic-project #:key
+                            doom?
+                            work-dir)
   (list
    (when doom?
      (doom-service
-      'phrenetic-work
+      'phrenetic-project
       #:config
       `((load ,(string-append work-dir "/phrenetic/meta") 'noerror 'nomessage))))))
 #+end_src
@@ -8569,45 +8569,48 @@ The default git config on my Guix system.
 ** Nyxt
 #+begin_src scheme
 (doom-service
- 'nyxt-work
+ 'nyxt-project
  #:modules '((#:lang
               common-lisp)))
 #+end_src
 ** Hyperdrive
 #+begin_src scheme
-(hyperdrive-work #:doom? doom?
-                 #:work-dir "~/work")
+(hyperdrive-project #:doom? doom?
+                    #:work-dir "~/work")
 
-(define* (hyperdrive-work #:key
-                          stateless?
-                          doom?
-                          work-dir)
+(define* (hyperdrive-project #:key
+                             stateless?
+                             doom?
+                             work-dir)
   (if doom?
-      (list
-       (doom-service
-        'hyperdrive-work
-        #:modules '((#:lang
-                     graphql
-                     yaml))
-        #:config
-        `((setq hyperdrive-dir ,(string-append work-dir "/Krush/hyperdrive"))
+      (append
+       (list
+        (doom-service
+         'hyperdrive-project
+         #:modules '((#:tools
+                      prodigy)
+                     (#:lang
+                      graphql
+                      yaml))
+         #:config
+         `((setq hyperdrive-dir ,(string-append work-dir "/Krush/hyperdrive"))
 
-          (after! org
-                  (add-to-list 'org-agenda-files (concat hyperdrive-dir "/hyperdrive.org") 'append))
+           (after! org
+                   (add-to-list 'org-agenda-files (concat hyperdrive-dir "/hyperdrive.org") 'append))
 
-          (prodigy-define-service
-           :name "Amplify Mock"
-           :command "amplify"
-           :args '("mock")
-           :cwd (concat ,hyperdrive-dir "/apps/singularity")
-           :kill-process-buffer-on-stop t)
+           (prodigy-define-service
+            :name "Amplify Mock"
+            :command "amplify"
+            :args '("mock")
+            :cwd (concat ,hyperdrive-dir "/apps/singularity")
+            :kill-process-buffer-on-stop t)
 
-          (prodigy-define-service
-           :name "Datomic Access (exogenesis)"
-           :command "bash"
-           :args '("datomic" "client" "access" "exogenesis")
-           :cwd (concat ,hyperdrive-dir "/ion/team")
-           :kill-process-buffer-on-stop t)))
+           (prodigy-define-service
+            :name "Datomic Access (exogenesis)"
+            :command "bash"
+            :args '("datomic" "client" "access" "exogenesis")
+            :cwd (concat ,hyperdrive-dir "/ion/team")
+            :kill-process-buffer-on-stop t))))
 
        (doom-clojure #:stateless? stateless?))
       '()))
@@ -8626,24 +8629,31 @@ The default git config on my Guix system.
 #+end_src
 ** Massrealty
 #+begin_src scheme
-(define* (massrealty-work #:key
-                          doom?
-                          work-dir)
-  (list
-   (when doom?
-     (doom-service
-      'massrealty-work
-      #:modules '((#:tools
-                   upload))
-      #:config
-      `((setq massrealty-dir ,(string-append work-dir "/massrealty"))
+(define* (massrealty-project #:key
+                             stateless?
+                             doom?
+                             work-dir
+                             email)
+  (if doom?
+      (append
+       (list
+        (doom-service
+         'massrealty-project
+         #:modules '((#:tools
+                      upload))
+         #:config
+         `((setq massrealty-dir ,(string-append work-dir "/massrealty"))
 
-        (after! org
-                (add-to-list 'org-agenda-files (concat massrealty-dir "/massrealty.org") 'append))
+           (after! org
+                   (add-to-list 'org-agenda-files (concat massrealty-dir "/massrealty.org") 'append))
 
-        ;; TODO Depend on / introduce my doom-calendar component?
-        (after! org-gcal
-                (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . (concat massrealty-dir "/cal/krzysztof@massrealty.com.org")) 'append)))))))
+           ;; TODO Depend on / introduce my doom-calendar component?
+           (after! org-gcal
+                   (add-to-list 'org-gcal-fetch-file-alist `("krzysztof@massrealty.com" . (concat massrealty-dir "/cal/krzysztof@massrealty.com.org")) 'append)))))
+
+       (doom-calendar #:stateless? stateless?
+                      #:email email))
+      '()))
 #+end_src
 #+begin_src elisp
 (pushnew! safe-local-variable-values
