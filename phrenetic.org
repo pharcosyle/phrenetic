@@ -2066,7 +2066,11 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
                        #:hash "1i8i102v4pqaja7vak03f5anmjx4m384d25c2lh8jxi21wayb1nb")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
-***** Wayland =Super= fix
+***** WAIT [#E] Wayland =Super= fix
+Remove this once either:
+- The issue [[https://gitlab.gnome.org/GNOME/gtk/-/issues/4913][GDK_SUPER_MASK is not set on Super key press events on Wayland / wlroots (#49...]] is resolved.
+  As discussed in [[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55362][#55362 - 29.0.50; Super key no longer works on Wayland - GNU bug report logs]].
+- I find a workaround with KMonad after I start using it.
 #+begin_src scheme
 (define-public (with-wayland-super-fix emacs)
   (package
@@ -2080,11 +2084,6 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
          ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
               (-> emacs package-source origin-patches)))))))
 #+end_src
-****** WAIT [#E] Remove the Wayland =Super= fix
-Once either:
-- The issue [[https://gitlab.gnome.org/GNOME/gtk/-/issues/4913][GDK_SUPER_MASK is not set on Super key press events on Wayland / wlroots (#49...]] is resolved.
-  As discussed in [[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55362][#55362 - 29.0.50; Super key no longer works on Wayland - GNU bug report logs]].
-- I find a workaround with KMonad after I start using it.
 ****** Patch
 #+begin_src diff :tangle (meta-in-dir "patches/wayland-super-fix.patch")
 diff --git src/pgtkterm.c src/pgtkterm.c
@@ -2188,7 +2187,8 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
                   (("\\(expand-file-name \"src\" source-directory\\)")
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 #+end_src
-***** =zstd=
+***** TODO [#E] =zstd=
+Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 #+begin_src scheme
 (define-public (with-zstd emacs)
   (package
@@ -2197,8 +2197,6 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
      (modify-inputs (package-propagated-inputs emacs)
        (prepend zstd)))))
 #+end_src
-****** TODO [#E] Add =zstd= to emacs program wrapper
-i.e. by using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
 ***** Path integration improvements
 #+begin_src scheme
 (define-public (with-path-integration-improvements emacs)
