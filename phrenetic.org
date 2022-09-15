@@ -1394,6 +1394,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages java) #:select (openjdk))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
+  #:use-module ((gnu packages node) #:select ((node-lts . node)))
   #:use-module ((gnu packages package-management) #:select (flatpak))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
   #:use-module ((gnu packages qt) #:select (qtwayland))
@@ -1481,6 +1482,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             services-only-packages
             services-sans-packages
             he-clojure
+            he-node
             he-base))
 #+end_src
 ** Create
@@ -4802,8 +4804,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:modules `((#:lang
                  data
                  emacs-lisp
-                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
-                 (javascript ,@(if tree-sitter? '(+tree-sitter) '()))
                  markdown
                  (web ,@(if tree-sitter? '(+tree-sitter) '()))))
     #:config
@@ -6724,6 +6724,31 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 (define-public clojure-tools
   (with-man-pages clojure:clojure-tools))
 #+end_src
+**** Node
+#+begin_src scheme
+(define* (he-node #:key
+                  stateless?
+                  doom?
+                  doom-tree-sitter?)
+  (list
+   (simple-service
+    'node-add-packages
+    home-profile-service-type
+    (list node))
+
+   ;; (when stateless?
+   ;;   (home-stateless-service
+   ;;    'node
+   ;;    #:state '(((#:path . ".npm/")
+   ;;               (#:store . #:machine)))))
+
+   (when doom?
+     (doom-service
+      'node
+      #:modules '((#:lang
+                   (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+                   (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
+#+end_src
 **** Datomic
 ***** Datomic CLI tools :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
@@ -6922,6 +6947,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                   nix?
                   developer?
                   doom?
+                  doom-tree-sitter?
                   (interactive-shell (if developer?
                                          #:shell/zsh login-shell))
                   console?
@@ -6932,8 +6958,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                   sessions
                   projects)
   (let* ((org-dir org-dir)
-         (work-dir work-dir)
-         (doom-tree-sitter? doom?))
+         (work-dir work-dir))
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
@@ -7631,17 +7656,20 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 
 (define* (primary-he)
   (he:create-he
-   (let ((doom? #t))
+   (let* ((doom? #t)
+          (doom-tree-sitter? doom?))
      (apply
       he:he-base
       #:email "pharcosyle@gmail.com"
       #:developer? #t
       #:doom? doom?
+      #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
       #:sessions '(#:session/sway)
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
-                                          (#:doom? . ,doom?))))
+                                          (#:doom? . ,doom?)
+                                          (#:doom-tree-sitter? doom-tree-sitter?))))
       he-shared-opts))))
 
 (define aux-he primary-he)
