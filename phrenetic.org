@@ -12,10 +12,9 @@
 - [[#home][Home]]
   - [[#create-1][Create]]
   - [[#components-1][Components]]
-  - [[#packages][Packages]]
   - [[#templates-1][Templates]]
 - [[#common][Common]]
-  - [[#packages-1][Packages]]
+  - [[#packages][Packages]]
   - [[#stateless][Stateless]]
 - [[#utils][Utils]]
   - [[#branching][Branching]]
@@ -5362,6 +5361,19 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ***** TODO [#D] Alternative fonts
 - =font-unifont-gnu= sucks, find a replacement?
 - Try out =font-adobe-source-sans-pro= in place of =font-iosevka-aile=?
+***** Source Code Pro :package:version:
+#+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
+(define-module (ebullient home packages fonts)
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
+  #:use-module (ebullient utils))
+
+(define-public font-adobe-source-code-pro
+  (with-git-version
+   fonts:font-adobe-source-code-pro
+   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
+   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
+   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
+#+end_src
 **** Date/time formats
 #+begin_src scheme
 (define date-format "%a %b %e")
@@ -6858,23 +6870,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
        (sha256
         (base32
          "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
-#+end_src
-** Packages
-:PROPERTIES:
-:meta-dir+: /packages
-:END:
-*** Fonts :package:version:
-#+begin_src scheme :tangle (meta-in-dir "fonts.scm")
-(define-module (ebullient home packages fonts)
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
-  #:use-module (ebullient utils))
-
-(define-public font-adobe-source-code-pro
-  (with-git-version
-   fonts:font-adobe-source-code-pro
-   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
-   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
-   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
 #+end_src
 ** Templates
 #+begin_src scheme
