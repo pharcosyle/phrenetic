@@ -5023,7 +5023,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define* (he-direnv #:key
                     stateless?
                     doom?
-                    shell)
+                    shell
+                    whitelist-dirs)
   (list
    (simple-service
     'direnv-add-package
@@ -5050,18 +5051,37 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                         (zshrc
                          (list (direnv-hook "zsh"))))))))
 
-   ;; TODO In the future I may want to have 'allow' folder entries in my configuration, if that's possible.
-   (when stateless?
-     (home-stateless-service
-      'direnv
-      #:state '(((#:path . ("direnv/allow/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:persist)))))
+   (when whitelist-dirs
+     (simple-service
+      'direnv-config
+      home-xdg-configuration-files-service-type
+      `(("direnv/direnv.toml"
+         ,(toml-config-file
+           "direnv-config"
+           `((whitelist ((prefix . ,(->> whitelist-dirs
+                                         (map (lambda (dir)
+                                                (string-append "~/" dir)))
+                                         serialize-toml-array))))))))))
 
    (when doom?
      (doom-service
       'direnv
       #:modules '((#:tools
                    direnv))))))
+#+end_src
+**** TOML serialization
+#+begin_src scheme
+(define (toml-config-file name config)
+  (ini-config-file name config))
+
+(define (serialize-toml-array elements)
+  (as-> elements $
+        (map (lambda (element)
+               (string-append "\"" element "\""))
+             $)
+        (string-join $ ", ")
+        (string-append "[ " $ " ]")
+        (string->symbol $)))
 #+end_src
 *** Console
 **** KMonad
@@ -6927,7 +6947,8 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
           (he-ssh)
           (he-direnv #:stateless? stateless?
                      #:doom? doom?
-                     #:shell interactive-shell))
+                     #:shell interactive-shell
+                     #:whitelist-dirs (list work-dir)))
          '())
      (if console?
          (if kmonad?
