@@ -4945,41 +4945,55 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 - TODO move this to "Auxillary"?
 #+begin_src scheme
 (define* (doom-clojure #:key stateless?)
-  (let ((name 'clojure))
-    (list
-     (doom-service
-      name
-      #:modules '((#:lang
-                   clojure))
-      #:config
-      `((use-package! clojure-mode
-                      :defer t
-                      :init
-                      (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
-                      :config
-                      (set-ligatures! 'clojure-mode :lambda "fn"))
+  (append
+   (let ((name 'clojure))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    clojure))
+       #:config
+       `((use-package! clojure-mode
+                       :defer t
+                       :init
+                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
+                       :config
+                       (set-ligatures! 'clojure-mode :lambda "fn"))
 
-        (after! cider
-                (setq cider-repl-history-size ,very-big-history
-                      cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
+         (use-package! cider
+                       :defer t
+                       :init
+                       (-each '((cider-preferred-build-tool symbolp)
+                                (cider-default-cljs-repl symbolp)
+                                (cider-shadow-default-options stringp)
+                                (cider-offer-to-open-cljs-app-in-browser booleanp)
+                                (cider-clojure-cli-global-options stringp)
+                                (cider-clojure-cli-global-options booleanp))
+                              (-lambda ((sym f))
+                                       (put sym 'safe-local-variable f)))
+                       :config
+                       (setq cider-repl-history-size ,very-big-history
+                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
 
-        ;; REVIEW make sure this is still working after nesting in `after!'
-        (after! cider-repl
-                (add-hook! 'cider-repl-mode-hook
-                           #'goto-address-prog-mode
-                           #'highlight-numbers-mode
-                           #'rainbow-delimiters-mode
-                           #'yas-minor-mode-on
-                           #'biome-sp-strict-h))
+         ;; REVIEW make sure this is still working after nesting in `after!'
+         (after! cider-repl
+                 (add-hook! 'cider-repl-mode-hook
+                            #'goto-address-prog-mode
+                            #'highlight-numbers-mode
+                            #'rainbow-delimiters-mode
+                            #'yas-minor-mode-on
+                            #'biome-sp-strict-h))
 
-        (after! clj-refactor
-                (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
+         (after! clj-refactor
+                 (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
 
-     (when stateless?
-       (doom-stateless-service
-        name
-        #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                   (#:store . #:persist))))))))
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-dash)))
 #+end_src
 *** Version control
 #+begin_src scheme
