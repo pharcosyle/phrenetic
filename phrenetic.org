@@ -5043,6 +5043,11 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                                                 (string-append "~/" dir)))
                                          serialize-toml-array))))))))))
 
+   (simple-service
+    'direnv-rc
+    home-xdg-configuration-files-service-type
+    `(("direnv/direnvrc" ,(local-file "direnvrc"))))
+
    (let ((direnv-hook
           (lambda (shell)
             (let ((direnv-bin (file-append direnv "/bin/direnv")))
@@ -5068,6 +5073,18 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       'direnv
       #:modules '((#:tools
                    direnv))))))
+#+end_src
+**** Direnvrc
+#+begin_src sh :tangle (meta-in-dir "direnvrc")
+use_guix-shell() {
+	LOCK_FILE=channels-lock
+
+	if [ -f $LOCK_FILE ]; then
+		eval "$(guix time-machine --channels=$LOCK_FILE -- shell --search-paths "$@")"
+	else
+		eval "$(guix shell --search-paths "$@")"
+	fi
+}
 #+end_src
 **** TOML serialization
 #+begin_src scheme
