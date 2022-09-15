@@ -5031,6 +5031,18 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     home-profile-service-type
     (list direnv))
 
+   (when whitelist-dirs
+     (simple-service
+      'direnv-config
+      home-xdg-configuration-files-service-type
+      `(("direnv/direnv.toml"
+         ,(toml-file
+           "direnv-config"
+           `((whitelist ((prefix . ,(->> whitelist-dirs
+                                         (map (lambda (dir)
+                                                (string-append "~/" dir)))
+                                         serialize-toml-array))))))))))
+
    (let ((direnv-hook
           (lambda (shell)
             (let ((direnv-bin (file-append direnv "/bin/direnv")))
@@ -5050,18 +5062,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        (home-zsh-extension
                         (zshrc
                          (list (direnv-hook "zsh"))))))))
-
-   (when whitelist-dirs
-     (simple-service
-      'direnv-config
-      home-xdg-configuration-files-service-type
-      `(("direnv/direnv.toml"
-         ,(toml-file
-           "direnv-config"
-           `((whitelist ((prefix . ,(->> whitelist-dirs
-                                         (map (lambda (dir)
-                                                (string-append "~/" dir)))
-                                         serialize-toml-array))))))))))
 
    (when doom?
      (doom-service
