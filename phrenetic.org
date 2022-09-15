@@ -5040,7 +5040,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            "direnv-config"
            `((whitelist ((prefix . ,(->> whitelist-dirs
                                          (map (lambda (dir)
-                                                (string-append "~/" dir)))
+                                                "/.persist/home/pharcosyle/work_for_now"))
+                                         ;; (map (lambda (dir)
+                                         ;;        (string-append "~/" dir)))
                                          serialize-toml-array))))))))))
 
    (simple-service
