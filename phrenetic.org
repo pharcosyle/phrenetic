@@ -1437,6 +1437,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-nix
             he-emacs
             he-doom
+            doom-service
+            doom-calendar
+            doom-clojure
             he-version-control
             he-ssh
             he-direnv
@@ -6593,6 +6596,23 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 (define (alacritty-terminal)
   (file-append alacritty "/bin/alacritty"))
 #+end_src
+*** Projects
+#+begin_src scheme
+(define* (he-projects #:key
+                      work-dir
+                      projects)
+  (append-map
+   (match-lambda
+     ((dir . opts)
+      (let ((proj-file (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir "/project.scm"))
+            ;; (proj-file (string-append (getenv "HOME") "/" work-dir "/" dir "/project.scm"))
+            )
+        (if (file-exists? proj-file)
+            ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
+            (apply (load proj-file) (alist->list opts))
+            '()))))
+   projects))
+#+end_src
 ** Packages
 :PROPERTIES:
 :meta-dir+: /packages
@@ -6620,6 +6640,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                   (login-shell #:shell/bash)
                   nix?
                   developer?
+                  doom?
                   (interactive-shell (if developer?
                                          #:shell/zsh login-shell))
                   console?
@@ -6627,10 +6648,10 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                   desktop?
                   pipewire?
                   gdm?
-                  sessions)
+                  sessions
+                  projects)
   (let* ((org-dir org-dir)
          (work-dir work-dir)
-         (doom? developer?)
          (doom-tree-sitter? doom?))
     (append
      (if stateless?
@@ -6752,6 +6773,10 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                 '())
             (if doom?
                 (he-doom-vterm) '())))
+         '())
+     (if projects
+         (he-projects #:work-dir work-dir
+                      #:projects projects)
          '()))))
 #+end_src
 * Common
@@ -7538,15 +7563,27 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
    os+he-shared-opts))
 
 
+(define stateless? #t)
+
+
 (define* (primary-he)
   (he:create-he
-   (apply
-    he:he-base
-    #:email "pharcosyle@gmail.com"
-    #:developer? #t
-    #:kmonad? #t
-    #:sessions '(#:session/sway)
-    he-shared-opts)))
+   (let ((email "pharcosyle@gmail.com")
+         (doom? #t))
+     (apply
+      he:he-base
+      #:email email
+      #:developer? #t
+      #:doom? doom?
+      #:kmonad? #t
+      #:sessions '(#:session/sway)
+      #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
+                   ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
+                                          (#:doom? . ,doom?)))
+                   ("massrealty" . ((#:stateless? . ,stateless?)
+                                    (#:doom? . ,doom?)
+                                    (#:email . ,email))))
+      he-shared-opts))))
 
 (define aux-he primary-he)
 
@@ -7556,7 +7593,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 
 
 (define nix? #t)
-(define stateless? #t)
 (define stateless-persist-dir os:stateless-persist-dir)
 (define stateless-machine-dir os:stateless-machine-dir)
 
