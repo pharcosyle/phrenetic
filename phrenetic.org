@@ -6601,12 +6601,14 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
   (append-map
    (match-lambda
      ((dir . opts)
-      (let ((proj-file (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir "/project.scm"))
-            ;; (proj-file (string-append (getenv "HOME") "/" work-dir "/" dir "/project.scm"))
-            )
+      (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
+             ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
+             (proj-file (string-append dir* "/project.scm")))
         (if (file-exists? proj-file)
             ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
-            (apply (load proj-file) (alist->list opts))
+            (apply (load proj-file) (->> opts
+                                         (acons #:dir dir*)
+                                         alist->list))
             '()))))
    projects))
 #+end_src
