@@ -1438,7 +1438,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             he-doom
             doom-service
-            doom-calendar
             doom-clojure
             he-version-control
             he-ssh
@@ -7568,21 +7567,17 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 
 (define* (primary-he)
   (he:create-he
-   (let ((email "pharcosyle@gmail.com")
-         (doom? #t))
+   (let ((doom? #t))
      (apply
       he:he-base
-      #:email email
+      #:email "pharcosyle@gmail.com"
       #:developer? #t
       #:doom? doom?
       #:kmonad? #t
       #:sessions '(#:session/sway)
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
-                                          (#:doom? . ,doom?)))
-                   ("massrealty" . ((#:stateless? . ,stateless?)
-                                    (#:doom? . ,doom?)
-                                    (#:email . ,email))))
+                                          (#:doom? . ,doom?))))
       he-shared-opts))))
 
 (define aux-he primary-he)
