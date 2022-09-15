@@ -5056,7 +5056,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       'direnv-config
       home-xdg-configuration-files-service-type
       `(("direnv/direnv.toml"
-         ,(toml-config-file
+         ,(toml-file
            "direnv-config"
            `((whitelist ((prefix . ,(->> whitelist-dirs
                                          (map (lambda (dir)
@@ -5071,8 +5071,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 **** TOML serialization
 #+begin_src scheme
-(define (toml-config-file name config)
-  (ini-config-file name config))
+(define (toml-file name config)
+  (ini-file name config))
 
 (define (serialize-toml-array elements)
   (as-> elements $
@@ -5127,8 +5127,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 *** Desktop
 #+begin_src scheme
-(define* (ini-config-file name config
-                          #:key (ini-serialize ini-serialize))
+(define* (ini-file name config
+                   #:key (ini-serialize ini-serialize))
   (apply mixed-text-file name (ini-serialize config)))
 
 (define (font-value font)
@@ -5677,7 +5677,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     'gtk-settings-and-dconf
     home-xdg-configuration-files-service-type
     `(("gtk-3.0/settings.ini"
-       ,(ini-config-file
+       ,(ini-file
          "gtk-3.0-settings.ini"
          `((Settings ((gtk-application-prefer-dark-theme . ,(eq? theme #:theme/dark)))))))
       ("dconf/user"
@@ -5691,7 +5691,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             #$(file-union
                "dconf-keyfiledir"
                `(("dconf-keyfile"
-                  ,(ini-config-file
+                  ,(ini-file
                     "dconf-keyfile"
                     `((org/gnome/desktop/interface
                        ((gtk-theme . ,(quoted-symbol
@@ -6147,7 +6147,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
     'mako-config
     home-xdg-configuration-files-service-type
     `(("mako/config"
-       ,(ini-config-file
+       ,(ini-file
          "mako-config"
          (let ((clr (lambda* (color #:optional alpha)
                       (as-> color $
