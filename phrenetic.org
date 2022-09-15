@@ -1394,6 +1394,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages gnome) #:select (dconf network-manager-applet))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
+  #:use-module ((gnu packages java) #:select (openjdk))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages package-management) #:select (flatpak))
@@ -1411,12 +1412,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
+  #:use-module ((nongnu packages clojure) #:select (clj-kondo))
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
+  #:use-module ((ebullient home packages clojure) #:select (clojure-tools))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
@@ -1438,7 +1441,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             he-doom
             doom-service
-            doom-clojure
             he-version-control
             he-ssh
             he-direnv
@@ -1478,6 +1480,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-vterm
             he-alacritty
             alacritty-terminal
+            he-projects
+            he-clojure
             he-base))
 #+end_src
 ** Create
@@ -4943,60 +4947,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
                    (#:store . #:persist))))))))
 #+end_src
-****** Clojure
-- TODO move this to "Auxillary"?
-#+begin_src scheme
-(define* (doom-clojure #:key stateless?)
-  (append
-   (let ((name 'clojure))
-     (list
-      (doom-service
-       name
-       #:modules '((#:lang
-                    clojure))
-       #:config
-       `((use-package! clojure-mode
-                       :defer t
-                       :init
-                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
-                       :config
-                       (set-ligatures! 'clojure-mode :lambda "fn"))
-
-         (use-package! cider
-                       :defer t
-                       :init
-                       (-each '((cider-preferred-build-tool symbolp)
-                                (cider-default-cljs-repl symbolp)
-                                (cider-shadow-default-options stringp)
-                                (cider-offer-to-open-cljs-app-in-browser booleanp)
-                                (cider-clojure-cli-global-options stringp)
-                                (cider-clojure-cli-global-options booleanp))
-                              (-lambda ((sym f))
-                                       (put sym 'safe-local-variable f)))
-                       :config
-                       (setq cider-repl-history-size ,very-big-history
-                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
-
-         ;; REVIEW make sure this is still working after nesting in `after!'
-         (after! cider-repl
-                 (add-hook! 'cider-repl-mode-hook
-                            #'goto-address-prog-mode
-                            #'highlight-numbers-mode
-                            #'rainbow-delimiters-mode
-                            #'yas-minor-mode-on
-                            #'biome-sp-strict-h))
-
-         (after! clj-refactor
-                 (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
-
-   (doom-dash)))
-#+end_src
 *** Version control
 #+begin_src scheme
 (define* (he-version-control #:key
@@ -6612,6 +6562,103 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
             '()))))
    projects))
 #+end_src
+*** Miscellany
+**** Clojure
+#+begin_src scheme
+(define* (he-clojure #:key
+                     stateless?
+                     doom?
+                     (jdk (list openjdk "jdk")))
+  (append
+   (list
+    (simple-service
+     'clojure-add-packages
+     home-profile-service-type
+     (list clojure-tools
+           jdk
+           clj-kondo))
+
+    (when stateless?
+      (home-stateless-service
+       'clojure
+       #:state '(((#:path . ".m2/")
+                  (#:store . #:machine))))))
+
+   (if doom?
+       (doom-clojure #:stateless? stateless?)
+       '())))
+
+(define* (doom-clojure #:key stateless?)
+  (append
+   (let ((name 'clojure))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    clojure))
+       #:config
+       `((use-package! clojure-mode
+                       :defer t
+                       :init
+                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
+                       :config
+                       (set-ligatures! 'clojure-mode :lambda "fn"))
+
+         (use-package! cider
+                       :defer t
+                       :init
+                       (-each '((cider-preferred-build-tool symbolp)
+                                (cider-default-cljs-repl symbolp)
+                                (cider-shadow-default-options stringp)
+                                (cider-offer-to-open-cljs-app-in-browser booleanp)
+                                (cider-clojure-cli-global-options stringp)
+                                (cider-clojure-cli-global-options booleanp))
+                              (-lambda ((sym f))
+                                       (put sym 'safe-local-variable f)))
+                       :config
+                       (setq cider-repl-history-size ,very-big-history
+                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
+
+         ;; REVIEW make sure this is still working after nesting in `after!'
+         (after! cider-repl
+                 (add-hook! 'cider-repl-mode-hook
+                            #'goto-address-prog-mode
+                            #'highlight-numbers-mode
+                            #'rainbow-delimiters-mode
+                            #'yas-minor-mode-on
+                            #'biome-sp-strict-h))
+
+         (after! clj-refactor
+                 (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-dash)))
+#+end_src
+***** Clojure tools :package:
+#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
+(define-module (ebullient home packages clojure)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
+
+(define (with-man-pages clojure-tools)
+  (package
+    (inherit clojure-tools)
+    (arguments
+     (substitute-keyword-arguments (package-arguments clojure-tools)
+       ((#:install-plan install-plan)
+        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
+                                   ("clj.1" "/share/man/man1/"))))))))
+
+(define-public clojure-tools
+  (with-man-pages clojure:clojure-tools))
+#+end_src
 ** Packages
 :PROPERTIES:
 :meta-dir+: /packages
@@ -7485,30 +7532,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
     (synopsis "CLI tools for Datomic")
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
-#+end_src
-*** Clojure
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "clojure.scm")
-:END:
-**** =man= pages :upstream:
-#+begin_src scheme
-(define-module (penitent packages clojure)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
-
-(define (with-man-pages clojure-tools)
-  (package
-    (inherit clojure-tools)
-    (arguments
-     (substitute-keyword-arguments (package-arguments clojure-tools)
-       ((#:install-plan install-plan)
-        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
-                                   ("clj.1" "/share/man/man1/"))))))))
-
-(define-public clojure-tools-with-man-pages
-  (with-man-pages clojure:clojure-tools))
 #+end_src
 * Configurations
 :PROPERTIES:
