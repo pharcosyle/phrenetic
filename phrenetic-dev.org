@@ -1,5 +1,19 @@
 #+title: Phrenetic Dev
 
+* Project
+#+begin_src scheme :tangle project.scm
+(use-modules (ebullient home core))
+
+(lambda* (#:key
+          dir
+          doom?)
+  (list
+   (when doom?
+     (doom-service
+      'phrenetic-project
+      #:config
+      `((load (concat ,dir "/meta") 'noerror 'nomessage))))))
+#+end_src
 * Git config
 :PROPERTIES:
 :header-args: :tangle .git/config
