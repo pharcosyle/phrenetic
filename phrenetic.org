@@ -6393,7 +6393,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     (format . ,(string-append "{:" date-format "  " "%I:%M %p" "}")))
+     (format . ,(string-append "{:" date-format "  " time-format "}")))
    '()
    #:placement 'modules-left))
 
@@ -6489,8 +6489,6 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-******* WAIT [#D] Use the ~time-format~ parameter
-Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead of =%-I=. See https://github.com/Alexays/Waybar/issues/1452.
 **** Menus and launchers
 ***** Rofi
 #+begin_src scheme
