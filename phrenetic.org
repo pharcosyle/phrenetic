@@ -2455,11 +2455,11 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "254863260067de0cdf44166471559d00522d0210")
+  (let ((commit "511f0ca38fbdda782813e9f311ad027103ecdb22")
         (revision "0"))
     (package
       (name "doom-emacs")
-      (version (git-version "3.0.0-dev" revision commit))
+      (version (git-version "3.0.0-pre" revision commit))
       (source
        (origin
          (method git-fetch)
@@ -2468,7 +2468,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
                (commit commit)))
          (sha256
           (base32
-           "16jvzhsgfl6fhxi3kvbgxsja07a50x31facnmvprz0717kb289k2"))
+           "05n5pm8wn93m26l2xw5a2bhgvza960a61zv34qzagcs1r4aysv5n"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/change-paths.patch")))))
@@ -2686,89 +2686,99 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 ******* Doom
 #+begin_src diff
 diff --git a/lisp/doom.el b/lisp/doom.el
-index 3e72b49a8..100914a53 100644
+index c75cb8749..621ee24de 100644
 --- a/lisp/doom.el
 +++ b/lisp/doom.el
-@@ -260,7 +260,9 @@ downloaded/installed by packages. Must end in a slash.")
+@@ -206,7 +206,9 @@ whichever is found first. Must end in a slash.")
+ (defvar doom-local-dir
+   (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
        (expand-file-name (file-name-as-directory localdir))
-     (if doom-profile
-         doom-profile-dir
--      (expand-file-name ".local/" doom-emacs-dir)))
-+      (expand-file-name "doom-local/"
-+                        (or (getenv-internal "XDG_STATE_HOME")
-+                            "~/.local/state"))))
+-    (expand-file-name ".local/" doom-emacs-dir))
++    (expand-file-name "doom-local/"
++                      (or (getenv-internal "XDG_STATE_HOME")
++                          "~/.local/state")))
    "Root directory for local storage.
  
  Use this as a storage location for this system's installation of Doom Emacs.
-@@ -268,10 +270,18 @@ Use this as a storage location for this system's installation of Doom Emacs.
+@@ -214,6 +216,11 @@ Use this as a storage location for this system's installation of Doom Emacs.
  These files should not be shared across systems. By default, it is used by
  `doom-data-dir' and `doom-cache-dir'. Must end with a slash.")
  
++(defconst doom-state-dir*
++  (expand-file-name "doom/"
++                    (or (getenv-internal "XDG_STATE_HOME")
++                        "~/.local/state")))
 +
-+(defconst doom-state-dir
-+  (if-let (localdir (getenv-internal "DOOMLOCALDIR"))
-+      (concat (expand-file-name (file-name-as-directory localdir)) "state/")
-+    (expand-file-name "doom/"
-+                      (or (getenv-internal "XDG_STATE_HOME")
-+                          "~/.local/state"))))
-+
- (defconst doom-data-dir
+ (define-obsolete-variable-alias 'doom-etc-dir 'doom-data-dir "3.0.0")
+ (defvar doom-data-dir
    (if doom-profile
-       doom-profile-data-dir
+@@ -221,7 +228,7 @@ These files should not be shared across systems. By default, it is used by
+           (expand-file-name "doomemacs/data/" (getenv-internal "APPDATA"))
+         (expand-file-name "doom/" (or (getenv-internal "XDG_DATA_HOME") "~/.local/share")))
+     ;; DEPRECATED: .local will be removed entirely in 3.0
 -    (concat doom-local-dir "etc/"))
-+    (concat doom-state-dir "etc/"))
-   "Directory for non-volatile local storage.
++    (concat doom-state-dir* "etc/"))
+   "Where Doom stores its global data files.
  
- Use this for files that don't change much, like server binaries, external
-@@ -280,7 +290,7 @@ dependencies or long-term shared data. Must end with a slash.")
- (defconst doom-cache-dir
-   (if doom-profile
-       doom-profile-cache-dir
+ Data files contain shared and long-lived data that Doom, Emacs, and their
+@@ -240,7 +247,7 @@ For profile-local data files, use `doom-profile-data-dir' instead.")
+           (expand-file-name "doomemacs/cache/" (getenv-internal "APPDATA"))
+         (expand-file-name "doom/" (or (getenv-internal "XDG_CACHE_HOME") "~/.cache")))
+     ;; DEPRECATED: .local will be removed entirely in 3.0
 -    (concat doom-local-dir "cache/"))
-+    (concat doom-state-dir "cache/"))
-   "Directory for volatile local storage.
++    (concat doom-state-dir* "cache/"))
+   "Where Doom stores its global cache files.
  
- Use this for files that change often, like cache files. Must end with a slash.")
-@@ -297,7 +307,7 @@ autoloaded core functions (in lisp/lib/*.el).")
+ Cache files represent non-essential data that shouldn't be problematic when
+@@ -259,7 +266,7 @@ For profile-local cache files, use `doom-profile-cache-dir' instead.")
+           (expand-file-name "doomemacs/state/" (getenv-internal "APPDATA"))
+         (expand-file-name "doom/" (or (getenv-internal "XDG_STATE_HOME") "~/.local/state")))
+     ;; DEPRECATED: .local will be removed entirely in 3.0
+-    (concat doom-local-dir "state/"))
++    (concat doom-state-dir* "state/"))
+   "Where Doom stores its global state files.
+ 
+ State files contain non-essential, unportable, but persistent data which, if
+@@ -294,7 +301,7 @@ For profile-local state files, use `doom-profile-state-dir' instead.")
  (defconst doom-env-file
-   (if doom-profile
-       (expand-file-name "env" doom-profile-dir)
--    (concat doom-local-dir "env"))
-+    (concat doom-state-dir "env"))
+   (file-name-concat (if doom-profile
+                         doom-profile-dir
+-                      doom-local-dir)
++                      doom-state-dir*)
+                     "env")
    "The location of your envvar file, generated by `doom env`.
  
- This file contains environment variables scraped from your shell environment,
-@@ -325,7 +335,7 @@ users).")
+@@ -464,7 +471,7 @@ users).")
+ 
+ ;; Allow the user to store custom.el-saved settings and themes in their Doom
+ ;; config (e.g. ~/.doom.d/).
+-(setq custom-file (file-name-concat doom-user-dir "custom.el"))
++(setq custom-file (file-name-concat doom-state-dir* "custom.el"))
+ 
+ ;; By default, Emacs stores `authinfo' in $HOME and in plain-text. Let's not do
+ ;; that, mkay? This file stores usernames, passwords, and other treasures for
+@@ -485,7 +492,7 @@ Otherwise, `en/disable-command' (in novice.el.gz) is hardcoded to write them to
    ;; Don't store eln files in ~/.emacs.d/eln-cache (where they can easily be
    ;; deleted by 'doom upgrade').
    ;; REVIEW Use `startup-redirect-eln-cache' when 28 support is dropped
 -  (add-to-list 'native-comp-eln-load-path (expand-file-name "eln/" doom-cache-dir))
-+  (add-to-list 'native-comp-eln-load-path (expand-file-name "eln/" doom-state-dir))
++  (add-to-list 'native-comp-eln-load-path (expand-file-name "eln/" doom-state-dir*))
  
    ;; UX: Suppress compiler warnings and don't inundate users with their popups.
    ;;   They are rarely more than warnings, so are safe to ignore.
-@@ -356,7 +366,7 @@ users).")
- 
- ;; Allow the user to store custom.el-saved settings and themes in their Doom
- ;; config (e.g. ~/.doom.d/).
--(setq custom-file (expand-file-name "custom.el" doom-user-dir))
-+(setq custom-file (expand-file-name "custom.el" doom-state-dir))
- 
- ;; By default, Emacs stores `authinfo' in $HOME and in plain-text. Let's not do
- ;; that, mkay? This file stores usernames, passwords, and other treasures for
 #+end_src
 ******* CLI
 #+begin_src diff
 diff --git a/lisp/doom-cli.el b/lisp/doom-cli.el
-index 8c5a78caa..42d0d4712 100644
+index 54af724b9..1ebb002f8 100644
 --- a/lisp/doom-cli.el
 +++ b/lisp/doom-cli.el
-@@ -219,7 +219,7 @@ If nil, falls back to less.")
+@@ -215,7 +215,7 @@ If nil, falls back to less.")
  
  Only applies if (exit! :pager) or (exit! :pager?) are called.")
  
 -(defvar doom-cli-log-file-format (expand-file-name "logs/cli.%s.%s.%s" doom-local-dir)
-+(defvar doom-cli-log-file-format (expand-file-name "logs/cli.%s.%s.%s" doom-state-dir)
++(defvar doom-cli-log-file-format (expand-file-name "logs/cli.%s.%s.%s" doom-state-dir*)
    "Where to write any output/log file to.
  
  Must have two arguments, one for session id and the other for log type.")
