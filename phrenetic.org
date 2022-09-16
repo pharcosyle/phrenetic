@@ -2261,13 +2261,12 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
    (if services
        services '())
 
-   (when stateless?
-     (list
+   (list
+    (when stateless?
       (home-stateless-service
        'doom
        #:state '(((#:path . ("doom-local/" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine)))))
-     '())))
+                  (#:store . #:machine))))))))
 #+end_src
 **** Service
 ***** Service type
