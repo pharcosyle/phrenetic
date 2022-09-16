@@ -2335,7 +2335,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
                                 (car m) m))
                           modules)))
     (apply append $)
-    (elisp-serialize*
+    (elisp-serialize
      `(,#~";;; -*- lexical-binding: t; -*-"
           (doom! ,@$)))))
 
@@ -2766,6 +2766,22 @@ index c75cb8749..621ee24de 100644
  
    ;; UX: Suppress compiler warnings and don't inundate users with their popups.
    ;;   They are rarely more than warnings, so are safe to ignore.
+#+end_src
+******* Profiles
+#+begin_src diff
+diff --git a/lisp/doom-profiles.el b/lisp/doom-profiles.el
+index 54da058ac..d40b202b5 100644
+--- a/lisp/doom-profiles.el
++++ b/lisp/doom-profiles.el
+@@ -31,7 +31,7 @@ files, and will write a summary profiles.el to the first entry in this
+ variable.")
+ 
+ (defvar doom-profiles-bootstrap-file
+-  (file-name-concat doom-emacs-dir (format "profiles/init.%d.el" emacs-major-version))
++  (file-name-concat doom-state-dir* (format "profiles/init.%d.el" emacs-major-version))
+   "Where Doom writes its profile bootstrap script.")
+ 
+ (defvar doom-profile-init-file-name (format "init.%d.el" emacs-major-version)
 #+end_src
 ******* CLI
 #+begin_src diff
@@ -4561,10 +4577,11 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (after! emojify
                  (setq emojify-display-style 'unicode))
 
-         ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-         (define-key! :keymaps +default-minibuffer-maps
-           "s-J" #'scroll-up-command
-           "s-K" #'scroll-down-command)
+         ;; TODO comment this back in once hlissner gets his house in order.
+         ;; ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+         ;; (define-key! :keymaps +default-minibuffer-maps
+         ;;   "s-J" #'scroll-up-command
+         ;;   "s-K" #'scroll-down-command)
 
          (map! "s-A" #'app-launcher-run-app)
 
@@ -6753,7 +6770,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome.
    (when doom?
      (doom-service
       'node
-      #:modules '((#:lang
+      #:modules `((#:lang
                    (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
                    (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
 #+end_src
