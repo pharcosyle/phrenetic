@@ -2078,6 +2078,8 @@ Remove this once either:
 - The issue [[https://gitlab.gnome.org/GNOME/gtk/-/issues/4913][GDK_SUPER_MASK is not set on Super key press events on Wayland / wlroots (#49...]] is resolved.
   As discussed in [[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55362][#55362 - 29.0.50; Super key no longer works on Wayland - GNU bug report logs]].
 - I find a workaround with KMonad after I start using it.
+- [2022-09-16 Fri] Upstreamed in [[https://github.com/guix-mirror/guix/commit/77e768ac4e57d5fd443c7d69a7cc0c8339d0c238][this commit]]
+  I think it's flawed though, other patches aren't being inherited.
 #+begin_src scheme
 (define-public (with-wayland-super-fix emacs)
   (package
