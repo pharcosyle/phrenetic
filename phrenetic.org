@@ -2270,12 +2270,27 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
    (if services
        services '())
 
-   (list
-    (when stateless?
+   (if stateless?
+     (list
       (home-stateless-service
        'doom
        #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine))))))))
+                  (#:store . #:machine))
+                 ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
+                  (#:store . #:machine))
+                 ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
+                  (#:store . #:machine))
+                 ((#:path . ("doom/profile-load.29.elc" #:xdg-base "XDG_STATE_HOME"))
+                  (#:store . #:machine))))
+      (doom-stateless-service
+       'doom
+       #:state '(((#:path . ("eln/" #:doom-base #:cache))
+                  (#:store . #:machine))
+                 ((#:path . ("profiles.@.el" #:doom-base #:cache))
+                  (#:store . #:machine))
+                 ((#:path . ("@/" #:doom-base #:data))
+                  (#:store . #:machine)))))
+     '())))
 #+end_src
 **** Service
 ***** Service type
