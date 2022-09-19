@@ -2073,63 +2073,6 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
                        #:hash "103g59y3ndvzy2yfd70k60lgf63939r3f88w4p0gazrc08m5b3xs")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
 #+end_src
-***** WAIT [#E] Wayland =Super= fix
-Remove this once either:
-- The issue [[https://gitlab.gnome.org/GNOME/gtk/-/issues/4913][GDK_SUPER_MASK is not set on Super key press events on Wayland / wlroots (#49...]] is resolved.
-  As discussed in [[https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55362][#55362 - 29.0.50; Super key no longer works on Wayland - GNU bug report logs]].
-- I find a workaround with KMonad after I start using it.
-- [2022-09-16 Fri] Upstreamed in [[https://github.com/guix-mirror/guix/commit/77e768ac4e57d5fd443c7d69a7cc0c8339d0c238][this commit]]
-  I think it's flawed though, other patches aren't being inherited. They don't seem like a big deal though.
-#+begin_src scheme
-(define-public (with-wayland-super-fix emacs)
-  (package
-    (inherit emacs)
-    (source
-     (origin
-       (inherit (package-source emacs))
-       (patches
-        (cons
-         "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch"
-         ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/wayland-super-fix.patch" ; (local-file "patches/wayland-super-fix.patch") ; TODO why isn't this working with local-file?
-              (-> emacs package-source origin-patches)))))))
-#+end_src
-****** Patch
-#+begin_src diff :tangle (meta-in-dir "patches/wayland-super-fix.patch")
-diff --git src/pgtkterm.c src/pgtkterm.c
-index 566fc1f03d..1cb4d5dac0 100644
---- a/src/pgtkterm.c
-+++ b/src/pgtkterm.c
-@@ -5207,7 +5207,7 @@ pgtk_gtk_to_emacs_modifiers (struct pgtk_display_info *dpyinfo, int state)
-     mod |= mod_ctrl;
-   if (state & GDK_META_MASK || state & GDK_MOD1_MASK)
-     mod |= mod_meta;
--  if (state & GDK_SUPER_MASK)
-+  if (state & GDK_SUPER_MASK || state & GDK_MOD4_MASK)
-     mod |= mod_super;
-   if (state & GDK_HYPER_MASK)
-     mod |= mod_hyper;
-@@ -5340,7 +5340,7 @@ key_press_event (GtkWidget *widget, GdkEvent *event, gpointer *user_data)
-       /* While super is pressed, the input method will always always
- 	 resend the key events ignoring super.  As a workaround, don't
- 	 filter key events with super or hyper pressed.  */
--      if (!(event->key.state & (GDK_SUPER_MASK | GDK_HYPER_MASK)))
-+      if (!(event->key.state & (GDK_SUPER_MASK | GDK_MOD4_MASK | GDK_HYPER_MASK)))
- 	{
- 	  if (pgtk_im_filter_keypress (f, &event->key))
- 	    return TRUE;
-@@ -5356,8 +5356,9 @@ key_press_event (GtkWidget *widget, GdkEvent *event, gpointer *user_data)
-       /* make_lispy_event turns chars into control chars.
-          Don't do it here because XLookupString is too eager.  */
-       state &= ~GDK_CONTROL_MASK;
--      state &= ~(GDK_META_MASK
--		 | GDK_SUPER_MASK | GDK_HYPER_MASK | GDK_MOD1_MASK);
-+      state &= ~(GDK_META_MASK | GDK_MOD1_MASK
-+		 | GDK_SUPER_MASK | GDK_MOD4_MASK
-+		 | GDK_HYPER_MASK);
-
-       nbytes = event->key.length;
-       if (nbytes > copy_bufsiz)
-#+end_src
 ***** Epoch patch update
 #+begin_src scheme
 (define-public (with-epoch-patch-update emacs)
@@ -2241,7 +2184,6 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
   (-> (if pgtk?
           (-> emacs-next-pgtk
               with-emacs-latest
-              with-wayland-super-fix
               with-epoch-patch-update)
           emacs)
       ;; with-libgccjit-latest
