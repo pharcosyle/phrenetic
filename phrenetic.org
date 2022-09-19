@@ -2060,7 +2060,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (ebullient utils)
-  #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
 #+end_src
 ***** Emacs latest :version:
@@ -2072,47 +2071,6 @@ Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git
                        #:commit "34a97f045a13fe6ad279f57ecdc6f7a3bee7caa2"
                        #:hash "103g59y3ndvzy2yfd70k60lgf63939r3f88w4p0gazrc08m5b3xs")
       (with-git-url "https://github.com/emacs-mirror/emacs")))
-#+end_src
-***** Epoch patch update
-#+begin_src scheme
-(define-public (with-epoch-patch-update emacs)
-  (package
-    (inherit emacs)
-    (source
-     (origin
-       (inherit (package-source emacs))
-       (patches
-        (->> (-> emacs package-source origin-patches)
-             (remove
-              (lambda (patch)
-                (string-suffix? "emacs-source-date-epoch.patch" patch)))
-             (cons
-              "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch"
-              ;; "/home/pharcosyle/work/phrenetic/ebullient/home/packages/patches/emacs-source-date-epoch.patch" ; (local-file "patches/emacs-source-date-epoch.patch") ; TODO why isn't this working with local-file?
-              )))))))
-#+end_src
-****** Patch
-#+begin_src diff :tangle (meta-in-dir "patches/emacs-source-date-epoch.patch")
-Honor SOURCE_DATE_EPOCH variable to avoid non-determinism in generated
-"autoloads" files.
-
---- a/lisp/obsolete/autoload.el
-+++ b/lisp/obsolete/autoload.el
-@@ -419,8 +419,12 @@
-   ;;              nil t))
-   ;;        (match-end 2))))
-   (insert generate-autoload-section-header)
--  (prin1 `(autoloads ,autoloads ,load-name ,file ,time)
--	 outbuf)
-+  (let* ((env  (getenv "SOURCE_DATE_EPOCH"))
-+         (time (if env
-+                   (seconds-to-time (string-to-number env))
-+                 time)))
-+    (prin1 `(autoloads ,autoloads ,load-name ,file ,time)
-+           outbuf))
-   (terpri outbuf)
-   ;; Break that line at spaces, to avoid very long lines.
-   ;; Make each sub-line into a comment.
 #+end_src
 ***** HOLD Libgccjit latest
 This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Just hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
@@ -2182,9 +2140,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
 #+begin_src scheme
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
-          (-> emacs-next-pgtk
-              with-emacs-latest
-              with-epoch-patch-update)
+          (with-emacs-latest emacs-next-pgtk)
           emacs)
       ;; with-libgccjit-latest
       with-findable-C-source
