@@ -4353,11 +4353,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (after! emojify
                  (setq emojify-display-style 'unicode))
 
-         ;; TODO comment this back in once hlissner gets his house in order.
-         ;; ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-         ;; (define-key! :keymaps +default-minibuffer-maps
-         ;;   "s-J" #'scroll-up-command
-         ;;   "s-K" #'scroll-down-command)
+         ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+         (define-key! :keymaps +default-minibuffer-maps
+           "s-J" #'scroll-up-command
+           "s-K" #'scroll-down-command)
 
          (map! "s-A" #'app-launcher-run-app)
 
