@@ -5266,45 +5266,35 @@ use_guixs() {
   (let ((clr (lambda (color)
                (assoc-ref colors color))))
     `((,name
-       ((bg         '(,(clr #:color/bg) "black"       "black"  ))
-        (fg         '(,(clr #:color/fg) "#bfbfbf"     "brightwhite"  ))
+       ((fg        '(,(clr #:color/fg)      "#bfbfbf" "brightwhite"))
+        (bg        '(,(clr #:color/bg)      "black"   "black"))
 
-        ;; These are off-color variants of bg/fg, used primarily for `solaire-mode',
-        ;; but can also be useful as a basis for subtle highlights (e.g. for hl-line
-        ;; or region), especially when paired with the `doom-darken', `doom-lighten',
-        ;; and `doom-blend' helper functions.
-        (bg-alt     '("#292c35" "black"       "black"        )) ; (doom-darken "#31343f" 0.15)
-        (fg-alt     '("#63677f" "#2d2d2d"     "white"        ))
+        (fg-alt    '("#63677f"              "#2d2d2d" "white"))
+        (bg-alt    '("#292c35"              "black"   "black")) ; (doom-darken "#31343f" 0.15)
 
-        ;; These should represent a spectrum from bg to fg, where base0 is a starker
-        ;; bg and base8 is a starker fg. For example, if bg is light grey and fg is
-        ;; dark grey, base0 should be white and base8 should be black.
-        (base0      '(,(clr #:color/base0) "black" "black"        ))
-        (base1      '("#202229"            "#1e1e1e"  "brightblack"  )) ; (doom-darken "#262831" 0.15)
-        (base2      '("#22242c"            "#2e2e2e"  "brightblack"  )) ; (doom-darken "#262831" 0.10)
-        (base3      '("#262831"            "#262626"  "brightblack"  ))
-        (base4      '("#484b5b"            "#3f3f3f"  "brightblack"  ))
-        (base5      `(,(car fg-alt)        "#525252"  "brightblack"  ))
-        (base6      '("#7c82a0"            "#6b6b6b"  "brightblack"  )) ; (doom-darken "#939abd" 0.15)
-        (base7      '("#939abd"            "#979797"  "brightblack"  ))
-        (base8      '(,(clr #:color/base8) "#dfdfdf" "white"        ))
+        (base0     '(,(clr #:color/base0)   "black"   "black"))
+        (base1     '("#202229"              "#1e1e1e" "brightblack")) ; (doom-darken "#262831" 0.15)
+        (base2     '("#22242c"              "#2e2e2e" "brightblack")) ; (doom-darken "#262831" 0.10)
+        (base3     '("#262831"              "#262626" "brightblack"))
+        (base4     '("#484b5b"              "#3f3f3f" "brightblack"))
+        (base5     `(,(car fg-alt)          "#525252" "brightblack"))
+        (base6     '("#7c82a0"              "#6b6b6b" "brightblack")) ; (doom-darken "#939abd" 0.15)
+        (base7     '("#939abd"              "#979797" "brightblack"))
+        (base8     '(,(clr #:color/base8)   "#dfdfdf" "white"))
 
-        (grey       base4)
-        (red        '(,(clr #:color/red)       "#ff6655" "red"          ))
-        (orange     '(,(clr #:color/orange)    "#dd8844" "brightred"    ))
-        (green      '(,(clr #:color/green)     "#99bb66" "green"        ))
-        (teal       '("#fec0cb"                "#44b9b1" "brightgreen"  ))
-        (yellow     '(,(clr #:color/yellow)    "#ECBE7B" "yellow"       ))
-        (blue       '(,(clr #:color/blue)      "#51afef" "brightblue"   ))
-        (dark-blue  '("#5f68de"                "#2257A0" "blue"         ))
-        (magenta    '(,(clr #:color/magenta)   "#c678dd" "brightmagenta"))
-        (violet     '(,(clr #:color/violet)    "#a9a1e1" "magenta"      ))
-        (cyan       '(,(clr #:color/cyan)      "#46D9FF" "brightcyan"   ))
-        (dark-cyan  '("#cf8191"                "#5699AF" "cyan"         ))
+        (grey      base4)
+        (red       '(,(clr #:color/red)     "#ff6655" "red"))
+        (orange    '(,(clr #:color/orange)  "#dd8844" "brightred"))
+        (green     '(,(clr #:color/green)   "#99bb66" "green"))
+        (teal      '("#fec0cb"              "#44b9b1" "brightgreen"))
+        (yellow    '(,(clr #:color/yellow)  "#ECBE7B" "yellow"))
+        (blue      '(,(clr #:color/blue)    "#51afef" "brightblue" ))
+        (dark-blue '("#5f68de"              "#2257A0" "blue"))
+        (magenta   '(,(clr #:color/magenta) "#c678dd" "brightmagenta"))
+        (violet    '(,(clr #:color/violet)  "#a9a1e1" "magenta"))
+        (cyan      '(,(clr #:color/cyan)    "#46D9FF" "brightcyan"))
+        (dark-cyan '("#cf8191"              "#5699AF" "cyan"))
 
-        ;; These are the "universal syntax classes" that doom-themes establishes.
-        ;; These *must* be included in every doom themes, or your theme will throw an
-        ;; error, as they are used in the base theme defined in doom-themes-base.
         (highlight      ,(clr #:color/accent))
         (vertical-bar   base0)
         (selection      dark-blue)
