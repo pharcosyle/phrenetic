@@ -5131,7 +5131,7 @@ use_guixs() {
 
 (define dark-colors
   '((#:color/fg . "#dee2f8")
-    (#:color/bg . "#2e313b") ; (doom-darken "#31343f" 0.05)
+    (#:color/bg . "#31343f")
     (#:color/base0 . "#1e1f27")
     (#:color/base8 . "#eef0fb") ; (doom-lighten "#dee2f8" 0.5)
     (#:color/accent . "#8496ff")
@@ -5261,6 +5261,10 @@ use_guixs() {
   `())
 #+end_src
 ****** Dark
+Some colors from the original Atom theme on which I based mine that might be useful:
+- ~#363b4e~
+  Dark with a bluish tint. Was previously used as the line highlight color.
+- ~#666d7a~
 #+begin_src scheme
 (define* (doom-dark-theme #:key name colors)
   (let ((clr (lambda (color)
@@ -5270,12 +5274,12 @@ use_guixs() {
         (bg        '(,(clr #:color/bg)      "black"   "black"))
 
         (fg-alt    '("#63677f"              "#2d2d2d" "white"))
-        (bg-alt    '("#292c35"              "black"   "black")) ; (doom-darken "#31343f" 0.15)
+        (bg-alt    '("#262831"              "black"   "black"))
 
         (base0     '(,(clr #:color/base0)   "black"   "black"))
         (base1     '("#202229"              "#1e1e1e" "brightblack")) ; (doom-darken "#262831" 0.15)
         (base2     '("#22242c"              "#2e2e2e" "brightblack")) ; (doom-darken "#262831" 0.10)
-        (base3     '("#262831"              "#262626" "brightblack"))
+        (base3     '("#24262e"              "#262626" "brightblack")) ; (doom-darken "#262831" 0.05)
         (base4     '("#484b5b"              "#3f3f3f" "brightblack"))
         (base5     `(,(car fg-alt)          "#525252" "brightblack"))
         (base6     '("#7c82a0"              "#6b6b6b" "brightblack")) ; (doom-darken "#939abd" 0.15)
@@ -5300,7 +5304,7 @@ use_guixs() {
         (selection      dark-blue)
         (builtin        blue)
         (comments       base5)
-        (doc-comments   violet)
+        (doc-comments   base7)
         (constants      yellow)
         (functions      blue)
         (keywords       magenta)
@@ -5316,24 +5320,16 @@ use_guixs() {
         (success        green)
         (vc-modified    orange)
         (vc-added       green)
-        (vc-deleted     red)
-
-        ;; Extra color variables (Doom base theme doesn't use them, only faces defined here do.)
-        (modeline-fg              fg)
-        (modeline-fg-alt          base5)
-        (modeline-bg              (doom-darken bg-alt 0.1))
-        (modeline-bg-alt          `(,(doom-darken (car bg-alt) 0.15) ,@(cdr bg)))
-        (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
-        (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg))))
+        (vc-deleted     red))
 
        ;; Doom base theme overrides.
        ((cursor :background "#fdd94a")
-        (font-lock-comment-delimiter-face :foreground base7)
-        ((line-number &override) :foreground base4)
+        ((font-lock-comment-delimiter-face &override) :foreground base7)
+        ((font-lock-doc-face &override) :foreground violet)
         ((line-number-current-line &override) :foreground violet)
-        (mode-line :background modeline-bg :foreground modeline-fg)
-        (mode-line-inactive :background modeline-bg-inactive :foreground modeline-fg-alt)
-        (mode-line-emphasis :foreground highlight)
+        (mode-line :background base1 :foreground fg)
+        (mode-line-inactive :background base3 :foreground base6)
+        (org-block :background (doom-darken bg 0.1))
 
         ;; Custom faces.
         (clojure-character-face :foreground teal :weight 'bold)
@@ -5350,8 +5346,8 @@ use_guixs() {
         (rainbow-delimiters-depth-7-face :foreground orange)
         (rainbow-delimiters-depth-8-face :foreground red)
         (rainbow-delimiters-depth-9-face :foreground teal)
-        (solaire-mode-line-face :inherit 'mode-line :background modeline-bg-alt)
-        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background modeline-bg-inactive-alt)
+        (solaire-mode-line-face :inherit 'mode-line :background base0)
+        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background base2)
 
         ;; These are present in the `doom-one' theme on which mine is based but I'm not sure if I need or want them. I'm keeping them around for now.
         (css-proprietary-property :foreground orange)
