@@ -5318,8 +5318,7 @@ use_guixs() {
         (vc-added       green)
         (vc-deleted     red)
 
-        ;; These are extra color variables used only in this theme; i.e. they aren't
-        ;; mandatory for derived themes.
+        ;; Extra color variables (Doom base theme doesn't use them, only faces defined here do.)
         (modeline-fg              fg)
         (modeline-fg-alt          base5)
         (modeline-bg              (doom-darken bg-alt 0.1))
@@ -5327,7 +5326,7 @@ use_guixs() {
         (modeline-bg-inactive     `(,(car bg-alt) ,@(cdr base1)))
         (modeline-bg-inactive-alt `(,(doom-darken (car bg-alt) 0.1) ,@(cdr bg))))
 
-       ;; TODO Maybe I don't need the `&override' for some of these?
+       ;; Doom base theme overrides.
        ((cursor :background "#fdd94a")
         (font-lock-comment-delimiter-face :foreground base7)
         ((line-number &override) :foreground base4)
@@ -5336,19 +5335,12 @@ use_guixs() {
         (mode-line-inactive :background modeline-bg-inactive :foreground modeline-fg-alt)
         (mode-line-emphasis :foreground highlight)
 
-        ;; TODO try removing some/all of these and see if I'm okay with the defaults? Hopefully they're defined in terms of doom colors or something that derives from them.
-        (clojure-character-face :foreground violet :weight 'bold) ; TODO Maybe remove this if it's not valuable enough.
-        (css-proprietary-property :foreground orange)
-        (css-property :foreground green)
-        (css-selector :foreground blue)
+        ;; Custom faces.
+        (clojure-character-face :foreground teal :weight 'bold)
         (doom-modeline-bar :background highlight)
         (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
         (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
         (doom-modeline-buffer-project-root :foreground green :weight 'bold)
-        (font-latex-math-face :foreground green)
-        (markdown-markup-face :foreground base5)
-        (markdown-header-face :inherit 'bold :foreground red)
-        ((markdown-code-face &override) :background (doom-lighten base3 0.05))
         (rainbow-delimiters-depth-1-face :foreground fg)
         (rainbow-delimiters-depth-2-face :foreground magenta)
         (rainbow-delimiters-depth-3-face :foreground blue)
@@ -5358,10 +5350,19 @@ use_guixs() {
         (rainbow-delimiters-depth-7-face :foreground orange)
         (rainbow-delimiters-depth-8-face :foreground red)
         (rainbow-delimiters-depth-9-face :foreground teal)
-        (rjsx-tag :foreground red)
-        (rjsx-attr :foreground orange)
         (solaire-mode-line-face :inherit 'mode-line :background modeline-bg-alt)
-        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background modeline-bg-inactive-alt))))))
+        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background modeline-bg-inactive-alt)
+
+        ;; These are present in the `doom-one' theme on which mine is based but I'm not sure if I need or want them. I'm keeping them around for now.
+        (css-proprietary-property :foreground orange)
+        (css-property :foreground green)
+        (css-selector :foreground blue)
+        (font-latex-math-face :foreground green)
+        (markdown-markup-face :foreground base5)
+        (markdown-header-face :inherit 'bold :foreground red)
+        ((markdown-code-face &override) :background (doom-lighten base3 0.05))
+        (rjsx-tag :foreground red)
+        (rjsx-attr :foreground orange))))))
 #+end_src
 ***** Fonts
 #+begin_src scheme
