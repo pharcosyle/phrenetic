@@ -2376,7 +2376,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "b7b66e620203c7068b9c45388eca9a1ebec8d13f")
+  (let ((commit "731764ae7134f6ce857147f7ef067c6ce3f23abd")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2389,7 +2389,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
                (commit commit)))
          (sha256
           (base32
-           "000zsk97v35rx65pq6kkn35dkxc9lhy0sm7d9kvg1sdk0ljqjy3d"))
+           "0s27aw5w84lsajxhsp1l9ii6xbm36qham10mbs1px28gbcp5i0fi"))
          (file-name (git-file-name name version))))
       (build-system copy-build-system) ; TODO LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and what copy-build-system does.
       (arguments
