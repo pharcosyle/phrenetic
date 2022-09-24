@@ -1483,10 +1483,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-projects
             services-only-packages
             services-sans-packages
-            he-clojure
-            he-node
-            he-datomic
             he-aws
+            he-clojure
+            he-datomic
+            he-node
             he-base))
 #+end_src
 ** Create
@@ -6414,175 +6414,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
      svcs))
 #+end_src
 *** Miscellany
-**** Clojure
-#+begin_src scheme
-(define* (he-clojure #:key
-                     stateless?
-                     doom?
-                     (jdk (list openjdk "jdk")))
-  (append
-   (list
-    (simple-service
-     'clojure-add-packages
-     home-profile-service-type
-     (list clojure-tools
-           jdk
-           clj-kondo))
-
-    (when stateless?
-      (home-stateless-service
-       'clojure
-       #:state '(((#:path . ".m2/")
-                  (#:store . #:machine))))))
-
-   (if doom?
-       (doom-clojure #:stateless? stateless?)
-       '())))
-
-(define* (doom-clojure #:key stateless?)
-  (append
-   (let ((name 'clojure))
-     (list
-      (doom-service
-       name
-       #:modules '((#:lang
-                    clojure))
-       #:config
-       `((use-package! clojure-mode
-                       :defer t
-                       :init
-                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
-                       :config
-                       (set-ligatures! 'clojure-mode :lambda "fn"))
-
-         (use-package! cider
-                       :defer t
-                       :init
-                       (-each '((cider-preferred-build-tool symbolp)
-                                (cider-default-cljs-repl symbolp)
-                                (cider-shadow-default-options stringp)
-                                (cider-offer-to-open-cljs-app-in-browser booleanp)
-                                (cider-clojure-cli-global-options stringp)
-                                (cider-clojure-cli-global-options booleanp))
-                              (-lambda ((sym f))
-                                       (put sym 'safe-local-variable f)))
-                       :config
-                       (setq cider-repl-history-size ,very-big-history
-                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
-
-         ;; REVIEW make sure this is still working after nesting in `after!'
-         (after! cider-repl
-                 (add-hook! 'cider-repl-mode-hook
-                            #'goto-address-prog-mode
-                            #'highlight-numbers-mode
-                            #'rainbow-delimiters-mode
-                            #'yas-minor-mode-on
-                            #'biome-sp-strict-h))
-
-         (after! clj-refactor
-                 (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
-
-   (doom-dash)))
-#+end_src
-***** Clojure tools :package:
-#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
-(define-module (ebullient home packages clojure)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
-
-(define (with-man-pages clojure-tools)
-  (package
-    (inherit clojure-tools)
-    (arguments
-     (substitute-keyword-arguments (package-arguments clojure-tools)
-       ((#:install-plan install-plan)
-        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
-                                   ("clj.1" "/share/man/man1/"))))))))
-
-(define-public clojure-tools
-  (with-man-pages clojure:clojure-tools))
-#+end_src
-**** Node
-#+begin_src scheme
-(define* (he-node #:key
-                  stateless?
-                  doom?
-                  doom-tree-sitter?)
-  (list
-   (simple-service
-    'node-add-packages
-    home-profile-service-type
-    (list node))
-
-   ;; (when stateless?
-   ;;   (home-stateless-service
-   ;;    'node
-   ;;    #:state '(((#:path . ".npm/")
-   ;;               (#:store . #:machine)))))
-
-   (when doom?
-     (doom-service
-      'node
-      #:modules `((#:lang
-                   (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-                   (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
-#+end_src
-**** Datomic
-#+begin_src scheme
-(define (he-datomic)
-  (list
-   (simple-service
-    'datomic-add-package
-    home-profile-service-type
-    (list datomic-cli-tools))))
-#+end_src
-***** Datomic CLI tools :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
-(define-module (ebullient home packages datomic)
-  #:use-module (guix build-system copy)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages compression) #:select (unzip))
-  #:use-module ((nonguix licenses) #:prefix license:))
-
-(define-public datomic-cli-tools
-  (package
-    (name "datomic-cli-tools")
-    (version "1.0.91")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com/tools/datomic-cli/datomic-cli-" version ".zip"))
-       (sha256
-        (base32
-         "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
-    (build-system copy-build-system)
-    (arguments
-     `(#:install-plan
-       '(("." "bin" #:include-regexp ("^\\./datomic")) ; Files that start with "datomic" are the scripts. Restrict to this subset to automatically pick up any added in the future without being too inclusive about what we add to bin.
-         ("README.txt" "share/doc/datomic/"))
-       #:phases
-       ,#~(modify-phases %standard-phases
-            (add-after 'install 'make-scripts-executable
-              (lambda _
-                (for-each (lambda (f) (chmod f #o555))
-                          (find-files (string-append #$output "/bin"))))))))
-    (native-inputs
-     (list unzip))
-    (home-page "https://docs.datomic.com/cloud/index.html")
-    (synopsis "CLI tools for Datomic")
-    (description synopsis)
-    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
-#+end_src
 **** AWS
 #+begin_src scheme
 (define (he-aws)
@@ -6737,6 +6568,175 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
        (sha256
         (base32
          "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
+#+end_src
+**** Clojure
+#+begin_src scheme
+(define* (he-clojure #:key
+                     stateless?
+                     doom?
+                     (jdk (list openjdk "jdk")))
+  (append
+   (list
+    (simple-service
+     'clojure-add-packages
+     home-profile-service-type
+     (list clojure-tools
+           jdk
+           clj-kondo))
+
+    (when stateless?
+      (home-stateless-service
+       'clojure
+       #:state '(((#:path . ".m2/")
+                  (#:store . #:machine))))))
+
+   (if doom?
+       (doom-clojure #:stateless? stateless?)
+       '())))
+
+(define* (doom-clojure #:key stateless?)
+  (append
+   (let ((name 'clojure))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    clojure))
+       #:config
+       `((use-package! clojure-mode
+                       :defer t
+                       :init
+                       (setq clojure-refactor-map-prefix (kbd "s-M r")) ; Has to be set before clojure-mode loads. ; REVIEW temporary binding
+                       :config
+                       (set-ligatures! 'clojure-mode :lambda "fn"))
+
+         (use-package! cider
+                       :defer t
+                       :init
+                       (-each '((cider-preferred-build-tool symbolp)
+                                (cider-default-cljs-repl symbolp)
+                                (cider-shadow-default-options stringp)
+                                (cider-offer-to-open-cljs-app-in-browser booleanp)
+                                (cider-clojure-cli-global-options stringp)
+                                (cider-clojure-cli-global-options booleanp))
+                              (-lambda ((sym f))
+                                       (put sym 'safe-local-variable f)))
+                       :config
+                       (setq cider-repl-history-size ,very-big-history
+                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
+
+         ;; REVIEW make sure this is still working after nesting in `after!'
+         (after! cider-repl
+                 (add-hook! 'cider-repl-mode-hook
+                            #'goto-address-prog-mode
+                            #'highlight-numbers-mode
+                            #'rainbow-delimiters-mode
+                            #'yas-minor-mode-on
+                            #'biome-sp-strict-h))
+
+         (after! clj-refactor
+                 (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-dash)))
+#+end_src
+***** Clojure tools :package:
+#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
+(define-module (ebullient home packages clojure)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
+
+(define (with-man-pages clojure-tools)
+  (package
+    (inherit clojure-tools)
+    (arguments
+     (substitute-keyword-arguments (package-arguments clojure-tools)
+       ((#:install-plan install-plan)
+        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
+                                   ("clj.1" "/share/man/man1/"))))))))
+
+(define-public clojure-tools
+  (with-man-pages clojure:clojure-tools))
+#+end_src
+**** Datomic
+#+begin_src scheme
+(define (he-datomic)
+  (list
+   (simple-service
+    'datomic-add-package
+    home-profile-service-type
+    (list datomic-cli-tools))))
+#+end_src
+***** Datomic CLI tools :package:version:upstream:
+#+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
+(define-module (ebullient home packages datomic)
+  #:use-module (guix build-system copy)
+  #:use-module (guix download)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages compression) #:select (unzip))
+  #:use-module ((nonguix licenses) #:prefix license:))
+
+(define-public datomic-cli-tools
+  (package
+    (name "datomic-cli-tools")
+    (version "1.0.91")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com/tools/datomic-cli/datomic-cli-" version ".zip"))
+       (sha256
+        (base32
+         "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
+    (build-system copy-build-system)
+    (arguments
+     `(#:install-plan
+       '(("." "bin" #:include-regexp ("^\\./datomic")) ; Files that start with "datomic" are the scripts. Restrict to this subset to automatically pick up any added in the future without being too inclusive about what we add to bin.
+         ("README.txt" "share/doc/datomic/"))
+       #:phases
+       ,#~(modify-phases %standard-phases
+            (add-after 'install 'make-scripts-executable
+              (lambda _
+                (for-each (lambda (f) (chmod f #o555))
+                          (find-files (string-append #$output "/bin"))))))))
+    (native-inputs
+     (list unzip))
+    (home-page "https://docs.datomic.com/cloud/index.html")
+    (synopsis "CLI tools for Datomic")
+    (description synopsis)
+    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
+#+end_src
+**** Node
+#+begin_src scheme
+(define* (he-node #:key
+                  stateless?
+                  doom?
+                  doom-tree-sitter?)
+  (list
+   (simple-service
+    'node-add-packages
+    home-profile-service-type
+    (list node))
+
+   ;; (when stateless?
+   ;;   (home-stateless-service
+   ;;    'node
+   ;;    #:state '(((#:path . ".npm/")
+   ;;               (#:store . #:machine)))))
+
+   (when doom?
+     (doom-service
+      'node
+      #:modules `((#:lang
+                   (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
+                   (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
 #+end_src
 ** Templates
 #+begin_src scheme
