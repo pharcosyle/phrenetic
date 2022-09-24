@@ -1417,7 +1417,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
+  #:use-module ((ebullient home packages aws) #:select (awscli-2))
   #:use-module ((ebullient home packages clojure) #:select (clojure-tools))
+  #:use-module ((ebullient home packages datomic) #:select (datomic-cli-tools))
   #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
@@ -1483,6 +1485,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             services-sans-packages
             he-clojure
             he-node
+            he-datomic
+            he-aws
             he-base))
 #+end_src
 ** Create
@@ -6532,7 +6536,15 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                    (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
 #+end_src
 **** Datomic
-***** Datomic CLI tools :package:version:
+#+begin_src scheme
+(define (he-datomic)
+  (list
+   (simple-service
+    'datomic-add-package
+    home-profile-service-type
+    (list datomic-cli-tools))))
+#+end_src
+***** Datomic CLI tools :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
 (define-module (ebullient home packages datomic)
   #:use-module (guix build-system copy)
@@ -6572,7 +6584,15 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
 **** AWS
-***** AWS CLI :package:version:
+#+begin_src scheme
+(define (he-aws)
+  (list
+   (simple-service
+    'aws-add-package
+    home-profile-service-type
+    (list awscli-2))))
+#+end_src
+***** AWS CLI 2 :package:version:upstream:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "packages/aws.scm")
 :END:
@@ -6606,7 +6626,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
   #:use-module ((gnu packages serialization) #:select (python-ruamel.yaml))
   #:use-module ((gnu packages time) #:select (python-dateutil)))
 
-(define-public awscli
+(define-public awscli-2
   (package
     (inherit python-web:awscli)
     (version "2.4.23")
