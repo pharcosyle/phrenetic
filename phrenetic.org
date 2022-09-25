@@ -2390,7 +2390,9 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
          (sha256
           (base32
            "0s27aw5w84lsajxhsp1l9ii6xbm36qham10mbs1px28gbcp5i0fi"))
-         (file-name (git-file-name name version))))
+         (file-name (git-file-name name version))
+         (patches
+          (list (local-file "patches/dirvish.patch")))))
       (build-system copy-build-system) ; TODO LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and what copy-build-system does.
       (arguments
        (list
@@ -2409,7 +2411,19 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
        (list git
              ripgrep
              fd
-             all-the-icons-fonts))
+             all-the-icons-fonts
+
+             ;; TODO For dirvish, putting them here temporarily.
+             (@ (gnu packages rust-apps) fd)
+             (@ (gnu packages imagemagick) imagemagick)
+             (@ (gnu packages pdf) poppler) ; TODO Readme says "or pdf-tools"?
+             ;; TODO epubs. See:
+             ;; - https://github.com/alexluigit/dirvish/blob/main/docs/CUSTOMIZING.org
+             ;; - https://github.com/alexluigit/dirvish/issues/85
+             (@ (gnu packages video) ffmpegthumbnailer)
+             (@ (gnu packages video) mediainfo)
+             (@ (gnu packages base) tar)
+             (@ (gnu packages compression) unzip)))
       (outputs '("out" "bin"))
       (synopsis "An Emacs framework for the stubborn martian hacker")
       (description "Doom is a configuration framework for GNU Emacs tailored for
@@ -2596,6 +2610,547 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (synopsis (package-synopsis emacs-all-the-icons))
       (description (package-description emacs-all-the-icons))
       (license (package-license emacs-all-the-icons)))))
+#+end_src
+***** Patches
+****** Dirvish :version:
+Taken from https://github.com/doomemacs/doomemacs/pull/6760.
+#+begin_src diff :tangle (meta-in-dir "patches/dirvish.patch")
+diff --git a/modules/emacs/dired/README.org b/modules/emacs/dired/README.org
+index 04d12e4f0cf..2d9f1f148ef 100644
+--- a/modules/emacs/dired/README.org
++++ b/modules/emacs/dired/README.org
+@@ -4,24 +4,29 @@
+ ,#+since:    2.0.0
+ 
+ ,* Description :unfold:
+-This module provides reasonable defaults and augmentations for dired.
++This module provides reasonable defaults and augmentations for [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Dired.html][Dired]], the
++inbuilt file manager for Emacs.  The extra features are mostly introduced by the
++Dired enhancement package [[https://github.com/alexluigit/dirvish][Dirvish]].
+ 
+ ,** Maintainers
+-/This module has no dedicated maintainers./ [[doom-contrib-maintainer:][Become a maintainer?]]
++- [[doom-user:][@alexluigit]]
++
++[[doom-contrib-maintainer:][Become a maintainer?]]
+ 
+ ,** Module flags
+ - +icons ::
+   Enables the display of fancy icons depending on file types in dired buffers.
+-- +ranger ::
+-  Enables dired to be more like [[https://github.com/ranger/ranger][ranger]].
++- +dirvish ::
++  Apply some stylistic defaults to the Dired buffer.
++  + Show file size at right fringe
++  + Collapse directories with only one entry in it automatically.
++  + Use prettified header line and mode line
++  + Hide file details information by default
++  + Enable line highlighting, hide the cursor
+ 
+ ,** Packages
+-- [[doom-package:][all-the-icons-dired]] if [[doom-module:][+icons]]
+-- [[doom-package:][diff-hl]]
++- [[doom-package:][dirvish]]
+ - [[doom-package:][diredfl]]
+-- [[doom-package:][dired-rsync]]
+-- [[doom-package:][fd-dired]]
+-- [[doom-package:][ranger]] if [[doom-module:][+ranger]]
+ 
+ ,** TODO Hacks
+ ,#+begin_quote
+@@ -38,29 +43,125 @@ This module provides reasonable defaults and augmentations for dired.
+ This module has no requirements *except on BSDs* like MacOS or FreeBSD, where
+ =GNU ls= (aka ~gls~) is required.
+ 
+-* TODO Usage
+-#+begin_quote
+- 🔨 /This module's usage documentation is incomplete./ [[doom-contrib-module:][Complete it?]]
+-#+end_quote
+-
+-| Keybind | Description                |
+-|---------+----------------------------|
+-| [[kbd:][SPC f d]] | Find directory with dired  |
+-| [[kbd:][q]]       | Exit dired buffer          |
+-| [[kbd:][C-c C-r]] | Run [[doom-package:][dired-rsync]]            |
+-| [[kbd:][C-c C-e]] | Rename entries with [[doom-package:][wdired]] |
+-
+-Other keybindings can be found on the official [[https://www.gnu.org/software/emacs/refcards/pdf/dired-ref.pdf][Dired reference card]].
+-
+-** Ranger
+-If [[doom-module:][+ranger]] is enabled often a buffer will be opened in minimal ranger mode
+-(~deer-mode~). In this case [[kbd:][z P]] can be used to toggle between full ranger and
+-~deer-mode~.
+-
+-* TODO Configuration
+-#+begin_quote
+- 🔨 This module has no configuration documentation yet. [[doom-contrib-module:][Write some?]]
+-#+end_quote
++Optionally, install these dependencies to improve the preview experience:
++
+++ =imagemagick= for image preview
+++ =poppler= | =pdf-tools= for pdf preview
+++ =ffmpegthumbnailer= for video preview
+++ =mediainfo= for audio/video metadata generation
+++ =tar= and =unzip= for archive files preview
++
++** macOS
++#+begin_src bash
++  brew install coreutils fd poppler ffmpegthumbnailer mediainfo imagemagick
++#+end_src
++
++** Debian-based
++#+begin_src bash
++  apt install fd-find poppler-utils ffmpegthumbnailer mediainfo imagemagick tar unzip
++#+end_src
++
++** Arch-based
++#+begin_src bash
++  pacman -S fd poppler ffmpegthumbnailer mediainfo imagemagick tar unzip
++#+end_src
++
++** FreeBSD
++#+begin_src bash
++  pkg install gnuls fd-find poppler ffmpegthumbnailer ImageMagick7 gtar
++#+end_src
++
++** Windows (not tested, may not work)
++#+begin_src bash
++  # install via Scoop: https://scoop.sh/
++  scoop install coreutils fd poppler imagemagick unzip
++#+end_src
++
++* Usage
++** Global bindings
++You can access Dired/Dirvish by opening a directory entry in commands like
++~find-file (SPC f f)~. Or you can create a Dired buffer directly with these
++keybindings.
++
++| Keybind                      | Description                        |
++|------------------------------+------------------------------------|
++| [[kbd:][SPC f d]]                      | Find directory with dired          |
++| [[kbd:][SPC o -]]                      | Jump to current directory in dired |
++
++These commands are available but not bound to any keys.
++
++| Command          | Description                    |
++|------------------+--------------------------------|
++| [[kbd:][M-x dirvish]]      | Open dired with preview        |
++| [[kbd:][M-x dirvish-dwim]] | Dirvish with smart layout      |
++| [[kbd:][M-x dirvish-fd]]   | Search files in dired using fd |
++| [[kbd:][M-x dirvish-side]] | Open project sidebar           |
++
++** Dired bindings
++*** Basics
++| Keybind  | Description                               |
++|----------+-------------------------------------------|
++| [[kbd:][n]]        | Move down a line                          |
++| [[kbd:][p]]        | Move up a line                            |
++| [[kbd:][e]] or [[kbd][RET]] | Visit the file or directory on this line  |
++| [[kbd:][(]]        | Toggle visibility of detailed information |
++| [[kbd:][q]]        | Exit dired buffer                         |
++| [[kbd:][^]]        | Go Up a directory                         |
++| [[kbd:][m]]        | Mark a file                               |
++| [[kbd:][u]]        | Unmark a file                             |
++| [[kbd:][D]]        | Delete a file                             |
++| [[kbd:][+]]        | Create a directory                        |
++| ...      | ...                                       |
++
++This is only a very small sample of dired keybindings, just for you to get a
++sense of Dired.  Other basic keybindings can be found on the official [[https://www.gnu.org/software/emacs/refcards/pdf/dired-ref.pdf][Dired
++reference card]].  If you have enabled ~(evil +everywhere)~, you would get a
++different set of bindings ([[kbd][j/k]] for move down/up a line), consult =evil-collection=
++for the actual bindings.
++
++*** Extras
++You don't have to memorize all of Dired bindings because this module provided a
++lot of easy-to-read menus such as ~dirvish-mark-menu~ (powered by =transient.el=)
++for you to find the suitable command in a specific context.  All of these
++(sub-)menus are included in ~dirvish-dispatch (?)~, the main help menu.  Some
++extremely useful ones are bound to a separate keys as well.
++
++| Keybind | Description                                   |
++|---------+-----------------------------------------------|
++| [[kbd:][?]]       | Ask for help                                  |
++| [[kbd:][a]]       | Quick access frequently used directories      |
++| [[kbd:][f]]       | Get file information under the cursor         |
++| [[kbd:][y]]       | Paste/link/move marked files here             |
++| [[kbd:][s]]       | Sort buffer with different criteria           |
++| [[kbd:][M-m]]     | Commands relate to marking and actions        |
++| [[kbd:][M-s]]     | Setup user interface for dirvish              |
++| [[kbd:][M-e]]     | "Emerge" important files at the top           |
++
++Other bindings in this module:
++
++| [[kbd:][TAB]]     | Expand or contract directory under the cursor |
++| [[kbd:][M-f]]     | Jump to next dired history entry              |
++| [[kbd:][M-b]]     | Jump to previous dired history entry          |
++| [[kbd:][M-n]]     | Narrow the buffer with user input             |
++| [[kbd:][M-t]]     | Toggle fullscreen (preview)                   |
++| [[kbd:][C-c C-e]] | Rename entries with [[doom-package:][wdired]]                    |
++
++* Configuration
++** Quick access entries
++
++Use the following syntax to configure the entries displayed in
++~dirvish-quick-access~ command.
++
++#+begin_src emacs-lisp
++  ;; in $DOOMDIR/config.el
++  (setq! dirvish-quick-access-entries
++         `(("h" "~/"                          "Home")
++           ("e" ,user-emacs-directory         "Emacs user directory")
++           ("c" "~/Code/"                     "Code")
++           ("d" "~/Downloads/"                "Downloads")
++           ("m" "/mnt/"                       "Mounted drives")
++           ("t" "~/.local/share/Trash/files/" "Trash")))
++#+end_src
+ 
+ ,* Troubleshooting
+ /There are no known problems with this module./ [[doom-report:][Report one?]]
+diff --git a/modules/emacs/dired/autoload.el b/modules/emacs/dired/autoload.el
+deleted file mode 100644
+index e44d3dda0dd..00000000000
+--- a/modules/emacs/dired/autoload.el
++++ /dev/null
+@@ -1,15 +0,0 @@
+-;;; emacs/dired/autoload.el -*- lexical-binding: t; -*-
+-
+-;;;###autoload
+-(defun +dired/quit-all ()
+-  "Kill all `dired-mode' buffers."
+-  (interactive)
+-  (mapc #'kill-buffer (doom-buffers-in-mode 'dired-mode))
+-  (message "Killed all dired buffers"))
+-
+-;;;###autoload
+-(defun +dired-enable-git-info-h ()
+-  "Enable `dired-git-info-mode' in git repos."
+-  (and (not (file-remote-p default-directory))
+-       (locate-dominating-file "." ".git")
+-       (dired-git-info-mode 1)))
+diff --git a/modules/emacs/dired/config.el b/modules/emacs/dired/config.el
+index 26e5e74e20b..c7d12bb33e0 100644
+--- a/modules/emacs/dired/config.el
++++ b/modules/emacs/dired/config.el
+@@ -1,10 +1,9 @@
+-;;; tools/dired/config.el -*- lexical-binding: t; -*-
++;;; emacs/dired/config.el -*- lexical-binding: t; -*-
+ 
+ (use-package! dired
+   :commands dired-jump
+   :init
+   (setq dired-dwim-target t  ; suggest a target for moving/copying intelligently
+-        dired-hide-details-hide-symlink-targets nil
+         ;; don't prompt to revert, just do it
+         dired-auto-revert-buffer #'dired-buffer-stale-p
+         ;; Always copy/delete recursively
+@@ -25,31 +24,21 @@
+     :slot 20 :size 0.8 :select t :quit nil :ttl 0)
+   (set-evil-initial-state! 'image-dired-display-image-mode 'emacs)
+ 
+-  (let ((args (list "-ahl" "-v" "--group-directories-first")))
+-    (when IS-BSD
+-      ;; Use GNU ls as `gls' from `coreutils' if available. Add `(setq
+-      ;; dired-use-ls-dired nil)' to your config to suppress the Dired warning
+-      ;; when not using GNU ls.
+-      (if-let (gls (executable-find "gls"))
+-          (setq insert-directory-program gls)
+-        ;; BSD ls doesn't support -v or --group-directories-first
+-        (setq args (list (car args)))))
+-    (setq dired-listing-switches (string-join args " "))
+-
+-    (add-hook! 'dired-mode-hook
+-      (defun +dired-disable-gnu-ls-flags-maybe-h ()
+-        "Remove extraneous switches from `dired-actual-switches' when it's
+-uncertain that they are supported (e.g. over TRAMP or on Windows).
+-
+-Fixes #1703: dired over TRAMP displays a blank screen.
+-Fixes #3939: unsortable dired entries on Windows."
+-        (when (or (file-remote-p default-directory)
+-                  (and (boundp 'ls-lisp-use-insert-directory-program)
+-                       (not ls-lisp-use-insert-directory-program)))
+-          (setq-local dired-actual-switches (car args))))))
+-
+-  ;; Don't complain about this command being disabled when we use it
+-  (put 'dired-find-alternate-file 'disabled nil)
++  (let ((non-gnu-args "-alh")
++        (gnu-args
++         "-l --almost-all --human-readable --group-directories-first"))
++    (cond ((and (boundp 'ls-lisp-use-insert-directory-program)
++                (not ls-lisp-use-insert-directory-program)
++                (< emacs-major-version 28))
++           ;; Fixes #3939: unsortable dired entries on Windows
++           (setq dired-listing-switches non-gnu-args))
++          (IS-BSD
++           ;; BSD ls doesn't support long options
++           (if-let (gls (executable-find "gls"))
++               (setq insert-directory-program gls
++                     dired-listing-switches gnu-args)
++             (setq dired-listing-switches non-gnu-args)))
++          (t (setq dired-listing-switches gnu-args))))
+ 
+   (defadvice! +dired--no-revert-in-virtual-buffers-a (&rest args)
+     "Don't auto-revert in dired-virtual buffers (see `dired-virtual-revert')."
+@@ -57,127 +46,11 @@ Fixes #3939: unsortable dired entries on Windows."
+     (not (eq revert-buffer-function #'dired-virtual-revert)))
+ 
+   (map! :map dired-mode-map
+-        ;; Kill all dired buffers on q
+-        :ng "q" #'+dired/quit-all
+         ;; To be consistent with ivy/helm+wgrep integration
+         "C-c C-e" #'wdired-change-to-wdired-mode))
+ 
+ 
+-(use-package! dired-rsync
+-  :general (dired-mode-map "C-c C-r" #'dired-rsync))
+-
+-
+-(use-package! diredfl
+-  :hook (dired-mode . diredfl-mode))
+-
+-
+-(use-package! ranger
+-  :when (modulep! +ranger)
+-  :after dired
+-  :init (setq ranger-override-dired t)
+-  :config
+-  (unless (file-directory-p image-dired-dir)
+-    (make-directory image-dired-dir))
+-
+-  (set-popup-rule! "^\\*ranger" :ignore t)
+-
+-  (defadvice! +dired--cleanup-header-line-a ()
+-    "Ranger fails to clean up `header-line-format' when it is closed, so..."
+-    :before #'ranger-revert
+-    (dolist (buffer (buffer-list))
+-      (when (buffer-live-p buffer)
+-        (with-current-buffer buffer
+-          (when (equal header-line-format '(:eval (ranger-header-line)))
+-            (setq header-line-format nil))))))
+-
+-  (defadvice! +dired--cleanup-mouse1-bind-a ()
+-    "Ranger binds an anonymous function to mouse-1 after previewing a buffer
+-that prevents the user from escaping the window with the mouse. This command is
+-never cleaned up if the buffer already existed before ranger was initialized, so
+-we have to clean it up ourselves."
+-    :after #'ranger-setup-preview
+-    (when (window-live-p ranger-preview-window)
+-      (with-current-buffer (window-buffer ranger-preview-window)
+-        (local-unset-key [mouse-1]))))
+-
+-  (defadvice! +dired--ranger-travel-a ()
+-    "Temporary fix for this function until ralesi/ranger.el#236 gets merged."
+-    :override #'ranger-travel
+-    (interactive)
+-    (let ((prompt "Travel: "))
+-      (cond
+-       ((bound-and-true-p helm-mode)
+-        (ranger-find-file (helm-read-file-name prompt)))
+-       ((bound-and-true-p ivy-mode)
+-        (ivy-read prompt 'read-file-name-internal
+-                  :matcher #'counsel--find-file-matcher
+-                  :action
+-                  (lambda (x)
+-                    (with-ivy-window
+-                     (ranger-find-file (expand-file-name x default-directory))))))
+-       ((bound-and-true-p ido-mode)
+-        (ranger-find-file (ido-read-file-name prompt)))
+-       (t
+-        (ranger-find-file (read-file-name prompt))))))
+-
+-  (setq ranger-cleanup-on-disable t
+-        ranger-excluded-extensions '("mkv" "iso" "mp4")
+-        ranger-deer-show-details t
+-        ranger-max-preview-size 10
+-        ranger-show-literal nil
+-        ranger-hide-cursor nil))
+-
+-
+-(use-package! dirvish
+-  :when (modulep! +dirvish)
+-  :defer t
+-  :init (after! dired (dirvish-override-dired-mode))
+-  :hook (dired-mode . dired-omit-mode)
+-  :config
+-  (setq dirvish-cache-dir (concat doom-cache-dir "dirvish/")
+-        dirvish-hide-details nil
+-        dirvish-attributes '(git-msg)
+-        dired-omit-files (concat dired-omit-files "\\|^\\..*$"))
+-  (when (modulep! +icons)
+-    (push 'all-the-icons dirvish-attributes))
+-  (map! :map dirvish-mode-map
+-        :n "b" #'dirvish-goto-bookmark
+-        :n "z" #'dirvish-show-history
+-        :n "f" #'dirvish-file-info-menu
+-        :n "F" #'dirvish-toggle-fullscreen
+-        :n "l" #'dired-find-file
+-        :n "h" #'dired-up-directory
+-        :localleader
+-        "h" #'dired-omit-mode))
+-
+-
+-(use-package! all-the-icons-dired
+-  :when (modulep! +icons)
+-  :unless (modulep! +dirvish)
+-  :hook (dired-mode . all-the-icons-dired-mode)
+-  :config
+-  ;; HACK Fixes #1929: icons break file renaming in Emacs 27+, because the icon
+-  ;;      is considered part of the filename, so we disable icons while we're in
+-  ;;      wdired-mode.
+-  (defvar +wdired-icons-enabled -1)
+-
+-  ;; display icons with colors
+-  (setq all-the-icons-dired-monochrome nil)
+-
+-  (defadvice! +dired-disable-icons-in-wdired-mode-a (&rest _)
+-    :before #'wdired-change-to-wdired-mode
+-    (setq-local +wdired-icons-enabled (if all-the-icons-dired-mode 1 -1))
+-    (when all-the-icons-dired-mode
+-      (all-the-icons-dired-mode -1)))
+-
+-  (defadvice! +dired-restore-icons-after-wdired-mode-a (&rest _)
+-    :after #'wdired-change-to-dired-mode
+-    (all-the-icons-dired-mode +wdired-icons-enabled)))
+-
+-
+ (use-package! dired-x
+-  :unless (modulep! +dirvish)
+-  :unless (modulep! +ranger)
+   :hook (dired-mode . dired-omit-mode)
+   :config
+   (setq dired-omit-verbose nil
+@@ -211,37 +84,55 @@ we have to clean it up ourselves."
+         "h" #'dired-omit-mode))
+ 
+ 
+-(use-package! fd-dired
+-  :when doom-projectile-fd-binary
+-  :defer t
+-  :init
+-  (global-set-key [remap find-dired] #'fd-dired)
+-  (set-popup-rule! "^\\*F\\(?:d\\|ind\\)\\*$" :ignore t))
+-
+ (use-package! dired-aux
+   :defer t
+   :config
+   (setq dired-create-destination-dirs 'ask
+         dired-vc-rename-file t))
+ 
+-;;;###package dired-git-info
+-(map! :after dired
+-      :map (dired-mode-map ranger-mode-map)
+-      :ng ")" #'dired-git-info-mode)
+-(setq dgi-commit-message-format "%h %cs %s"
+-      dgi-auto-hide-details-p nil)
+-(after! wdired
+-  ;; Temporarily disable `dired-git-info-mode' when entering wdired, due to
+-  ;; reported incompatibilities.
+-  (defvar +dired--git-info-p nil)
+-  (defadvice! +dired--disable-git-info-a (&rest _)
+-    :before #'wdired-change-to-wdired-mode
+-    (setq +dired--git-info-p (bound-and-true-p dired-git-info-mode))
+-    (when +dired--git-info-p
+-      (dired-git-info-mode -1)))
+-  (defadvice! +dired--reactivate-git-info-a (&rest _)
+-    :after '(wdired-exit
+-             wdired-abort-changes
+-             wdired-finish-edit)
+-    (when +dired--git-info-p
+-      (dired-git-info-mode +1))))
++
++(use-package! diredfl
++  :hook (dired-mode . diredfl-mode)
++  :hook (dirvish-directory-view-mode . diredfl-mode))
++
++
++(use-package! dirvish
++  :defer t
++  :general (dired-mode-map "C-c C-r" #'dirvish-yank) ; for backward compatibility
++  :after-call dired-noselect dired dired-jump
++  :config
++  (dirvish-override-dired-mode)
++  (setq dirvish-cache-dir (concat doom-cache-dir "dirvish/"))
++  (set-popup-rule! "^ ?\\*Dirvish.*" :ignore t)
++  (map! :map dirvish-mode-map
++        :n  "?"   #'dirvish-dispatch
++        :n  "q"   #'dirvish-quit
++        :ng "a"   #'dirvish-quick-access
++        :ng "f"   #'dirvish-file-info-menu
++        :ng "y"   #'dirvish-yank-menu
++        :ng "s"   #'dirvish-quicksort
++        :ng "TAB" #'dirvish-subtree-toggle
++        :ng "M-t" #'dirvish-layout-toggle
++        :ng "M-b" #'dirvish-history-go-backward
++        :ng "M-f" #'dirvish-history-go-forward
++        :ng "M-n" #'dirvish-narrow
++        :ng "M-m" #'dirvish-mark-menu
++        :ng "M-s" #'dirvish-setup-menu
++        :ng "M-e" #'dirvish-emerge-menu)
++  (if (modulep! +dirvish)
++      (setq dirvish-attributes '(file-size collapse)
++            dirvish-mode-line-format
++            '(:left (sort file-time symlink) :right (omit yank index)))
++    (setq dirvish-attributes nil
++          dirvish-use-header-line nil
++          dirvish-mode-line-format nil
++          dirvish-hide-details nil
++          dirvish-hide-cursor nil))
++  (when (modulep! :ui tabs)
++    (after! centaur-tabs
++      (add-hook! 'dired-mode-hook 'centaur-tabs-local-mode)
++      (add-hook! 'dirvish-directory-view-mode-hook 'centaur-tabs-local-mode)))
++  (when (modulep! :ui vc-gutter)
++    (push 'vc-state dirvish-attributes))
++  (when (modulep! +icons)
++    (appendq! dirvish-attributes '(all-the-icons subtree-state))))
+diff --git a/modules/emacs/dired/doctor.el b/modules/emacs/dired/doctor.el
+index 2c2e77b29ab..3c0c77a8cfd 100644
+--- a/modules/emacs/dired/doctor.el
++++ b/modules/emacs/dired/doctor.el
+@@ -2,3 +2,6 @@
+ 
+ (when (and IS-BSD (not (executable-find "gls")))
+   (warn! "Cannot find gls (GNU ls). This may cause issues with dired"))
++
++(when (modulep! +ranger)
++  (warn! "The +ranger flag has been removed from this module"))
+diff --git a/modules/emacs/dired/packages.el b/modules/emacs/dired/packages.el
+index 06e5659a592..a3dfc11359c 100644
+--- a/modules/emacs/dired/packages.el
++++ b/modules/emacs/dired/packages.el
+@@ -1,14 +1,5 @@
+ ;; -*- no-byte-compile: t; -*-
+ ;;; emacs/dired/packages.el
+ 
+-(package! diredfl :pin "f9140b2c42151dca669003d685c9f079b2e3dc37")
+-(package! dired-git-info :pin "9461476a28a5fec0784260f6e318237c662c3430")
+-(package! dired-rsync :pin "7940d9154d0a908693999b0e1ea351a6d365c93d")
+-(when (modulep! +ranger)
+-  (package! ranger :pin "2498519cb21dcd5791d240607a72a204d1761668"))
+-(when (modulep! +dirvish)
+-  (package! dirvish :pin "73dcaa404da9ab84d25f2919e6e3af4b1f8e7f37"))
+-(when (and (modulep! +icons)
+-           (not (modulep! +dirvish)))
+-  (package! all-the-icons-dired :pin "5e9b097f9950cc9f86de922b07903a4e5fefc733"))
+-(package! fd-dired :pin "458464771bb220b6eb87ccfd4c985c436e57dc7e")
++(package! diredfl :pin "62b559e1d6b69834a56a57eb1832ac6ad4d2e5d0")
++(package! dirvish :pin "22af07264007bdfced9f332d04053d9d93806289")
+diff --git a/modules/ui/vc-gutter/config.el b/modules/ui/vc-gutter/config.el
+index c555f9d08f7..006de3e3fc6 100644
+--- a/modules/ui/vc-gutter/config.el
++++ b/modules/ui/vc-gutter/config.el
+@@ -148,9 +148,10 @@ is deferred until the file is saved. Respects `git-gutter:disabled-modes'."
+   :when (modulep! +diff-hl)
+   :hook (find-file    . diff-hl-mode)
+   :hook (vc-dir-mode  . diff-hl-dir-mode)
+-  :hook (dired-mode   . diff-hl-dired-mode)
+   :hook (diff-hl-mode . diff-hl-flydiff-mode)
+   :config
++  (unless (modulep! :emacs dired)
++    (add-hook! 'dired-mode-hook #'diff-hl-dired-mode))
+   (set-popup-rule! "^\\*diff-hl" :select nil :size '+popup-shrink-to-fit)
+ 
+   ;; PERF: reduce load on remote
 #+end_src
 ***** packaging doom WIP
 Extremely WIP, basically just a scratchpad
@@ -4143,7 +4698,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
             word-wrap)
 
            (#:emacs
-            (dired ,@(if icons? '(+icons) '()))
+            (dired ,@(if icons? '(+icons) '()) +dirvish)
             electric
             (ibuffer ,@(if icons? '(+icons) '()))
             undo)
@@ -4246,20 +4801,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                              "C-s-p" #'lispyville-prettify
                              (:prefix "C-s-;"
                               "R" #'lispyville-raise-list)))
-
-         ;; Don't hide files in dired, remove the Doom module's hook. However, via the Doom config dired-x is only loaded when ~dired-omit-mode~ is triggered so add another hook that mimics this (loads dired-x after the first use of dired). A simple =:after= would probably be fine too (and less odd) but this is lazier.
-         ;; - TODO dired buffers always marked modified
-         ;;   *wait to do this until I do my dired project*
-         ;;   Removing the ~dired-omit-mode~ hook causes dired buffers to start off marked as modified. I don't think this was happening until I upgraded to Emacs 29 so maybe this will resolve itself on a later Emacs upgrade.
-         ;;   - although even before this started happenning I recall dired buffers being marked modified and annoying to close irritating me. I don't know why I'd want that behavior to begin with but I suspect there are good reasons.
-         ;;     Some remarks on modified dired buffers: [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Auto-Reverting-Dired.html]]
-         (use-package! dired-x
-                       :defer t
-                       :init
-                       (remove-hook! 'dired-mode-hook #'dired-omit-mode)
-                       (add-hook! 'dired-mode-hook
-                                  (defun require-dired-x-h ()
-                                    (require 'dired-x))))
 
          (use-package! org
                        :defer t
@@ -4489,6 +5030,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    ((#:path . ("workspaces/autosave/" #:doom-base #:data))
                     (#:store . #:machine)))))))
 
+   (doom-transient)
    (doom-dash)))
 #+end_src
 ****** User
