@@ -4885,7 +4885,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
           (doom-stateless-service
            name
            #:state (append
-                    '(((#:path . ("projectile.projects" #:doom-base #:cache))
+                    '(((#:path . ("autosave/" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("bookmarks" #:doom-base #:data))
                        (#:store . #:persist))
                       ((#:path . ("recentf" #:doom-base #:cache))
                        (#:store . #:persist))
@@ -4893,18 +4895,20 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        (#:store . #:persist))
                       ((#:path . ("saveplace" #:doom-base #:cache))
                        (#:store . #:persist))
-                      ((#:path . ("bookmarks" #:doom-base #:data))
-                       (#:store . #:persist))
-                      ((#:path . ("scratch/" #:doom-base #:data))
-                       (#:store . #:persist))
-                      ((#:path . ("autosave/" #:doom-base #:cache))
-                       (#:store . #:machine))
-                      ((#:path . ("projectile.cache" #:doom-base #:cache))
-                       (#:store . #:machine))
                       ((#:path . ("tramp" #:doom-base #:cache))
                        (#:store . #:machine))
+
+                      ((#:path . ("scratch/" #:doom-base #:data))
+                       (#:store . #:persist))
+
+                      ((#:path . ("projectile.projects" #:doom-base #:cache))
+                       (#:store . #:persist))
+                      ((#:path . ("projectile.cache" #:doom-base #:cache))
+                       (#:store . #:machine))
+
                       ((#:path . ("undo-fu-session/" #:doom-base #:cache))
                        (#:store . #:machine))
+
                       ((#:path . ("workspaces/autosave/" #:doom-base #:data))
                        (#:store . #:machine)))
                     (if dirvish?
