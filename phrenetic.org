@@ -4642,10 +4642,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                     org-dir)
   (append
    (doom-general #:stateless? stateless?
-                 #:tree-sitter? tree-sitter?
-                 #:org-dir org-dir)
+                 #:tree-sitter? tree-sitter?)
    (doom-user #:email email)
    (doom-keymaps)
+   (doom-org #:org-dir org-dir)
    (doom-languages #:tree-sitter? tree-sitter?)
    (doom-calendar #:stateless? stateless?
                   #:email email)
@@ -4655,8 +4655,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-general #:key
                        stateless?
-                       tree-sitter?
-                       org-dir)
+                       tree-sitter?)
   (let ((dirvish? #t))
     (append
      (let ((name 'general))
@@ -4719,7 +4718,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
               ,@(if tree-sitter? '(tree-sitter) '()))
 
              (#:lang
-              (org +journal)
               (rest +jq))
 
              (#:config
@@ -4803,31 +4801,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                                "C-s-p" #'lispyville-prettify
                                (:prefix "C-s-;"
                                 "R" #'lispyville-raise-list)))
-
-           (use-package! org
-                         :defer t
-                         :init
-                         (setq org-directory ,(string-append "~/" org-dir))
-                         :config
-                         (setq org-log-done 'time
-                               org-priority-lowest ?E
-                               org-priority-default ?C
-                               org-priority-faces
-                               (-map (-lambda ((priority color))
-                                              (cons priority (doom-color color)))
-                                     '((?A red)
-                                       (?B orange)
-                                       (?C blue)
-                                       (?D yellow)
-                                       (?E green)))))
-
-           (after! ob
-                   (setq org-babel-noweb-error-all-langs t))
-
-           (after! evil-org
-                   (map! :map evil-org-mode-map
-                         :nv "C-j" #'outline-forward-same-level
-                         :nv "C-k" #'outline-backward-same-level))
 
            (use-package! expand-region
                          :defer t
@@ -5016,13 +4989,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        (#:store . #:persist))
                       ((#:path . ("bookmarks" #:doom-base #:data))
                        (#:store . #:persist))
-                      ((#:path . ("org-clock-save.el" #:doom-base #:data))
-                       (#:store . #:persist))
                       ((#:path . ("scratch/" #:doom-base #:data))
                        (#:store . #:persist))
                       ((#:path . ("autosave/" #:doom-base #:cache))
-                       (#:store . #:machine))
-                      ((#:path . ("org/persist/" #:doom-base #:cache))
                        (#:store . #:machine))
                       ((#:path . ("projectile.cache" #:doom-base #:cache))
                        (#:store . #:machine))
@@ -5038,8 +5007,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                         '()))))))
 
      (if dirvish?
-         (doom-transient) '())
-     (doom-dash))))
+         (doom-transient) '()))))
 #+end_src
 ****** User
 #+begin_src scheme
@@ -5148,6 +5116,54 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (biome--trans "s-h" "C-h")
        ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
        (biome--trans "C-S-i" "<backtab>"))))
+
+   (doom-dash)))
+#+end_src
+****** Org :bindings:
+#+begin_src scheme
+(define* (doom-org #:key
+                   stateless?
+                   org-dir)
+  (append
+   (let ((name 'org))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    (org +journal)))
+       #:config
+       `((use-package! org
+                       :defer t
+                       :init
+                       (setq org-directory ,(string-append "~/" org-dir))
+                       :config
+                       (setq org-log-done 'time
+                             org-priority-lowest ?E
+                             org-priority-default ?C
+                             org-priority-faces
+                             (-map (-lambda ((priority color))
+                                            (cons priority (doom-color color)))
+                                   '((?A red)
+                                     (?B orange)
+                                     (?C blue)
+                                     (?D yellow)
+                                     (?E green)))))
+
+         (after! ob
+                 (setq org-babel-noweb-error-all-langs t))
+
+         (after! evil-org
+                 (map! :map evil-org-mode-map
+                       :nv "C-j" #'outline-forward-same-level
+                       :nv "C-k" #'outline-backward-same-level))))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("org-clock-save.el" #:doom-base #:data))
+                    (#:store . #:persist))
+                   ((#:path . ("org/persist/" #:doom-base #:cache))
+                    (#:store . #:machine)))))))
 
    (doom-dash)))
 #+end_src
