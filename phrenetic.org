@@ -4657,381 +4657,389 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        stateless?
                        tree-sitter?
                        org-dir)
-  (append
-   (let ((name 'general))
-     (list
-      (doom-service
-       name
-       #:modules
-       (let ((childframe? #t)
-             (icons? #t))
-         `((#:completion
-            (company ,@(if childframe? '(+childframe) '()))
-            (vertico ,@(if icons? '(+icons) '())))
-
-           (#:ui
-            doom
-            doom-dashboard
-            (emoji +unicode)
-            hl-todo
-            hydra
-            indent-guides
-            ;; (ligatures +extra)
-            modeline
-            nav-flash
-            ophints
-            (popup +defaults +all)
-            treemacs
-            vi-tilde-fringe
-            window-select
-            workspaces)
-
-           (#:editor
-            (evil +everywhere)
-            file-templates
-            fold
-            format
-            lispy
-            multiple-cursors
-            rotate-text
-            snippets
-            word-wrap)
-
-           (#:emacs
-            (dired ,@(if icons? '(+icons) '()) +dirvish)
-            electric
-            (ibuffer ,@(if icons? '(+icons) '()))
-            undo)
-
-           (#:checkers
-            (syntax ,@(if childframe? '(+childframe) '())))
-
-           (#:tools
-            (eval +overlay)
-            lookup
-            (pass +auth)
-            pdf
-            prodigy
-            rgb
-            taskrunner
-            ,@(if tree-sitter? '(tree-sitter) '()))
-
-           (#:lang
-            (org +journal)
-            (rest +jq))
-
-           (#:config
-            (default +bindings +smartparens))))
-
-       #:packages
-       '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
-         (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
-         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
-         (package! app-launcher
-                   :recipe (:host github
-                            :repo "SebastienWae/app-launcher")
-                   :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
-         (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d"))
-
-       #:config
-       `((setq scroll-margin 10
-               save-interprogram-paste-before-kill t)
-
-         ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
-         ;; (setq display-line-numbers-type nil)
-
-         (setq-default indent-tabs-mode t) ; Doom sets this to nil, reset it.
-
-         ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
-         ;; (setq-default cursor-in-non-selected-windows t)
-
-         (after! doom-modeline
-                 ;; (setq doom-modeline-checker-simple-format nil)
-                 (setq doom-modeline-major-mode-icon t)
-                 (setq doom-modeline-persp-name t))
-
-         (use-package! highlight-indent-guides
-                       :defer t
-                       :init
-                       ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-                       (remove-hook! '(prog-mode-hook
-                                       text-mode-hook
-                                       conf-mode-hook)
-                                     #'highlight-indent-guides-mode))
-
-         (after! evil
-                 (map! :m (vector 'C-i) nil)) ; Remove Doom's binding for `evil-jump-forward'.
-
-         (after! evil-multiedit
-                 (setq evil-multiedit-follow-matches t))
-
-         (use-package! lispy
-                       :defer t
-                       :init
-                       ;; Not using lispy, remove all the Doom module's hooks.
-                       (remove-hook! '(lisp-mode-hook
-                                       emacs-lisp-mode-hook
-                                       ielm-mode-hook
-                                       scheme-mode-hook
-                                       racket-mode-hook
-                                       hy-mode-hook
-                                       lfe-mode-hook
-                                       dune-mode-hook
-                                       clojure-mode-hook
-                                       fennel-mode-hook)
-                                     #'lispy-mode)
-                       (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
-
-         (use-package! lispyville
-                       :hook (prog-mode . lispyville-mode)
-                       :init
-                       (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
-                       :config
-                       (lispyville-set-key-theme
-                        '(operators
-                          c-w
-                          c-u
-                          commentary))
-                       (map! :map lispyville-mode-map
-                             "C-s-j" #'lispyville-beginning-of-next-defun
-                             "C-s-k" #'lispyville-beginning-of-defun
-                             "C-s-," #'lispyville-end-of-defun
-                             "C-s-a" #'lispyville-drag-backward
-                             "C-s-g" #'lispyville-drag-forward
-                             "C-s-p" #'lispyville-prettify
-                             (:prefix "C-s-;"
-                              "R" #'lispyville-raise-list)))
-
-         (use-package! org
-                       :defer t
-                       :init
-                       (setq org-directory ,(string-append "~/" org-dir))
-                       :config
-                       (setq org-log-done 'time
-                             org-priority-lowest ?E
-                             org-priority-default ?C
-                             org-priority-faces
-                             (-map (-lambda ((priority color))
-                                            (cons priority (doom-color color)))
-                                   '((?A red)
-                                     (?B orange)
-                                     (?C blue)
-                                     (?D yellow)
-                                     (?E green)))))
-
-         (after! ob
-                 (setq org-babel-noweb-error-all-langs t))
-
-         (after! evil-org
-                 (map! :map evil-org-mode-map
-                       :nv "C-j" #'outline-forward-same-level
-                       :nv "C-k" #'outline-backward-same-level))
-
-         (use-package! expand-region
-                       :defer t
-                       :init
-                       (map! :nv "s-e" #'er/expand-region
-                             :nv "s-E" #'er/contract-region)
-                       :config
-                       (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-                       ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
-                       (defadvice! biome--quit-expand-region-a (&rest _)
-                         "Properly abort an expand-region region."
-                         :before '(evil-escape doom/escape)
-                         (when (memq last-command '(er/expand-region er/contract-region))
-                           (er/contract-region 0))))
-
-         ;; REVIEW Trying out not having this so I can use avy dispatch commands.
-         ;; (after! avy
-         ;;   (setq avy-single-candidate-jump t))
-
-         (after! paren
-                 (setq! show-paren-delay 0))
-
-         (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
-
-         (after! rainbow-delimiters
-                 ;; Doom sets this to 4 for possible performance reasons. I like having more (and 9 is the rainbow-delimiters default). The Doom base theme defines 9 too so this should look okay on most themes (though if they define their own faces there might be some duplication/clash where their definitions stop and the base theme's start).
-                 (setq rainbow-delimiters-max-face-count 9))
-
-         (after! recentf
-                 (setq recentf-max-saved-items 500))
-
-         (after! smartparens
-                 (map! :map smartparens-mode-map
-                       "C-s-h" #'sp-backward-sexp
-                       "C-s-l" #'sp-forward-sexp
-                       "C-s-u" #'sp-backward-up-sexp
-                       "C-s-o" #'sp-up-sexp
-                       :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
-                       "C-s-." #'sp-down-sexp
-                       "C-s-c" #'sp-splice-sexp
-                       "C-s-s" #'sp-splice-sexp-killing-backward
-                       "C-s-f" #'sp-splice-sexp-killing-forward
-                       "C-s-x" #'sp-backward-slurp-sexp
-                       "C-s-v" #'sp-forward-slurp-sexp
-                       "C-s-w" #'sp-backward-barf-sexp
-                       "C-s-r" #'sp-forward-barf-sexp
-                       (:prefix "C-s-;"
-                        "(" #'sp-wrap-round
-                        "[" #'sp-wrap-square
-                        "{" #'sp-wrap-curly
-                        "s" #'sp-split-sexp
-                        "j" #'sp-join-sexp
-                        "r" #'sp-raise-sexp
-                        "c" #'sp-convolute-sexp
-                        "w" #'sp-rewrap-sexp)))
-
-         (defun biome-sp-strict-h ()
-           (add-hook! 'smartparens-enabled-hook :local
-                      #'turn-on-smartparens-strict-mode
-                      (defun biome-modify-sp-strict-mode-map-h ()
-                        (map! :map smartparens-strict-mode-map
-                              :i "DEL" #'sp-backward-delete-char))))
-
-         (after! undo-fu
-                 (setq undo-fu-ignore-keyboard-quit t))
-
-         ;; (after! undo-tree
-         ;;   (setq undo-tree-visualizer-timestamps t))
-
-         (after! emojify
-                 (setq emojify-display-style 'unicode))
-
-         ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-         (define-key! :keymaps +default-minibuffer-maps
-           "s-J" #'scroll-up-command
-           "s-K" #'scroll-down-command)
-
-         (map! "s-A" #'app-launcher-run-app)
-
-         ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
-         ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
-
-         (map! "s-&" (lambda (command)
-                       (interactive (list (read-shell-command "$ ")))
-                       (call-process-shell-command command nil 0 nil)))
-
-         (map! :leader
-               "s-," (lookup-key doom-leader-map (kbd "<")))
-
-         (after! company
-                 (map! :map company-active-map
-                       "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-                       "s-]" #'company-show-location))
-
-         (after! evil-org
-                 (map! :map evil-org-mode-map
-                       (:prefix "g"
-                        :nv "{" #'evil-backward-paragraph
-                        :nv "}" #'evil-forward-paragraph)))
-
-         ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
-         (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
-
-         ;; `forward-char' in original definition is messing things up, do this for now
-         ;; (defun +eshell/search-history ()
-         ;;   (interactive)
-         ;;   (consult-history))
-         (after! esh-mode
-                 (map! :map eshell-mode-map
-                       "C-s" #'consult-history))
-
-         (after! vertico
-                 (setq vertico-count 20  ; Trying out, maybe too big.
-                       vertico-scroll-margin 7))
-
-         (map! (:leader
-                "A" #'embark-dwim)
-               ;; Trying out cycling (temp)
-               "C-:" #'embark-act
-               "s-q" #'embark-cycle)
-
-         ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
-         ;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
-         (use-package! s)
-         (add-hook! 'doom-real-buffer-functions
-                    ;; (defun biome-new-buffer-p (buf)
-                    ;;   (s-matches?
-                    ;;    (rx bol "*new*"
-                    ;;        (* "<" (+ digit) ">")
-                    ;;        eol)
-                    ;;    (buffer-name buf)))
-                    ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
-                    (defun biome-org-src-edit-buffer-p (buf)
-                      (s-matches?
-                       (rx bol "*Org Src " (+ anything) "*"
-                           (* "<" (+ digit) ">")
-                           eol)
-                       (buffer-name buf))))
-
-         ;;  TODO Might be easier to do this with file-local variables.
-         ;; (setq biome--phrenetic-dir "~/work/phrenetic")
-         ;; (add-hook! 'org-mode-hook
-         ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
-         ;;     (add-hook! 'after-save-hook :local
-         ;;       (defun biome-autotangle-h ()
-         ;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
-         ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
-         ;;           (let ((org-confirm-babel-evaluate nil))
-         ;;             (org-babel-tangle)))))))
-
-         ;; (use-package! org-tanglesync
-         ;;   :hook ((org-mode . org-tanglesync-mode)
-         ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
-         ;;   :config
-         ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
-
-         ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
-         ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
-         ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
-         ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
-
-         (map! "s-o" (lookup-key doom-leader-map (kbd "<")))
-         ;; Get rid of binding for =s-r=?
-         (map! "s-r" nil)
-
-         ;; Also messes with my sexp-movement bindings
-         ;; (map! "C-s-j" #'evil-scroll-down
-         ;;       "C-s-k" #'evil-scroll-up)
-
-         (after! evil
-                 (map! :map evil-motion-state-map
-                       ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
-                       "C-S-o" #'evil-jump-forward))))
-
-      (when stateless?
-        (doom-stateless-service
+  (let ((dirvish? #t))
+    (append
+     (let ((name 'general))
+       (list
+        (doom-service
          name
-         #:state '(((#:path . ("projectile.projects" #:doom-base #:cache))
-                    (#:store . #:persist))
-                   ((#:path . ("recentf" #:doom-base #:cache))
-                    (#:store . #:persist))
-                   ((#:path . ("savehist" #:doom-base #:cache))
-                    (#:store . #:persist))
-                   ((#:path . ("saveplace" #:doom-base #:cache))
-                    (#:store . #:persist))
-                   ((#:path . ("bookmarks" #:doom-base #:data))
-                    (#:store . #:persist))
-                   ((#:path . ("org-clock-save.el" #:doom-base #:data))
-                    (#:store . #:persist))
-                   ((#:path . ("scratch/" #:doom-base #:data))
-                    (#:store . #:persist))
-                   ((#:path . ("autosave/" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("org/persist/" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("projectile.cache" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("tramp" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("undo-fu-session/" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("workspaces/autosave/" #:doom-base #:data))
-                    (#:store . #:machine)))))))
+         #:modules
+         (let ((childframe? #t)
+               (icons? #t))
+           `((#:completion
+              (company ,@(if childframe? '(+childframe) '()))
+              (vertico ,@(if icons? '(+icons) '())))
 
-   (doom-transient)
-   (doom-dash)))
+             (#:ui
+              doom
+              doom-dashboard
+              (emoji +unicode)
+              hl-todo
+              hydra
+              indent-guides
+              ;; (ligatures +extra)
+              modeline
+              nav-flash
+              ophints
+              (popup +defaults +all)
+              treemacs
+              vi-tilde-fringe
+              window-select
+              workspaces)
+
+             (#:editor
+              (evil +everywhere)
+              file-templates
+              fold
+              format
+              lispy
+              multiple-cursors
+              rotate-text
+              snippets
+              word-wrap)
+
+             (#:emacs
+              (dired ,@(if icons? '(+icons) '())
+                     ,@(if dirvish? '(+dirvish) '()))
+              electric
+              (ibuffer ,@(if icons? '(+icons) '()))
+              undo)
+
+             (#:checkers
+              (syntax ,@(if childframe? '(+childframe) '())))
+
+             (#:tools
+              (eval +overlay)
+              lookup
+              (pass +auth)
+              pdf
+              prodigy
+              rgb
+              taskrunner
+              ,@(if tree-sitter? '(tree-sitter) '()))
+
+             (#:lang
+              (org +journal)
+              (rest +jq))
+
+             (#:config
+              (default +bindings +smartparens))))
+
+         #:packages
+         '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
+           (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+           ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
+           (package! app-launcher
+                     :recipe (:host github
+                              :repo "SebastienWae/app-launcher")
+                     :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")
+           (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d"))
+
+         #:config
+         `((setq scroll-margin 10
+                 save-interprogram-paste-before-kill t)
+
+           ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
+           ;; (setq display-line-numbers-type nil)
+
+           (setq-default indent-tabs-mode t) ; Doom sets this to nil, reset it.
+
+           ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+           ;; (setq-default cursor-in-non-selected-windows t)
+
+           (after! doom-modeline
+                   ;; (setq doom-modeline-checker-simple-format nil)
+                   (setq doom-modeline-major-mode-icon t)
+                   (setq doom-modeline-persp-name t))
+
+           (use-package! highlight-indent-guides
+                         :defer t
+                         :init
+                         ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+                         (remove-hook! '(prog-mode-hook
+                                         text-mode-hook
+                                         conf-mode-hook)
+                                       #'highlight-indent-guides-mode))
+
+           (after! evil
+                   (map! :m (vector 'C-i) nil)) ; Remove Doom's binding for `evil-jump-forward'.
+
+           (after! evil-multiedit
+                   (setq evil-multiedit-follow-matches t))
+
+           (use-package! lispy
+                         :defer t
+                         :init
+                         ;; Not using lispy, remove all the Doom module's hooks.
+                         (remove-hook! '(lisp-mode-hook
+                                         emacs-lisp-mode-hook
+                                         ielm-mode-hook
+                                         scheme-mode-hook
+                                         racket-mode-hook
+                                         hy-mode-hook
+                                         lfe-mode-hook
+                                         dune-mode-hook
+                                         clojure-mode-hook
+                                         fennel-mode-hook)
+                                       #'lispy-mode)
+                         (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
+
+           (use-package! lispyville
+                         :hook (prog-mode . lispyville-mode)
+                         :init
+                         (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
+                         :config
+                         (lispyville-set-key-theme
+                          '(operators
+                            c-w
+                            c-u
+                            commentary))
+                         (map! :map lispyville-mode-map
+                               "C-s-j" #'lispyville-beginning-of-next-defun
+                               "C-s-k" #'lispyville-beginning-of-defun
+                               "C-s-," #'lispyville-end-of-defun
+                               "C-s-a" #'lispyville-drag-backward
+                               "C-s-g" #'lispyville-drag-forward
+                               "C-s-p" #'lispyville-prettify
+                               (:prefix "C-s-;"
+                                "R" #'lispyville-raise-list)))
+
+           (use-package! org
+                         :defer t
+                         :init
+                         (setq org-directory ,(string-append "~/" org-dir))
+                         :config
+                         (setq org-log-done 'time
+                               org-priority-lowest ?E
+                               org-priority-default ?C
+                               org-priority-faces
+                               (-map (-lambda ((priority color))
+                                              (cons priority (doom-color color)))
+                                     '((?A red)
+                                       (?B orange)
+                                       (?C blue)
+                                       (?D yellow)
+                                       (?E green)))))
+
+           (after! ob
+                   (setq org-babel-noweb-error-all-langs t))
+
+           (after! evil-org
+                   (map! :map evil-org-mode-map
+                         :nv "C-j" #'outline-forward-same-level
+                         :nv "C-k" #'outline-backward-same-level))
+
+           (use-package! expand-region
+                         :defer t
+                         :init
+                         (map! :nv "s-e" #'er/expand-region
+                               :nv "s-E" #'er/contract-region)
+                         :config
+                         (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+                         ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
+                         (defadvice! biome--quit-expand-region-a (&rest _)
+                           "Properly abort an expand-region region."
+                           :before '(evil-escape doom/escape)
+                           (when (memq last-command '(er/expand-region er/contract-region))
+                             (er/contract-region 0))))
+
+           ;; REVIEW Trying out not having this so I can use avy dispatch commands.
+           ;; (after! avy
+           ;;   (setq avy-single-candidate-jump t))
+
+           (after! paren
+                   (setq! show-paren-delay 0))
+
+           (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
+
+           (after! rainbow-delimiters
+                   ;; Doom sets this to 4 for possible performance reasons. I like having more (and 9 is the rainbow-delimiters default). The Doom base theme defines 9 too so this should look okay on most themes (though if they define their own faces there might be some duplication/clash where their definitions stop and the base theme's start).
+                   (setq rainbow-delimiters-max-face-count 9))
+
+           (after! recentf
+                   (setq recentf-max-saved-items 500))
+
+           (after! smartparens
+                   (map! :map smartparens-mode-map
+                         "C-s-h" #'sp-backward-sexp
+                         "C-s-l" #'sp-forward-sexp
+                         "C-s-u" #'sp-backward-up-sexp
+                         "C-s-o" #'sp-up-sexp
+                         :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
+                         "C-s-." #'sp-down-sexp
+                         "C-s-c" #'sp-splice-sexp
+                         "C-s-s" #'sp-splice-sexp-killing-backward
+                         "C-s-f" #'sp-splice-sexp-killing-forward
+                         "C-s-x" #'sp-backward-slurp-sexp
+                         "C-s-v" #'sp-forward-slurp-sexp
+                         "C-s-w" #'sp-backward-barf-sexp
+                         "C-s-r" #'sp-forward-barf-sexp
+                         (:prefix "C-s-;"
+                          "(" #'sp-wrap-round
+                          "[" #'sp-wrap-square
+                          "{" #'sp-wrap-curly
+                          "s" #'sp-split-sexp
+                          "j" #'sp-join-sexp
+                          "r" #'sp-raise-sexp
+                          "c" #'sp-convolute-sexp
+                          "w" #'sp-rewrap-sexp)))
+
+           (defun biome-sp-strict-h ()
+             (add-hook! 'smartparens-enabled-hook :local
+                        #'turn-on-smartparens-strict-mode
+                        (defun biome-modify-sp-strict-mode-map-h ()
+                          (map! :map smartparens-strict-mode-map
+                                :i "DEL" #'sp-backward-delete-char))))
+
+           (after! undo-fu
+                   (setq undo-fu-ignore-keyboard-quit t))
+
+           ;; (after! undo-tree
+           ;;   (setq undo-tree-visualizer-timestamps t))
+
+           (after! emojify
+                   (setq emojify-display-style 'unicode))
+
+           ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+           (define-key! :keymaps +default-minibuffer-maps
+             "s-J" #'scroll-up-command
+             "s-K" #'scroll-down-command)
+
+           (map! "s-A" #'app-launcher-run-app)
+
+           ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
+           ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+           (map! "s-&" (lambda (command)
+                         (interactive (list (read-shell-command "$ ")))
+                         (call-process-shell-command command nil 0 nil)))
+
+           (map! :leader
+                 "s-," (lookup-key doom-leader-map (kbd "<")))
+
+           (after! company
+                   (map! :map company-active-map
+                         "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+                         "s-]" #'company-show-location))
+
+           (after! evil-org
+                   (map! :map evil-org-mode-map
+                         (:prefix "g"
+                          :nv "{" #'evil-backward-paragraph
+                          :nv "}" #'evil-forward-paragraph)))
+
+           ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
+           (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
+
+           ;; `forward-char' in original definition is messing things up, do this for now
+           ;; (defun +eshell/search-history ()
+           ;;   (interactive)
+           ;;   (consult-history))
+           (after! esh-mode
+                   (map! :map eshell-mode-map
+                         "C-s" #'consult-history))
+
+           (after! vertico
+                   (setq vertico-count 20  ; Trying out, maybe too big.
+                         vertico-scroll-margin 7))
+
+           (map! (:leader
+                  "A" #'embark-dwim)
+                 ;; Trying out cycling (temp)
+                 "C-:" #'embark-act
+                 "s-q" #'embark-cycle)
+
+           ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
+           ;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
+           (use-package! s)
+           (add-hook! 'doom-real-buffer-functions
+                      ;; (defun biome-new-buffer-p (buf)
+                      ;;   (s-matches?
+                      ;;    (rx bol "*new*"
+                      ;;        (* "<" (+ digit) ">")
+                      ;;        eol)
+                      ;;    (buffer-name buf)))
+                      ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
+                      (defun biome-org-src-edit-buffer-p (buf)
+                        (s-matches?
+                         (rx bol "*Org Src " (+ anything) "*"
+                             (* "<" (+ digit) ">")
+                             eol)
+                         (buffer-name buf))))
+
+           ;;  TODO Might be easier to do this with file-local variables.
+           ;; (setq biome--phrenetic-dir "~/work/phrenetic")
+           ;; (add-hook! 'org-mode-hook
+           ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
+           ;;     (add-hook! 'after-save-hook :local
+           ;;       (defun biome-autotangle-h ()
+           ;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
+           ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
+           ;;           (let ((org-confirm-babel-evaluate nil))
+           ;;             (org-babel-tangle)))))))
+
+           ;; (use-package! org-tanglesync
+           ;;   :hook ((org-mode . org-tanglesync-mode)
+           ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
+           ;;   :config
+           ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
+
+           ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+           ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
+           ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+           ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
+
+           (map! "s-o" (lookup-key doom-leader-map (kbd "<")))
+           ;; Get rid of binding for =s-r=?
+           (map! "s-r" nil)
+
+           ;; Also messes with my sexp-movement bindings
+           ;; (map! "C-s-j" #'evil-scroll-down
+           ;;       "C-s-k" #'evil-scroll-up)
+
+           (after! evil
+                   (map! :map evil-motion-state-map
+                         ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
+                         "C-S-o" #'evil-jump-forward))))
+
+        (when stateless?
+          (doom-stateless-service
+           name
+           #:state (append
+                    '(((#:path . ("projectile.projects" #:doom-base #:cache))
+                       (#:store . #:persist))
+                      ((#:path . ("recentf" #:doom-base #:cache))
+                       (#:store . #:persist))
+                      ((#:path . ("savehist" #:doom-base #:cache))
+                       (#:store . #:persist))
+                      ((#:path . ("saveplace" #:doom-base #:cache))
+                       (#:store . #:persist))
+                      ((#:path . ("bookmarks" #:doom-base #:data))
+                       (#:store . #:persist))
+                      ((#:path . ("org-clock-save.el" #:doom-base #:data))
+                       (#:store . #:persist))
+                      ((#:path . ("scratch/" #:doom-base #:data))
+                       (#:store . #:persist))
+                      ((#:path . ("autosave/" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("org/persist/" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("projectile.cache" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("tramp" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("undo-fu-session/" #:doom-base #:cache))
+                       (#:store . #:machine))
+                      ((#:path . ("workspaces/autosave/" #:doom-base #:data))
+                       (#:store . #:machine)))
+                    (if dirvish?
+                        '(((#:path . ("dirvish/" #:doom-base #:cache))
+                           (#:store . #:machine)))
+                        '()))))))
+
+     (if dirvish?
+         (doom-transient) '())
+     (doom-dash))))
 #+end_src
 ****** User
 #+begin_src scheme
