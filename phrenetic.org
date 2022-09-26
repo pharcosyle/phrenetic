@@ -2027,7 +2027,8 @@ Maybe make a simple home-activation-service that ensures the nix profile package
         (list (local-file "zsh-vterm"))))))))
 #+end_src
 **** Configure zsh for vterm
-#+begin_src sh :tangle (meta-in-dir "zsh-vterm")
+- TODO Changed the org source block type to "org" from "sh" because there's a fontification error.
+#+begin_src org :tangle (meta-in-dir "zsh-vterm")
 vterm_printf(){
     if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
         # Tell tmux to pass the escape sequences through
