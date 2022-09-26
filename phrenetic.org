@@ -4640,22 +4640,26 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                     tree-sitter?
                     email
                     org-dir)
-  (append
-   (doom-general #:stateless? stateless?
-                 #:tree-sitter? tree-sitter?)
-   (doom-user #:email email)
-   (doom-keymaps)
-   (doom-org #:org-dir org-dir)
-   (doom-languages #:tree-sitter? tree-sitter?)
-   (doom-calendar #:stateless? stateless?
-                  #:email email)
-   (doom-guix #:stateless? stateless?)))
+  (let ((evil? #t))
+    (append
+     (doom-general #:stateless? stateless?
+                   #:tree-sitter? tree-sitter?
+                   #:evil? evil?)
+     (doom-user #:email email)
+     (doom-keymaps)
+     (doom-org #:evil? evil?
+               #:org-dir org-dir)
+     (doom-languages #:tree-sitter? tree-sitter?)
+     (doom-calendar #:stateless? stateless?
+                    #:email email)
+     (doom-guix #:stateless? stateless?))))
 #+end_src
 ****** General :bindings:
 #+begin_src scheme
 (define* (doom-general #:key
                        stateless?
-                       tree-sitter?)
+                       tree-sitter?
+                       evil?)
   (let ((dirvish? #t))
     (append
      (let ((name 'general))
@@ -4687,7 +4691,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
               workspaces)
 
              (#:editor
-              (evil +everywhere)
+              ,@(if evil? '((evil +everywhere)) '())
               file-templates
               fold
               format
@@ -4734,143 +4738,147 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d"))
 
          #:config
-         '((setq scroll-margin 10
-                 save-interprogram-paste-before-kill t)
+         (append
+          '((setq scroll-margin 10
+                  save-interprogram-paste-before-kill t)
 
-           ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
-           ;; (setq display-line-numbers-type nil)
+            ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
+            ;; (setq display-line-numbers-type nil)
 
-           (setq-default indent-tabs-mode t) ; Doom sets this to nil, reset it.
+            (setq-default indent-tabs-mode t) ; Doom sets this to nil, reset it.
 
-           ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
-           ;; (setq-default cursor-in-non-selected-windows t)
+            ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
+            ;; (setq-default cursor-in-non-selected-windows t)
 
-           (after! doom-modeline
-                   ;; (setq doom-modeline-checker-simple-format nil)
-                   (setq doom-modeline-major-mode-icon t)
-                   (setq doom-modeline-persp-name t))
+            (after! doom-modeline
+                    ;; (setq doom-modeline-checker-simple-format nil)
+                    (setq doom-modeline-major-mode-icon t)
+                    (setq doom-modeline-persp-name t))
 
-           (use-package! highlight-indent-guides
-                         :defer t
-                         :init
-                         ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-                         (remove-hook! '(prog-mode-hook
-                                         text-mode-hook
-                                         conf-mode-hook)
-                                       #'highlight-indent-guides-mode))
+            (use-package! highlight-indent-guides
+                          :defer t
+                          :init
+                          ;; I don't want indent guides on by default, remove all the Doom module's hooks.
+                          (remove-hook! '(prog-mode-hook
+                                          text-mode-hook
+                                          conf-mode-hook)
+                                        #'highlight-indent-guides-mode))
 
-           (after! evil
-                   (map! :m (vector 'C-i) nil)) ; Remove Doom's binding for `evil-jump-forward'.
+            (use-package! lispy
+                          :defer t
+                          :init
+                          ;; Not using lispy, remove all the Doom module's hooks.
+                          (remove-hook! '(lisp-mode-hook
+                                          emacs-lisp-mode-hook
+                                          ielm-mode-hook
+                                          scheme-mode-hook
+                                          racket-mode-hook
+                                          hy-mode-hook
+                                          lfe-mode-hook
+                                          dune-mode-hook
+                                          clojure-mode-hook
+                                          fennel-mode-hook)
+                                        #'lispy-mode)
+                          (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
 
-           (after! evil-multiedit
-                   (setq evil-multiedit-follow-matches t))
+            (use-package! lispyville
+                          :hook (prog-mode . lispyville-mode)
+                          :init
+                          (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
+                          :config
+                          (lispyville-set-key-theme
+                           '(operators
+                             c-w
+                             c-u
+                             commentary))
+                          (map! :map lispyville-mode-map
+                                "C-s-j" #'lispyville-beginning-of-next-defun
+                                "C-s-k" #'lispyville-beginning-of-defun
+                                "C-s-," #'lispyville-end-of-defun
+                                "C-s-a" #'lispyville-drag-backward
+                                "C-s-g" #'lispyville-drag-forward
+                                "C-s-p" #'lispyville-prettify
+                                (:prefix "C-s-;"
+                                 "R" #'lispyville-raise-list)))
 
-           (use-package! lispy
-                         :defer t
-                         :init
-                         ;; Not using lispy, remove all the Doom module's hooks.
-                         (remove-hook! '(lisp-mode-hook
-                                         emacs-lisp-mode-hook
-                                         ielm-mode-hook
-                                         scheme-mode-hook
-                                         racket-mode-hook
-                                         hy-mode-hook
-                                         lfe-mode-hook
-                                         dune-mode-hook
-                                         clojure-mode-hook
-                                         fennel-mode-hook)
-                                       #'lispy-mode)
-                         (remove-hook! 'eval-expression-minibuffer-setup-hook #'doom-init-lispy-in-eval-expression-h))
+            (use-package! expand-region
+                          :defer t
+                          :init
+                          (map! :nv "s-e" #'er/expand-region
+                                :nv "s-E" #'er/contract-region)
+                          :config
+                          (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
+                          ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
+                          (defadvice! biome--quit-expand-region-a (&rest _)
+                            "Properly abort an expand-region region."
+                            :before '(evil-escape doom/escape) ; TODO `evil-escape': maybe gate with `evil?'
+                            (when (memq last-command '(er/expand-region er/contract-region))
+                              (er/contract-region 0))))
 
-           (use-package! lispyville
-                         :hook (prog-mode . lispyville-mode)
-                         :init
-                         (setq lispyville-key-theme nil) ; Prevent Doom module's invocation of `lispyville-set-key-theme' from doing anything.
-                         :config
-                         (lispyville-set-key-theme
-                          '(operators
-                            c-w
-                            c-u
-                            commentary))
-                         (map! :map lispyville-mode-map
-                               "C-s-j" #'lispyville-beginning-of-next-defun
-                               "C-s-k" #'lispyville-beginning-of-defun
-                               "C-s-," #'lispyville-end-of-defun
-                               "C-s-a" #'lispyville-drag-backward
-                               "C-s-g" #'lispyville-drag-forward
-                               "C-s-p" #'lispyville-prettify
-                               (:prefix "C-s-;"
-                                "R" #'lispyville-raise-list)))
+            ;; REVIEW Trying out not having this so I can use avy dispatch commands.
+            ;; (after! avy
+            ;;   (setq avy-single-candidate-jump t))
 
-           (use-package! expand-region
-                         :defer t
-                         :init
-                         (map! :nv "s-e" #'er/expand-region
-                               :nv "s-E" #'er/contract-region)
-                         :config
-                         (setq expand-region-fast-keys-enabled nil) ; My mapping is conventient enough and I don't want the repeat key to conflict with anything.
-                         ;; Copied from Doom config: ~/.config/emacs/modules/config/default/+emacs.el:12
-                         (defadvice! biome--quit-expand-region-a (&rest _)
-                           "Properly abort an expand-region region."
-                           :before '(evil-escape doom/escape)
-                           (when (memq last-command '(er/expand-region er/contract-region))
-                             (er/contract-region 0))))
+            (after! paren
+                    (setq! show-paren-delay 0))
 
-           ;; REVIEW Trying out not having this so I can use avy dispatch commands.
-           ;; (after! avy
-           ;;   (setq avy-single-candidate-jump t))
+            (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
 
-           (after! paren
-                   (setq! show-paren-delay 0))
+            (after! rainbow-delimiters
+                    ;; Doom sets this to 4 for possible performance reasons. I like having more (and 9 is the rainbow-delimiters default). The Doom base theme defines 9 too so this should look okay on most themes (though if they define their own faces there might be some duplication/clash where their definitions stop and the base theme's start).
+                    (setq rainbow-delimiters-max-face-count 9))
 
-           (add-hook! 'prog-mode-hook #'biome-sp-strict-h)
+            (after! recentf
+                    (setq recentf-max-saved-items 500))
 
-           (after! rainbow-delimiters
-                   ;; Doom sets this to 4 for possible performance reasons. I like having more (and 9 is the rainbow-delimiters default). The Doom base theme defines 9 too so this should look okay on most themes (though if they define their own faces there might be some duplication/clash where their definitions stop and the base theme's start).
-                   (setq rainbow-delimiters-max-face-count 9))
+            (after! smartparens
+                    (map! :map smartparens-mode-map
+                          "C-s-h" #'sp-backward-sexp
+                          "C-s-l" #'sp-forward-sexp
+                          "C-s-u" #'sp-backward-up-sexp
+                          "C-s-o" #'sp-up-sexp
+                          :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
+                          "C-s-." #'sp-down-sexp
+                          "C-s-c" #'sp-splice-sexp
+                          "C-s-s" #'sp-splice-sexp-killing-backward
+                          "C-s-f" #'sp-splice-sexp-killing-forward
+                          "C-s-x" #'sp-backward-slurp-sexp
+                          "C-s-v" #'sp-forward-slurp-sexp
+                          "C-s-w" #'sp-backward-barf-sexp
+                          "C-s-r" #'sp-forward-barf-sexp
+                          (:prefix "C-s-;"
+                           "(" #'sp-wrap-round
+                           "[" #'sp-wrap-square
+                           "{" #'sp-wrap-curly
+                           "s" #'sp-split-sexp
+                           "j" #'sp-join-sexp
+                           "r" #'sp-raise-sexp
+                           "c" #'sp-convolute-sexp
+                           "w" #'sp-rewrap-sexp)))
 
-           (after! recentf
-                   (setq recentf-max-saved-items 500))
+            (defun biome-sp-strict-h ()
+              (add-hook! 'smartparens-enabled-hook :local
+                         #'turn-on-smartparens-strict-mode
+                         (defun biome-modify-sp-strict-mode-map-h ()
+                           (map! :map smartparens-strict-mode-map
+                                 :i "DEL" #'sp-backward-delete-char))))
 
-           (after! smartparens
-                   (map! :map smartparens-mode-map
-                         "C-s-h" #'sp-backward-sexp
-                         "C-s-l" #'sp-forward-sexp
-                         "C-s-u" #'sp-backward-up-sexp
-                         "C-s-o" #'sp-up-sexp
-                         :gn "C-s-m" #'sp-backward-down-sexp ; Bind in normal mode explicitly to override the Doom mapping in ~/.config/emacs/modules/config/default/config.el:447
-                         "C-s-." #'sp-down-sexp
-                         "C-s-c" #'sp-splice-sexp
-                         "C-s-s" #'sp-splice-sexp-killing-backward
-                         "C-s-f" #'sp-splice-sexp-killing-forward
-                         "C-s-x" #'sp-backward-slurp-sexp
-                         "C-s-v" #'sp-forward-slurp-sexp
-                         "C-s-w" #'sp-backward-barf-sexp
-                         "C-s-r" #'sp-forward-barf-sexp
-                         (:prefix "C-s-;"
-                          "(" #'sp-wrap-round
-                          "[" #'sp-wrap-square
-                          "{" #'sp-wrap-curly
-                          "s" #'sp-split-sexp
-                          "j" #'sp-join-sexp
-                          "r" #'sp-raise-sexp
-                          "c" #'sp-convolute-sexp
-                          "w" #'sp-rewrap-sexp)))
+            (after! undo-fu
+                    (setq undo-fu-ignore-keyboard-quit t))
 
-           (defun biome-sp-strict-h ()
-             (add-hook! 'smartparens-enabled-hook :local
-                        #'turn-on-smartparens-strict-mode
-                        (defun biome-modify-sp-strict-mode-map-h ()
-                          (map! :map smartparens-strict-mode-map
-                                :i "DEL" #'sp-backward-delete-char))))
+            ;; (after! undo-tree
+            ;;   (setq undo-tree-visualizer-timestamps t))
+            )
 
-           (after! undo-fu
-                   (setq undo-fu-ignore-keyboard-quit t))
+          (if evil?
+              '((after! evil
+                        (map! :m (vector 'C-i) nil)) ; Remove Doom's binding for `evil-jump-forward'.
 
-           ;; (after! undo-tree
-           ;;   (setq undo-tree-visualizer-timestamps t))
+                (after! evil-multiedit
+                        (setq evil-multiedit-follow-matches t)))
+              '())
 
-           ,@(wip-config)))
+          (wip-config)))
 
         (when stateless?
           (doom-stateless-service
@@ -5062,13 +5070,14 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
              "s-n" #'+default/new-buffer
              "s-z" #'undo
              "s-Z" #'redo
-             "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill)
+             "s-c" (if (featurep 'evil) #'evil-yank #'copy-region-as-kill) ; TODO If keeping this, gate with `evil?'.
              "s-v" #'yank
              "s-s" #'save-buffer
              "s-x" #'execute-extended-command
              ;; REVIEW I don't think I need this, any time I'm in visual mode I can use `evil-delete` ("d")
              ;; :v "s-x" #'kill-region
              "s-/" (cmd! (save-excursion (comment-line 1)))
+             ;; TODO If keeping this, gate with `evil?'.
              :n "s-/" #'evilnc-comment-or-uncomment-lines
              :v "s-/" #'evilnc-comment-operator
 
@@ -5092,11 +5101,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
              (:map universal-argument-map
               "s-u" #'universal-argument-more)
 
+             ;; TODO Gate with `evil?'.
              (:after evil-easymotion
               "s-a" (lookup-key evilem-map (kbd "SPC")))
 
              "s-." #'repeat
 
+             ;; TODO Gate with `evil?'.
              "s-J" #'evil-scroll-down
              "s-K" #'evil-scroll-up
 
@@ -5109,6 +5120,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
               "t" #'tldr
               "s" #'org-save-all-org-buffers
               "a" #'link-hint-open-multiple-links
+              ;; TODO Gate with `evil?'.
               ;; "b" (cmd! (evil-local-mode 'toggle)
               ;;           (when evil-local-mode (evil-normal-state)))
               (:prefix "c"
@@ -5130,6 +5142,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-org #:key
                    stateless?
+                   evil?
                    org-dir)
   (append
    (let ((name 'org))
@@ -5139,30 +5152,33 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        #:modules '((#:lang
                     (org +journal)))
        #:config
-       `((use-package! org
-                       :defer t
-                       :init
-                       (setq org-directory ,(string-append "~/" org-dir))
-                       :config
-                       (setq org-log-done 'time
-                             org-priority-lowest ?E
-                             org-priority-default ?C
-                             org-priority-faces
-                             (-map (-lambda ((priority color))
-                                            (cons priority (doom-color color)))
-                                   '((?A red)
-                                     (?B orange)
-                                     (?C blue)
-                                     (?D yellow)
-                                     (?E green)))))
+       (append
+        `((use-package! org
+                        :defer t
+                        :init
+                        (setq org-directory ,(string-append "~/" org-dir))
+                        :config
+                        (setq org-log-done 'time
+                              org-priority-lowest ?E
+                              org-priority-default ?C
+                              org-priority-faces
+                              (-map (-lambda ((priority color))
+                                             (cons priority (doom-color color)))
+                                    '((?A red)
+                                      (?B orange)
+                                      (?C blue)
+                                      (?D yellow)
+                                      (?E green)))))
 
-         (after! ob
-                 (setq org-babel-noweb-error-all-langs t))
+          (after! ob
+                  (setq org-babel-noweb-error-all-langs t)))
 
-         (after! evil-org
-                 (map! :map evil-org-mode-map
-                       :nv "C-j" #'outline-forward-same-level
-                       :nv "C-k" #'outline-backward-same-level))))
+        (if evil?
+            '((after! evil-org
+                      (map! :map evil-org-mode-map
+                            :nv "C-j" #'outline-forward-same-level
+                            :nv "C-k" #'outline-backward-same-level)))
+            '())))
 
       (when stateless?
         (doom-stateless-service
