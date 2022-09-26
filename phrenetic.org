@@ -4647,7 +4647,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    #:evil? evil?)
      (doom-user #:email email)
      (doom-keymaps)
-     (doom-org #:evil? evil?
+     (doom-org #:stateless? stateless?
+               #:evil? evil?
                #:org-dir org-dir)
      (doom-languages #:tree-sitter? tree-sitter?)
      (doom-calendar #:stateless? stateless?
