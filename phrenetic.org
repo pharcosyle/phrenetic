@@ -4734,7 +4734,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d"))
 
          #:config
-         `((setq scroll-margin 10
+         '((setq scroll-margin 10
                  save-interprogram-paste-before-kill t)
 
            ;; I like having line numbers on but hlissner says they're slow so I might want to disable them at some point. Keep in mind I use them to determine what lines are continuation lines so I might have to make the right fringe bigger if I do this and set visual-line-fringe-indicators.
@@ -4870,110 +4870,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            ;; (after! undo-tree
            ;;   (setq undo-tree-visualizer-timestamps t))
 
-           (after! emojify
-                   (setq emojify-display-style 'unicode))
-
-           ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
-           (define-key! :keymaps +default-minibuffer-maps
-             "s-J" #'scroll-up-command
-             "s-K" #'scroll-down-command)
-
-           (map! "s-A" #'app-launcher-run-app)
-
-           ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
-           ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
-
-           (map! "s-&" (lambda (command)
-                         (interactive (list (read-shell-command "$ ")))
-                         (call-process-shell-command command nil 0 nil)))
-
-           (map! :leader
-                 "s-," (lookup-key doom-leader-map (kbd "<")))
-
-           (after! company
-                   (map! :map company-active-map
-                         "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-                         "s-]" #'company-show-location))
-
-           (after! evil-org
-                   (map! :map evil-org-mode-map
-                         (:prefix "g"
-                          :nv "{" #'evil-backward-paragraph
-                          :nv "}" #'evil-forward-paragraph)))
-
-           ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
-           (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
-
-           ;; `forward-char' in original definition is messing things up, do this for now
-           ;; (defun +eshell/search-history ()
-           ;;   (interactive)
-           ;;   (consult-history))
-           (after! esh-mode
-                   (map! :map eshell-mode-map
-                         "C-s" #'consult-history))
-
-           (after! vertico
-                   (setq vertico-count 20  ; Trying out, maybe too big.
-                         vertico-scroll-margin 7))
-
-           (map! (:leader
-                  "A" #'embark-dwim)
-                 ;; Trying out cycling (temp)
-                 "C-:" #'embark-act
-                 "s-q" #'embark-cycle)
-
-           ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
-           ;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
-           (use-package! s)
-           (add-hook! 'doom-real-buffer-functions
-                      ;; (defun biome-new-buffer-p (buf)
-                      ;;   (s-matches?
-                      ;;    (rx bol "*new*"
-                      ;;        (* "<" (+ digit) ">")
-                      ;;        eol)
-                      ;;    (buffer-name buf)))
-                      ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
-                      (defun biome-org-src-edit-buffer-p (buf)
-                        (s-matches?
-                         (rx bol "*Org Src " (+ anything) "*"
-                             (* "<" (+ digit) ">")
-                             eol)
-                         (buffer-name buf))))
-
-           ;;  TODO Might be easier to do this with file-local variables.
-           ;; (setq biome--phrenetic-dir "~/work/phrenetic")
-           ;; (add-hook! 'org-mode-hook
-           ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
-           ;;     (add-hook! 'after-save-hook :local
-           ;;       (defun biome-autotangle-h ()
-           ;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
-           ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
-           ;;           (let ((org-confirm-babel-evaluate nil))
-           ;;             (org-babel-tangle)))))))
-
-           ;; (use-package! org-tanglesync
-           ;;   :hook ((org-mode . org-tanglesync-mode)
-           ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
-           ;;   :config
-           ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
-
-           ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
-           ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
-           ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
-           ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
-
-           (map! "s-o" (lookup-key doom-leader-map (kbd "<")))
-           ;; Get rid of binding for =s-r=?
-           (map! "s-r" nil)
-
-           ;; Also messes with my sexp-movement bindings
-           ;; (map! "C-s-j" #'evil-scroll-down
-           ;;       "C-s-k" #'evil-scroll-up)
-
-           (after! evil
-                   (map! :map evil-motion-state-map
-                         ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
-                         "C-S-o" #'evil-jump-forward))))
+           ,@(wip-config)))
 
         (when stateless?
           (doom-stateless-service
@@ -5008,6 +4905,116 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
      (if dirvish?
          (doom-transient) '()))))
+
+
+
+;; TODO WIP. Some of this stuff belongs in other components or gated.
+
+(define (wip-config)
+  '((after! emojify
+            (setq emojify-display-style 'unicode))
+
+    ;; TODO donno where this should go, ~+default-minibuffer-maps~ is a doom thing I guess
+    (define-key! :keymaps +default-minibuffer-maps
+      "s-J" #'scroll-up-command
+      "s-K" #'scroll-down-command)
+
+    (map! "s-A" #'app-launcher-run-app)
+
+    ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
+    ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
+
+    (map! "s-&" (lambda (command)
+                  (interactive (list (read-shell-command "$ ")))
+                  (call-process-shell-command command nil 0 nil)))
+
+    (map! :leader
+          "s-," (lookup-key doom-leader-map (kbd "<")))
+
+    (after! company
+            (map! :map company-active-map
+                  "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+                  "s-]" #'company-show-location))
+
+    (after! evil-org
+            (map! :map evil-org-mode-map
+                  (:prefix "g"
+                   :nv "{" #'evil-backward-paragraph
+                   :nv "}" #'evil-forward-paragraph)))
+
+    ;; Doesn't work yet: you have to switch to the buffer "manually" once before it starts being treated as real
+    (map! "s-d m" (cmd! (doom-set-buffer-real (current-buffer) t)))
+
+    ;; `forward-char' in original definition is messing things up, do this for now
+    ;; (defun +eshell/search-history ()
+    ;;   (interactive)
+    ;;   (consult-history))
+    (after! esh-mode
+            (map! :map eshell-mode-map
+                  "C-s" #'consult-history))
+
+    (after! vertico
+            (setq vertico-count 20  ; Trying out, maybe too big.
+                  vertico-scroll-margin 7))
+
+    (map! (:leader
+           "A" #'embark-dwim)
+          ;; Trying out cycling (temp)
+          "C-:" #'embark-act
+          "s-q" #'embark-cycle)
+
+    ;; REVIEW Might be useful if there end up being a lot more of these and they have a lot of similarities: https://www.gnu.org/software/emacs/manual/html_node/elisp/Extending-Rx.html
+    ;; TODO `better-jumper-jump-backward' doesn't consider these buffers, that's probably not a problem with `doom-real-buffer-functions' but rather something I have to do specially for it.
+    (use-package! s)
+    (add-hook! 'doom-real-buffer-functions
+               ;; (defun biome-new-buffer-p (buf)
+               ;;   (s-matches?
+               ;;    (rx bol "*new*"
+               ;;        (* "<" (+ digit) ">")
+               ;;        eol)
+               ;;    (buffer-name buf)))
+               ;; TODO This should be in my Org config section / module but wait to move it until I'm confident I'll be continuing with this marking-buffers-as-real approach.
+               (defun biome-org-src-edit-buffer-p (buf)
+                 (s-matches?
+                  (rx bol "*Org Src " (+ anything) "*"
+                      (* "<" (+ digit) ">")
+                      eol)
+                  (buffer-name buf))))
+
+    ;;  TODO Might be easier to do this with file-local variables.
+    ;; (setq biome--phrenetic-dir "~/work/phrenetic")
+    ;; (add-hook! 'org-mode-hook
+    ;;   (defun biome-add-org-autotangle-after-save-hook-h ()
+    ;;     (add-hook! 'after-save-hook :local
+    ;;       (defun biome-autotangle-h ()
+    ;;         (when (file-in-directory-p buffer-file-name biome--phrenetic-dir)
+    ;;           ;; TODO ensure there aren't files in the output directory that no longer correspond to the org file. Just wipe it?
+    ;;           (let ((org-confirm-babel-evaluate nil))
+    ;;             (org-babel-tangle)))))))
+
+    ;; (use-package! org-tanglesync
+    ;;   :hook ((org-mode . org-tanglesync-mode)
+    ;;          ((prog-mode text-mode) . org-tanglesync-watch-mode))
+    ;;   :config
+    ;;   (setq org-tanglesync-watch-files '("/home/pharcosyle/work/phrenetic/phrenetic.org")))
+
+    ;; Maybe `s-S' to save-and-tangle? If I don't get some sort of auto-tangling thing going
+    ;; - maybe it could be "save and eval defun (C-M-x)" in lisp/programming modes?'
+    ;; Maybe a hotkey that just jumps back and forth between my most recently focused browser window and eemacs?
+    ;; Maybe bind `s-o' in `consult-buffer' to "close consult-buffer and open +vertico/switch-workspace-buffer"
+
+    (map! "s-o" (lookup-key doom-leader-map (kbd "<")))
+    ;; Get rid of binding for =s-r=?
+    (map! "s-r" nil)
+
+    ;; Also messes with my sexp-movement bindings
+    ;; (map! "C-s-j" #'evil-scroll-down
+    ;;       "C-s-k" #'evil-scroll-up)
+
+    (after! evil
+            (map! :map evil-motion-state-map
+                  ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
+                  "C-S-o" #'evil-jump-forward))))
 #+end_src
 ****** User
 #+begin_src scheme
