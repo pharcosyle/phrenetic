@@ -285,7 +285,6 @@ Run with ~sudo~.
             network-manager
             bluetooth
             gdm
-            gnome-desktop
             wm
             sway-wm
             host-info
@@ -567,10 +566,10 @@ Must succeed "Accounts" component.
 ***** Desktop environments
 ****** Gnome
 #+begin_src scheme
-(define-system-comp (gnome-desktop)
-  (services
-   (cons* (service gnome-desktop-service-type)
-          (operating-system-user-services os))))
+;; (define-system-comp (gnome-desktop)
+;;   (services
+;;    (cons* (service gnome-desktop-service-type)
+;;           (operating-system-user-services os))))
 #+end_src
 ***** Window managers
 #+begin_src scheme
@@ -1300,8 +1299,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                       $)
                   (if gdm?
                       (gdm $ #:auto-login gdm-auto-login))
-                  (if (member #:session/gnome (or sessions '()))
-                      (gnome-desktop $) $)
+                  ;; (if (member #:session/gnome (or sessions '()))
+                  ;;     (gnome-desktop $) $)
                   (if (member #:session/sway (or sessions '()))
                       (sway-wm $) $)))
             $))))
@@ -1388,8 +1387,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (dconf network-manager-applet))
-  #:use-module ((gnu packages gnome-xyz) #:select (arc-theme))
+  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome-themes-extra hicolor-icon-theme network-manager-applet))
+  #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
@@ -6071,7 +6070,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    (simple-service
     'gtk-add-packages
     home-profile-service-type
-    (list arc-theme))
+    (list arc-theme
+          ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
+          hicolor-icon-theme
+          adwaita-icon-theme
+          papirus-icon-theme
+          gnome-themes-extra))
 
    (simple-service
     'gtk-settings-and-dconf
@@ -6364,8 +6368,8 @@ Some cursorily-googled intel:
       'sway
       #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215"))))))
 #+end_src
-****** TODO [#E] Conditionalize Sway environment variables
-These should only be set for Sway and might mess up other sessions, like Gnome.
+****** HOLD Conditionalize Sway environment variables
+These should only be set for Sway and might mess up other sessions, like Gnome. I don't need to worry about this until/unless I add another session.
 - check for the presence of =DESKTOP_SESSION=sway=?
 - some (not particularly helpful) resources:
   - [[https://lists.sr.ht/~abcdw/rde-devel/%3C871qy1vtaz.fsf%40minikn.xyz%3E][{BUG} feature-sway breaks existing GNOME sessions — sourcehut lists]]
@@ -8043,8 +8047,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                            aux-name
                            guest-name)
    ;; #:gdm-auto-login primary-name ; REVIEW Enable this later.
-   #:sessions '(#:session/gnome
-                #:session/sway)
+   #:sessions '(#:session/sway)
    os+he-shared-opts))
 
 
@@ -8062,7 +8065,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
       #:doom? doom?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
-      #:sessions '(#:session/sway)
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
                                           (#:doom? . ,doom?)
@@ -8092,7 +8094,8 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
   (append
    os+he-shared-opts
    `(#:stateless-persist-dir ,stateless-persist-dir
-     #:stateless-machine-dir ,stateless-machine-dir)))
+     #:stateless-machine-dir ,stateless-machine-dir
+     #:sessions (#:session/sway))))
 
 
 (define efi? #t)
