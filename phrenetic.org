@@ -2064,16 +2064,27 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (ebullient utils)
+  #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
 #+end_src
-***** Non-next PGTK :version:
+***** Emacs PGTK :version:
 #+begin_src scheme
-(define-public (with-non-next-pgtk emacs)
-  (-> emacs
-      (with-git-commit #:upstream-version "28.1.91"
-                       #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
-                       #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
-      (with-git-url "https://github.com/flatwhatson/emacs")))
+(define-public emacs-pgtk
+  (as-> emacs-next-pgtk $
+    (with-git-url $ "https://github.com/flatwhatson/emacs")
+    (with-git-commit $ #:upstream-version "28.1.91"
+                     #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
+                     #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
+    (let ((emacs $))
+      (package
+        (inherit emacs)
+        (source
+         (origin
+           (inherit (package-source emacs))
+           (patches
+            (remove (lambda (patch)
+                      (string-suffix? "emacs-pgtk-super-key-fix.patch" patch))
+                    (-> emacs package-source origin-patches)))))))))
 #+end_src
 ***** HOLD Libgccjit latest
 This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Just hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
@@ -2143,8 +2154,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
 #+begin_src scheme
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
-          (with-non-next-pgtk emacs-next-pgtk)
-          emacs)
+          emacs-pgtk emacs)
       ;; with-libgccjit-latest
       with-findable-C-source
       with-zstd
