@@ -2389,7 +2389,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
   #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "3f16c82877c007a6b687d4c0add025c653d211b3")
+  (let ((commit "95bdc3b566b72169f4bed41ea51f0d0b941fa2de")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2402,7 +2402,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
                (commit commit)))
          (sha256
           (base32
-           "14mc98fcxq0f6n7gsqskcxdgdhlzb30arwafsfqlxny141i7dpjs"))
+           "1v6cnmgyivnih61bpczaxlmz05afl4n5hqvlplqb7iv68fi5ldyi"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/dirvish.patch")))))
