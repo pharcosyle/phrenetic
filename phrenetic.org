@@ -2066,11 +2066,14 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   #:use-module (ebullient utils)
   #:export (emacs-fully-loaded))
 #+end_src
-***** Mirror
-Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
+***** Non-next PGTK :version:
 #+begin_src scheme
-(define-public (with-mirror emacs)
-  (with-git-url emacs "https://github.com/emacs-mirror/emacs"))
+(define-public (with-non-next-pgtk emacs)
+  (-> emacs
+      (with-git-commit #:upstream-version "28.1.91"
+                       #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
+                       #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
+      (with-git-url "https://github.com/flatwhatson/emacs")))
 #+end_src
 ***** HOLD Libgccjit latest
 This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Just hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
@@ -2140,7 +2143,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
 #+begin_src scheme
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
-          (with-mirror emacs-next-pgtk)
+          (with-non-next-pgtk emacs-next-pgtk)
           emacs)
       ;; with-libgccjit-latest
       with-findable-C-source
