@@ -2127,7 +2127,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
                    (cons start-of-list
                          (map wrap-in-quotes
                               (list "~/.config/guix/current/bin"
-                                    "~/.guix-home/profile"))) ; TODO This should have "/bin" at the end. I haven't done it yet to avoid triggering an emacs rebuild.
+                                    "~/.guix-home/profile/bin")))
                    " ")))
                (substitute* "man.el"
                  (("\"/usr/local/include\"" last-item)
