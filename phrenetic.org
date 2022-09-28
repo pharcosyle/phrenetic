@@ -431,7 +431,8 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-**** Nix
+**** Package managers
+***** Nix
 #+begin_src scheme
 (define-system-comp (nix)
   (services
@@ -1441,13 +1442,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-packages
             utility-packages
             he-shells
-            he-nix
             he-emacs
             he-doom
             doom-service
             he-version-control
             he-ssh
             he-direnv
+            he-nix
+            he-flatpak
             he-kmonad
             he-pipewire
             he-gdm
@@ -1465,7 +1467,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             date-format
             time-format
             he-doom-themes+fonts
-            he-flatpak
             he-wm-common
             he-sway
             he-swaylock
@@ -1893,97 +1894,6 @@ alias grep='grep --color=auto'
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
-#+end_src
-*** Nix
-#+begin_src scheme
-(define* (he-nix #:key
-                 stateless?
-                 doom?
-                 doom-tree-sitter?
-                 login-shell
-                 (nix-channels (local-file "nix-channels"))
-                 (nixpkgs-config (local-file "nixpkgs-config.nix")))
-  (append
-   (list
-    (let ((name 'nix-source-profile)
-          (source (local-file "source-nix-profile")))
-      (case login-shell
-        ((#:shell/bash)
-         (simple-service name
-                         home-bash-service-type
-                         (home-bash-extension
-                          (bash-profile
-                           (list source)))))
-        ;; ((#:shell/zsh)
-        ;;  (simple-service name
-        ;;                  home-zsh-service-type
-        ;;                  (home-zsh-extension
-        ;;                   (zprofile
-        ;;                    (list source)))))
-        ))
-
-    (simple-service
-     'nix-add-channels
-     home-files-service-type
-     `((".nix-channels"
-        ,nix-channels)))
-
-    (simple-service
-     'nix-add-nixpkgs-config
-     home-xdg-configuration-files-service-type
-     `(("nixpkgs/config.nix"
-        ,nixpkgs-config))))
-
-   (if stateless?
-       (let ((nix-profile ".nix-profile")
-             (nix-channels ".nix-defexpr/channels"))
-         (list
-          (simple-service
-           'stateless-nix-ensure-profiles
-           home-activation-service-type
-           #~(#$stateless-ensure-profiles-gexp
-              (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-                `((,(string-append (getenv "HOME") "/" #$nix-profile) . ,(string-append user-profiles-dir "/profile"))
-                  (,(string-append (getenv "HOME") "/" #$nix-channels) . ,(string-append user-profiles-dir "/channels"))))))
-
-          (home-stateless-service
-           'nix
-           #:state '(((#:path . ("nix/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:store . #:machine)))
-           #:ignore (list nix-profile
-                          nix-channels))))
-       '())
-
-   (if doom?
-       (append
-        (list
-         (doom-service
-          'nix
-          #:modules `((#:lang
-                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
-
-        (doom-transient #:stateless? stateless?))
-       '())))
-#+end_src
-**** Source Nix profile
-#+begin_src sh :tangle (meta-in-dir "source-nix-profile")
-if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
-  . /run/current-system/profile/etc/profile.d/nix.sh
-fi
-#+end_src
-**** Nix channels
-#+begin_src conf :tangle (meta-in-dir "nix-channels")
-https://nixos.org/channels/nixpkgs-unstable nixpkgs
-#+end_src
-**** Nixpkgs config
-#+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
-{ allowUnfree = true; }
-#+end_src
-**** Setup example
-#+begin_src sh :tangle no
-nix-channel --update
-
-nix-env --install google-chrome
 #+end_src
 *** Emacs
 #+begin_src scheme
@@ -5308,6 +5218,134 @@ use_guixs() {
         (string-append "[ " $ " ]")
         (string->symbol $)))
 #+end_src
+*** Package managers
+**** Nix
+#+begin_src scheme
+(define* (he-nix #:key
+                 stateless?
+                 doom?
+                 doom-tree-sitter?
+                 login-shell
+                 (nix-channels (local-file "nix-channels"))
+                 (nixpkgs-config (local-file "nixpkgs-config.nix")))
+  (append
+   (list
+    (let ((name 'nix-source-profile)
+          (source (local-file "source-nix-profile")))
+      (case login-shell
+        ((#:shell/bash)
+         (simple-service name
+                         home-bash-service-type
+                         (home-bash-extension
+                          (bash-profile
+                           (list source)))))
+        ;; ((#:shell/zsh)
+        ;;  (simple-service name
+        ;;                  home-zsh-service-type
+        ;;                  (home-zsh-extension
+        ;;                   (zprofile
+        ;;                    (list source)))))
+        ))
+
+    (simple-service
+     'nix-add-channels
+     home-files-service-type
+     `((".nix-channels"
+        ,nix-channels)))
+
+    (simple-service
+     'nix-add-nixpkgs-config
+     home-xdg-configuration-files-service-type
+     `(("nixpkgs/config.nix"
+        ,nixpkgs-config))))
+
+   (if stateless?
+       (let ((nix-profile ".nix-profile")
+             (nix-channels ".nix-defexpr/channels"))
+         (list
+          (simple-service
+           'stateless-nix-ensure-profiles
+           home-activation-service-type
+           #~(#$stateless-ensure-profiles-gexp
+              (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+                `((,(string-append (getenv "HOME") "/" #$nix-profile) . ,(string-append user-profiles-dir "/profile"))
+                  (,(string-append (getenv "HOME") "/" #$nix-channels) . ,(string-append user-profiles-dir "/channels"))))))
+
+          (home-stateless-service
+           'nix
+           #:state '(((#:path . ("nix/" #:xdg-base "XDG_CACHE_HOME"))
+                      (#:store . #:machine)))
+           #:ignore (list nix-profile
+                          nix-channels))))
+       '())
+
+   (if doom?
+       (append
+        (list
+         (doom-service
+          'nix
+          #:modules `((#:lang
+                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
+
+        (doom-transient #:stateless? stateless?))
+       '())))
+#+end_src
+***** Source Nix profile
+#+begin_src sh :tangle (meta-in-dir "source-nix-profile")
+if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
+  . /run/current-system/profile/etc/profile.d/nix.sh
+fi
+#+end_src
+***** Nix channels
+#+begin_src conf :tangle (meta-in-dir "nix-channels")
+https://nixos.org/channels/nixpkgs-unstable nixpkgs
+#+end_src
+***** Nixpkgs config
+#+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
+{ allowUnfree = true; }
+#+end_src
+***** Setup example
+#+begin_src sh :tangle no
+nix-channel --update
+
+nix-env --install google-chrome
+#+end_src
+**** Flatpak
+#+begin_src scheme
+(define* (he-flatpak #:key
+                     stateless?
+                     wayland?)
+  (list
+   (simple-service
+    'flatpak-add-packages
+    home-profile-service-type
+    (append
+     (list flatpak)
+     (if wayland?
+         (list xdg-desktop-portal
+               xdg-desktop-portal-wlr)
+         '())))
+
+   (simple-service
+    'flatpak-exports
+    home-environment-variables-service-type
+    `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
+
+   (when stateless?
+     (home-stateless-service
+      'flatpak
+      #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700)))))))
+#+end_src
+***** Setup example
+#+begin_src sh :tangle no
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+
+flatpak install --user flathub com.discordapp.Discord
+flatpak install --user flathub-beta com.obsproject.Studio
+#+end_src
 *** Console
 **** KMonad
 #+begin_src scheme
@@ -5905,42 +5943,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
-#+end_src
-**** Flatpak
-#+begin_src scheme
-(define* (he-flatpak #:key
-                     stateless?
-                     wayland?)
-  (list
-   (simple-service
-    'flatpak-add-packages
-    home-profile-service-type
-    (append
-     (list flatpak)
-     (if wayland?
-         (list xdg-desktop-portal
-               xdg-desktop-portal-wlr)
-         '())))
-
-   (simple-service
-    'flatpak-exports
-    home-environment-variables-service-type
-    `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
-
-   (when stateless?
-     (home-stateless-service
-      'flatpak
-      #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700)))))))
-#+end_src
-***** Setup example
-#+begin_src sh :tangle no
-flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
-
-flatpak install --user flathub com.discordapp.Discord
-flatpak install --user flathub-beta com.obsproject.Studio
 #+end_src
 **** Window managers
 ***** Common
@@ -7292,12 +7294,6 @@ No Guix package currently, install through Nix.
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
-     (if nix?
-         (he-nix #:stateless? stateless?
-                 #:doom? doom?
-                 #:doom-tree-sitter? doom-tree-sitter?
-                 #:login-shell login-shell)
-         '())
      (if developer?
          (append
           (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
@@ -7316,6 +7312,12 @@ No Guix package currently, install through Nix.
                      #:doom? doom?
                      #:shell interactive-shell
                      #:whitelist-dirs (list work-dir)))
+         '())
+     (if nix?
+         (he-nix #:stateless? stateless?
+                 #:doom? doom?
+                 #:doom-tree-sitter? doom-tree-sitter?
+                 #:login-shell login-shell)
          '())
      (if console?
          (if kmonad?
@@ -7340,6 +7342,8 @@ No Guix package currently, install through Nix.
                 '())
             (if gdm?
                 (he-gdm #:stateless? stateless?) '())
+            (he-flatpak #:stateless? stateless?
+                        #:wayland? wayland?)
             (he-fonts #:stateless? stateless?
                       #:fonts (list font-mono
                                     font-sans
@@ -7361,8 +7365,6 @@ No Guix package currently, install through Nix.
                     #:theme theme
                     #:font font-variable-pitch
                     #:font-monospace font-mono)
-            (he-flatpak #:stateless? stateless?
-                        #:wayland? wayland?)
             (if sway?
                 (let ((date-format date-format)
                       (time-format time-format))
