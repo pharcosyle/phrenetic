@@ -7131,18 +7131,17 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 **** Proton VPN
 #+begin_src scheme
 (define* (he-protonvpn #:key stateless?)
-  (append
-   (list
-    (simple-service
-     'protonvpn-add-package
-     home-profile-service-type
-     (list protonvpn-cli))
+  (list
+   (simple-service
+    'protonvpn-add-package
+    home-profile-service-type
+    (list protonvpn-cli))
 
-    (when stateless?
-      (home-stateless-service
-       'protonvpn
-       #:state '(((#:path . ".pvpn-cli/")
-                  (#:store . #:machine))))))))
+   (when stateless?
+     (home-stateless-service
+      'protonvpn
+      #:state '(((#:path . ".pvpn-cli/")
+                 (#:store . #:machine)))))))
 #+end_src
 *** Apps
 **** Google Chrome
@@ -7177,32 +7176,31 @@ No Guix package currently, install through Nix.
 (define* (he-nyxt #:key
                   stateless?
                   doom?)
-  (append
-   (list
-    (simple-service
-     'nyxt-add-packages
-     home-profile-service-type
-     (list nyxt
-           ;; gst-libav
-           ;; gst-plugins-bad
-           ;; gst-plugins-base
-           ;; gst-plugins-good
-           ;; gst-plugins-ugly
-           ))
+  (list
+   (simple-service
+    'nyxt-add-packages
+    home-profile-service-type
+    (list nyxt
+          ;; gst-libav
+          ;; gst-plugins-bad
+          ;; gst-plugins-base
+          ;; gst-plugins-good
+          ;; gst-plugins-ugly
+          ))
 
-    (when stateless?
-      (home-stateless-service
-       'nyxt
-       #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:store . #:machine))
-                 ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:store . #:machine)))))
+   (when stateless?
+     (home-stateless-service
+      'nyxt
+      #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine))
+                ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
+                 (#:store . #:machine)))))
 
-    (when doom?
-      (doom-service
-       'nyxt
-       #:modules '((#:lang
-                    common-lisp)))))))
+   (when doom?
+     (doom-service
+      'nyxt
+      #:modules '((#:lang
+                   common-lisp))))))
 #+end_src
 ** Templates
 #+begin_src scheme
