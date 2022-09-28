@@ -1404,6 +1404,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
+  #:use-module ((gnu packages web-browsers) #:select (nyxt))
   #:use-module ((gnu packages wm) #:select (mako swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
@@ -1486,6 +1487,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-datomic
             he-node
             he-protonvpn
+            he-nyxt
             he-base))
 #+end_src
 ** Create
@@ -7161,6 +7163,40 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
        #:state '(((#:path . ".pvpn-cli/")
                   (#:store . #:machine))))))))
 #+end_src
+*** Apps
+**** Nyxt
+#+begin_src scheme
+(define* (he-nyxt #:key
+                  stateless?
+                  doom?)
+  (append
+   (list
+    (simple-service
+     'nyxt-add-packages
+     home-profile-service-type
+     (list nyxt
+           ;; gst-libav
+           ;; gst-plugins-bad
+           ;; gst-plugins-base
+           ;; gst-plugins-good
+           ;; gst-plugins-ugly
+           ))
+
+    (when stateless?
+      (home-stateless-service
+       'nyxt
+       #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:store . #:machine))
+                 ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
+                  (#:store . #:machine)))))
+
+    (when doom?
+      (doom-service
+       'nyxt
+       #:modules '((#:lang
+                    common-lisp)))))))
+#+end_src
+
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -7308,7 +7344,9 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
          (he-projects #:work-dir work-dir
                       #:projects projects)
          '())
-     (he-protonvpn #:stateless? stateless?))))
+     (he-protonvpn #:stateless? stateless?)
+     (he-nyxt #:stateless? stateless?
+              #:doom? doom?))))
 #+end_src
 * Common
 :PROPERTIES:
