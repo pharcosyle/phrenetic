@@ -7266,11 +7266,9 @@ No Guix package currently, install through Nix.
                   stateless-persist-dir
                   stateless-machine-dir
                   (login-shell #:shell/bash)
-                  developer?
+                  (interactive-shell #:shell/zsh)
                   doom?
                   doom-tree-sitter?
-                  (interactive-shell (if developer?
-                                         #:shell/zsh login-shell))
                   console?
                   nix?
                   kmonad?
@@ -7294,25 +7292,22 @@ No Guix package currently, install through Nix.
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
-     (if developer?
-         (append
-          (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
-          (if doom?
-              (he-doom #:stateless? stateless?
-                       #:services (doom-main #:stateless? stateless?
-                                             #:tree-sitter? doom-tree-sitter?
-                                             #:email email
-                                             #:org-dir org-dir))
-              '())
-          (he-version-control #:stateless? stateless?
-                              #:doom? doom?
-                              #:email email)
-          (he-ssh)
-          (he-direnv #:stateless? stateless?
-                     #:doom? doom?
-                     #:shell interactive-shell
-                     #:whitelist-dirs (list work-dir)))
+     (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+     (if doom?
+         (he-doom #:stateless? stateless?
+                  #:services (doom-main #:stateless? stateless?
+                                        #:tree-sitter? doom-tree-sitter?
+                                        #:email email
+                                        #:org-dir org-dir))
          '())
+     (he-version-control #:stateless? stateless?
+                         #:doom? doom?
+                         #:email email)
+     (he-ssh)
+     (he-direnv #:stateless? stateless?
+                #:doom? doom?
+                #:shell interactive-shell
+                #:whitelist-dirs (list work-dir))
      (if nix?
          (he-nix #:stateless? stateless?
                  #:doom? doom?
@@ -7977,7 +7972,6 @@ No Guix package currently, install through Nix.
      (apply
       he:he-base
       #:email "pharcosyle@gmail.com"
-      #:developer? #t
       #:doom? doom?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
