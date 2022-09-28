@@ -7201,9 +7201,10 @@ No Guix package currently, install through Nix.
                 ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:store . #:machine)
                  (#:mode . #o700))
-                ((#:path . ".pki/")
+                ((#:path . ".pki/nssdb/")
                  (#:store . #:machine)
-                 (#:mode . #o700)))))))
+                 (#:mode . #o700)
+                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 **** Nyxt
 #+begin_src scheme
@@ -7259,9 +7260,10 @@ No Guix package currently, install through Nix.
                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:store . #:machine)
                  (#:mode . #o700))
-                ((#:path . ".pki/")
+                ((#:path . ".pki/nssdb/")
                  (#:store . #:machine)
-                 (#:mode . #o700)))))))
+                 (#:mode . #o700)
+                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 ** Templates
 #+begin_src scheme
