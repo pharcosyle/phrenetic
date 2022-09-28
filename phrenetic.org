@@ -1450,8 +1450,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-xdg
             he-mesa
             he-gtk
-            he-desktop-packages
-            desktop-packages
             light-colors
             dark-colors
             he-fonts
@@ -5524,26 +5522,6 @@ use_guixs() {
                  (#:store . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
-**** Desktop packages
-#+begin_src scheme
-(define* (he-desktop-packages #:key packages)
-  (list
-   (simple-service
-    'desktop-packages-add-packages
-    home-profile-service-type
-    packages)))
-
-(define desktop-packages
-  (list ;; "protonvpn-cli" ; TODO Appears to be broken after the big Guix frozen-updates upgrade.
-
-   ;; nyxt
-   ;; gst-libav
-   ;; gst-plugins-bad
-   ;; gst-plugins-base
-   ;; gst-plugins-good
-   ;; gst-plugins-ugly
-   ))
-#+end_src
 **** Colors
 #+begin_src scheme
 ;; Nothing here yet.
@@ -7266,7 +7244,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                 '())
             (if gdm?
                 (he-gdm #:stateless? stateless?) '())
-            (he-desktop-packages #:packages desktop-packages)
             (he-fonts #:stateless? stateless?
                       #:fonts (list font-mono
                                     font-sans
