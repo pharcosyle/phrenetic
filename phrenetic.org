@@ -6754,14 +6754,16 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
       rofi))
 #+end_src
 **** Terminals
-***** Doom vterm
+***** Vterm
 #+begin_src scheme
-(define* (he-doom-vterm)
-  (list
-   (doom-service
-    'vterm
-    #:modules '((#:term
-                 vterm)))))
+(define* (he-vterm #:key doom?)
+  (if doom?
+      (list
+       (doom-service
+        'vterm
+        #:modules '((#:term
+                     vterm))))
+      '()))
 #+end_src
 ***** Alacritty
 #+begin_src scheme
@@ -7304,8 +7306,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                    (he-alacritty #:colors colors
                                  #:font font-mono)))
                 '())
-            (if doom?
-                (he-doom-vterm) '())))
+            (he-vterm #:doom? doom?)))
          '())
      (if projects
          (he-projects #:work-dir work-dir
