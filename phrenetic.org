@@ -781,6 +781,7 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
 
 (define stateless-persist-dir "/.persist")
 (define stateless-machine-dir "/.machine")
+
 (define* (stateless-mountables #:key persist-dir machine-dir nix?)
   (append
    `(("boot" . "/boot")
@@ -790,6 +791,7 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
      ("machine" . ,machine-dir))
    (if nix?
        '(("nix" . "/nix")) '())))
+
 (define (stateless-swapfile machine-dir)
   (string-append machine-dir "/.swap"))
 #+end_src
@@ -6512,12 +6514,12 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
      (format-source . "{volume}% ")
      (format-source-muted . "")
      (format-icons . ((headphone . )
-                       (hands-free . )
-                       (headset . )
-                       (phone . )
-                       (portable . )
-                       (car . )
-                       (default . #(  ))))
+                      (hands-free . )
+                      (headset . )
+                      (phone . )
+                      (portable . )
+                      (car . )
+                      (default . #(  ))))
      (on-click . ,#~(string-append "\"" #$(file-append pavucontrol "/bin/pavucontrol") "\"")))))
 
 (define (waybar-battery)
@@ -7393,9 +7395,9 @@ No Guix package currently, install through Nix.
                             #:colors colors
                             #:font font-variable-pitch)))
                 '())
+            (he-vterm #:doom? doom?)
             (he-alacritty #:colors colors
                           #:font font-mono)
-            (he-vterm #:doom? doom?)
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
             (he-google-chrome #:stateless? stateless?
