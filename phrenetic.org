@@ -7146,10 +7146,19 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
 #+end_src
 *** Apps
 **** Google Chrome
-No Guix package, install through Nix.
+No Guix package currently, install through Nix.
 #+begin_src scheme
-(define* (he-google-chrome #:key stateless?)
+(define* (he-google-chrome #:key
+                           stateless?
+                           wayland?)
   (list
+   ;; (simple-service
+   ;;  'google-chrome-add-package
+   ;;  home-profile-service-type
+   ;;  (list (if wayland?
+   ;;            google-chrome/wayland
+   ;;            google-chrome)))
+
    (when stateless?
      (home-stateless-service
       'google-chrome
@@ -7336,14 +7345,15 @@ No Guix package, install through Nix.
                 '())
             (he-alacritty #:colors colors
                           #:font font-mono)
-            (he-vterm #:doom? doom?)))
+            (he-vterm #:doom? doom?)
+            (he-google-chrome #:stateless? stateless?
+                              #:wayland? wayland?)))
          '())
      (if projects
          (he-projects #:work-dir work-dir
                       #:projects projects)
          '())
      (he-protonvpn #:stateless? stateless?)
-     (he-google-chrome #:stateless? stateless?)
      (he-nyxt #:stateless? stateless?
               #:doom? doom?))))
 #+end_src
