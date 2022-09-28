@@ -5926,6 +5926,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                xdg-desktop-portal-wlr)
          '())))
 
+   (simple-service
+    'flatpak-exports
+    home-environment-variables-service-type
+    `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
+
    (when stateless?
      (home-stateless-service
       'flatpak
@@ -5933,24 +5938,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  (#:store . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
-***** Make Flatpak apps visible
-TODO and remove "tangle no"
-#+begin_src sh :tangle no
-export XDG_DATA_DIRS=$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS
-#+end_src
-***** WIP Flatpak
-TODO and remove "tangle no"
-Ran these manually
+***** Setup example
 #+begin_src sh :tangle no
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
 
-# flatpak install --user flathub com.spotify.Client
-# flatpak install --user flathub us.zoom.Zoom
+flatpak install --user flathub com.discordapp.Discord
+flatpak install --user flathub-beta com.obsproject.Studio
 #+end_src
-****** how to pin?
-Some cursorily-googled intel:
-- [[https://github.com/flatpak/flatpak/issues/3097][flatpak/flatpak#3097 Is there a way to install a specific version?]]
-- [[https://discourse.flathub.org/t/install-an-older-version-of-an-app/320/3][Install an older version of an app - #3 by gjanssens - Flathub Discourse]]
 **** Window managers
 ***** Common
 #+begin_src scheme
