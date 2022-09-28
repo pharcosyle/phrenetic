@@ -1412,6 +1412,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
+  #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
@@ -1487,6 +1488,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-datomic
             he-node
             he-protonvpn
+            he-firefox
             he-google-chrome
             he-nyxt
             he-base))
@@ -7144,6 +7146,35 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                  (#:store . #:machine)))))))
 #+end_src
 *** Apps
+**** Firefox
+#+begin_src scheme
+(define* (he-firefox #:key
+                     stateless?
+                     wayland?)
+  (list
+   (simple-service
+    'firefox-add-package
+    home-profile-service-type
+    (list (if wayland?
+              firefox/wayland
+              firefox)))
+
+   (when stateless?
+     (home-stateless-service
+      'firefox
+      #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700)
+                 (#:parent-dir-perms . ((#:mode . #o700))))
+                ((#:path . ".mozilla/firefox")
+                 (#:store . #:machine)
+                 (#:mode . #o700)
+                 (#:parent-dir-perms . ((#:mode . #o700))))
+                ((#:path . ".mozilla/extensions")
+                 (#:store . #:machine)
+                 (#:mode . #o700)
+                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
+#+end_src
 **** Google Chrome
 No Guix package currently, install through Nix.
 #+begin_src scheme
@@ -7344,6 +7375,8 @@ No Guix package currently, install through Nix.
             (he-alacritty #:colors colors
                           #:font font-mono)
             (he-vterm #:doom? doom?)
+            (he-firefox #:stateless? stateless?
+                        #:wayland? wayland?)
             (he-google-chrome #:stateless? stateless?
                               #:wayland? wayland?)))
          '())
