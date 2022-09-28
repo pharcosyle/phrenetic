@@ -1487,6 +1487,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-datomic
             he-node
             he-protonvpn
+            he-google-chrome
             he-nyxt
             he-base))
 #+end_src
@@ -1939,9 +1940,7 @@ SAVEHIST=$HISTSIZE
                        (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
 
         (doom-transient #:stateless? stateless?))
-       '())
-
-   (google-chrome-services #:stateless? stateless?)))
+       '())))
 #+end_src
 **** Load Nix environment
 TODO and remove "tangle no"
@@ -1985,23 +1984,6 @@ nix-env --upgrade
 Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
 ***** [2022-08-21 Sun] stateless first install
 Maybe make a simple home-activation-service that ensures the nix profile packages are installed so I don't have to do it manually after a fresh computer install (better reproducability!). Mount the nix subvolume in the installation script.
-**** Google Chrome
-#+begin_src scheme
-(define* (google-chrome-services #:key stateless?)
-  (list
-   (when stateless?
-     (home-stateless-service
-      'google-chrome
-      #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ".pki/")
-                 (#:store . #:machine)
-                 (#:mode . #o700)))))))
-#+end_src
 *** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key
@@ -7164,6 +7146,24 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                   (#:store . #:machine))))))))
 #+end_src
 *** Apps
+**** Google Chrome
+No Guix package, install through Nix.
+#+begin_src scheme
+(define* (he-google-chrome #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'google-chrome
+      #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700))
+                ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700))
+                ((#:path . ".pki/")
+                 (#:store . #:machine)
+                 (#:mode . #o700)))))))
+#+end_src
 **** Nyxt
 #+begin_src scheme
 (define* (he-nyxt #:key
@@ -7196,7 +7196,6 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
        #:modules '((#:lang
                     common-lisp)))))))
 #+end_src
-
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -7345,6 +7344,7 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                       #:projects projects)
          '())
      (he-protonvpn #:stateless? stateless?)
+     (he-google-chrome #:stateless? stateless?)
      (he-nyxt #:stateless? stateless?
               #:doom? doom?))))
 #+end_src
