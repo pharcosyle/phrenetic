@@ -1709,7 +1709,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (service home-bash-service-type
                    (home-bash-configuration
                     (bashrc
-                     (list (local-file "bashrc")))))
+                     (list bashrc))))
           (when stateless?
             (home-stateless-service
              'bash
