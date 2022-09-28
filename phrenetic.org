@@ -1900,10 +1900,28 @@ SAVEHIST=$HISTSIZE
                  stateless?
                  doom?
                  doom-tree-sitter?
+                 login-shell
                  (nix-channels (local-file "nix-channels"))
                  (nixpkgs-config (local-file "nixpkgs-config.nix")))
   (append
    (list
+    (let ((name 'nix-source-profile)
+          (source (local-file "source-nix-profile")))
+      (case login-shell
+        ((#:shell/bash)
+         (simple-service name
+                         home-bash-service-type
+                         (home-bash-extension
+                          (bash-profile
+                           (list source)))))
+        ;; ((#:shell/zsh)
+        ;;  (simple-service name
+        ;;                  home-zsh-service-type
+        ;;                  (home-zsh-extension
+        ;;                   (zprofile
+        ;;                    (list source)))))
+        ))
+
     (simple-service
      'nix-add-channels
      home-files-service-type
@@ -1947,10 +1965,8 @@ SAVEHIST=$HISTSIZE
         (doom-transient #:stateless? stateless?))
        '())))
 #+end_src
-**** Load Nix environment
-TODO and remove "tangle no"
-- I vaguely recall not being sure I wanted to source nix.sh, or make sure it was sourced earlier than guix stuff, so it wouldn't override guix env vars (but wouldn't that mess up one or the other, nix or guix?)
-#+begin_src sh :tangle no
+**** Source Nix profile
+#+begin_src sh :tangle (meta-in-dir "source-nix-profile")
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
 fi
@@ -1963,32 +1979,12 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
-**** Nix WIP
-TODO and remove all the COMMENT keywords
-Commands and stuff (like manifests install and upgrade and guix channel pull) plus a packages "manifest"
-***** COMMENT Update channels
-#+begin_src sh :results output silent :async
+**** Setup example
+#+begin_src sh :tangle no
 nix-channel --update
+
+nix-env --install google-chrome
 #+end_src
-***** COMMENT "Manifest"
-- TODO might want to / see if I can make this a simple bulleted list I pass with :var to source block(s)
-#+name: nix-packages
-#+begin_src org
-google-chrome zoom-us
-#+end_src
-***** COMMENT Install packages
-Removed ":noweb yes" for now
-#+begin_src sh :results output silent :async
-nix-env --install <<nix-packages>>
-#+end_src
-***** COMMENT Upgrade packages
-#+begin_src sh :results output silent :async
-nix-env --upgrade
-#+end_src
-***** how to pin packages?
-Is [[https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs][this]] the right way? Maybe the new nix CLI will have a better option?
-***** [2022-08-21 Sun] stateless first install
-Maybe make a simple home-activation-service that ensures the nix profile packages are installed so I don't have to do it manually after a fresh computer install (better reproducability!). Mount the nix subvolume in the installation script.
 *** Emacs
 #+begin_src scheme
 (define* (he-emacs #:key
@@ -7299,7 +7295,8 @@ No Guix package currently, install through Nix.
      (if nix?
          (he-nix #:stateless? stateless?
                  #:doom? doom?
-                 #:doom-tree-sitter? doom-tree-sitter?)
+                 #:doom-tree-sitter? doom-tree-sitter?
+                 #:login-shell login-shell)
          '())
      (if developer?
          (append
