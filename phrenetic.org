@@ -1402,6 +1402,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
+  #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages wm) #:select (mako swayidle waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
@@ -1486,6 +1487,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-clojure
             he-datomic
             he-node
+            he-protonvpn
             he-base))
 #+end_src
 ** Create
@@ -5897,10 +5899,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     home-profile-service-type
     (list arc-theme
           ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
-          hicolor-icon-theme
-          adwaita-icon-theme
-          papirus-icon-theme
-          gnome-themes-extra))
+          ;; hicolor-icon-theme
+          ;; adwaita-icon-theme
+          ;; papirus-icon-theme
+          ;; gnome-themes-extra
+          ))
 
    (simple-service
     'gtk-settings-and-dconf
@@ -7164,6 +7167,22 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
                    (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
                    (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
 #+end_src
+**** Proton VPN
+#+begin_src scheme
+(define* (he-protonvpn #:key stateless?)
+  (append
+   (list
+    (simple-service
+     'protonvpn-add-package
+     home-profile-service-type
+     (list protonvpn-cli))
+
+    (when stateless?
+      (home-stateless-service
+       'protonvpn
+       #:state '(((#:path . ".pvpn-cli/")
+                  (#:store . #:machine))))))))
+#+end_src
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -7311,7 +7330,8 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
      (if projects
          (he-projects #:work-dir work-dir
                       #:projects projects)
-         '()))))
+         '())
+     (he-protonvpn #:stateless? stateless?))))
 #+end_src
 * Common
 :PROPERTIES:
