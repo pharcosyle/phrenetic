@@ -1381,6 +1381,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
+  #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
+  #:use-module ((gnu packages chromium) #:select (ungoogled-chromium ungoogled-chromium/wayland))
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
@@ -1490,6 +1492,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-protonvpn
             he-firefox
             he-google-chrome
+            he-ungoogled-chromium
             he-nyxt
             he-base))
 #+end_src
@@ -7233,6 +7236,33 @@ No Guix package currently, install through Nix.
       #:modules '((#:lang
                    common-lisp))))))
 #+end_src
+**** Ungoogled Chromium
+#+begin_src scheme
+(define* (he-ungoogled-chromium #:key
+                                stateless?
+                                wayland?)
+  (list
+   (simple-service
+    'ungoogled-chromium-add-packages
+    home-profile-service-type
+    (list (if wayland?
+              ungoogled-chromium/wayland
+              ungoogled-chromium)
+          ublock-origin/chromium))
+
+   (when stateless?
+     (home-stateless-service
+      'ungoogled-chromium
+      #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700))
+                ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700))
+                ((#:path . ".pki/")
+                 (#:store . #:machine)
+                 (#:mode . #o700)))))))
+#+end_src
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -7378,7 +7408,9 @@ No Guix package currently, install through Nix.
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
             (he-google-chrome #:stateless? stateless?
-                              #:wayland? wayland?)))
+                              #:wayland? wayland?)
+            (he-ungoogled-chromium #:stateless? stateless?
+                                   #:wayland? wayland?)))
          '())
      (if projects
          (he-projects #:work-dir work-dir
