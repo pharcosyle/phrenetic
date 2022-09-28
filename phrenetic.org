@@ -247,6 +247,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
+  #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
@@ -264,7 +265,6 @@ Run with ~sudo~.
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
-  #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -1407,7 +1407,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako swayidle waybar))
+  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -1428,7 +1428,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
   #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
   #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
-  #:use-module ((ebullient packages wm) #:select (swaylock-effects))
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -7459,19 +7458,6 @@ No Guix package currently, install through Nix.
                                 hspec-discover))))
      #:commit commit
      #:hash "0rprjk2n9ssvfk3hlibgd44zvn2hhxz1wqcrnjbbddvi3br5sv7s")))
-#+end_src
-*** Swaylock effects :package:version:
-#+begin_src scheme :tangle (meta-in-dir "wm.scm")
-(define-module (ebullient packages wm)
-  #:use-module ((gnu packages wm) #:select (swaylock-effects) #:prefix wm:)
-  #:use-module (ebullient utils))
-
-(define-public swaylock-effects
-  (with-git-commit
-   wm:swaylock-effects
-   #:upstream-version "1.6-3"
-   #:commit "a8fc557b86e70f2f7a30ca9ff9b3124f89e7f204"
-   #:hash "0f9571blnn7lg317js1j1spc5smz69i5aw6zkhskkm5m633rrpqq"))
 #+end_src
 ** Stateless
 :PROPERTIES:
