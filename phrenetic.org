@@ -6475,15 +6475,16 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
         (waybar-sway-workspaces)
         (waybar-sway-window))
        '())
-   (list
-    (waybar-tray)
-    (waybar-idle-inhibitor)
-    (waybar-volume)
-    (waybar-microphone)
-    (waybar-backlight)
-    (waybar-cpu)
-    (waybar-memory)
-    (waybar-battery))))
+   (let ((show-percentage? #f))
+     (list
+      (waybar-tray)
+      (waybar-idle-inhibitor)
+      (waybar-volume #:show-percentage? show-percentage?)
+      (waybar-microphone #:show-percentage? show-percentage?)
+      (waybar-backlight #:show-percentage? show-percentage?)
+      (waybar-cpu)
+      (waybar-memory)
+      (waybar-battery #:show-percentage? #t)))))
 #+end_src
 ****** Modules
 #+begin_src scheme
@@ -6532,24 +6533,27 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
                           (string-append $ " --tab=4")
                           (string-append "\"" $ "\""))))))
 
-(define (waybar-battery)
+(define* (waybar-battery #:key show-percentage?)
   (waybar-module
    'battery
-   `((format . "{icon} {capacity}%")
-     (format-charging . " {icon} {capacity}%")
-     (tooltip-format . "Current capacity: {capacity}%\n\n{timeTo}")
-     (states . ((empty . 10)
-                (low . 20)
-                (half-low . 40)
-                (half . 60)
-                (high . 90)
-                (full . 100)))
-     (format-icons . ((empty . )
-                      (low . )
-                      (half-low . )
-                      (half . )
-                      (high . )
-                      (full . ))))
+   (let ((base-format (string-append
+                       "{icon} "
+                       (if show-percentage? "{capacity}%" ""))))
+     `((format . ,base-format)
+       (format-charging . ,(string-append "⚡ " base-format))
+       (states . ((empty . 10)
+                  (low . 20)
+                  (half-low . 40)
+                  (half . 60)
+                  (high . 90)
+                  (full . 100)))
+       (format-icons . ((empty . )
+                        (low . )
+                        (half-low . )
+                        (half . )
+                        (high . )
+                        (full . )))
+       (tooltip-format . "Current capacity: {capacity}%\n\n{timeTo}")))
    `((#{#battery.discharging.empty}#
       ((color . @red)))
      (#{#battery.discharging.low}#
@@ -6557,10 +6561,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
      (#{#battery.full}#
       ((color . @green))))))
 
-(define (waybar-backlight)
+(define* (waybar-backlight #:key show-percentage?)
   (waybar-module
    'backlight
-   '((format . " {percent}"))))
+   '((format . ,(string-append
+                 "{icon} "
+                 (if show-percentage? "{percent}" "")))
+     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑)))))
 
 (define* (waybar-clock #:key
                        date-format
