@@ -1482,6 +1482,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-rofi
             rofi-menu
             rofi-application-launcher
+            he-kanshi
             he-vterm
             he-alacritty
             alacritty-terminal
@@ -6735,6 +6736,18 @@ Once Waybar is updated in Guix this should work. If it doesn't try =%-i= instead
       rofi-wayland
       rofi))
 #+end_src
+**** Display configuration
+***** Kanshi
+#+begin_src scheme
+(define* (he-kanshi #:key extra-config)
+  (list
+   (service
+    home-kanshi-service-type
+    (home-kanshi-configuration
+     (config
+      `(,@(if extra-config
+              extra-config '())))))))
+#+end_src
 **** Terminals
 ***** Vterm
 #+begin_src scheme
@@ -7411,7 +7424,9 @@ No Guix package currently, install through Nix.
                    (he-rofi #:stateless? stateless?
                             #:wayland? wayland?
                             #:colors colors
-                            #:font font-variable-pitch)))
+                            #:font font-variable-pitch)
+                   ;; (he-kanshi)
+                   ))
                 '())
             (he-vterm #:doom? doom?)
             (he-alacritty #:colors colors
