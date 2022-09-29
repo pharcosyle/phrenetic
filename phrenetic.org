@@ -5423,6 +5423,7 @@ flatpak install --user flathub-beta com.obsproject.Studio
     (list
      (shepherd-service
       (provision '(pipewire))
+      (requirement '(dbus))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire"))
                 #:log-file (string-append
@@ -5537,6 +5538,35 @@ flatpak install --user flathub-beta com.obsproject.Studio
 ;;       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
 ;;                  (#:store . #:machine)
 ;;                  (#:mode . #o700)))))))
+#+end_src
+**** D-Bus
+#+begin_src scheme
+(define (he-dbus)
+  (list
+   (simple-service
+    'dbus-set-address-env-var
+    home-environment-variables-service-type
+    '(("DBUS_SESSION_BUS_ADDRESS" . "unix:path=$XDG_RUNTIME_DIR/bus")))
+
+   (simple-service
+    'dbus-add-shepherd-daemon
+    home-shepherd-service-type
+    (list
+     (shepherd-service
+      (provision '(dbus))
+      (stop  #~(make-kill-destructor))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append dbus "/bin/dbus-daemon")
+                      "--nofork"
+                      "--session"
+                      (string-append
+                       "--address=" "unix:path="
+                       (getenv "XDG_RUNTIME_DIR") "/bus"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/dbus.log"))))))))
 #+end_src
 **** Colors
 #+begin_src scheme
@@ -7363,6 +7393,7 @@ No Guix package currently, install through Nix.
                 '())
             ;; (if gdm?
             ;;     (he-gdm #:stateless? stateless?) '())
+            (he-dbus)
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
             (he-fonts #:stateless? stateless?
