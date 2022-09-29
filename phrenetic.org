@@ -6478,7 +6478,8 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
    (list
     (waybar-tray)
     (waybar-idle-inhibitor)
-    (waybar-audio)
+    (waybar-volume)
+    (waybar-microphone)
     (waybar-backlight)
     (waybar-cpu)
     (waybar-memory)
@@ -6504,29 +6505,39 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
     (style-css (if style
                    style '())))))
 
-(define (waybar-audio)
+(define* (waybar-volume #:key show-percentage?)
   (waybar-module
-   'pulseaudio
-   `((format . "{volume}% {icon} {format_source}")
-     (format-muted . " {format_source}")
-     (format-bluetooth . "{volume}% {icon} {format_source}")
-     (format-bluetooth-muted . " {icon} {format_source}")
-     (format-source . "{volume}% ")
+   'pulseaudio#sink
+   (let ((base-format (string-append
+                       (if show-percentage? "{volume}% " "")
+                       "{icon}")))
+     `((format . ,base-format)
+       (format-muted . "🔇")
+       (format-bluetooth . ,(string-append base-format ""))
+       (format-icons . ((default . #(🔈 🔉 🔊 📢))))
+       (tooltip-format . "{desc} is on {volume}%")
+       (on-click . ,#~(let ((cmd #$(file-append pavucontrol "/bin/pavucontrol")))
+                        (string-append "\"" cmd "\"")))))))
+
+(define* (waybar-microphone #:key show-percentage?)
+  (waybar-module
+   'pulseaudio#source
+   `((format . "{format_source}")
+     (format-source . (string-append
+                       (if show-percentage? "{volume}% " "")
+                       ""))
      (format-source-muted . "")
-     (format-icons . ((headphone . )
-                      (hands-free . )
-                      (headset . )
-                      (phone . )
-                      (portable . )
-                      (car . )
-                      (default . #(  ))))
-     (on-click . ,#~(string-append "\"" #$(file-append pavucontrol "/bin/pavucontrol") "\"")))))
+     (tooltip-format . "{source_desc} is on {source_volume}%")
+     (on-click . ,#~(as-> #$(file-append pavucontrol "/bin/pavucontrol") $
+                          (string-append $ " --tab=4")
+                          (string-append "\"" $ "\""))))))
 
 (define (waybar-battery)
   (waybar-module
    'battery
    `((format . "{icon} {capacity}%")
      (format-charging . " {icon} {capacity}%")
+     (tooltip-format . "Current capacity: {capacity}%\n\n{timeTo}")
      (states . ((empty . 10)
                 (low . 20)
                 (half-low . 40)
@@ -6594,9 +6605,10 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
                           ("2" . )
                           ("3" . )
                           ("4" . )
+                          ("5" . )
                           ("6" . ) ; 
-                          ("7" . ) ; 
-                          ("8" . )
+                          ("7" . )  ; 
+                          ("8" . )
                           ("9" . )
                           ("10" . )
                           ("urgent" . )
