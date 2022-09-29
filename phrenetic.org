@@ -263,7 +263,6 @@ Run with ~sudo~.
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
   #:use-module ((ebullient stateless) #:prefix stateless:)
   #:use-module (ebullient utils)
@@ -574,22 +573,13 @@ Must succeed "Accounts" component.
 ;;           (operating-system-user-services os))))
 #+end_src
 ***** Window managers
-#+begin_src scheme
-(define-system-comp (wm #:key package services)
-  (packages
-   (cons* package
-          (operating-system-packages os)))
-  (services
-   (append services
-           (operating-system-user-services os))))
-#+end_src
 ****** Sway
 #+begin_src scheme
-(define* (sway-wm os)
-  (wm os
-      #:package sway
-      #:services (cons* swaylock-service
-                        (list brightnessctl-udev-rules))))
+(define-system-comp (sway-wm)
+  (services
+   (append (operating-system-user-services os)
+           (list swaylock-service
+                 brightnessctl-udev-rules))))
 #+end_src
 ***** Screen lockers
 ****** Swaylock
