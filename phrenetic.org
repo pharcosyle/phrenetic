@@ -6524,14 +6524,13 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
   (waybar-module
    'pulseaudio#source
    `((format . "{format_source}")
-     (format-source . (string-append
-                       (if show-percentage? "{volume}% " "")
-                       ""))
+     (format-source . ,(string-append
+                        (if show-percentage? "{volume}% " "")
+                        ""))
      (format-source-muted . "")
      (tooltip-format . "{source_desc} is on {source_volume}%")
-     (on-click . ,#~(as-> #$(file-append pavucontrol "/bin/pavucontrol") $
-                          (string-append $ " --tab=4")
-                          (string-append "\"" $ "\""))))))
+     (on-click . ,#~(let ((cmd (string-append #$(file-append pavucontrol "/bin/pavucontrol") " --tab=4")))
+                      (string-append "\"" cmd "\""))))))
 
 (define* (waybar-battery #:key show-percentage?)
   (waybar-module
@@ -6564,7 +6563,7 @@ These should only be set for Sway and might mess up other sessions, like Gnome. 
 (define* (waybar-backlight #:key show-percentage?)
   (waybar-module
    'backlight
-   '((format . ,(string-append
+   `((format . ,(string-append
                  "{icon} "
                  (if show-percentage? "{percent}" "")))
      (fomat-icons . #(🌕 🌔 🌗 🌒 🌑)))))
