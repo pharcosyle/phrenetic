@@ -5196,7 +5196,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define* (he-direnv #:key
                     stateless?
                     doom?
-                    shell
+                    shells
                     whitelist-dirs)
   (list
    (simple-service
@@ -5223,25 +5223,27 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     home-xdg-configuration-files-service-type
     `(("direnv/direnvrc" ,(local-file "direnvrc"))))
 
-   (let ((direnv-hook
-          (lambda (shell)
-            (let ((direnv-bin (file-append direnv "/bin/direnv")))
-              (mixed-text-file
-               "direnv-hook"
-               "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell ")\"")))))
-     (case shell
-       ;; ((#:shell/bash) (simple-service
-       ;;                  'direnv-bash-hook
-       ;;                  home-bash-service-type
-       ;;                  (home-bash-extension
-       ;;                   (bashrc
-       ;;                    (list (direnv-hook "bash"))))))
-       ((#:shell/zsh) (simple-service
-                       'direnv-zsh-hook
-                       home-zsh-service-type
-                       (home-zsh-extension
-                        (zshrc
-                         (list (direnv-hook "zsh"))))))))
+   (map (lambda (shell)
+          (let ((direnv-hook
+                 (lambda (shell-name)
+                   (let ((direnv-bin (file-append direnv "/bin/direnv")))
+                     (mixed-text-file
+                      "direnv-hook"
+                      "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell-name ")\"")))))
+            (case shell
+              ;; ((#:shell/bash) (simple-service
+              ;;                  'direnv-bash-hook
+              ;;                  home-bash-service-type
+              ;;                  (home-bash-extension
+              ;;                   (bashrc
+              ;;                    (list (direnv-hook "bash"))))))
+              ((#:shell/zsh) (simple-service
+                              'direnv-zsh-hook
+                              home-zsh-service-type
+                              (home-zsh-extension
+                               (zshrc
+                                (list (direnv-hook "zsh")))))))))
+        shells)
 
    (when doom?
      (doom-service
@@ -7510,7 +7512,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
      (he-ssh)
      (he-direnv #:stateless? stateless?
                 #:doom? doom?
-                #:shell interactive-shell
+                #:shells (list interactive-shell)
                 #:whitelist-dirs (list work-dir))
      (if nix?
          (he-nix #:stateless? stateless?
