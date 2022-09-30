@@ -148,7 +148,7 @@ Run with ~sudo~.
        (define mount-bin "/run/setuid-programs/mount")
        (define umount-bin "/run/setuid-programs/umount")
 
-       (when (eq? #$filesystem #:filesystem/btrfs)
+       (when (equal? #$filesystem #:filesystem/btrfs)
          (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
            (cmd mount-bin system-root mount-dir)
            (for-each (lambda (subvol)
@@ -187,7 +187,7 @@ Run with ~sudo~.
 
        (let ((swapfile-on-mount (string-append mount-dir #$swapfile)))
          (cmd #$(file-append coreutils "/bin/truncate") "--size" "0" swapfile-on-mount)
-         (when (eq? #$filesystem #:filesystem/btrfs)
+         (when (equal? #$filesystem #:filesystem/btrfs)
            (cmd #$(file-append e2fsprogs "/bin/chattr") "+C" swapfile-on-mount))
          (cmd #$(file-append util-linux+udev "/bin/fallocate") "--length" #$swapfile-size swapfile-on-mount)
          (chmod swapfile-on-mount #o600)
@@ -1789,7 +1789,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                         (#:store . #:machine))))))
          '())
      (list
-      (when-not (eq? login-shell interactive-shell)
+      (when-not (equal? login-shell interactive-shell)
                 (simple-service
                  'set-shell-env-var
                  home-environment-variables-service-type
@@ -2205,7 +2205,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
               (let ((idx (lambda (entry)
                            (list-index
                             (lambda (category)
-                              (eq? (car entry) category))
+                              (equal? (car entry) category))
                             '(#:completion #:ui #:editor #:emacs #:term #:checkers #:tools #:lang #:app #:config)))))
                 (< (idx a) (idx b)))))
     (update-vals $ (lambda (modules)
@@ -3355,7 +3355,7 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
   (let ((hasher (lambda (url)
                   (git-checkout-hash url commit #:recursive? recursive?))))
     (as-> hasher $
-          ($ (if (eq? (-> p package-source origin-method) git-fetch)
+          ($ (if (equal? (-> p package-source origin-method) git-fetch)
                  (-> p
                      package-source
                      origin-uri
@@ -5855,7 +5855,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         'doom-font
         (font-spec ;; :family ,(assoc-ref font #:font/name)
                    ;; Work around what I suspect is a PGTK issue. It's fixed in Emacs 29.
-                   :family ,(if (eq? (assoc-ref font #:font/weight) 'medium)
+                   :family ,(if (equal? (assoc-ref font #:font/weight) 'medium)
                                 (string-append (assoc-ref font #:font/name) " Medium")
                                 (assoc-ref font #:font/name))
                    :size ,(+ (assoc-ref font #:font/size) 2)
@@ -5964,7 +5964,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     `(("gtk-3.0/settings.ini"
        ,(ini-file
          "gtk-3.0-settings.ini"
-         `((Settings ((gtk-application-prefer-dark-theme . ,(eq? theme #:theme/dark)))))))
+         `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
       ("dconf/user"
        ,(computed-file
          "dconf-user"
@@ -6937,7 +6937,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 
 (define (services-packages f svcs)
   (f (lambda (s)
-       (eq? (service-kind s) home-profile-service-type))
+       (equal? (service-kind s) home-profile-service-type))
      svcs))
 #+end_src
 *** Programs
@@ -7498,7 +7498,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
-     (he-emacs #:zsh-vterm? (eq? interactive-shell #:shell/zsh))
+     (he-emacs #:zsh-vterm? (equal? interactive-shell #:shell/zsh))
      (if doom?
          (he-doom #:stateless? stateless?
                   #:services (doom-main #:stateless? stateless?
@@ -7859,7 +7859,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
          (define (make-known-files+dirs paths)
            (map (let ((directory?
                        (lambda (path)
-                         (eq? (stat:type (lstat path)) 'directory))))
+                         (equal? (stat:type (lstat path)) 'directory))))
                   (lambda (path)
                     (cons path
                           (if (string-suffix? "/" path)
@@ -7899,7 +7899,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                        (make-known-files+dirs
                         (let ((state-in-store
                                (filter (lambda (entry)
-                                         (eq? (assoc-ref entry #:store) store))
+                                         (equal? (assoc-ref entry #:store) store))
                                        #$state)))
                           (map (lambda (path)
                                  (string-append state-dir path))
