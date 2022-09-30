@@ -285,7 +285,7 @@ Run with ~sudo~.
             bluetooth
             gdm
             desktop-tty
-            ;; gnome-desktop
+            gnome-desktop
             sway-wm
             host-info
             boot-label
@@ -610,10 +610,10 @@ Must succeed "Accounts" component.
 ****** Desktop environments
 ******* Gnome
 #+begin_src scheme
-;; (define-system-comp (gnome-desktop)
-;;   (services
-;;    (cons* (service gnome-desktop-service-type)
-;;           (operating-system-user-services os))))
+(define-system-comp (gnome-desktop)
+  (services
+   (cons* (service gnome-desktop-service-type)
+          (operating-system-user-services os))))
 #+end_src
 ****** Window managers
 ******* Sway
@@ -1343,8 +1343,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                       (desktop-tty $ #:tty-number tty-start
                                    #:auto-login? auto-login?
                                    #:auto-login-user auto-login-user))
-                  ;; (if (member #:session/gnome (or sessions '()))
-                  ;;     (gnome-desktop $) $)
+                  (if (member #:session/gnome (or sessions '()))
+                      (gnome-desktop $) $)
                   (if (member #:session/sway (or sessions '()))
                       (sway-wm $) $)))
             $))))
