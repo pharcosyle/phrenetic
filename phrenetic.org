@@ -612,14 +612,17 @@ Must succeed "Accounts" component.
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
-   (cons* (let ((base gnome-desktop-service-type))
-            (service-type
-             (inherit base)
-             (extensions
-              (remove (lambda (ext)
-                        (equal? (service-extension-target ext) profile-service-type))
-                      (service-type-extensions base)))))
+   (cons* (service gnome-desktop-service-type-without-package)
           (operating-system-user-services os))))
+
+(define gnome-desktop-service-type-without-package
+  (let ((base gnome-desktop-service-type))
+    (service-type
+     (inherit base)
+     (extensions
+      (remove (lambda (ext)
+                (equal? (service-extension-target ext) profile-service-type))
+              (service-type-extensions base))))))
 #+end_src
 ****** Window managers
 ******* Sway
