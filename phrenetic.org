@@ -5201,30 +5201,31 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                     doom?
                     shells
                     whitelist-dirs)
-  (list
-   (simple-service
-    'direnv-add-package
-    home-profile-service-type
-    (list direnv))
+  (append
+   (list
+    (simple-service
+     'direnv-add-package
+     home-profile-service-type
+     (list direnv))
 
-   (when whitelist-dirs
-     (simple-service
-      'direnv-config
-      home-xdg-configuration-files-service-type
-      `(("direnv/direnv.toml"
-         ,(toml-file
-           "direnv-config"
-           `((whitelist ((prefix . ,(->> whitelist-dirs
-                                         (map (lambda (dir)
-                                                "/.persist/home/pharcosyle/work_for_now"))
-                                         ;; (map (lambda (dir)
-                                         ;;        (string-append "~/" dir)))
-                                         serialize-toml-array))))))))))
+    (when whitelist-dirs
+      (simple-service
+       'direnv-config
+       home-xdg-configuration-files-service-type
+       `(("direnv/direnv.toml"
+          ,(toml-file
+            "direnv-config"
+            `((whitelist ((prefix . ,(->> whitelist-dirs
+                                          (map (lambda (dir)
+                                                 "/.persist/home/pharcosyle/work_for_now"))
+                                          ;; (map (lambda (dir)
+                                          ;;        (string-append "~/" dir)))
+                                          serialize-toml-array))))))))))
 
-   (simple-service
-    'direnv-rc
-    home-xdg-configuration-files-service-type
-    `(("direnv/direnvrc" ,(local-file "direnvrc"))))
+    (simple-service
+     'direnv-rc
+     home-xdg-configuration-files-service-type
+     `(("direnv/direnvrc" ,(local-file "direnvrc")))))
 
    (map (lambda (shell)
           (let ((direnv-hook
@@ -5248,11 +5249,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                                 (list (direnv-hook "zsh")))))))))
         shells)
 
-   (when doom?
-     (doom-service
-      'direnv
-      #:modules '((#:tools
-                   direnv))))))
+   (list
+    (when doom?
+      (doom-service
+       'direnv
+       #:modules '((#:tools
+                    direnv)))))))
 #+end_src
 **** Direnvrc
 #+begin_src sh :tangle (meta-in-dir "direnvrc")
