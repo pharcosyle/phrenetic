@@ -7258,6 +7258,18 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define chromium-flavors '(#:ungoogled-chromium
                            #:google-chrome))
 #+end_src
+***** Setup instructions
+It might be possible to configure some of these in a file or with command-line flags. Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones (just through flags or not at all).
+****** Chromium
+- Settings > Appearance > Use GTK+ theme
+- Settings > On startup, check "Continue where you left off"
+- Right-click on the Bookmarks bar and uncheck "Show bookarks bar"
+******* Ungoogled Chromium
+- Settings > Manage search engines, make google the default
+  It might not appear under "Other Search Engines" until you search something on google.com
+- chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
+****** uBlock extension
+chrome://extensions > uBlock Origin > Details > Allow in Incognito
 **** Firefox
 #+begin_src scheme
 (define* (he-firefox #:key
