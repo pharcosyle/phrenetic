@@ -612,7 +612,13 @@ Must succeed "Accounts" component.
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
-   (cons* (service gnome-desktop-service-type)
+   (cons* (let ((base gnome-desktop-service-type))
+            (service-type
+             (inherit base)
+             (extensions
+              (remove (lambda (ext)
+                        (equal? (service-extension-target ext) profile-service-type))
+                      (service-type-extensions base)))))
           (operating-system-user-services os))))
 #+end_src
 ****** Window managers
@@ -1435,7 +1441,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome-themes-extra hicolor-icon-theme network-manager-applet))
+  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme network-manager-applet))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
@@ -1514,6 +1520,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-dbus
             he-gdm
             he-desktop-tty
+            he-gnome
+            gnome-start
             he-wm-common
             he-sway
             sway-start
@@ -6043,6 +6051,29 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start))))))
 #+end_src
 **** Sessions
+***** Desktop environments
+#+begin_src scheme
+(define (he-gnome)
+  (list
+   (simple-service
+    'gnome-add-packages
+    home-profile-service-type
+    (list (gnome-start-package)
+          gnome))))
+
+(define (gnome-start)
+  (file-append (gnome-start-package) "/bin/" gnome-start-exe))
+
+(define gnome-start-exe "gnome-start")
+
+(define (gnome-start-package)
+  (session-start
+   gnome-start-exe
+   (environment-variable-shell-definitions
+    (list (xdg-current-desktop-env-var "GNOME")
+          xdg-session-type-wayland-env-var))
+   "exec " (file-append gnome-session "/bin/gnome-session")))
+#+end_src
 ***** Window managers
 #+begin_src scheme
 (define* (session-start exe #:rest content)
@@ -6064,11 +6095,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (xdg-current-desktop-env-var val)
   `("XDG_CURRENT_DESKTOP" . ,val)) ; This is "normally" provided by a display manager.
 
+(define xdg-session-type-wayland-env-var
+  '("XDG_SESSION_TYPE" . "wayland")) ; This is "normally" provided by a display manager.
+
 (define* (wayland-env-vars #:key pipewire?)
  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
  (append
-  '(("XDG_SESSION_TYPE" . "wayland") ; This is "normally" provided by a display manager.
-    ("SDL_VIDEODRIVER" . "wayland")
+  '(("SDL_VIDEODRIVER" . "wayland")
     ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
     ("CLUTTER_BACKEND" . "wayland")
     ("ELM_ENGINE" . "wayland_egl")
@@ -6282,6 +6315,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
+           xdg-session-type-wayland-env-var
            (wayland-env-vars #:pipewire? pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
@@ -7537,6 +7571,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                   ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
                 (he-desktop-tty #:tty-number tty-start
                                 #:start (sway-start #:pipewire? pipewire?)))
+            (if (member #:session/gnome (or sessions '()))
+                (he-gnome) '())
             (if sway?
                 (let ((date-format date-format)
                       (time-format time-format))
@@ -8165,7 +8201,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
     #:sessions guest-he-sessions
     he-shared-opts)))
 
-(define guest-he-sessions '(#:session/sway))
+(define guest-he-sessions '(#:session/gnome
+                            #:session/sway))
 
 (define (main-he sessions)
   (he:create-he
