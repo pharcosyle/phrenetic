@@ -5297,11 +5297,12 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 #+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
 #+end_src
-***** Setup example
+***** Setup instructions
 #+begin_src sh :tangle no
 nix-channel --update
 
-nix-env --install google-chrome
+# nix-env --install google-chrome
+# ...
 #+end_src
 **** Flatpak
 #+begin_src scheme
@@ -5331,13 +5332,14 @@ nix-env --install google-chrome
                  (#:store . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
-***** Setup example
+***** Setup instructions
 #+begin_src sh :tangle no
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+# flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
 
-flatpak install --user flathub com.discordapp.Discord
-flatpak install --user flathub-beta com.obsproject.Studio
+# flatpak install --user flathub com.discordapp.Discord
+# flatpak install --user flathub-beta com.obsproject.Studio
+# ...
 #+end_src
 *** Console
 **** KMonad
