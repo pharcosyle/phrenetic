@@ -283,7 +283,8 @@ Run with ~sudo~.
             pipewire-multimedia
             network-manager
             bluetooth
-            ;; gdm
+            gdm
+            desktop-tty
             ;; gnome-desktop
             sway-wm
             host-info
@@ -553,28 +554,33 @@ Must succeed "Accounts" component.
 ***** Display managers
 ****** GDM
 #+begin_src scheme
-;; (define-system-comp (gdm #:key
-;;                          (wayland? #t)
-;;                          auto-login?
-;;                          auto-login-user)
-;;   (services
-;;    (cons* (service gdm-service-type
-;;                    (gdm-configuration
-;;                     (auto-login? auto-login?)
-;;                     (default-user auto-login-user)
-;;                     (wayland? wayland?)))
-;;           (operating-system-user-services os))))
+(define-system-comp (gdm #:key
+                         (wayland? #t)
+                         auto-login?
+                         auto-login-user)
+  (services
+   (cons* (service gdm-service-type
+                   (gdm-configuration
+                    (auto-login? auto-login?)
+                    (default-user auto-login-user)
+                    (wayland? wayland?)))
+          (operating-system-user-services os))))
 #+end_src
-***** Desktop environments
-****** Gnome
+***** Desktop TTY
 #+begin_src scheme
-;; (define-system-comp (gnome-desktop)
-;;   (services
-;;    (cons* (service gnome-desktop-service-type)
-;;           (operating-system-user-services os))))
-#+end_src
-***** Window managers
-#+begin_src scheme
+(define-system-comp (desktop-tty #:key
+                                 auto-login?
+                                 auto-login-user)
+  (services
+   (let ((tty-number 2))
+     (cons* (switch-to-tty-service #:tty-number tty-number)
+            (let ((services (operating-system-user-services os)))
+              (if auto-login?
+                  (with-auto-login-to-tty services
+                                          #:tty-number tty-number
+                                          #:user auto-login-user)
+                  services))))))
+
 (define* (switch-to-tty-service #:key tty-number)
   (simple-service
    'switch-to-tty
@@ -588,7 +594,7 @@ Must succeed "Accounts" component.
                 (invoke #$(file-append kbd "/bin/chvt")
                         #$(number->string tty-number))))))))
 
-(define* (auto-login-to-tty services #:key tty-number user)
+(define* (with-auto-login-to-tty services #:key tty-number user)
   (modify-services services
     (mingetty-service-type
      config =>
@@ -599,35 +605,32 @@ Must succeed "Accounts" component.
           (auto-login user))
          config))))
 #+end_src
-****** Sway
+***** Sessions
+****** Desktop environments
+******* Gnome
 #+begin_src scheme
-(define-system-comp (sway-wm #:key
-                             switch-to-tty?
-                             auto-login?
-                             auto-login-user)
-  (services
-   (let ((tty-number 2))
-     (append
-      (if switch-to-tty?
-          (list (switch-to-tty-service #:tty-number tty-number))
-          '())
-      (let ((services (operating-system-user-services os)))
-        (if auto-login?
-            (auto-login-to-tty services
-                               #:tty-number tty-number
-                               #:user auto-login-user)
-            services))
-      (list swaylock-service
-            brightnessctl-udev-rules)))))
+;; (define-system-comp (gnome-desktop)
+;;   (services
+;;    (cons* (service gnome-desktop-service-type)
+;;           (operating-system-user-services os))))
 #+end_src
-***** Screen lockers
-****** Swaylock
+****** Window managers
+******* Sway
+#+begin_src scheme
+(define-system-comp (sway-wm)
+  (services
+   (append (operating-system-user-services os)
+           (list swaylock-service
+                 brightnessctl-udev-rules))))
+#+end_src
+****** Screen lockers
+******* Swaylock
 #+begin_src scheme
 (define swaylock-service
   (screen-locker-service swaylock-effects "swaylock"))
 #+end_src
-***** Backlight
-****** Brightnessctl
+****** Backlight
+******* Brightnessctl
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
@@ -1297,7 +1300,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   pipewire?
                   bluetooth?
                   bluetooth-users
-                  ;; gdm?
+                  display-manager
                   sessions
                   auto-login?
                   auto-login-user)
@@ -1331,19 +1334,16 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                       (bluetooth $ #:who bluetooth-users
                                  #:stateless? stateless?)
                       $)
-                  ;; (if gdm?
-                  ;;     (gdm $ #:auto-login? auto-login?
-                  ;;          #:auto-login-user auto-login-user)
-                  ;;     $)
+                  (if display-manager
+                      (case display-manager
+                        ((#:dm/gdm) (gdm $ #:auto-login? auto-login?
+                                         #:auto-login-user auto-login-user)))
+                      (desktop-tty $ #:auto-login? auto-login?
+                                   #:auto-login-user auto-login-user))
                   ;; (if (member #:session/gnome (or sessions '()))
                   ;;     (gnome-desktop $) $)
                   (if (member #:session/sway (or sessions '()))
-                      (sway-wm $ #:switch-to-tty? #t
-                               ;; #:switch-to-tty? (not gdm?)
-                               #:auto-login? auto-login?
-                               ;; #:auto-login? (not gdm?)
-                               #:auto-login-user auto-login-user)
-                      $)))
+                      (sway-wm $) $)))
             $))))
 
 (define with-host-info host-info)
@@ -1492,7 +1492,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-flatpak
             he-kmonad
             he-pipewire
-            ;; he-gdm
+            he-gdm
             he-xdg
             he-mesa
             he-gtk
@@ -5583,14 +5583,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 **** Display managers
 ***** GDM
 #+begin_src scheme
-;; (define* (he-gdm #:key stateless?)
-;;   (list
-;;    (when stateless?
-;;      (home-stateless-service
-;;       'gdm
-;;       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
-;;                  (#:store . #:machine)
-;;                  (#:mode . #o700)))))))
+(define* (he-gdm #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'gdm
+      #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700)))))))
 #+end_src
 **** D-Bus
 #+begin_src scheme
@@ -7395,7 +7395,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                   kmonad?
                   desktop?
                   pipewire?
-                  ;; gdm?
+                  display-manager
                   sessions
                   projects)
   (let* ((org-dir org-dir)
@@ -7449,8 +7449,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 (font-serif font-serif)
                 (font-unicode font-unicode)
                 (font-variable-pitch font-sans)
-                (dbus? #t)
-                ;; (dbus? (not gdm?))
+                (dbus? (not display-manager))
                 (wayland? #t)
                 (sway? (member #:session/sway (or sessions '()))))
            (append
@@ -7459,8 +7458,9 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                              #:dbus? dbus?
                              #:sway? sway?)
                 '())
-            ;; (if gdm?
-            ;;     (he-gdm #:stateless? stateless?) '())
+            (case display-manager
+              ((#:dm/gdm) (he-gdm #:stateless? stateless?))
+              (else '()))
             (if dbus?
                 (he-dbus) '())
             (he-flatpak #:stateless? stateless?
@@ -8128,7 +8128,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
-    ;; #:gdm? #t
+    ;; #:display-manager #:dm/gdm
     ))
 
 (define he-shared-opts
