@@ -6034,7 +6034,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        ("CLUTTER_BACKEND" . "wayland")
        ("ELM_ENGINE" . "wayland_egl")
        ("ECORE_EVAS_ENGINE" . "wayland-egl")
-       ("QT_QPA_PLATFORM" . "wayland-egl")
+       ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary, see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
        ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
      (if pipewire?
          '(("RTC_USE_PIPEWIRE" . "true")) '())))
@@ -6183,7 +6183,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ****** HOLD Conditionalize Sway environment variables
 These should only be set for Sway and might mess up other sessions, like Gnome. I don't need to worry about this until/unless I add another session.
-- check for the presence of =DESKTOP_SESSION=sway=?
 - some (not particularly helpful) resources:
   - [[https://lists.sr.ht/~abcdw/rde-devel/%3C871qy1vtaz.fsf%40minikn.xyz%3E][{BUG} feature-sway breaks existing GNOME sessions — sourcehut lists]]
   - [[https://www.reddit.com/r/swaywm/comments/sw9lct/whats_the_recommended_way_of_setting_environment/][Whats the recommended way of setting environment variables? .profile doesnt w...]]
