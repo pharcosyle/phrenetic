@@ -1697,7 +1697,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     (bashrc (local-file "bashrc"))
                     (zshrc (local-file "zshrc")))
   (let ((setup-shell? (lambda (shell)
-                        (memq shell (list login-shell interactive-shell)))))
+                        (member shell (list login-shell interactive-shell)))))
     (append
      (if (setup-shell? #:shell/bash)
          (list
