@@ -447,9 +447,10 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
    (modify-services (operating-system-user-services os)
      (console-font-service-type
       config =>
-      (map (lambda (tty-and-font)
-             (cons (car tty-and-font)
-                   (file-append font-terminus "/share/consolefonts/ter-132n")))
+      (map (match-lambda
+             ((tty . _)
+              (cons tty
+                    (file-append font-terminus "/share/consolefonts/ter-132n"))))
            config)))))
 #+end_src
 ***** KMonad
