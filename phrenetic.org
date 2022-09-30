@@ -6091,13 +6091,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ***** Desktop environments
 #+begin_src scheme
-(define (he-gnome)
+(define* (he-gnome #:key stateless?)
   (list
    (simple-service
     'gnome-add-packages
     home-profile-service-type
     (list (gnome-start-package)
-          gnome))))
+          gnome))
+
+   ;; (when stateless?
+   ;;   (home-stateless-service
+   ;;    'gnome
+   ;;    #:state ...))
+   ))
 
 (define (gnome-start)
   (file-append (gnome-start-package) "/bin/" gnome-start-exe))
@@ -7574,7 +7580,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 (he-desktop-tty #:tty-number tty-start
                                 #:start (sway-start #:pipewire? pipewire?)))
             (if (member #:session/gnome (or sessions '()))
-                (he-gnome) '())
+                (he-gnome #:stateless? stateless?) '())
             (if sway?
                 (let ((date-format date-format)
                       (time-format time-format))
