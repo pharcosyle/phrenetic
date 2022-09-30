@@ -1415,6 +1415,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
+  #:use-module ((chromium chromium) #:select (chromium+drm))
   #:use-module ((ebullient home packages aws) #:select (awscli-2))
   #:use-module ((ebullient home packages clojure) #:select (clojure-tools))
   #:use-module ((ebullient home packages datomic) #:select (datomic-cli-tools))
@@ -1484,9 +1485,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-datomic
             he-node
             he-protonvpn
+            he-chromium
+            chromium-flavors
             he-firefox
-            he-google-chrome
-            he-ungoogled-chromium
             he-nyxt
             he-base))
 #+end_src
@@ -7200,6 +7201,63 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  (#:store . #:machine)))))))
 #+end_src
 *** Apps
+**** Chromium
+#+begin_src scheme
+(define* (he-chromium #:key
+                      stateless?
+                      wayland?
+                      flavors)
+  (list
+   (when (chromium? flavors)
+     (simple-service
+      'chromium-add-packages
+      home-profile-service-type
+      (append
+       (if (member #:ungoogled-chromium flavors)
+           (list (if wayland?
+                     ungoogled-chromium/wayland
+                     ungoogled-chromium))
+           '())
+       (if (member #:chromium flavors)
+           (list chromium+drm)
+           '())
+       (list ublock-origin/chromium))))
+
+   (when stateless?
+     (home-stateless-service
+      'chromium
+      #:state (append
+               (if (chromium? flavors)
+                   '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                      (#:store . #:machine)
+                      (#:mode . #o700))
+                     ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                      (#:store . #:machine)
+                      (#:mode . #o700)))
+                   '())
+               (if (chrome? flavors)
+                   '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+                      (#:store . #:machine)
+                      (#:mode . #o700))
+                     ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+                      (#:store . #:machine)
+                      (#:mode . #o700)))
+                   '())
+               '(((#:path . ".pki/nssdb/")
+                  (#:store . #:machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))))
+
+(define (chromium? flavors)
+  (or (member #:ungoogled-chromium flavors)
+      (member #:chromium flavors)))
+
+(define (chrome? flavors)
+  (member #:google-chrome flavors))
+
+(define chromium-flavors '(#:ungoogled-chromium
+                           #:google-chrome))
+#+end_src
 **** Firefox
 #+begin_src scheme
 (define* (he-firefox #:key
@@ -7225,34 +7283,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  (#:mode . #o700)
                  (#:parent-dir-perms . ((#:mode . #o700))))
                 ((#:path . ".mozilla/extensions")
-                 (#:store . #:machine)
-                 (#:mode . #o700)
-                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
-#+end_src
-**** Google Chrome
-No Guix package currently, install through Nix.
-#+begin_src scheme
-(define* (he-google-chrome #:key
-                           stateless?
-                           wayland?)
-  (list
-   ;; (simple-service
-   ;;  'google-chrome-add-package
-   ;;  home-profile-service-type
-   ;;  (list (if wayland?
-   ;;            google-chrome/wayland
-   ;;            google-chrome)))
-
-   (when stateless?
-     (home-stateless-service
-      'google-chrome
-      #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ".pki/nssdb/")
                  (#:store . #:machine)
                  (#:mode . #o700)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
@@ -7287,34 +7317,6 @@ No Guix package currently, install through Nix.
       'nyxt
       #:modules '((#:lang
                    common-lisp))))))
-#+end_src
-**** Ungoogled Chromium
-#+begin_src scheme
-(define* (he-ungoogled-chromium #:key
-                                stateless?
-                                wayland?)
-  (list
-   (simple-service
-    'ungoogled-chromium-add-packages
-    home-profile-service-type
-    (list (if wayland?
-              ungoogled-chromium/wayland
-              ungoogled-chromium)
-          ublock-origin/chromium))
-
-   (when stateless?
-     (home-stateless-service
-      'ungoogled-chromium
-      #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700))
-                ((#:path . ".pki/nssdb/")
-                 (#:store . #:machine)
-                 (#:mode . #o700)
-                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 ** Templates
 #+begin_src scheme
@@ -7457,12 +7459,11 @@ No Guix package currently, install through Nix.
             (he-vterm #:doom? doom?)
             (he-alacritty #:colors colors
                           #:font font-mono)
+            (he-chromium #:stateless? stateless?
+                         #:wayland? wayland?
+                         #:flavors chromium-flavors)
             (he-firefox #:stateless? stateless?
-                        #:wayland? wayland?)
-            (he-google-chrome #:stateless? stateless?
-                              #:wayland? wayland?)
-            (he-ungoogled-chromium #:stateless? stateless?
-                                   #:wayland? wayland?)))
+                        #:wayland? wayland?)))
          '())
      (if projects
          (he-projects #:work-dir work-dir
@@ -8160,6 +8161,9 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
           "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
           (openpgp-fingerprint
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+       (channel
+        (name 'guix-chromium)
+        (url "https://gitlab.com/mbakke/guix-chromium"))
        %default-channels)
 #+end_src
 **** COMMENT From project channel
@@ -8185,7 +8189,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://git.savannah.gnu.org/git/guix.git")
        (branch "master")
        (commit
-        "f7565101e49102da6f87ad92e4644ae7996515ab")
+        "1ee2d117d8fa9e2e0d4ec46cc5555497bb5e6337")
        (introduction
         (make-channel-introduction
          "9edb3f66fd807b096b48283debdcddccfea34bad"
@@ -8196,7 +8200,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://git.sr.ht/~abcdw/rde")
        (branch "master")
        (commit
-        "a8803ae9f2bf09f631b7142d5a31e4f6cba1243a")
+        "77bf57ba4f977af437fbaabff5e14bc09fb2eccd")
        (introduction
         (make-channel-introduction
          "257cebd587b66e4d865b3537a9a88cccd7107c95"
@@ -8207,12 +8211,19 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://gitlab.com/nonguix/nonguix")
        (branch "master")
        (commit
-        "415aeda016ca174764a700d8493cc93285ebe3dd")
+        "5a76529aff40107fbc03f293a0a332c839059815")
        (introduction
         (make-channel-introduction
          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
          (openpgp-fingerprint
-          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+
+      (channel
+       (name 'guix-chromium)
+       (url "https://gitlab.com/mbakke/guix-chromium")
+       (branch "master")
+       (commit
+        "3bc21255be98efb7a0e4b8de060c27bf60ae44f7")))
 #+end_src
 **** COMMENT From project channel
 #+begin_src scheme :tangle (meta-in-dir "channels-lock")
@@ -8221,7 +8232,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://git.savannah.gnu.org/git/guix.git")
        (branch "master")
        (commit
-        "4c03f62ad04c2cbbfc7ed61c97b0ecf897383706")
+        "1ee2d117d8fa9e2e0d4ec46cc5555497bb5e6337")
        (introduction
         (make-channel-introduction
          "9edb3f66fd807b096b48283debdcddccfea34bad"
@@ -8241,7 +8252,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        (url "https://git.savannah.gnu.org/git/guix.git")
        (branch "master")
        (commit
-        "4c03f62ad04c2cbbfc7ed61c97b0ecf897383706")
+        "1ee2d117d8fa9e2e0d4ec46cc5555497bb5e6337")
        (introduction
         (make-channel-introduction
          "9edb3f66fd807b096b48283debdcddccfea34bad"
@@ -8274,7 +8285,10 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
     (make-channel-introduction
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
-      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
+      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+  (channel
+   (name 'guix-chromium)
+   (url "https://gitlab.com/mbakke/guix-chromium"))))
 #+end_src
 * Github
 ** Readme
