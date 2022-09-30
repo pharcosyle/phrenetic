@@ -1511,6 +1511,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-themes+fonts
             he-wm-common
             he-sway
+            sway-start
             he-swaylock
             swaylock-screen-locker
             swaylock-screen-locker-immediate
@@ -6022,24 +6023,37 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
 #+end_src
+**** Desktop TTY
+#+begin_src scheme
+(define* (he-desktop-tty #:key
+                         start
+                         (tty-number 2))
+  (list
+   (simple-service
+    'desktop-tty-start-session
+    home-shell-profile-service-type
+    (list
+     (mixed-text-file
+      "start-on-tty"
+      #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start))))))
+#+end_src
 **** Window managers
 #+begin_src scheme
-(define* (start-session name* #:rest content)
-  (let ((name (string-append "start-" name*)))
-    (package
-      (inherit blank-package)
-      (name name)
-      (source (apply mixed-text-file name content))
-      (build-system trivial-build-system)
-      (arguments
-       `(#:builder
-         ,#~(begin
-              (let* ((bin (string-append #$output "/bin"))
-                     (f (string-append bin "/" #$name)))
-                (mkdir #$output)
-                (mkdir bin)
-                (copy-file #$source f)
-                (chmod f #o555))))))))
+(define* (session-start exe #:rest content)
+  (package
+    (inherit blank-package)
+    (name (string-append "session-" exe))
+    (source (apply mixed-text-file exe content))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:builder
+       ,#~(begin
+            (let* ((bin (string-append #$output "/bin"))
+                   (f (string-append bin "/" #$exe)))
+              (mkdir #$output)
+              (mkdir bin)
+              (copy-file #$source f)
+              (chmod f #o555)))))))
 
 (define (xdg-current-desktop-env-var val)
   `("XDG_CURRENT_DESKTOP" . ,val)) ; This is "normally" provided by a display manager.
@@ -6103,7 +6117,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    (simple-service
     'packages-for-sway
     home-profile-service-type
-    (list (start-sway #:pipewire? pipewire?)
+    (list (sway-start-package #:pipewire? pipewire?)
           qtwayland ; Copied from RDE. I don't know what this is for.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
@@ -6252,9 +6266,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       'sway
       #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215"))))))
 
-(define* (start-sway #:key pipewire?)
-  (start-session
-   "sway"
+(define* (sway-start #:key pipewire?)
+  (file-append (sway-start-package #:pipewire? pipewire?) "/bin/" sway-start-exe))
+
+(define sway-start-exe "sway-start")
+
+(define* (sway-start-package #:key pipewire?)
+  (session-start
+   sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
            (wayland-env-vars #:pipewire? pipewire?)))
@@ -7482,9 +7501,6 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                              #:dbus? dbus?
                              #:sway? sway?)
                 '())
-            (case display-manager
-              ((#:dm/gdm) (he-gdm #:stateless? stateless?))
-              (else '()))
             (if dbus?
                 (he-dbus) '())
             (he-flatpak #:stateless? stateless?
@@ -7510,6 +7526,10 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                     #:theme theme
                     #:font font-variable-pitch
                     #:font-monospace font-mono)
+            (if display-manager
+                (case display-manager
+                  ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
+                (he-desktop-tty #:start (sway-start #:pipewire? pipewire?)))
             (if sway?
                 (let ((date-format date-format)
                       (time-format time-format))
