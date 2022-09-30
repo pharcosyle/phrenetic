@@ -246,7 +246,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
-  #:use-module ((gnu packages linux) #:select (brightnessctl pipewire-0.3))
+  #:use-module ((gnu packages linux) #:select (brightnessctl kbd pipewire-0.3))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services base)
@@ -555,12 +555,13 @@ Must succeed "Accounts" component.
 #+begin_src scheme
 ;; (define-system-comp (gdm #:key
 ;;                          (wayland? #t)
-;;                          auto-login)
+;;                          auto-login?
+;;                          auto-login-user)
 ;;   (services
 ;;    (cons* (service gdm-service-type
 ;;                    (gdm-configuration
-;;                     (auto-login? (if auto-login #t #f))
-;;                     (default-user auto-login)
+;;                     (auto-login? auto-login?)
+;;                     (default-user auto-login-user)
 ;;                     (wayland? wayland?)))
 ;;           (operating-system-user-services os))))
 #+end_src
@@ -573,13 +574,51 @@ Must succeed "Accounts" component.
 ;;           (operating-system-user-services os))))
 #+end_src
 ***** Window managers
+#+begin_src scheme
+(define* (switch-to-tty-service #:key tty-number)
+  (simple-service
+   'switch-to-tty
+   shepherd-root-service-type
+   (list
+    (shepherd-service
+     (provision '(switch-to-tty))
+     (requirement '(virtual-terminal))
+     (one-shot? #t)
+     (start #~(lambda ()
+                (invoke #$(file-append kbd "/bin/chvt")
+                        #$(number->string tty-number))))))))
+
+(define* (auto-login-to-tty services #:key tty-number user)
+  (modify-services services
+    (mingetty-service-type
+     config =>
+     (if (equal? (mingetty-configuration-tty config)
+                 (string-append "tty" (number->string tty-number)))
+         (mingetty-configuration
+          (inherit config)
+          (auto-login user))
+         config))))
+#+end_src
 ****** Sway
 #+begin_src scheme
-(define-system-comp (sway-wm)
+(define-system-comp (sway-wm #:key
+                             switch-to-tty?
+                             auto-login?
+                             auto-login-user)
   (services
-   (append (operating-system-user-services os)
-           (list swaylock-service
-                 brightnessctl-udev-rules))))
+   (let ((tty-number 2))
+     (append
+      (if switch-to-tty?
+          (list (switch-to-tty-service #:tty-number tty-number))
+          '())
+      (let ((services (operating-system-user-services os)))
+        (if auto-login?
+            (auto-login-to-tty services
+                               #:tty-number tty-number
+                               #:user auto-login-user)
+            services))
+      (list swaylock-service
+            brightnessctl-udev-rules)))))
 #+end_src
 ***** Screen lockers
 ****** Swaylock
@@ -1259,8 +1298,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   bluetooth?
                   bluetooth-users
                   ;; gdm?
-                  ;; gdm-auto-login
-                  sessions)
+                  sessions
+                  auto-login?
+                  auto-login-user)
   (-> os
       (as-> $
         (if source?
@@ -1292,11 +1332,18 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                  #:stateless? stateless?)
                       $)
                   ;; (if gdm?
-                  ;;     (gdm $ #:auto-login gdm-auto-login))
+                  ;;     (gdm $ #:auto-login? auto-login?
+                  ;;          #:auto-login-user auto-login-user)
+                  ;;     $)
                   ;; (if (member #:session/gnome (or sessions '()))
                   ;;     (gnome-desktop $) $)
                   (if (member #:session/sway (or sessions '()))
-                      (sway-wm $) $)))
+                      (sway-wm $ #:switch-to-tty? #t
+                               ;; #:switch-to-tty? (not gdm?)
+                               #:auto-login? auto-login?
+                               ;; #:auto-login? (not gdm?)
+                               #:auto-login-user auto-login-user)
+                      $)))
             $))))
 
 (define with-host-info host-info)
@@ -8005,7 +8052,9 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                   primary-name
                   aux-name
                   guest-name
-                  bluetooth?)
+                  bluetooth?
+                  auto-login?
+                  auto-login-user)
   (apply
    os:os-base
    os:blank-os
@@ -8031,6 +8080,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                            aux-name
                            guest-name)
    #:sessions '(#:session/sway)
+   #:auto-login? auto-login?
+   #:auto-login-user auto-login-user
    os+he-shared-opts))
 
 
@@ -8105,7 +8156,9 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
     (-> (os-base #:primary-name primary-name
                  #:aux-name aux-name
                  #:guest-name guest-name
-                 #:bluetooth? bluetooth?)
+                 #:bluetooth? bluetooth?
+                 #:auto-login? disk-encryption?
+                 #:auto-login-user primary-name)
         (os:with-host-info #:host-name "frostfire"
                            #:timezone "America/Los_Angeles")
         (os:with-bootloader #:efi? efi?
