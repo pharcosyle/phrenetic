@@ -5451,6 +5451,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (he-pipewire #:key
                       stateless?
+                      dbus?
                       sway?)
   (append
    (pipewire-services #:stateless? stateless?
@@ -5460,6 +5461,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define* (pipewire-services #:key
                             stateless?
+                            dbus?
                             sway?)
   (list
    (simple-service
@@ -5473,7 +5475,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (list
      (shepherd-service
       (provision '(pipewire))
-      (requirement '(dbus))
+      (requirement (if dbus?
+                       '(dbus) '()))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire"))
                 #:log-file (string-append
@@ -7446,16 +7449,20 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 (font-serif font-serif)
                 (font-unicode font-unicode)
                 (font-variable-pitch font-sans)
+                (dbus? #t)
+                ;; (dbus? (not gdm?))
                 (wayland? #t)
                 (sway? (member #:session/sway (or sessions '()))))
            (append
             (if pipewire?
                 (he-pipewire #:stateless? stateless?
+                             #:dbus? dbus?
                              #:sway? sway?)
                 '())
             ;; (if gdm?
             ;;     (he-gdm #:stateless? stateless?) '())
-            (he-dbus)
+            (if dbus?
+                (he-dbus) '())
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
             (he-fonts #:stateless? stateless?
