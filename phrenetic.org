@@ -1413,7 +1413,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 :END:
 #+begin_src scheme
 (define-module (ebullient home core)
+  #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
+  #:use-module (guix packages)
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services shells)
@@ -6021,6 +6023,41 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (string->symbol (string-append "'" s "'")))
 #+end_src
 **** Window managers
+#+begin_src scheme
+(define* (start-session name* #:rest content)
+  (let ((name (string-append "start-" name*)))
+    (package
+      (inherit blank-package)
+      (name name)
+      (source (apply mixed-text-file name content))
+      (build-system trivial-build-system)
+      (arguments
+       `(#:builder
+         ,#~(begin
+              (let* ((bin (string-append #$output "/bin"))
+                     (f (string-append bin "/" #$name)))
+                (mkdir #$output)
+                (mkdir bin)
+                (copy-file #$source f)
+                (chmod f #o555))))))))
+
+(define (xdg-current-desktop-env-var val)
+  `("XDG_CURRENT_DESKTOP" . ,val)) ; This is "normally" provided by a display manager.
+
+(define* (wayland-env-vars #:key pipewire?)
+ ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
+ (append
+  '(("XDG_SESSION_TYPE" . "wayland") ; This is "normally" provided by a display manager.
+    ("SDL_VIDEODRIVER" . "wayland")
+    ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
+    ("CLUTTER_BACKEND" . "wayland")
+    ("ELM_ENGINE" . "wayland_egl")
+    ("ECORE_EVAS_ENGINE" . "wayland-egl")
+    ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
+    ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+  (if pipewire?
+      '(("RTC_USE_PIPEWIRE" . "true")) '())))
+#+end_src
 ***** Common
 #+begin_src scheme
 (define* (he-wm-common #:key sway?)
@@ -6066,28 +6103,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    (simple-service
     'packages-for-sway
     home-profile-service-type
-    (list qtwayland ; Copied from RDE. I don't know what this is for.
+    (list (start-sway #:pipewire? pipewire?)
+          qtwayland ; Copied from RDE. I don't know what this is for.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
           xdg-desktop-portal-wlr
           slurp)) ; This might be necessary to make xdg-desktop-portal-wlr screencasting work. See "xdpw will try to use the first chooser found in the list of hardcoded choosers..." in https://man.archlinux.org/man/xdg-desktop-portal-wlr.5.
-
-   (simple-service
-    'set-wayland-specific-env-vars
-    home-environment-variables-service-type
-    ;; Copied from RDE: I don't know what all of these do.
-    (append
-     '(("XDG_CURRENT_DESKTOP" . "sway")
-       ("XDG_SESSION_TYPE" . "wayland")
-       ("SDL_VIDEODRIVER" . "wayland")
-       ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
-       ("CLUTTER_BACKEND" . "wayland")
-       ("ELM_ENGINE" . "wayland_egl")
-       ("ECORE_EVAS_ENGINE" . "wayland-egl")
-       ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary, see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
-       ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
-     (if pipewire?
-         '(("RTC_USE_PIPEWIRE" . "true")) '())))
 
    (service
     home-sway-service-type
@@ -6230,12 +6251,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (doom-service
       'sway
       #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215"))))))
+
+(define* (start-sway #:key pipewire?)
+  (start-session
+   "sway"
+   (environment-variable-shell-definitions
+    (cons* (xdg-current-desktop-env-var "sway")
+           (wayland-env-vars #:pipewire? pipewire?)))
+   "exec " (file-append sway "/bin/sway")))
 #+end_src
-****** HOLD Conditionalize Sway environment variables
-These should only be set for Sway and might mess up other sessions, like Gnome. I don't need to worry about this until/unless I add another session.
-- some (not particularly helpful) resources:
-  - [[https://lists.sr.ht/~abcdw/rde-devel/%3C871qy1vtaz.fsf%40minikn.xyz%3E][{BUG} feature-sway breaks existing GNOME sessions — sourcehut lists]]
-  - [[https://www.reddit.com/r/swaywm/comments/sw9lct/whats_the_recommended_way_of_setting_environment/][Whats the recommended way of setting environment variables? .profile doesnt w...]]
 ****** Sway screenshot
 #+begin_src scheme
 (define (sway-screenshot-service)
