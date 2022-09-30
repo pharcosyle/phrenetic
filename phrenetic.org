@@ -8100,6 +8100,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
   #:use-module (ebullient install)
   #:use-module ((ebullient system core) #:prefix os:)
   #:use-module (ebullient utils)
+  #:use-module ((srfi srfi-1) #:select (delete-duplicates))
   #:export (frostfire
             installer
             primary
@@ -8111,6 +8112,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                   aux-name
                   guest-name
                   bluetooth?
+                  sessions
                   auto-login?
                   auto-login-user)
   (apply
@@ -8137,7 +8139,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
    #:bluetooth-users (list primary-name
                            aux-name
                            guest-name)
-   #:sessions '(#:session/sway)
+   #:sessions sessions
    #:auto-login? auto-login?
    #:auto-login-user auto-login-user
    os+he-shared-opts))
@@ -8147,6 +8149,25 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
 
 
 (define* (primary-he)
+  (main-he primary-he-sessions))
+
+(define primary-he-sessions '(#:session/sway))
+
+(define (aux-he)
+  (main-he aux-he-sessions))
+
+(define aux-he-sessions primary-he-sessions)
+
+(define (guest-he)
+  (he:create-he
+   (apply
+    he:he-base
+    #:sessions guest-he-sessions
+    he-shared-opts)))
+
+(define guest-he-sessions '(#:session/sway))
+
+(define (main-he sessions)
   (he:create-he
    (let* ((doom? #t)
           (doom-tree-sitter? doom?))
@@ -8156,17 +8177,12 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
       #:doom? doom?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
+      #:sessions sessions
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
                                           (#:doom? . ,doom?)
                                           (#:doom-tree-sitter? doom-tree-sitter?))))
       he-shared-opts))))
-
-(define aux-he primary-he)
-
-(define (guest-he)
-  (he:create-he
-   (apply he:he-base he-shared-opts)))
 
 
 (define nix? #t)
@@ -8186,8 +8202,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
   (append
    os+he-shared-opts
    `(#:stateless-persist-dir ,stateless-persist-dir
-     #:stateless-machine-dir ,stateless-machine-dir
-     #:sessions (#:session/sway))))
+     #:stateless-machine-dir ,stateless-machine-dir)))
 
 
 (define efi? #t)
@@ -8215,6 +8230,11 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                  #:aux-name aux-name
                  #:guest-name guest-name
                  #:bluetooth? bluetooth?
+                 #:sessions (->> (list primary-he-sessions
+                                       aux-he-sessions
+                                       guest-he-sessions)
+                                 (apply append)
+                                 delete-duplicates)
                  #:auto-login? disk-encryption?
                  #:auto-login-user primary-name)
         (os:with-host-info #:host-name "frostfire"
