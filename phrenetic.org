@@ -6051,30 +6051,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start))))))
 #+end_src
 **** Sessions
-***** Desktop environments
-#+begin_src scheme
-(define (he-gnome)
-  (list
-   (simple-service
-    'gnome-add-packages
-    home-profile-service-type
-    (list (gnome-start-package)
-          gnome))))
-
-(define (gnome-start)
-  (file-append (gnome-start-package) "/bin/" gnome-start-exe))
-
-(define gnome-start-exe "gnome-start")
-
-(define (gnome-start-package)
-  (session-start
-   gnome-start-exe
-   (environment-variable-shell-definitions
-    (list (xdg-current-desktop-env-var "GNOME")
-          xdg-session-type-wayland-env-var))
-   "exec " (file-append gnome-session "/bin/gnome-session")))
-#+end_src
-***** Window managers
 #+begin_src scheme
 (define* (session-start exe #:rest content)
   (package
@@ -6111,6 +6087,30 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (if pipewire?
       '(("RTC_USE_PIPEWIRE" . "true")) '())))
 #+end_src
+***** Desktop environments
+#+begin_src scheme
+(define (he-gnome)
+  (list
+   (simple-service
+    'gnome-add-packages
+    home-profile-service-type
+    (list (gnome-start-package)
+          gnome))))
+
+(define (gnome-start)
+  (file-append (gnome-start-package) "/bin/" gnome-start-exe))
+
+(define gnome-start-exe "gnome-start")
+
+(define (gnome-start-package)
+  (session-start
+   gnome-start-exe
+   (environment-variable-shell-definitions
+    (list (xdg-current-desktop-env-var "GNOME")
+          xdg-session-type-wayland-env-var))
+   "exec " (file-append gnome-session "/bin/gnome-session")))
+#+end_src
+***** Window managers
 ****** Common
 #+begin_src scheme
 (define* (he-wm-common #:key sway?)
@@ -6154,7 +6154,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   extra-config)
   (list
    (simple-service
-    'packages-for-sway
+    'sway-add-packages
     home-profile-service-type
     (list (sway-start-package #:pipewire? pipewire?)
           qtwayland ; Copied from RDE. I don't know what this is for.
