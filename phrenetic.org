@@ -1497,10 +1497,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-flatpak
             he-kmonad
             he-pipewire
-            he-gdm
-            he-xdg
-            he-mesa
-            he-gtk
             light-colors
             dark-colors
             he-fonts
@@ -1511,7 +1507,13 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             useful-font-packages
             date-format
             time-format
+            he-xdg
+            he-mesa
+            he-gtk
             he-doom-themes+fonts
+            he-dbus
+            he-gdm
+            he-desktop-tty
             he-wm-common
             he-sway
             sway-start
@@ -1527,9 +1529,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             rofi-menu
             rofi-application-launcher
             he-kanshi
-            he-vterm
-            he-alacritty
-            alacritty-terminal
             he-projects
             services-only-packages
             services-sans-packages
@@ -1538,6 +1537,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-datomic
             he-node
             he-protonvpn
+            he-vterm
+            he-alacritty
+            alacritty-terminal
             he-chromium
             chromium-flavors
             he-firefox
@@ -5586,47 +5588,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  (#:store . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
-**** Display managers
-***** GDM
-#+begin_src scheme
-(define* (he-gdm #:key stateless?)
-  (list
-   (when stateless?
-     (home-stateless-service
-      'gdm
-      #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700)))))))
-#+end_src
-**** D-Bus
-#+begin_src scheme
-(define (he-dbus)
-  (list
-   (simple-service
-    'dbus-set-address-env-var
-    home-environment-variables-service-type
-    '(("DBUS_SESSION_BUS_ADDRESS" . "unix:path=$XDG_RUNTIME_DIR/bus")))
-
-   (simple-service
-    'dbus-add-shepherd-daemon
-    home-shepherd-service-type
-    (list
-     (shepherd-service
-      (provision '(dbus))
-      (stop  #~(make-kill-destructor))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append dbus "/bin/dbus-daemon")
-                      "--nofork"
-                      "--session"
-                      (string-append
-                       "--address=" "unix:path="
-                       (getenv "XDG_RUNTIME_DIR") "/bus"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/dbus.log"))))))))
-#+end_src
 **** Colors
 #+begin_src scheme
 ;; Nothing here yet.
@@ -6026,6 +5987,47 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
 #+end_src
+**** D-Bus
+#+begin_src scheme
+(define (he-dbus)
+  (list
+   (simple-service
+    'dbus-set-address-env-var
+    home-environment-variables-service-type
+    '(("DBUS_SESSION_BUS_ADDRESS" . "unix:path=$XDG_RUNTIME_DIR/bus")))
+
+   (simple-service
+    'dbus-add-shepherd-daemon
+    home-shepherd-service-type
+    (list
+     (shepherd-service
+      (provision '(dbus))
+      (stop  #~(make-kill-destructor))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append dbus "/bin/dbus-daemon")
+                      "--nofork"
+                      "--session"
+                      (string-append
+                       "--address=" "unix:path="
+                       (getenv "XDG_RUNTIME_DIR") "/bus"))
+                #:log-file (string-append
+                            (or (getenv "XDG_LOG_HOME")
+                                (format #f "~a/.local/var/log"
+                                        (getenv "HOME")))
+                            "/dbus.log"))))))))
+#+end_src
+**** Display managers
+***** GDM
+#+begin_src scheme
+(define* (he-gdm #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'gdm
+      #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700)))))))
+#+end_src
 **** Desktop TTY
 #+begin_src scheme
 (define* (he-desktop-tty #:key
@@ -6040,7 +6042,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       "start-on-tty"
       #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start))))))
 #+end_src
-**** Window managers
+**** Sessions
+***** Window managers
 #+begin_src scheme
 (define* (session-start exe #:rest content)
   (package
@@ -6075,7 +6078,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (if pipewire?
       '(("RTC_USE_PIPEWIRE" . "true")) '())))
 #+end_src
-***** Common
+****** Common
 #+begin_src scheme
 (define* (he-wm-common #:key sway?)
   (wm-common-applets #:sway? sway?))
@@ -6099,7 +6102,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               ;; --file-manager ,(file-append xdg-utils "/bin/xdg-open")
               ))))))
 #+end_src
-***** Sway
+****** Sway
 #+begin_src scheme
 (define* (he-sway #:key
                   doom?
@@ -6282,7 +6285,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
            (wayland-env-vars #:pipewire? pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
-****** Sway screenshot
+******* Sway screenshot
 #+begin_src scheme
 (define (sway-screenshot-service)
   (simple-service
@@ -6331,8 +6334,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               #$(file-append wl-clipboard "/bin/wl-paste")
               #$(file-append swappy "/bin/swappy")))))
 #+end_src
-**** Screen lockers
-***** Swaylock
+***** Screen lockers
+****** Swaylock
 #+begin_src scheme
 (define* (he-swaylock #:key
                       colors
@@ -6405,11 +6408,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (swaylock-screen-locker-immediate)
   #~(string-append #$(swaylock-screen-locker) " --grace=0"))
 #+end_src
-****** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
+******* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
 Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
-**** Idle managers
-***** Swayidle
+***** Idle managers
+****** Swayidle
 #+begin_src scheme
 (define* (he-swayidle #:key
                       sway?
@@ -6443,8 +6446,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (swayidle-idle-manager)
   #~(string-append #$(file-append swayidle "/bin/swayidle") " -w"))
 #+end_src
-**** Notification daemons
-***** Mako
+***** Notification daemons
+****** Mako
 #+begin_src scheme
 (define* (he-mako #:key
                   sway?
@@ -6491,8 +6494,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
               (bindsym $mod+Shift+m exec ,makoctl restore)
               (bindsym $mod+Control+m exec ,makoctl menu ,menu "\"Notification action\""))))))))
 #+end_src
-**** Status bars
-***** Waybar
+***** Status bars
+****** Waybar
 #+begin_src scheme
 (define* (he-waybar #:key
                     colors
@@ -6608,7 +6611,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (waybar-memory)
       (waybar-battery #:show-percentage? #t)))))
 #+end_src
-****** Modules
+******* Modules
 #+begin_src scheme
 (define* (waybar-module name
                         #:optional
@@ -6795,8 +6798,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-**** Menus and launchers
-***** Rofi
+***** Menus and launchers
+****** Rofi
 #+begin_src scheme
 (define* (he-rofi #:key
                   stateless?
@@ -6857,8 +6860,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       rofi-wayland
       rofi))
 #+end_src
-**** Display configuration
-***** Kanshi
+***** Display configuration
+****** Kanshi
 #+begin_src scheme
 (define* (he-kanshi #:key extra-config)
   (list
@@ -6868,60 +6871,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (config
       `(,@(if extra-config
               extra-config '())))))))
-#+end_src
-**** Terminals
-***** Vterm
-#+begin_src scheme
-(define* (he-vterm #:key doom?)
-  (if doom?
-      (list
-       (doom-service
-        'vterm
-        #:modules '((#:term
-                     vterm))))
-      '()))
-#+end_src
-***** Alacritty
-#+begin_src scheme
-(define* (he-alacritty #:key
-                       colors
-                       font)
-  (list
-   (service
-    home-alacritty-service-type
-    (home-alacritty-configuration
-     (config
-      `((window . ((padding . ((x . 5)
-                               (y . 5)))))
-        (background_opacity . 0.75) ; Change this to window.opacity when Guix updates Alacritty version.
-        ,@(if font
-              `((font . ((normal . ,(append
-                                     `((family . ,(assoc-ref font #:font/name)))
-                                     (if-let ((weight (assoc-ref font #:font/weight)))
-                                             `((style . ,(font-weight->style weight))) '())))
-                         (size . ,(- (assoc-ref font #:font/size) 1)))))
-              '())
-        ,@(let ((clr (lambda (color)
-                       (assoc-ref colors color))))
-            `((colors . ((primary . ((background . ,(clr #:color/bg))
-                                     (foreground . ,(clr #:color/fg))))
-                         (normal . ((black . ,(clr #:color/base0))
-                                    (white . ,(clr #:color/base8))
-                                    (red . ,(clr #:color/red))
-                                    (green . ,(clr #:color/green))
-                                    (yellow . ,(clr #:color/yellow))
-                                    (blue . ,(clr #:color/blue))
-                                    (magenta . ,(clr #:color/magenta))
-                                    (cyan . ,(clr #:color/cyan))))))))))))))
-
-(define (font-weight->style weight)
-  (->> weight
-       symbol->string
-       (string-delete #\-)
-       string-capitalize))
-
-(define (alacritty-terminal)
-  (file-append alacritty "/bin/alacritty"))
 #+end_src
 *** Projects
 #+begin_src scheme
@@ -7295,7 +7244,60 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       #:state '(((#:path . ".pvpn-cli/")
                  (#:store . #:machine)))))))
 #+end_src
+**** Vterm
+#+begin_src scheme
+(define* (he-vterm #:key doom?)
+  (if doom?
+      (list
+       (doom-service
+        'vterm
+        #:modules '((#:term
+                     vterm))))
+      '()))
+#+end_src
 *** Apps
+**** Alacritty
+#+begin_src scheme
+(define* (he-alacritty #:key
+                       colors
+                       font)
+  (list
+   (service
+    home-alacritty-service-type
+    (home-alacritty-configuration
+     (config
+      `((window . ((padding . ((x . 5)
+                               (y . 5)))))
+        (background_opacity . 0.75) ; Change this to window.opacity when Guix updates Alacritty version.
+        ,@(if font
+              `((font . ((normal . ,(append
+                                     `((family . ,(assoc-ref font #:font/name)))
+                                     (if-let ((weight (assoc-ref font #:font/weight)))
+                                             `((style . ,(font-weight->style weight))) '())))
+                         (size . ,(- (assoc-ref font #:font/size) 1)))))
+              '())
+        ,@(let ((clr (lambda (color)
+                       (assoc-ref colors color))))
+            `((colors . ((primary . ((background . ,(clr #:color/bg))
+                                     (foreground . ,(clr #:color/fg))))
+                         (normal . ((black . ,(clr #:color/base0))
+                                    (white . ,(clr #:color/base8))
+                                    (red . ,(clr #:color/red))
+                                    (green . ,(clr #:color/green))
+                                    (yellow . ,(clr #:color/yellow))
+                                    (blue . ,(clr #:color/blue))
+                                    (magenta . ,(clr #:color/magenta))
+                                    (cyan . ,(clr #:color/cyan))))))))))))))
+
+(define (font-weight->style weight)
+  (->> weight
+       symbol->string
+       (string-delete #\-)
+       string-capitalize))
+
+(define (alacritty-terminal)
+  (file-append alacritty "/bin/alacritty"))
+#+end_src
 **** Chromium
 #+begin_src scheme
 (define* (he-chromium #:key
@@ -7505,8 +7507,6 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                              #:dbus? dbus?
                              #:sway? sway?)
                 '())
-            (if dbus?
-                (he-dbus) '())
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
             (he-fonts #:stateless? stateless?
@@ -7530,6 +7530,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                     #:theme theme
                     #:font font-variable-pitch
                     #:font-monospace font-mono)
+            (if dbus?
+                (he-dbus) '())
             (if display-manager
                 (case display-manager
                   ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
@@ -7570,22 +7572,22 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                    ;; (he-kanshi)
                    ))
                 '())
-            (he-vterm #:doom? doom?)
             (he-alacritty #:colors colors
                           #:font font-mono)
             (he-chromium #:stateless? stateless?
                          #:wayland? wayland?
                          #:flavors chromium-flavors)
             (he-firefox #:stateless? stateless?
-                        #:wayland? wayland?)))
+                        #:wayland? wayland?)
+            (he-nyxt #:stateless? stateless?
+                     #:doom? doom?)))
          '())
      (if projects
          (he-projects #:work-dir work-dir
                       #:projects projects)
          '())
      (he-protonvpn #:stateless? stateless?)
-     (he-nyxt #:stateless? stateless?
-              #:doom? doom?))))
+     (he-vterm #:doom? doom?))))
 #+end_src
 * Common
 :PROPERTIES:
