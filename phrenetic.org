@@ -6119,8 +6119,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (session-start
    gnome-start-exe
    (environment-variable-shell-definitions
-    (list (xdg-current-desktop-env-var "GNOME")
-          xdg-session-type-wayland-env-var))
+    (list xdg-session-type-wayland-env-var))
    "exec " (file-append gnome-session "/bin/gnome-session")))
 #+end_src
 ***** Window managers
