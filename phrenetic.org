@@ -1540,9 +1540,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             rofi-menu
             rofi-application-launcher
             he-kanshi
-            he-projects
-            services-only-packages
-            services-sans-packages
             he-aws
             he-clojure
             he-datomic
@@ -1555,6 +1552,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             chromium-flavors
             he-firefox
             he-nyxt
+            he-projects
+            services-only-packages
+            services-sans-packages
             he-base))
 #+end_src
 ** Create
@@ -6919,38 +6919,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       `(,@(if extra-config
               extra-config '())))))))
 #+end_src
-*** Projects
-#+begin_src scheme
-(define* (he-projects #:key
-                      work-dir
-                      projects)
-  (append-map
-   (match-lambda
-     ((dir . opts)
-      (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
-             ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
-             (proj-file (string-append dir* "/project.scm")))
-        (if (file-exists? proj-file)
-            ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
-            (apply (load proj-file) (->> opts
-                                         (acons #:dir dir*)
-                                         alist->list))
-            '()))))
-   projects))
-#+end_src
-**** Project helpers
-#+begin_src scheme
-(define (services-only-packages svcs)
-  (services-packages filter svcs))
-
-(define (services-sans-packages svcs)
-  (services-packages remove svcs))
-
-(define (services-packages f svcs)
-  (f (lambda (s)
-       (equal? (service-kind s) home-profile-service-type))
-     svcs))
-#+end_src
 *** Programs
 **** AWS
 #+begin_src scheme
@@ -7474,6 +7442,38 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
       #:modules '((#:lang
                    common-lisp))))))
 #+end_src
+*** Projects
+#+begin_src scheme
+(define* (he-projects #:key
+                      work-dir
+                      projects)
+  (append-map
+   (match-lambda
+     ((dir . opts)
+      (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
+             ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
+             (proj-file (string-append dir* "/project.scm")))
+        (if (file-exists? proj-file)
+            ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
+            (apply (load proj-file) (->> opts
+                                         (acons #:dir dir*)
+                                         alist->list))
+            '()))))
+   projects))
+#+end_src
+**** Project helpers
+#+begin_src scheme
+(define (services-only-packages svcs)
+  (services-packages filter svcs))
+
+(define (services-sans-packages svcs)
+  (services-packages remove svcs))
+
+(define (services-packages f svcs)
+  (f (lambda (s)
+       (equal? (service-kind s) home-profile-service-type))
+     svcs))
+#+end_src
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -7631,12 +7631,12 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
             (he-nyxt #:stateless? stateless?
                      #:doom? doom?)))
          '())
+     (he-protonvpn #:stateless? stateless?)
+     (he-vterm #:doom? doom?)
      (if projects
          (he-projects #:work-dir work-dir
                       #:projects projects)
-         '())
-     (he-protonvpn #:stateless? stateless?)
-     (he-vterm #:doom? doom?))))
+         '()))))
 #+end_src
 * Common
 :PROPERTIES:
