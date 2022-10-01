@@ -7460,13 +7460,13 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
           ;; gst-plugins-ugly
           ))
 
-   (when stateless?
-     (home-stateless-service
-      'nyxt
-      #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine))
-                ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)))))
+   ;; (when stateless?
+   ;;   (home-stateless-service
+   ;;    'nyxt
+   ;;    #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
+   ;;               (#:store . #:machine))
+   ;;              ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
+   ;;               (#:store . #:machine)))))
 
    (when doom?
      (doom-service
