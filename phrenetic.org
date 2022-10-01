@@ -6327,7 +6327,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
-           xdg-session-type-wayland-env-var
            (wayland-env-vars #:pipewire? pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
