@@ -5099,7 +5099,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define (doom-dash)
   (list
    (doom-service
-    'globals
+    'dash
     #:packages
     '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341"))
     #:config
@@ -6076,10 +6076,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               (chmod f #o555)))))))
 
 (define (xdg-current-desktop-env-var val)
-  `("XDG_CURRENT_DESKTOP" . ,val)) ; This is "normally" provided by a display manager.
+  `("XDG_CURRENT_DESKTOP" . ,val)) ; "Normally" provided by a display manager.
 
 (define xdg-session-type-wayland-env-var
-  '("XDG_SESSION_TYPE" . "wayland")) ; This is "normally" provided by a display manager.
+  '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a display manager.
 
 (define* (wayland-env-vars #:key pipewire?)
  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
