@@ -6095,6 +6095,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       '(("RTC_USE_PIPEWIRE" . "true")) '())))
 #+end_src
 ***** Desktop environments
+****** Gnome
 #+begin_src scheme
 (define* (he-gnome #:key stateless?)
   (list
@@ -6327,7 +6328,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
-           xdg-session-type-wayland-env-var
+           xdg-session-type-wayland-env-var ; Seems to be set even without this but might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars #:pipewire? pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
