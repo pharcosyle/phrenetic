@@ -1981,6 +1981,7 @@ SAVEHIST=$HISTSIZE
         (list (local-file "zsh-vterm"))))))))
 #+end_src
 **** Configure zsh for vterm
+- TODO move this into =he-vterm=
 - TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
 #+begin_src org :tangle (meta-in-dir "zsh-vterm")
 vterm_printf(){
@@ -7628,8 +7629,9 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                          #:flavors chromium-flavors)
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
-            (he-nyxt #:stateless? stateless?
-                     #:doom? doom?)))
+            ;; (he-nyxt #:stateless? stateless?
+            ;;          #:doom? doom?)
+            ))
          '())
      (he-protonvpn #:stateless? stateless?)
      (he-vterm #:doom? doom?)
