@@ -1572,6 +1572,16 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 ** Components
 #+begin_src scheme
+(define home-multi-xdg-configuration-files-service-type
+  (service-type
+   (inherit home-xdg-configuration-files-service-type)
+   (compose
+    (lambda (exts)
+      (as-> exts $
+            (delete-duplicates $ (lambda (a b)
+                                   (equal? (car a) (car b))))
+            (apply append $))))))
+
 (define very-big-history 1000000)
 #+end_src
 *** Stateless
@@ -5974,7 +5984,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
    (simple-service
     'gtk-settings-and-dconf
-    home-xdg-configuration-files-service-type
+    home-multi-xdg-configuration-files-service-type
     `(("gtk-3.0/settings.ini"
        ,(ini-file
          "gtk-3.0-settings.ini"
