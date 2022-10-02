@@ -1549,7 +1549,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-gimp
             he-alacritty
             alacritty-terminal
-            he-vterm
+            he-doom-vterm
             he-chromium
             chromium-flavors
             he-firefox
@@ -7299,27 +7299,23 @@ use_guixs() {
 (define (alacritty-terminal)
   (file-append alacritty "/bin/alacritty"))
 #+end_src
-****** Vterm
+****** Doom vterm
 Does this belong in [[*Apps][Apps]]?
 #+begin_src scheme
-(define* (he-vterm #:key
-                   doom?
-                   setup-zsh?)
-  (if doom?
-      (list
-       (doom-service
-        'vterm
-        #:modules '((#:term
-                     vterm)))
+(define* (he-doom-vterm #:key setup-zsh?)
+  (list
+   (doom-service
+    'vterm
+    #:modules '((#:term
+                 vterm)))
 
-       (when setup-zsh?
-         (simple-service
-          'vterm-zsh
-          home-zsh-service-type
-          (home-zsh-extension
-           (zshrc
-            (list (local-file "zsh-vterm")))))))
-      '()))
+   (when setup-zsh?
+     (simple-service
+      'doom-vterm-zsh
+      home-zsh-service-type
+      (home-zsh-extension
+       (zshrc
+        (list (local-file "zsh-vterm"))))))))
 #+end_src
 ******* Configure zsh for vterm
 - TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
@@ -7777,8 +7773,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                ;;          #:gtk-services gtk)
                (he-alacritty #:colors colors
                              #:font font-mono)
-               (he-vterm #:doom? doom?
-                         #:setup-zsh? (equal? interactive-shell #:shell/zsh))
+               (if doom?
+                   (he-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh))
+                   '())
                (he-chromium #:stateless? stateless?
                             #:wayland? wayland?
                             #:gtk-services gtk
