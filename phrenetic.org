@@ -4922,8 +4922,16 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (he-guix #:key
                   stateless?
-                  doom?)
+                  doom?
+                  channels)
   (append
+   (list
+    (simple-service
+     'guix-add-channels
+     home-xdg-configuration-files-service-type
+     `(("guix/channels.scm"
+        ,channels))))
+
    (if stateless?
        (let ((guix-profile ".guix-profile")
              (guix-current "guix/current"))
@@ -7751,6 +7759,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   doom-evil?
                   doom-tree-sitter?
                   console?
+                  guix-channels
                   nix?
                   kmonad?
                   desktop?
@@ -7776,7 +7785,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                       #:evil? doom-evil?
                                       #:email email))
        '())
-   (he-guix #:stateless? stateless?)
+   (he-guix #:stateless? stateless?
+            #:channels guix-channels)
    (if nix?
        (he-nix #:stateless? stateless?
                #:doom? doom?
@@ -8433,6 +8443,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
 (define-module (exuberant frostfire)
+  #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((ebullient home core) #:prefix he:)
   #:use-module (ebullient install)
   #:use-module ((ebullient system core) #:prefix os:)
@@ -8521,6 +8532,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:doom-evil? doom-evil?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
+      #:guix-channels (local-file "channels-lock")
       #:sessions sessions
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
