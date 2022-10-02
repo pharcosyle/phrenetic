@@ -1547,6 +1547,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-calendar
             he-doom-org
             he-direnv
+            ;; he-nano
             he-node
             he-protonvpn
             he-ssh
@@ -1576,6 +1577,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 ** Components
 #+begin_src scheme
+(define* (skeleton-file file)
+  (string-append "/etc/skel/" file))
+
 (define very-big-history 1000000)
 #+end_src
 *** Stateless
@@ -1594,9 +1598,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (home-stateless-service
      'home
      #:state (or extra-state '())
-     #:ignore '(".guix-home")))
-
-   (stateless-skeletons)))
+     #:ignore '(".guix-home")))))
 #+end_src
 **** Service
 ***** Service type
@@ -1671,32 +1673,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+begin_src scheme
 (define home-stateless-service
   (stateless:service-fn home-stateless-service-type))
-#+end_src
-**** Skeletons
-#+begin_src scheme
-(define (stateless-skeletons)
-  (list
-   (simple-service
-    'stateless-skeletons
-    home-files-service-type
-    (map (lambda (file)
-           `(,file
-             ,(skel-file file #:strip-dot? #t)))
-         '(".Xdefaults"
-           ".gdbinit"
-           ".guile")))
-
-   (simple-service
-    'stateless-skeletons-xdg
-    home-xdg-configuration-files-service-type
-    `(("nano/nanorc"
-       ,(skel-file ".config/nano/nanorc"))))))
-
-(define* (skel-file file* #:key strip-dot?)
-  (let ((file (string-append "/etc/skel/" file*)))
-    (if strip-dot?
-        (local-file file (substring file* 1))
-        (local-file file))))
 #+end_src
 *** Shells
 #+begin_src scheme
@@ -4968,8 +4944,61 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                       (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
        '())
 
+   (guile-services #:stateless? stateless?
+                   #:doom? doom?)
+
    (if doom?
        (doom-guix #:stateless? stateless?) '())))
+#+end_src
+***** Guile
+#+begin_src scheme
+(define* (guile-services #:key
+                         stateless?
+                         doom?)
+  (append
+   (list
+    ;; (simple-service
+    ;;  'guile-add-packages
+    ;;  home-profile-service-type
+    ;;  (list guile))
+
+    (simple-service
+     'guile-add-config
+     home-files-service-type
+     `((".guile"
+        ,(local-file (skeleton-file ".guile") "guile"))
+       (".gdbinit"
+        ,(local-file (skeleton-file ".gdbinit") "gdbinit")))))
+
+   (if doom?
+       (doom-guile #:stateless? stateless?) '())))
+#+end_src
+****** Doom Guile
+#+begin_src scheme
+(define* (doom-guile #:key stateless?)
+  (append
+   (let ((name 'guile))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    (scheme +guile)))
+       #:config
+       '((after! scheme
+                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+
+         ;; TODO Maybe do this if popping to the side is too annoying
+         ;; (after! geiser-repl
+         ;;   (setq geiser-repl-use-other-window nil))
+         ))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-transient #:stateless? stateless?)))
 #+end_src
 ***** Doom Guix :bindings:
 #+begin_src scheme
@@ -5015,34 +5044,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
                     (#:store . #:machine)))))))
 
-   (doom-guile-scheme #:stateless? stateless?)))
-#+end_src
-****** Guile Scheme
-#+begin_src scheme
-(define* (doom-guile-scheme #:key stateless?)
-  (append
-   (let ((name 'guile-scheme))
-     (list
-      (doom-service
-       name
-       #:modules '((#:lang
-                    (scheme +guile)))
-       #:config
-       '((after! scheme
-                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
-
-         ;; TODO Maybe do this if popping to the side is too annoying
-         ;; (after! geiser-repl
-         ;;   (setq geiser-repl-use-other-window nil))
-         ))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
-
-   (doom-transient #:stateless? stateless?)))
+   (doom-guile #:stateless? stateless?)))
 #+end_src
 **** Nix
 #+begin_src scheme
@@ -7172,6 +7174,16 @@ use_guixs() {
         (string-join $ ", ")
         (string-append "[ " $ " ]")
         (string->symbol $)))
+#+end_src
+**** Nano
+#+begin_src scheme
+;; (define (he-nano)
+;;   (list
+;;    (simple-service
+;;     'nano-add-config
+;;     home-xdg-configuration-files-service-type
+;;     `(("nano/nanorc"
+;;        ,(local-file (skeleton-file ".config/nano/nanorc")))))))
 #+end_src
 **** Node
 #+begin_src scheme
