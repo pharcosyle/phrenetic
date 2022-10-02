@@ -4968,7 +4968,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      `((".guile"
         ,(local-file (skeleton-file ".guile") "guile"))
        (".gdbinit"
-        ,(local-file (skeleton-file ".gdbinit") "gdbinit")))))
+        ,(local-file (skeleton-file ".gdbinit") "gdbinit"))))
+
+    (home-stateless-service
+     'guile
+     #:state '(((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
+                (#:store . #:machine)))))
 
    (if doom?
        (doom-guile #:stateless? stateless?) '())))
