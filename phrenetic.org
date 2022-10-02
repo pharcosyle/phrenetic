@@ -7106,24 +7106,31 @@ use_guixs() {
                   stateless?
                   doom?
                   doom-tree-sitter?)
+  (append
+   (list
+    (simple-service
+     'node-add-packages
+     home-profile-service-type
+     (list node))
+
+    ;; (when stateless?
+    ;;   (home-stateless-service
+    ;;    'node
+    ;;    #:state '(((#:path . ".npm/")
+    ;;               (#:store . #:machine)))))
+    )
+
+   (if doom?
+       (doom-javascript-services #:tree-sitter? doom-tree-sitter?)
+       '())))
+
+(define* (doom-javascript-services #:key tree-sitter?)
   (list
-   (simple-service
-    'node-add-packages
-    home-profile-service-type
-    (list node))
-
-   ;; (when stateless?
-   ;;   (home-stateless-service
-   ;;    'node
-   ;;    #:state '(((#:path . ".npm/")
-   ;;               (#:store . #:machine)))))
-
-   (when doom?
-     (doom-service
-      'node
-      #:modules `((#:lang
-                   (json ,@(if doom-tree-sitter? '(+tree-sitter) '()))
-                   (javascript ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))))
+   (doom-service
+    'javascript
+    #:modules `((#:lang
+                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
+                 (javascript ,@(if tree-sitter? '(+tree-sitter) '())))))))
 #+end_src
 **** Proton VPN
 #+begin_src scheme
