@@ -551,8 +551,9 @@ Must succeed [[*Accounts][Accounts]] component.
                      (#:mode . #o700)))))
         '()))))
 #+end_src
-**** Display managers
-***** GDM
+**** Login management
+***** Display managers
+****** GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key
                          (wayland? #t)
@@ -566,7 +567,7 @@ Must succeed [[*Accounts][Accounts]] component.
                     (wayland? wayland?)))
           (operating-system-user-services os))))
 #+end_src
-**** Desktop TTY
+***** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
                                  tty-number
@@ -5740,8 +5741,9 @@ Some colors from the original Atom theme on which I based mine that might be use
                                         (getenv "HOME")))
                             "/dbus.log"))))))))
 #+end_src
-**** Display managers
-***** GDM
+**** Login management
+***** Display managers
+****** GDM
 #+begin_src scheme
 (define* (he-gdm #:key stateless?)
   (list
@@ -5752,7 +5754,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                  (#:store . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
-**** Desktop TTY
+***** Desktop TTY
 #+begin_src scheme
 (define* (he-desktop-tty #:key
                          tty-number
