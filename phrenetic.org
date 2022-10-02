@@ -275,8 +275,8 @@ Run with ~sudo~.
             nss
             linux-nonfree
             accounts
-            nonguix-substitutes
-            nix
+            guix-pm
+            nix-pm
             hidpi-console-font
             kmonad-tool
             desktop-services
@@ -406,34 +406,48 @@ Run with ~sudo~.
                  (crypt password (or salt "toosimple"))
                  #f))))
 #+end_src
-*** Nonguix substitutes
-This could be done using the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] but it works fine now so I won't change it.
+*** Package management
+**** Guix
 #+begin_src scheme
-(define-system-comp (nonguix-substitutes)
+(define-system-comp (guix-pm #:key stateless?)
   (services
-   (modify-services (operating-system-user-services os)
-     (guix-service-type
-      config =>
-      (guix-configuration
-       (inherit config)
-       (substitute-urls
-        (append (guix-configuration-substitute-urls config)
-                (list "https://substitutes.nonguix.org")))
-       (authorized-keys
-        (append (guix-configuration-authorized-keys config)
-                (list (local-file "substitutes.nonguix.org.pub")))))))))
+   (append
+    (operating-system-user-services os)
+    (if stateless?
+        (list
+         (stateless-service
+          'guix
+          #:state '(((#:path . "/etc/guix/signing-key.pub")
+                     (#:store . #:machine)
+                     (#:parent-dir-perms . ((#:mode . #o111))))
+                    ((#:path . "/etc/guix/signing-key.sec")
+                     (#:store . #:machine)
+                     (#:parent-dir-perms . ((#:mode . #o111)))))))
+        '())
+    (list (nonguix-substitutes)))))
 #+end_src
-**** Signing key
+***** Nonguix substitutes
+#+begin_src scheme
+(define (nonguix-substitutes)
+  (simple-service
+   'nonguix-substitutes
+   guix-service-type
+   (guix-extension
+    (authorized-keys
+     (list (local-file "substitutes.nonguix.org.pub")))
+    (substitute-urls
+     (list "https://substitutes.nonguix.org")))))
+#+end_src
+****** Signing key
 #+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-*** Package management
 **** Nix
 #+begin_src scheme
-(define-system-comp (nix)
+(define-system-comp (nix-pm)
   (services
    (cons* (service nix-service-type)
           (operating-system-user-services os))))
@@ -812,13 +826,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
       #:state '(((#:path . "/etc/machine-id")
                  (#:store . #:machine))
                 ((#:path . "/var/lib/random-seed")
-                 (#:store . #:machine))
-                ((#:path . "/etc/guix/signing-key.pub")
-                 (#:store . #:machine)
-                 (#:parent-dir-perms . ((#:mode . #o111))))
-                ((#:path . "/etc/guix/signing-key.sec")
-                 (#:store . #:machine)
-                 (#:parent-dir-perms . ((#:mode . #o111)))))
+                 (#:store . #:machine)))
       #:ignore '("/var/log/"))))))
 
 (define stateless-persist-dir "/.persist")
@@ -1322,11 +1330,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       base-services
       nss
       (accounts #:users-info users-info)
-      nonguix-substitutes
       linux-nonfree
+      (guix-pm #:stateless? stateless?)
       (as-> $
         (if nix?
-            (nix $) $)
+            (nix-pm $) $)
         (if console?
             (-> $
                 hidpi-console-font
