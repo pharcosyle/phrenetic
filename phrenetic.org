@@ -1540,6 +1540,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-clojure
             he-datomic
             he-doom-calendar
+            he-doom-org
             he-direnv
             he-node
             he-protonvpn
@@ -4329,21 +4330,17 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-main #:key
                     stateless?
+                    evil?
                     tree-sitter?
-                    email
-                    org-dir)
-  (let ((evil? #t))
-    (append
-     (doom-general #:stateless? stateless?
-                   #:tree-sitter? tree-sitter?
-                   #:evil? evil?)
-     (doom-user #:email email)
-     (doom-keymaps)
-     (doom-org #:stateless? stateless?
-               #:evil? evil?
-               #:org-dir org-dir)
-     (doom-languages #:tree-sitter? tree-sitter?)
-     (doom-guix #:stateless? stateless?))))
+                    email)
+  (append
+   (doom-general #:stateless? stateless?
+                 #:tree-sitter? tree-sitter?
+                 #:evil? evil?)
+   (doom-user #:email email)
+   (doom-keymaps)
+   (doom-languages #:tree-sitter? tree-sitter?)
+   (doom-guix #:stateless? stateless?)))
 #+end_src
 ****** General :bindings:
 #+begin_src scheme
@@ -4830,58 +4827,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (biome--trans "s-h" "C-h")
        ;; Maybe "C-s-i" but then I'll have to change my sexp-movement command(s). Maybe keep this even if I do that, for consistency.
        (biome--trans "C-S-i" "<backtab>"))))
-
-   (doom-dash)))
-#+end_src
-****** Org :bindings:
-#+begin_src scheme
-(define* (doom-org #:key
-                   stateless?
-                   evil?
-                   org-dir)
-  (append
-   (let ((name 'org))
-     (list
-      (doom-service
-       name
-       #:modules '((#:lang
-                    (org +journal)))
-       #:config
-       (append
-        `((use-package! org
-                        :defer t
-                        :init
-                        (setq org-directory ,(string-append "~/" org-dir))
-                        :config
-                        (setq org-log-done 'time
-                              org-priority-lowest ?E
-                              org-priority-default ?C
-                              org-priority-faces
-                              (-map (-lambda ((priority color))
-                                             (cons priority (doom-color color)))
-                                    '((?A red)
-                                      (?B orange)
-                                      (?C blue)
-                                      (?D yellow)
-                                      (?E green)))))
-
-          (after! ob
-                  (setq org-babel-noweb-error-all-langs t)))
-
-        (if evil?
-            '((after! evil-org
-                      (map! :map evil-org-mode-map
-                            :nv "C-j" #'outline-forward-same-level
-                            :nv "C-k" #'outline-backward-same-level)))
-            '())))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("org-clock-save.el" #:doom-base #:data))
-                    (#:store . #:persist))
-                   ((#:path . ("org/persist/" #:doom-base #:cache))
-                    (#:store . #:machine)))))))
 
    (doom-dash)))
 #+end_src
@@ -6980,6 +6925,58 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 
    (doom-dash)))
 #+end_src
+**** Doom org :bindings:
+#+begin_src scheme
+(define* (he-doom-org #:key
+                      stateless?
+                      evil?
+                      org-dir)
+  (append
+   (let ((name 'org))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    (org +journal)))
+       #:config
+       (append
+        `((use-package! org
+                        :defer t
+                        :init
+                        (setq org-directory ,(string-append "~/" org-dir))
+                        :config
+                        (setq org-log-done 'time
+                              org-priority-lowest ?E
+                              org-priority-default ?C
+                              org-priority-faces
+                              (-map (-lambda ((priority color))
+                                             (cons priority (doom-color color)))
+                                    '((?A red)
+                                      (?B orange)
+                                      (?C blue)
+                                      (?D yellow)
+                                      (?E green)))))
+
+          (after! ob
+                  (setq org-babel-noweb-error-all-langs t)))
+
+        (if evil?
+            '((after! evil-org
+                      (map! :map evil-org-mode-map
+                            :nv "C-j" #'outline-forward-same-level
+                            :nv "C-k" #'outline-backward-same-level)))
+            '())))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("org-clock-save.el" #:doom-base #:data))
+                    (#:store . #:persist))
+                   ((#:path . ("org/persist/" #:doom-base #:cache))
+                    (#:store . #:machine)))))))
+
+   (doom-dash)))
+#+end_src
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv #:key
@@ -7615,6 +7612,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   (login-shell #:shell/bash)
                   (interactive-shell #:shell/zsh)
                   doom?
+                  doom-evil?
                   doom-tree-sitter?
                   console?
                   nix?
@@ -7643,9 +7641,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (if doom?
          (he-doom #:stateless? stateless?
                   #:services (doom-main #:stateless? stateless?
+                                        #:evil? doom-evil?
                                         #:tree-sitter? doom-tree-sitter?
-                                        #:email email
-                                        #:org-dir org-dir))
+                                        #:email email))
          '())
      (he-guix #:stateless? stateless?)
      (if nix?
@@ -7655,7 +7653,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  #:login-shell login-shell)
          '())
      (if doom?
-         (he-doom-calendar #:stateless? stateless?) '())
+         (append
+          (he-doom-calendar #:stateless? stateless?)
+          (he-doom-org #:stateless? stateless?
+                       #:evil? doom-evil?
+                       #:org-dir org-dir))
+         '())
      (he-direnv #:stateless? stateless?
                 #:doom? doom?
                 #:shells (list interactive-shell)
@@ -8368,11 +8371,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (main-he sessions)
   (he:create-he
    (let* ((doom? #t)
+          (doom-evil? doom?)
           (doom-tree-sitter? doom?))
      (apply
       he:he-base
       #:email "pharcosyle@gmail.com"
       #:doom? doom?
+      #:doom-evil? doom-evil?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
       #:sessions sessions
