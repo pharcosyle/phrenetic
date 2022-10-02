@@ -338,8 +338,7 @@ Run with ~sudo~.
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 #+end_src
-*** General
-**** Source
+*** Source
 #+begin_src scheme
 (define-system-comp (source #:key path)
   (services
@@ -354,21 +353,21 @@ Run with ~sudo~.
                            #:recursive? #t
                            #:select? (negate vcs-file?)))))))))
 #+end_src
-**** Base services
+*** Base services
 #+begin_src scheme
 (define-system-comp (base-services)
   (services
    (append %base-services
            (operating-system-user-services os))))
 #+end_src
-**** NSS
+*** NSS
 #+begin_src scheme
 (define-system-comp (nss)
   (packages
    (cons* nss-certs
           (operating-system-packages os))))
 #+end_src
-**** Linux nonfree
+*** Linux nonfree
 #+begin_src scheme
 (define-system-comp (linux-nonfree)
   (kernel linux)
@@ -376,7 +375,7 @@ Run with ~sudo~.
   (firmware (cons* linux-firmware
                    (operating-system-firmware os))))
 #+end_src
-**** Accounts
+*** Accounts
 #+begin_src scheme
 (define-system-comp (accounts #:key users-info)
   (users
@@ -407,7 +406,7 @@ Run with ~sudo~.
                  (crypt password (or salt "toosimple"))
                  #f))))
 #+end_src
-**** Nonguix substitutes
+*** Nonguix substitutes
 This could be done using the new [[https://github.com/guix-mirror/guix/commit/fcad6226486b52e5d45531f60811d35eac34fa67][guix-extension]] but it works fine now so I won't change it.
 #+begin_src scheme
 (define-system-comp (nonguix-substitutes)
@@ -424,23 +423,23 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
         (append (guix-configuration-authorized-keys config)
                 (list (local-file "substitutes.nonguix.org.pub")))))))))
 #+end_src
-***** Signing key
+**** Signing key
 #+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
 (public-key
  (ecc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-**** Package management
-***** Nix
+*** Package management
+**** Nix
 #+begin_src scheme
 (define-system-comp (nix)
   (services
    (cons* (service nix-service-type)
           (operating-system-user-services os))))
 #+end_src
-**** Console
-***** HiDPI console font
+*** Console
+**** HiDPI console font
 #+begin_src scheme
 (define-system-comp (hidpi-console-font)
   (services
@@ -453,7 +452,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
                     (file-append font-terminus "/share/consolefonts/ter-132n"))))
            config)))))
 #+end_src
-***** KMonad
+**** KMonad
 Must succeed "Accounts" component.
 #+begin_src scheme
 (define-system-comp (kmonad-tool #:key who)
@@ -473,14 +472,14 @@ Must succeed "Accounts" component.
    (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
           (operating-system-user-services os))))
 #+end_src
-**** Desktop
+*** Desktop
 #+begin_src scheme
 (define (remove-services services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
 #+end_src
-***** Desktop services
+**** Desktop services
 #+begin_src scheme
 (define-system-comp (desktop-services)
   (services
@@ -493,7 +492,7 @@ Must succeed "Accounts" component.
                    gdm-service-type
                    screen-locker-service-type))))))
 #+end_src
-***** Pipewire
+**** Pipewire
 #+begin_src scheme
 (define-system-comp (pipewire-multimedia)
   (services
@@ -504,8 +503,8 @@ Must succeed "Accounts" component.
                                     pipewire-0.3)
                 $))))
 #+end_src
-***** Network
-****** Network manager
+**** Network
+***** Network manager
 #+begin_src scheme
 (define-system-comp (network-manager #:key stateless?)
   (services
@@ -524,7 +523,7 @@ Must succeed "Accounts" component.
                      (#:parent-dir-perms . ((#:mode . #o700)))))))
         '()))))
 #+end_src
-***** Bluetooth
+**** Bluetooth
 #+begin_src scheme
 (define-system-comp (bluetooth #:key
                                who
@@ -552,8 +551,8 @@ Must succeed "Accounts" component.
                      (#:mode . #o700)))))
         '()))))
 #+end_src
-***** Display managers
-****** GDM
+**** Display managers
+***** GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key
                          (wayland? #t)
@@ -567,7 +566,7 @@ Must succeed "Accounts" component.
                     (wayland? wayland?)))
           (operating-system-user-services os))))
 #+end_src
-***** Desktop TTY
+**** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
                                  tty-number
@@ -606,9 +605,9 @@ Must succeed "Accounts" component.
           (auto-login user))
          config))))
 #+end_src
-***** Sessions
-****** Desktop environments
-******* GNOME
+**** Sessions
+***** Desktop environments
+****** GNOME
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
@@ -624,8 +623,8 @@ Must succeed "Accounts" component.
                 (equal? (service-extension-target ext) profile-service-type))
               (service-type-extensions base))))))
 #+end_src
-****** Window managers
-******* Sway
+***** Window managers
+****** Sway
 #+begin_src scheme
 (define-system-comp (sway-wm)
   (services
@@ -633,14 +632,14 @@ Must succeed "Accounts" component.
            (list swaylock-service
                  brightnessctl-udev-rules))))
 #+end_src
-****** Screen lockers
-******* Swaylock
+***** Screen lockers
+****** Swaylock
 #+begin_src scheme
 (define swaylock-service
   (screen-locker-service swaylock-effects "swaylock"))
 #+end_src
-****** Backlight
-******* Brightnessctl
+***** Backlight
+****** Brightnessctl
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
@@ -1501,9 +1500,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             he-doom
             doom-service
-            he-version-control
-            he-ssh
-            he-direnv
             he-nix
             he-flatpak
             he-kmonad
@@ -1546,17 +1542,20 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-aws
             he-clojure
             he-datomic
+            he-direnv
             he-node
             he-protonvpn
-            he-vterm
+            he-ssh
+            he-version-control
+            he-pavucontrol
+            he-gimp
             he-alacritty
             alacritty-terminal
+            he-vterm
             he-chromium
             chromium-flavors
             he-firefox
-            he-gimp
             he-nyxt
-            he-pavucontrol
             he-vlc
             he-projects
             services-only-packages
@@ -5139,166 +5138,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
                    (#:store . #:persist))))))))
 #+end_src
-*** Version control
-#+begin_src scheme
-(define* (he-version-control #:key
-                             stateless?
-                             doom?
-                             email
-                             sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
-                             gpg-sign-key
-                             ;; git-send-email?
-                             extra-config)
-  (append
-   (list
-    ;; (when git-send-email?
-    ;;   (simple-service
-    ;;    'git-send-email-package
-    ;;    home-profile-service-type
-    ;;    (list (list git "send-email"))))
-    (service
-     home-git-service-type
-     (home-git-configuration
-      (config
-       `((user
-          ((email . ,email)
-           ,@(if sign-commits?
-                 `((signingkey . ,gpg-sign-key)) '())))
-         ;; TODO stuff from feature-git, figure it out later
-         ;; (merge
-         ;;  ;; diff3 makes it easier to solve conflicts with smerge, zdiff3
-         ;;  ;; should make a conflict scope smaller, but guile-git fails if
-         ;;  ;; this option is set.
-         ;;  ((conflictStyle . diff3)))
-         ;; (diff
-         ;;  ;; histogram should be smarter about diff generation.
-         ;;  ((algorithm . histogram)))
-         (commit
-          (,@(if sign-commits?
-                 '((gpgsign . #t)) '())))
-         ;; (sendemail
-         ;;  ((annotate . #t)))
-         ;;  TODO these two (http and gpg) sections were in the RDE example home environment (but notably not in the rde feature-git). Figure out what they're for after I do gpg.
-         ;; (http "https://weak.example.com"
-         ;;       ((ssl-verify . #f)))
-         ;; (gpg
-         ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-         ,@(if extra-config
-               extra-config '()))))))
-
-   (if doom?
-       (append
-        (list
-         (doom-service
-          'version-control
-          #:modules '((#:emacs
-                       vc)
-                      (#:ui
-                       (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
-                      (#:tools
-                       (magit +forge)))
-          #:config
-          '((after! magit
-                    (setq git-commit-style-convention-checks '(non-empty-second-line))
-                    (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
-
-        (doom-transient #:stateless? stateless?))
-       '())))
-#+end_src
-*** SSH
-#+begin_src scheme
-(define (he-ssh)
-  (list
-   (service home-openssh-service-type)))
-#+end_src
-*** Direnv
-#+begin_src scheme
-(define* (he-direnv #:key
-                    stateless?
-                    doom?
-                    shells
-                    whitelist-dirs)
-  (append
-   (list
-    (simple-service
-     'direnv-add-package
-     home-profile-service-type
-     (list direnv))
-
-    (when whitelist-dirs
-      (simple-service
-       'direnv-config
-       home-xdg-configuration-files-service-type
-       `(("direnv/direnv.toml"
-          ,(toml-file
-            "direnv-config"
-            `((whitelist ((prefix . ,(->> whitelist-dirs
-                                          (map (lambda (dir)
-                                                 "/.persist/home/pharcosyle/work_for_now"))
-                                          ;; (map (lambda (dir)
-                                          ;;        (string-append "~/" dir)))
-                                          serialize-toml-array))))))))))
-
-    (simple-service
-     'direnv-rc
-     home-xdg-configuration-files-service-type
-     `(("direnv/direnvrc" ,(local-file "direnvrc")))))
-
-   (map (lambda (shell)
-          (let ((direnv-hook
-                 (lambda (shell-name)
-                   (let ((direnv-bin (file-append direnv "/bin/direnv")))
-                     (mixed-text-file
-                      "direnv-hook"
-                      "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell-name ")\"")))))
-            (case shell
-              ;; ((#:shell/bash) (simple-service
-              ;;                  'direnv-bash-hook
-              ;;                  home-bash-service-type
-              ;;                  (home-bash-extension
-              ;;                   (bashrc
-              ;;                    (list (direnv-hook "bash"))))))
-              ((#:shell/zsh) (simple-service
-                              'direnv-zsh-hook
-                              home-zsh-service-type
-                              (home-zsh-extension
-                               (zshrc
-                                (list (direnv-hook "zsh")))))))))
-        shells)
-
-   (list
-    (when doom?
-      (doom-service
-       'direnv
-       #:modules '((#:tools
-                    direnv)))))))
-#+end_src
-**** Direnvrc
-#+begin_src sh :tangle (meta-in-dir "direnvrc")
-use_guixs() {
-	LOCK_FILE=channels-lock
-
-	if [ -f $LOCK_FILE ]; then
-		eval "$(guix time-machine --channels=$LOCK_FILE -- shell --search-paths "$@")"
-	else
-		eval "$(guix shell --search-paths "$@")"
-	fi
-}
-#+end_src
-**** TOML serialization
-#+begin_src scheme
-(define (toml-file name config)
-  (ini-file name config))
-
-(define (serialize-toml-array elements)
-  (as-> elements $
-        (map (lambda (element)
-               (string-append "\"" element "\""))
-             $)
-        (string-join $ ", ")
-        (string-append "[ " $ " ]")
-        (string->symbol $)))
-#+end_src
 *** Package management
 **** Nix
 #+begin_src scheme
@@ -7250,6 +7089,94 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
+**** Direnv
+#+begin_src scheme
+(define* (he-direnv #:key
+                    stateless?
+                    doom?
+                    shells
+                    whitelist-dirs)
+  (append
+   (list
+    (simple-service
+     'direnv-add-package
+     home-profile-service-type
+     (list direnv))
+
+    (when whitelist-dirs
+      (simple-service
+       'direnv-config
+       home-xdg-configuration-files-service-type
+       `(("direnv/direnv.toml"
+          ,(toml-file
+            "direnv-config"
+            `((whitelist ((prefix . ,(->> whitelist-dirs
+                                          (map (lambda (dir)
+                                                 "/.persist/home/pharcosyle/work_for_now"))
+                                          ;; (map (lambda (dir)
+                                          ;;        (string-append "~/" dir)))
+                                          serialize-toml-array))))))))))
+
+    (simple-service
+     'direnv-rc
+     home-xdg-configuration-files-service-type
+     `(("direnv/direnvrc" ,(local-file "direnvrc")))))
+
+   (map (lambda (shell)
+          (let ((direnv-hook
+                 (lambda (shell-name)
+                   (let ((direnv-bin (file-append direnv "/bin/direnv")))
+                     (mixed-text-file
+                      "direnv-hook"
+                      "command -v " direnv-bin " > /dev/null && eval \"$(" direnv-bin " hook " shell-name ")\"")))))
+            (case shell
+              ;; ((#:shell/bash) (simple-service
+              ;;                  'direnv-bash-hook
+              ;;                  home-bash-service-type
+              ;;                  (home-bash-extension
+              ;;                   (bashrc
+              ;;                    (list (direnv-hook "bash"))))))
+              ((#:shell/zsh) (simple-service
+                              'direnv-zsh-hook
+                              home-zsh-service-type
+                              (home-zsh-extension
+                               (zshrc
+                                (list (direnv-hook "zsh")))))))))
+        shells)
+
+   (list
+    (when doom?
+      (doom-service
+       'direnv
+       #:modules '((#:tools
+                    direnv)))))))
+#+end_src
+***** Direnvrc
+#+begin_src sh :tangle (meta-in-dir "direnvrc")
+use_guixs() {
+	LOCK_FILE=channels-lock
+
+	if [ -f $LOCK_FILE ]; then
+		eval "$(guix time-machine --channels=$LOCK_FILE -- shell --search-paths "$@")"
+	else
+		eval "$(guix shell --search-paths "$@")"
+	fi
+}
+#+end_src
+***** TOML serialization
+#+begin_src scheme
+(define (toml-file name config)
+  (ini-file name config))
+
+(define (serialize-toml-array elements)
+  (as-> elements $
+        (map (lambda (element)
+               (string-append "\"" element "\""))
+             $)
+        (string-join $ ", ")
+        (string-append "[ " $ " ]")
+        (string->symbol $)))
+#+end_src
 **** Node
 #+begin_src scheme
 (define* (he-node #:key
@@ -7290,19 +7217,114 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       #:state '(((#:path . ".pvpn-cli/")
                  (#:store . #:machine)))))))
 #+end_src
-**** Vterm
+**** SSH
 #+begin_src scheme
-(define* (he-vterm #:key doom?)
-  (if doom?
-      (list
-       (doom-service
-        'vterm
-        #:modules '((#:term
-                     vterm))))
-      '()))
+(define (he-ssh)
+  (list
+   (service home-openssh-service-type)))
 #+end_src
-*** Apps
-**** Alacritty
+**** Version control
+#+begin_src scheme
+(define* (he-version-control #:key
+                             stateless?
+                             doom?
+                             email
+                             sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
+                             gpg-sign-key
+                             ;; git-send-email?
+                             extra-config)
+  (append
+   (list
+    ;; (when git-send-email?
+    ;;   (simple-service
+    ;;    'git-send-email-package
+    ;;    home-profile-service-type
+    ;;    (list (list git "send-email"))))
+    (service
+     home-git-service-type
+     (home-git-configuration
+      (config
+       `((user
+          ((email . ,email)
+           ,@(if sign-commits?
+                 `((signingkey . ,gpg-sign-key)) '())))
+         ;; TODO stuff from feature-git, figure it out later
+         ;; (merge
+         ;;  ;; diff3 makes it easier to solve conflicts with smerge, zdiff3
+         ;;  ;; should make a conflict scope smaller, but guile-git fails if
+         ;;  ;; this option is set.
+         ;;  ((conflictStyle . diff3)))
+         ;; (diff
+         ;;  ;; histogram should be smarter about diff generation.
+         ;;  ((algorithm . histogram)))
+         (commit
+          (,@(if sign-commits?
+                 '((gpgsign . #t)) '())))
+         ;; (sendemail
+         ;;  ((annotate . #t)))
+         ;;  TODO these two (http and gpg) sections were in the RDE example home environment (but notably not in the rde feature-git). Figure out what they're for after I do gpg.
+         ;; (http "https://weak.example.com"
+         ;;       ((ssl-verify . #f)))
+         ;; (gpg
+         ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+         ,@(if extra-config
+               extra-config '()))))))
+
+   (if doom?
+       (append
+        (list
+         (doom-service
+          'version-control
+          #:modules '((#:emacs
+                       vc)
+                      (#:ui
+                       (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+                      (#:tools
+                       (magit +forge)))
+          #:config
+          '((after! magit
+                    (setq git-commit-style-convention-checks '(non-empty-second-line))
+                    (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
+
+        (doom-transient #:stateless? stateless?))
+       '())))
+#+end_src
+**** Apps
+***** PulseAudio Volume Control
+#+begin_src scheme
+(define* (he-pavucontrol #:key stateless?)
+  (list
+   (simple-service
+    'pavucontrol-add-package
+    home-profile-service-type
+    (list pavucontrol))
+
+   (when stateless?
+     (home-stateless-service
+      'pavucontrol
+      #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)))))))
+#+end_src
+***** Image processing
+****** GIMP
+#+begin_src scheme
+(define* (he-gimp #:key stateless?)
+  (list
+   (simple-service
+    'gimp-add-package
+    home-profile-service-type
+    (list gimp))
+
+   (when stateless?
+     (home-stateless-service
+      'gimp
+      #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine))
+                ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)))))))
+#+end_src
+***** Terminals
+****** Alacritty
 #+begin_src scheme
 (define* (he-alacritty #:key
                        colors
@@ -7344,7 +7366,20 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (alacritty-terminal)
   (file-append alacritty "/bin/alacritty"))
 #+end_src
-**** Chromium
+****** Vterm
+Does this belong in [[*Apps][Apps]]?
+#+begin_src scheme
+(define* (he-vterm #:key doom?)
+  (if doom?
+      (list
+       (doom-service
+        'vterm
+        #:modules '((#:term
+                     vterm))))
+      '()))
+#+end_src
+***** Web browsers
+****** Chromium
 #+begin_src scheme
 (define* (he-chromium #:key
                       stateless?
@@ -7401,36 +7436,19 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define chromium-flavors '(#:ungoogled-chromium
                            #:google-chrome))
 #+end_src
-***** Setup instructions
+******* Setup instructions
 It might be possible to configure some of these in a file or with command-line flags. Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones (just through flags or not at all).
-****** Chromium
+******** Chromium
 - Settings > Appearance > Use GTK+ theme
 - Settings > On startup, check "Continue where you left off"
 - Right-click on the Bookmarks bar and uncheck "Show bookarks bar"
-******* Ungoogled Chromium
+********* Ungoogled Chromium
 - Settings > Manage search engines, make google the default
   It might not appear under "Other Search Engines" until you search something on google.com
 - chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
-****** uBlock extension
+******** uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
-**** GIMP
-#+begin_src scheme
-(define* (he-gimp #:key stateless?)
-  (list
-   (simple-service
-    'gimp-add-package
-    home-profile-service-type
-    (list gimp))
-
-   (when stateless?
-     (home-stateless-service
-      'gimp
-      #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine))
-                ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
-#+end_src
-**** Firefox
+****** Firefox
 #+begin_src scheme
 (define* (he-firefox #:key
                      stateless?
@@ -7459,7 +7477,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                  (#:mode . #o700)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
-**** Nyxt
+****** Nyxt
 #+begin_src scheme
 (define* (he-nyxt #:key
                   stateless?
@@ -7490,22 +7508,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
       #:modules '((#:lang
                    common-lisp))))))
 #+end_src
-**** PulseAudio Volume Control
-#+begin_src scheme
-(define* (he-pavucontrol #:key stateless?)
-  (list
-   (simple-service
-    'pavucontrol-add-package
-    home-profile-service-type
-    (list pavucontrol))
-
-   (when stateless?
-     (home-stateless-service
-      'pavucontrol
-      #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
-#+end_src
-**** VLC
+***** Video
+****** VLC
 #+begin_src scheme
 (define* (he-vlc #:key stateless?)
   (list
@@ -7597,20 +7601,21 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                                         #:email email
                                         #:org-dir org-dir))
          '())
-     (he-version-control #:stateless? stateless?
-                         #:doom? doom?
-                         #:email email)
-     (he-ssh)
-     (he-direnv #:stateless? stateless?
-                #:doom? doom?
-                #:shells (list interactive-shell)
-                #:whitelist-dirs (list work-dir))
      (if nix?
          (he-nix #:stateless? stateless?
                  #:doom? doom?
                  #:doom-tree-sitter? doom-tree-sitter?
                  #:login-shell login-shell)
          '())
+     (he-direnv #:stateless? stateless?
+                #:doom? doom?
+                #:shells (list interactive-shell)
+                #:whitelist-dirs (list work-dir))
+     (he-protonvpn #:stateless? stateless?)
+     (he-ssh)
+     (he-version-control #:stateless? stateless?
+                         #:doom? doom?
+                         #:email email)
      (if console?
          (if kmonad?
              (he-kmonad #:doom? doom?) '())
@@ -7702,22 +7707,21 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                    ;; (he-kanshi)
                    ))
                 '())
+            (he-pavucontrol #:stateless? stateless?)
+            ;; (he-gimp #:stateless? stateless?)
             (he-alacritty #:colors colors
                           #:font font-mono)
+            (he-vterm #:doom? doom?)
             (he-chromium #:stateless? stateless?
                          #:wayland? wayland?
                          #:flavors chromium-flavors)
-            ;; (he-gimp #:stateless? stateless?)
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
             (he-nyxt #:stateless? stateless?
                      #:doom? doom?)
-            (he-pavucontrol #:stateless? stateless?)
             ;; (he-vlc #:stateless? stateless?)
             ))
          '())
-     (he-protonvpn #:stateless? stateless?)
-     (he-vterm #:doom? doom?)
      (if projects
          (he-projects #:work-dir work-dir
                       #:projects projects)
