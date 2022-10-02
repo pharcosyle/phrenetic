@@ -7713,6 +7713,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   (login-shell #:shell/bash)
                   (interactive-shell #:shell/zsh)
                   doom?
+                  doom-calendar?
                   doom-org?
                   doom-evil?
                   doom-tree-sitter?
@@ -7751,8 +7752,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        '())
    (if doom?
        (append
-        (he-doom-calendar #:stateless? stateless?
-                          #:org? doom-org?)
+        (if doom-calendar?
+            (he-doom-calendar #:stateless? stateless?
+                              #:org? doom-org?)
+            '())
         (if doom-org?
             (he-doom-org #:stateless? stateless?
                          #:evil? doom-evil?)
@@ -8472,6 +8475,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (main-he sessions)
   (he:create-he
    (let* ((doom? #t)
+          (doom-calendar? doom?)
           (doom-org? doom?)
           (doom-evil? doom?)
           (doom-tree-sitter? doom?))
@@ -8479,6 +8483,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       he:he-base
       #:email "pharcosyle@gmail.com"
       #:doom? doom?
+      #:doom-calendar? doom-calendar?
       #:doom-org? doom-org?
       #:doom-evil? doom-evil?
       #:doom-tree-sitter? doom-tree-sitter?
