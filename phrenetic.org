@@ -1529,9 +1529,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-mako
             he-waybar
             waybar-modules
+            he-doom-app-launcher
             he-rofi
             rofi-menu
             rofi-application-launcher
+            he-doom-trash
             he-kanshi
             he-aws
             he-clojure
@@ -4405,11 +4407,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
            (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
            ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
-           (package! app-launcher
-                     :recipe (:host github
-                              :repo "SebastienWae/app-launcher")
-                     :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145") ; TODO This probably belongs under the "Menus and launchers" heading.
-           (package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")) ; TODO This probably belongs in some sort of home component.
+           )
 
          #:config
          (append
@@ -6513,6 +6511,18 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    #:placement 'modules-left))
 #+end_src
 ***** Menus and launchers
+****** Doom app launcher
+#+begin_src scheme
+(define (he-doom-app-launcher)
+  (list
+   (doom-service
+    'app-launcher
+    #:packages
+    '((package! app-launcher
+                :recipe (:host github
+                         :repo "SebastienWae/app-launcher")
+                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
+#+end_src
 ****** Rofi
 #+begin_src scheme
 (define* (he-rofi #:key
@@ -6573,6 +6583,16 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (if wayland?
       rofi-wayland
       rofi))
+#+end_src
+***** Trash management
+****** Doom trash
+#+begin_src scheme
+(define (he-doom-trash)
+  (list
+   (doom-service
+    'trash
+    #:packages
+    '((package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")))))
 #+end_src
 ***** Display configuration
 ****** Kanshi
@@ -7770,10 +7790,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:modules (waybar-modules #:sway? sway?
                                                       #:date-format date-format
                                                       #:time-format time-format))
+                 (if doom?
+                     (he-doom-app-launcher) '())
                  (he-rofi #:stateless? stateless?
                           #:wayland? wayland?
                           #:colors colors
                           #:font font-variable-pitch)
+                 (if doom?
+                     (he-doom-trash) '())
                  ;; (he-kanshi)
                  ))
               '())
