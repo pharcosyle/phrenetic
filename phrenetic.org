@@ -1556,6 +1556,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-firefox
             he-gimp
             he-nyxt
+            he-pavucontrol
             he-vlc
             he-projects
             services-only-packages
@@ -7479,6 +7480,21 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
       #:modules '((#:lang
                    common-lisp))))))
 #+end_src
+**** PulseAudio Volume Control
+#+begin_src scheme
+(define* (he-pavucontrol #:key stateless?)
+  (list
+   (simple-service
+    'pavucontrol-add-package
+    home-profile-service-type
+    (list pavucontrol))
+
+   (when stateless?
+     (home-stateless-service
+      'pavucontrol
+      #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)))))))
+#+end_src
 **** VLC
 #+begin_src scheme
 (define* (he-vlc #:key stateless?)
@@ -7686,6 +7702,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                         #:wayland? wayland?)
             (he-nyxt #:stateless? stateless?
                      #:doom? doom?)
+            (he-pavucontrol #:stateless? stateless?)
             ;; (he-vlc #:stateless? stateless?)
             ))
          '())
