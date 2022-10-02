@@ -1539,6 +1539,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-aws
             he-clojure
             he-datomic
+            he-doom-calendar
             he-direnv
             he-node
             he-protonvpn
@@ -4342,8 +4343,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                #:evil? evil?
                #:org-dir org-dir)
      (doom-languages #:tree-sitter? tree-sitter?)
-     (doom-calendar #:stateless? stateless?
-                    #:email email)
      (doom-guix #:stateless? stateless?))))
 #+end_src
 ****** General :bindings:
@@ -4900,40 +4899,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:config
     '((after! elisp-mode
               (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))))))
-#+end_src
-****** Calendar
-#+begin_src scheme
-(define* (doom-calendar #:key
-                        stateless?
-                        email)
-  (append
-   (let ((name 'calendar))
-     (list
-      (doom-service
-       name
-       #:modules '((#:app
-                    calendar))
-       #:config
-       '((after! org-gcal
-                 (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
-                       org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-                       ;; TODO `elisp-serialize' doesn't like the unquotes.
-                       ;; org-gcal-fetch-file-alist (let ((cal-dir concat org-directory "/cal"))
-                       ;;                             `((user-mail-address . ,(concat cal-dir "/" user-mail-address ".org"))
-                       ;;                               ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat cal-dir "/contacts.org"))
-                       ;;                               ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
-                       org-gcal-recurring-events-mode 'nested))))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
-                    (#:store . #:machine))
-                   ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
-                    (#:store . #:machine)))))))
-
-   (doom-dash)
-   (doom-user #:email email)))
 #+end_src
 ****** Guix :bindings:
 #+begin_src scheme
@@ -6990,6 +6955,31 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
+**** Doom calendar
+#+begin_src scheme
+(define* (he-doom-calendar #:key stateless?)
+  (append
+   (list
+    (doom-service
+     'calendar
+     #:modules '((#:app
+                  calendar))
+     #:config
+     '((after! org-gcal
+               (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+                     org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+                     org-gcal-recurring-events-mode 'nested))))
+
+    (when stateless?
+      (doom-stateless-service
+       'doom-calendar
+       #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
+                  (#:store . #:machine))
+                 ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
+                  (#:store . #:machine))))))
+
+   (doom-dash)))
+#+end_src
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv #:key
@@ -7664,6 +7654,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  #:doom-tree-sitter? doom-tree-sitter?
                  #:login-shell login-shell)
          '())
+     (if doom?
+         (he-doom-calendar #:stateless? stateless?) '())
      (he-direnv #:stateless? stateless?
                 #:doom? doom?
                 #:shells (list interactive-shell)
