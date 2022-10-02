@@ -1320,9 +1320,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   bluetooth-users
                   display-manager
                   tty-start
-                  sessions
                   auto-login?
-                  auto-login-user)
+                  auto-login-user
+                  sessions)
   (as-> os $
     (if source?
         (source $ #:path source-path) $)
@@ -8432,9 +8432,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   aux-name
                   guest-name
                   bluetooth?
-                  sessions
                   auto-login?
-                  auto-login-user)
+                  auto-login-user
+                  sessions)
   (apply
    os:os-base
    os:blank-os
@@ -8459,9 +8459,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    #:bluetooth-users (list primary-name
                            aux-name
                            guest-name)
-   #:sessions sessions
    #:auto-login? auto-login?
    #:auto-login-user auto-login-user
+   #:sessions sessions
    os+he-shared-opts))
 
 
@@ -8558,13 +8558,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  #:aux-name aux-name
                  #:guest-name guest-name
                  #:bluetooth? bluetooth?
+                 #:auto-login? disk-encryption?
+                 #:auto-login-user primary-name
                  #:sessions (->> (list primary-he-sessions
                                        aux-he-sessions
                                        guest-he-sessions)
                                  (apply append)
-                                 delete-duplicates)
-                 #:auto-login? disk-encryption?
-                 #:auto-login-user primary-name)
+                                 delete-duplicates))
         (os:with-host-info #:host-name "frostfire"
                            #:timezone "America/Los_Angeles")
         (os:with-bootloader #:efi? efi?
