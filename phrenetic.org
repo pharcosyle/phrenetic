@@ -1746,33 +1746,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
          (doom-shells #:stateless? stateless?
                       #:tree-sitter? doom-tree-sitter?)
          '()))))
-
-(define* (doom-shells #:key
-                      stateless?
-                      tree-sitter?)
-  (append
-   (doom-ts-lang 'sh #:tree-sitter? tree-sitter?)
-   (doom-eshell #:stateless? stateless?)))
-
-(define* (doom-eshell #:key stateless?)
-  (let ((name 'eshell))
-    (list
-     (doom-service
-      name
-      #:modules '((#:term
-                   eshell))
-      #:config `((after! eshell
-                         (setq eshell-history-size ,very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
-
-     (when stateless?
-       (doom-stateless-service
-        name
-        #:state '(((#:path . ("eshell/history" #:doom-base #:data))
-                   (#:store . #:persist))
-                  ((#:path . ("eshell/lastdir" #:doom-base #:data))
-                   (#:store . #:persist))
-                  ((#:path . ("eshell/z" #:doom-base #:data))
-                   (#:store . #:persist))))))))
 #+end_src
 **** Bash
 ***** Bashrc
@@ -1900,6 +1873,37 @@ alias grep='grep --color=auto'
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
+#+end_src
+**** Doom shells
+#+begin_src scheme
+(define* (doom-shells #:key
+                      stateless?
+                      tree-sitter?)
+  (append
+   (doom-ts-lang 'sh #:tree-sitter? tree-sitter?)
+   (doom-eshell #:stateless? stateless?)))
+#+end_src
+***** Doom eshell
+#+begin_src scheme
+(define* (doom-eshell #:key stateless?)
+  (let ((name 'eshell))
+    (list
+     (doom-service
+      name
+      #:modules '((#:term
+                   eshell))
+      #:config `((after! eshell
+                         (setq eshell-history-size ,very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("eshell/history" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("eshell/lastdir" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("eshell/z" #:doom-base #:data))
+                   (#:store . #:persist))))))))
 #+end_src
 *** Emacs
 #+begin_src scheme
@@ -5099,13 +5103,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-nix #:stateless? stateless?
                  #:tree-sitter? doom-tree-sitter?)
        '())))
-
-(define* (doom-nix #:key
-                   stateless?
-                   tree-sitter?)
-  (append
-   (doom-ts-lang 'nix #:tree-sitter? tree-sitter?)
-   (doom-transient #:stateless? stateless?)))
 #+end_src
 ***** Source Nix profile
 #+begin_src sh :tangle (meta-in-dir "source-nix-profile")
@@ -5120,6 +5117,15 @@ https://nixos.org/channels/nixpkgs-unstable nixpkgs
 ***** Nixpkgs config
 #+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
 { allowUnfree = true; }
+#+end_src
+***** Doom Nix
+#+begin_src scheme
+(define* (doom-nix #:key
+                   stateless?
+                   tree-sitter?)
+  (append
+   (doom-ts-lang 'nix #:tree-sitter? tree-sitter?)
+   (doom-transient #:stateless? stateless?)))
 #+end_src
 ***** Setup instructions
 #+begin_src sh :tangle no
@@ -6847,9 +6853,30 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                   (#:store . #:machine))))))
 
    (if doom?
-       (doom-clojure #:stateless? stateless?)
-       '())))
+       (doom-clojure #:stateless? stateless?) '())))
+#+end_src
+***** Clojure tools :package:
+#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
+(define-module (ebullient home packages clojure)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
 
+(define (with-man-pages clojure-tools)
+  (package
+    (inherit clojure-tools)
+    (arguments
+     (substitute-keyword-arguments (package-arguments clojure-tools)
+       ((#:install-plan install-plan)
+        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
+                                   ("clj.1" "/share/man/man1/"))))))))
+
+(define-public clojure-tools
+  (with-man-pages clojure:clojure-tools))
+#+end_src
+***** Doom Clojure
+#+begin_src scheme
 (define* (doom-clojure #:key stateless?)
   (append
    (let ((name 'clojure))
@@ -6901,26 +6928,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 
    (doom-xml+csv)
    (doom-dash)))
-#+end_src
-***** Clojure tools :package:
-#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
-(define-module (ebullient home packages clojure)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
-
-(define (with-man-pages clojure-tools)
-  (package
-    (inherit clojure-tools)
-    (arguments
-     (substitute-keyword-arguments (package-arguments clojure-tools)
-       ((#:install-plan install-plan)
-        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
-                                   ("clj.1" "/share/man/man1/"))))))))
-
-(define-public clojure-tools
-  (with-man-pages clojure:clojure-tools))
 #+end_src
 **** Datomic
 #+begin_src scheme
@@ -7209,18 +7216,6 @@ use_guixs() {
    (service home-openssh-service-type)))
 #+end_src
 **** Version control
-#+begin_src scheme
-(define* (version-control-services #:key doom?)
-  (if doom?
-      (list
-       (doom-service
-        'version-control
-        #:modules '((#:emacs
-                     vc)
-                    (#:ui
-                     (vc-gutter +pretty))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
-      '()))
-#+end_src
 ***** Git
 #+begin_src scheme
 (define* (he-git #:key
@@ -7269,21 +7264,36 @@ use_guixs() {
                extra-config '()))))))
 
    (if doom?
-       (append
-        (list
-         (doom-service
-          'git
-          #:modules '((#:tools
-                       (magit +forge)))
-          #:config
-          '((after! magit
-                    (setq git-commit-style-convention-checks '(non-empty-second-line))
-                    (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
+       (doom-git #:stateless? stateless?) '())))
+#+end_src
+****** Doom Git
+#+begin_src scheme
+(define* (doom-git #:key stateless?)
+  (append
+   (doom-version-control)
 
-        (doom-transient #:stateless? stateless?))
-       '())
+   (list
+    (doom-service
+     'git
+     #:modules '((#:tools
+                  (magit +forge)))
+     #:config
+     '((after! magit
+               (setq git-commit-style-convention-checks '(non-empty-second-line))
+               (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
 
-   (version-control-services #:doom? doom?)))
+   (doom-transient #:stateless? stateless?)))
+#+end_src
+******* Doom version control
+#+begin_src scheme
+(define (doom-version-control)
+  (list
+   (doom-service
+    'version-control
+    #:modules '((#:emacs
+                 vc)
+                (#:ui
+                 (vc-gutter +pretty)))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
 #+end_src
 **** Miscellaneous
 #+begin_src scheme
