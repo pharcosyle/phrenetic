@@ -453,7 +453,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
            config)))))
 #+end_src
 **** KMonad
-Must succeed "Accounts" component.
+Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (kmonad-tool #:key who)
   (packages
@@ -724,7 +724,7 @@ Must succeed "Accounts" component.
 (define btrfs-mount-options '("compress=zstd" "autodefrag"))
 #+end_src
 ***** Disk encryption
-Must succeed "File systems" component.
+Must succeed [[*File systems][File systems]] component.
 #+begin_src scheme
 (define* (disk-encryption os
                           #:key
@@ -754,7 +754,7 @@ Must succeed "File systems" component.
 (define luks-label "ciphered")
 #+end_src
 ***** Swap
-Must succeed "File systems" component. No dependencies are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
+Must succeed [[*File systems][File systems]] component. No dependencies are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
 (define-system-comp (swap #:key swapfile)
   (swap-devices
@@ -763,7 +763,7 @@ Must succeed "File systems" component. No dependencies are required as long as t
      (target swapfile)))))
 #+end_src
 ***** Stateless
-Must succeed "File systems" and "Accounts" components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
+Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
 #+begin_src scheme
 (define-system-comp (stateless #:key
                                persist-dir
@@ -960,7 +960,7 @@ Must succeed "File systems" and "Accounts" components. To be useful, the statele
 *** Hardware-specific
 **** Console
 ***** Console keyboard layouts
-Must succeed "Bootloader" component.
+Must succeed [[*Bootloader][Bootloader]] component.
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key kb-layout)
   (keyboard-layout kb-layout)
