@@ -431,7 +431,7 @@ This could be done using the new [[https://github.com/guix-mirror/guix/commit/fc
   (curve Ed25519)
   (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
 #+end_src
-**** Package managers
+**** Package management
 ***** Nix
 #+begin_src scheme
 (define-system-comp (nix)
@@ -608,7 +608,7 @@ Must succeed "Accounts" component.
 #+end_src
 ***** Sessions
 ****** Desktop environments
-******* Gnome
+******* GNOME
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
@@ -5287,7 +5287,7 @@ use_guixs() {
         (string-append "[ " $ " ]")
         (string->symbol $)))
 #+end_src
-*** Package managers
+*** Package management
 **** Nix
 #+begin_src scheme
 (define* (he-nix #:key
@@ -5381,6 +5381,7 @@ nix-channel --update
 # ...
 #+end_src
 **** Flatpak
+I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
 #+begin_src scheme
 (define* (he-flatpak #:key
                      stateless?
@@ -6086,6 +6087,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define xdg-session-type-wayland-env-var
   '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a display manager.
 
+;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
 (define* (wayland-env-vars #:key pipewire?)
  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
  (append
@@ -6100,7 +6102,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       '(("RTC_USE_PIPEWIRE" . "true")) '())))
 #+end_src
 ***** Desktop environments
-****** Gnome
+****** GNOME
 #+begin_src scheme
 (define* (he-gnome #:key stateless?)
   (list
@@ -6175,7 +6177,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     'sway-add-packages
     home-profile-service-type
     (list (sway-start-package #:pipewire? pipewire?)
-          qtwayland ; Copied from RDE. I don't know what this is for.
+          qtwayland ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
           xdg-desktop-portal-wlr
@@ -6220,9 +6222,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
         (bindsym --to-code $mod+Shift+r reload)
 
-        ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested in the Sway wiki and an RDE mailing list thread:
+        ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
         ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
         ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
+        ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
         (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
               DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
 
@@ -6333,7 +6336,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
-           xdg-session-type-wayland-env-var ; Seems to be set even without this but might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
+           xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars #:pipewire? pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
