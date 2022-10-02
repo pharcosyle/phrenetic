@@ -1494,8 +1494,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             org-dir
             work-dir
             org+work-state
-            he-packages
-            utility-packages
             he-shells
             he-emacs
             he-doom
@@ -1547,6 +1545,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-protonvpn
             he-ssh
             he-version-control
+            he-miscellaneous
             he-pavucontrol
             he-gimp
             he-alacritty
@@ -1752,20 +1751,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if strip-dot?
         (local-file file (substring file* 1))
         (local-file file))))
-#+end_src
-*** Packages
-#+begin_src scheme
-(define* (he-packages #:key packages)
-  (list
-   (simple-service
-    'packages-add-packages
-    home-profile-service-type
-    packages)))
-
-(define utility-packages
-  (list curl
-        zip
-        unzip))
 #+end_src
 *** Shells
 #+begin_src scheme
@@ -7289,6 +7274,17 @@ use_guixs() {
         (doom-transient #:stateless? stateless?))
        '())))
 #+end_src
+**** Miscellaneous
+#+begin_src scheme
+(define (he-miscellaneous)
+  (list
+   (simple-service
+    'miscellaneous-add-packages
+    home-profile-service-type
+    (list curl
+          zip
+          unzip))))
+#+end_src
 **** Apps
 ***** PulseAudio Volume Control
 #+begin_src scheme
@@ -7587,7 +7583,6 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                        #:extra-state (org+work-state #:org-dir org-dir
                                                      #:work-dir work-dir))
          '())
-     (he-packages #:packages utility-packages)
      (he-shells #:stateless? stateless?
                 #:doom? doom?
                 #:doom-tree-sitter? doom-tree-sitter?
@@ -7616,6 +7611,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
      (he-version-control #:stateless? stateless?
                          #:doom? doom?
                          #:email email)
+     (he-miscellaneous)
      (if console?
          (if kmonad?
              (he-kmonad #:doom? doom?) '())
