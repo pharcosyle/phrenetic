@@ -1443,6 +1443,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme network-manager-applet))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
@@ -1459,6 +1460,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
+  #:use-module ((gnu packages video) #:select (vlc))
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
@@ -1551,7 +1553,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-chromium
             chromium-flavors
             he-firefox
+            he-gimp
             he-nyxt
+            he-vlc
             he-projects
             services-only-packages
             services-sans-packages
@@ -7383,6 +7387,23 @@ It might be possible to configure some of these in a file or with command-line f
 - chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
 ****** uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
+**** GIMP
+#+begin_src scheme
+(define* (he-gimp #:key stateless?)
+  (list
+   (simple-service
+    'gimp-add-package
+    home-profile-service-type
+    (list gimp))
+
+   (when stateless?
+     (home-stateless-service
+      'gimp
+      #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine))
+                ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine)))))))
+#+end_src
 **** Firefox
 #+begin_src scheme
 (define* (he-firefox #:key
@@ -7442,6 +7463,23 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
       'nyxt
       #:modules '((#:lang
                    common-lisp))))))
+#+end_src
+**** VLC
+#+begin_src scheme
+(define* (he-vlc #:key stateless?)
+  (list
+   (simple-service
+    'vlc-add-package
+    home-profile-service-type
+    (list vlc))
+
+   (when stateless?
+     (home-stateless-service
+      'vlc
+      #:state '(((#:path . ("vlc/" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:machine))
+                ((#:path . ("vlc/" #:xdg-base "XDG_DATA_HOME"))
+                 (#:store . #:machine)))))))
 #+end_src
 *** Projects
 #+begin_src scheme
@@ -7627,11 +7665,12 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
             (he-chromium #:stateless? stateless?
                          #:wayland? wayland?
                          #:flavors chromium-flavors)
+            (he-gimp #:stateless? stateless?)
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
             ;; (he-nyxt #:stateless? stateless?
             ;;          #:doom? doom?)
-            ))
+            (he-vlc #:stateless? stateless?)))
          '())
      (he-protonvpn #:stateless? stateless?)
      (he-vterm #:doom? doom?)
