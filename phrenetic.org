@@ -1732,6 +1732,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                        ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
                         (#:store . #:machine))))))
          '())
+
      (list
       (when-not (equal? login-shell interactive-shell)
                 (simple-service
@@ -1742,32 +1743,36 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                  ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))
 
      (if doom?
-         (append
-          (list
-           (doom-service
-            'sh
-            #:modules `((#:lang
-                         (sh ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
-
-          (let ((name 'eshell))
-            (list
-             (doom-service
-              name
-              #:modules '((#:term
-                           eshell))
-              #:config `((after! eshell
-                                 (setq eshell-history-size ,very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
-
-             (when stateless?
-               (doom-stateless-service
-                name
-                #:state '(((#:path . ("eshell/history" #:doom-base #:data))
-                           (#:store . #:persist))
-                          ((#:path . ("eshell/lastdir" #:doom-base #:data))
-                           (#:store . #:persist))
-                          ((#:path . ("eshell/z" #:doom-base #:data))
-                           (#:store . #:persist))))))))
+         (doom-shells #:stateless? stateless?
+                      #:tree-sitter? doom-tree-sitter?)
          '()))))
+
+(define* (doom-shells #:key
+                      stateless?
+                      tree-sitter?)
+  (append
+   (doom-ts-lang 'sh #:tree-sitter? tree-sitter?)
+   (doom-eshell #:stateless? stateless?)))
+
+(define* (doom-eshell #:key stateless?)
+  (let ((name 'eshell))
+    (list
+     (doom-service
+      name
+      #:modules '((#:term
+                   eshell))
+      #:config `((after! eshell
+                         (setq eshell-history-size ,very-big-history)))) ; Setting this to `nil' to inherit envvar HISTSIZE is another option.
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("eshell/history" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("eshell/lastdir" #:doom-base #:data))
+                   (#:store . #:persist))
+                  ((#:path . ("eshell/z" #:doom-base #:data))
+                   (#:store . #:persist))))))))
 #+end_src
 **** Bash
 ***** Bashrc
@@ -4320,11 +4325,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define* (doom-main #:key
                     stateless?
                     evil?
-                    tree-sitter?
                     email)
   (append
    (doom-general #:stateless? stateless?
-                 #:tree-sitter? tree-sitter?
                  #:evil? evil?)
    (doom-user #:email email)
    (doom-keymaps)
@@ -4336,7 +4339,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-general #:key
                        stateless?
-                       tree-sitter?
                        evil?)
   (let ((dirvish? #t))
     (append
@@ -4396,8 +4398,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
               pdf
               prodigy
               rgb
-              taskrunner
-              ,@(if tree-sitter? '(tree-sitter) '()))
+              taskrunner)
 
              (#:config
               (default +bindings +smartparens))))
@@ -4887,6 +4888,27 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-transient #:stateless? stateless?)))
 #+end_src
 ***** Languages
+#+begin_src scheme
+(define* (doom-ts-lang lang
+                       #:key
+                       tree-sitter?)
+  (append
+   (list
+    (doom-service
+     lang
+     #:modules `((#:lang
+                  (,lang ,@(if tree-sitter? '(+tree-sitter) '()))))))
+
+   (if tree-sitter?
+       (doom-tree-sitter) '())))
+
+(define (doom-tree-sitter)
+  (list
+   (doom-service
+    'tree-sitter
+    #:modules `((#:tools
+                 tree-sitter)))))
+#+end_src
 ****** Emacs Lisp
 #+begin_src scheme
 (define (doom-emacs-lisp)
@@ -4902,12 +4924,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ****** Javascript
 #+begin_src scheme
 (define* (doom-javascript #:key tree-sitter?)
-  (list
-   (doom-service
-    'javascript
-    #:modules `((#:lang
-                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
-                 (javascript ,@(if tree-sitter? '(+tree-sitter) '())))))))
+  (append
+   (doom-ts-lang 'javascript #:tree-sitter? tree-sitter?)
+   (doom-ts-lang 'json #:tree-sitter? tree-sitter?)))
 #+end_src
 ****** Markdown
 #+begin_src scheme
@@ -4931,14 +4950,14 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-web #:key tree-sitter?)
   (append
+   (doom-ts-lang 'web #:tree-sitter? tree-sitter?)
+   (doom-javascript #:tree-sitter? tree-sitter?)
+
    (list
     (doom-service
-     'web
+     'rest
      #:modules `((#:lang
-                  (rest +jq)
-                  (web ,@(if tree-sitter? '(+tree-sitter) '()))))))
-
-   (doom-javascript #:tree-sitter? tree-sitter?)))
+                  (rest +jq)))))))
 #+end_src
 ***** Libraries
 ****** Dash
@@ -5072,15 +5091,16 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        '())
 
    (if doom?
-       (append
-        (list
-         (doom-service
-          'nix
-          #:modules `((#:lang
-                       (nix ,@(if doom-tree-sitter? '(+tree-sitter) '()))))))
-
-        (doom-transient #:stateless? stateless?))
+       (doom-nix #:stateless? stateless?
+                 #:tree-sitter? doom-tree-sitter?)
        '())))
+
+(define* (doom-nix #:key
+                   stateless?
+                   tree-sitter?)
+  (append
+   (doom-ts-lang 'nix #:tree-sitter? tree-sitter?)
+   (doom-transient #:stateless? stateless?)))
 #+end_src
 ***** Source Nix profile
 #+begin_src sh :tangle (meta-in-dir "source-nix-profile")
@@ -7160,8 +7180,7 @@ use_guixs() {
     )
 
    (if doom?
-       (doom-javascript #:tree-sitter? doom-tree-sitter?)
-       '())))
+       (doom-javascript #:tree-sitter? doom-tree-sitter?) '())))
 #+end_src
 **** Proton VPN
 #+begin_src scheme
@@ -7721,7 +7740,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (he-doom #:stateless? stateless?
                 #:services (doom-main #:stateless? stateless?
                                       #:evil? doom-evil?
-                                      #:tree-sitter? doom-tree-sitter?
                                       #:email email))
        '())
    (he-guix #:stateless? stateless?)
