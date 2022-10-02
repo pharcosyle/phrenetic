@@ -1957,9 +1957,7 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Emacs
 #+begin_src scheme
-(define* (he-emacs #:key
-                   (emacs emacs-fully-loaded)
-                   zsh-vterm?)
+(define* (he-emacs #:key (emacs emacs-fully-loaded))
   (list
    (simple-service
     'emacs-add-package
@@ -1970,41 +1968,7 @@ SAVEHIST=$HISTSIZE
     'emacs-set-editor-env-vars
     home-environment-variables-service-type
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
-      ("EDITOR" . "$VISUAL")))
-
-   (when zsh-vterm?
-     (simple-service
-      'emacs-zsh-vterm
-      home-zsh-service-type
-      (home-zsh-extension
-       (zshrc
-        (list (local-file "zsh-vterm"))))))))
-#+end_src
-**** Configure zsh for vterm
-- TODO move this into =he-vterm=
-- TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
-#+begin_src org :tangle (meta-in-dir "zsh-vterm")
-vterm_printf(){
-    if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
-        # Tell tmux to pass the escape sequences through
-        printf "\ePtmux;\e\e]%s\007\e\\" "$1"
-    elif [ "${TERM%%-*}" = "screen" ]; then
-        # GNU screen (screen, screen-256color, screen-256color-bce)
-        printf "\eP\e]%s\007\e\\" "$1"
-    elif ([ "${TERM%%-*}" = "eterm" ] || [ "${TERM%%-*}" = "dumb" ]); then
-        # Do nothing for Emacs' term and ansi-term, and other dumb terminals.
-    else
-        printf "\e]%s\e\\" "$1"
-    fi
-}
-
-vterm_prompt_end() {
-    # USERNAME=$(whoami)
-    # HOSTNAME=$(hostname)
-    vterm_printf "51;A$USER@$HOST:$(pwd)";
-}
-setopt PROMPT_SUBST
-PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
+      ("EDITOR" . "$VISUAL")))))
 #+end_src
 **** Emacs packages
 :PROPERTIES:
@@ -7388,14 +7352,49 @@ use_guixs() {
 ****** Vterm
 Does this belong in [[*Apps][Apps]]?
 #+begin_src scheme
-(define* (he-vterm #:key doom?)
+(define* (he-vterm #:key
+                   doom?
+                   setup-zsh?)
   (if doom?
       (list
        (doom-service
         'vterm
         #:modules '((#:term
-                     vterm))))
+                     vterm)))
+
+       (when setup-zsh?
+         (simple-service
+          'vterm-zsh
+          home-zsh-service-type
+          (home-zsh-extension
+           (zshrc
+            (list (local-file "zsh-vterm")))))))
       '()))
+#+end_src
+******* Configure zsh for vterm
+- TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
+#+begin_src org :tangle (meta-in-dir "zsh-vterm")
+vterm_printf(){
+    if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ] ); then
+        # Tell tmux to pass the escape sequences through
+        printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+    elif [ "${TERM%%-*}" = "screen" ]; then
+        # GNU screen (screen, screen-256color, screen-256color-bce)
+        printf "\eP\e]%s\007\e\\" "$1"
+    elif ([ "${TERM%%-*}" = "eterm" ] || [ "${TERM%%-*}" = "dumb" ]); then
+        # Do nothing for Emacs' term and ansi-term, and other dumb terminals.
+    else
+        printf "\e]%s\e\\" "$1"
+    fi
+}
+
+vterm_prompt_end() {
+    # USERNAME=$(whoami)
+    # HOSTNAME=$(hostname)
+    vterm_printf "51;A$USER@$HOST:$(pwd)";
+}
+setopt PROMPT_SUBST
+PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Web browsers
 ****** Chromium
@@ -7611,7 +7610,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shell interactive-shell)
-     (he-emacs #:zsh-vterm? (equal? interactive-shell #:shell/zsh))
+     (he-emacs)
      (if doom?
          (he-doom #:stateless? stateless?
                   #:services (doom-main #:stateless? stateless?
@@ -7730,7 +7729,8 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
             ;; (he-gimp #:stateless? stateless?)
             (he-alacritty #:colors colors
                           #:font font-mono)
-            (he-vterm #:doom? doom?)
+            (he-vterm #:doom? doom?
+                      #:setup-zsh? (equal? interactive-shell #:shell/zsh))
             (he-chromium #:stateless? stateless?
                          #:wayland? wayland?
                          #:flavors chromium-flavors)
