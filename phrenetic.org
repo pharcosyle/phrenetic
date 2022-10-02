@@ -1544,7 +1544,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-node
             he-protonvpn
             he-ssh
-            he-version-control
+            he-git
             he-miscellaneous
             he-pavucontrol
             he-gimp
@@ -7197,14 +7197,27 @@ use_guixs() {
 #+end_src
 **** Version control
 #+begin_src scheme
-(define* (he-version-control #:key
-                             stateless?
-                             doom?
-                             email
-                             sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
-                             gpg-sign-key
-                             ;; git-send-email?
-                             extra-config)
+(define* (version-control-services #:key doom?)
+  (if doom?
+      (list
+       (doom-service
+        'version-control
+        #:modules '((#:emacs
+                     vc)
+                    (#:ui
+                     (vc-gutter +pretty))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+      '()))
+#+end_src
+***** Git
+#+begin_src scheme
+(define* (he-git #:key
+                 stateless?
+                 doom?
+                 email
+                 sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
+                 gpg-sign-key
+                 ;; git-send-email?
+                 extra-config)
   (append
    (list
     ;; (when git-send-email?
@@ -7246,12 +7259,8 @@ use_guixs() {
        (append
         (list
          (doom-service
-          'version-control
-          #:modules '((#:emacs
-                       vc)
-                      (#:ui
-                       (vc-gutter +pretty)) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
-                      (#:tools
+          'git
+          #:modules '((#:tools
                        (magit +forge)))
           #:config
           '((after! magit
@@ -7259,7 +7268,9 @@ use_guixs() {
                     (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
 
         (doom-transient #:stateless? stateless?))
-       '())))
+       '())
+
+   (version-control-services #:doom? doom?)))
 #+end_src
 **** Miscellaneous
 #+begin_src scheme
@@ -7630,9 +7641,9 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 #:whitelist-dirs (list work-dir))
      (he-protonvpn #:stateless? stateless?)
      (he-ssh)
-     (he-version-control #:stateless? stateless?
-                         #:doom? doom?
-                         #:email email)
+     (he-git #:stateless? stateless?
+             #:doom? doom?
+             #:email email)
      (he-miscellaneous)
      (if console?
          (if kmonad?
