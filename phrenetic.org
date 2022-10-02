@@ -1521,6 +1521,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-xdg
             he-mesa
             he-gtk
+            he-qt
             he-doom-themes+fonts
             he-dbus
             he-gdm
@@ -5950,7 +5951,8 @@ Some colors from the original Atom theme on which I based mine that might be use
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)))))))
 #+end_src
-**** GTK
+**** Graphical toolkits
+***** GTK
 It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland).
 #+begin_src scheme
 (define* (he-gtk #:key
@@ -6007,6 +6009,16 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
+#+end_src
+***** Qt
+#+begin_src scheme
+(define* (he-qt #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'qt
+      #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:store . #:persist)))))))
 #+end_src
 **** D-Bus
 #+begin_src scheme
@@ -7619,6 +7631,7 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                     #:theme theme
                     #:font font-variable-pitch
                     #:font-monospace font-mono)
+            (he-qt #:stateless? stateless?)
             (if dbus?
                 (he-dbus) '())
             (if display-manager
