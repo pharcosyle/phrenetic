@@ -6013,8 +6013,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                  -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
         (gaps left 78) ; To accommodate the crack in my screen.
 
-        ,@(if extra-config
-              extra-config '())))))
+        ,@(or extra-config '())))))
 
    (simple-service
     'sway-reload-config-on-change
@@ -6157,8 +6156,7 @@ Some colors from the original Atom theme on which I based mine that might be use
           (timestr . ,time-format)
           (datestr . ,date-format)
 
-          ,@(if extra-config
-                extra-config '()))))))))
+          ,@(or extra-config '()))))))))
 
 (define (swaylock-screen-locker)
   "/run/setuid-programs/swaylock")
@@ -6188,8 +6186,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                   (before-sleep ,lock-cmd-quoted)
                   (timeout ,lock-timeout ,lock-cmd-quoted)))
               '())
-        ,@(if extra-config
-              extra-config '())))))
+        ,@(or extra-config '())))))
 
    (when sway?
      (let* ((swaymsg (file-append sway "/bin/swaymsg"))
@@ -6672,8 +6669,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     home-kanshi-service-type
     (home-kanshi-configuration
      (config
-      `(,@(if extra-config
-              extra-config '())))))))
+      `(,@(or extra-config '())))))))
 #+end_src
 *** Programs
 **** AWS
@@ -7260,8 +7256,7 @@ use_guixs() {
          ;;       ((ssl-verify . #f)))
          ;; (gpg
          ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-         ,@(if extra-config
-               extra-config '()))))))
+         ,@(or extra-config '()))))))
 
    (if doom?
        (doom-git #:stateless? stateless?) '())))
