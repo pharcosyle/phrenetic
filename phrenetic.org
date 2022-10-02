@@ -7766,7 +7766,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                (he-alacritty #:colors colors
                              #:font font-mono)
                (if doom?
-                   (he-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh))
+                   (he-doom-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh))
                    '())
                (he-chromium #:stateless? stateless?
                             #:wayland? wayland?
