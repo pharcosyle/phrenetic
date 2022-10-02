@@ -5953,7 +5953,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 **** Graphical toolkits
 ***** GTK
-It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland).
+It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see [[https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland][GTK 3 settings on Wayland · swaywm/sway Wiki · GitHub]].
 #+begin_src scheme
 (define* (he-gtk #:key
                  stateless?
@@ -7681,12 +7681,13 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
             (he-chromium #:stateless? stateless?
                          #:wayland? wayland?
                          #:flavors chromium-flavors)
-            (he-gimp #:stateless? stateless?)
+            ;; (he-gimp #:stateless? stateless?)
             (he-firefox #:stateless? stateless?
                         #:wayland? wayland?)
-            ;; (he-nyxt #:stateless? stateless?
-            ;;          #:doom? doom?)
-            (he-vlc #:stateless? stateless?)))
+            (he-nyxt #:stateless? stateless?
+                     #:doom? doom?)
+            ;; (he-vlc #:stateless? stateless?)
+            ))
          '())
      (he-protonvpn #:stateless? stateless?)
      (he-vterm #:doom? doom?)
