@@ -1586,13 +1586,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (list
     (home-stateless-service
      'home
-     #:state (append
-              '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
-                 (#:store . #:machine))
-                ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700)))
-              (or extra-state '()))
+     #:state (or extra-state '())
      #:ignore '(".guix-home")))
 
    (stateless-skeletons)))
@@ -5716,26 +5710,33 @@ Some colors from the original Atom theme on which I based mine that might be use
      (home-stateless-service
       'xdg
       #:state
-      (let ((normalize
-             (lambda (dir)
-               (as-> dir $
-                     (let ((home-prefix "$HOME/"))
-                       (if (string-prefix? home-prefix $)
-                           (string-drop $ (string-length home-prefix))
-                           $))
-                     (string-append $ "/")))))
-        `(,@(map (lambda (dir)
-                   `((#:path . ,(normalize dir))
-                     (#:store . #:persist)))
-                 (list desktop
-                       documents
-                       music
-                       pictures
-                       publicshare
-                       templates
-                       videos))
-          ((#:path . ,(normalize download))
-           (#:store . #:machine))))))))
+      (append
+       '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
+          (#:store . #:machine)
+          (#:mode . #o700))
+         ;; `XDG_LOG_HOME' isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
+         ((#:path . (#:xdg-base "XDG_LOG_HOME"))
+          (#:store . #:machine)))
+       (let ((normalize
+              (lambda (dir)
+                (as-> dir $
+                      (let ((home-prefix "$HOME/"))
+                        (if (string-prefix? home-prefix $)
+                            (string-drop $ (string-length home-prefix))
+                            $))
+                      (string-append $ "/")))))
+         `(,@(map (lambda (dir)
+                    `((#:path . ,(normalize dir))
+                      (#:store . #:persist)))
+                  (list desktop
+                        documents
+                        music
+                        pictures
+                        publicshare
+                        templates
+                        videos))
+           ((#:path . ,(normalize download))
+            (#:store . #:machine)))))))))
 #+end_src
 **** Mesa
 #+begin_src scheme
