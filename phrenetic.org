@@ -1495,6 +1495,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             he-doom
             doom-service
+            doom-web
             he-guix
             he-nix
             he-flatpak
@@ -4327,7 +4328,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                  #:evil? evil?)
    (doom-user #:email email)
    (doom-keymaps)
-   (doom-languages #:tree-sitter? tree-sitter?)
+   (doom-emacs-lisp)
+   (doom-markdown)
    (doom-guix #:stateless? stateless?)))
 #+end_src
 ****** General :bindings:
@@ -4396,9 +4398,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
               rgb
               taskrunner
               ,@(if tree-sitter? '(tree-sitter) '()))
-
-             (#:lang
-              (rest +jq))
 
              (#:config
               (default +bindings +smartparens))))
@@ -4814,21 +4813,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
    (doom-dash)))
 #+end_src
-****** Languages
-#+begin_src scheme
-(define* (doom-languages #:key tree-sitter?)
-  (list
-   (doom-service
-    'languages
-    #:modules `((#:lang
-                 data
-                 emacs-lisp
-                 markdown
-                 (web ,@(if tree-sitter? '(+tree-sitter) '()))))
-    #:config
-    '((after! elisp-mode
-              (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))))))
-#+end_src
 ****** Guix :bindings:
 #+begin_src scheme
 (define* (doom-guix #:key stateless?)
@@ -4901,6 +4885,60 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                     (#:store . #:persist)))))))
 
    (doom-transient #:stateless? stateless?)))
+#+end_src
+***** Languages
+****** Emacs Lisp
+#+begin_src scheme
+(define (doom-emacs-lisp)
+  (list
+   (doom-service
+    'emacs-lisp
+    #:modules `((#:lang
+                 emacs-lisp))
+    #:config
+    '((after! elisp-mode
+              (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))))))
+#+end_src
+****** Javascript
+#+begin_src scheme
+(define* (doom-javascript #:key tree-sitter?)
+  (list
+   (doom-service
+    'javascript
+    #:modules `((#:lang
+                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
+                 (javascript ,@(if tree-sitter? '(+tree-sitter) '())))))))
+#+end_src
+****** Markdown
+#+begin_src scheme
+(define* (doom-markdown)
+  (list
+   (doom-service
+    'markdown
+    #:modules `((#:lang
+                 markdown)))))
+#+end_src
+****** XML and CSV
+#+begin_src scheme
+(define (doom-xml+csv)
+  (list
+   (doom-service
+    'xml+csv
+    #:modules `((#:lang
+                 data)))))
+#+end_src
+****** Web
+#+begin_src scheme
+(define* (doom-web #:key tree-sitter?)
+  (append
+   (list
+    (doom-service
+     'web
+     #:modules `((#:lang
+                  (rest +jq)
+                  (web ,@(if tree-sitter? '(+tree-sitter) '()))))))
+
+   (doom-javascript #:tree-sitter? tree-sitter?)))
 #+end_src
 ***** Libraries
 ****** Dash
@@ -6836,6 +6874,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
          #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
                     (#:store . #:persist)))))))
 
+   (doom-xml+csv)
    (doom-dash)))
 #+end_src
 ***** Clojure tools :package:
@@ -6919,9 +6958,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                   calendar))))
 
    (if org?
-       (doom-org-gcal-services #:stateless? stateless?) '())))
+       (doom-org-gcal #:stateless? stateless?) '())))
 
-(define* (doom-org-gcal-services #:key stateless?)
+(define* (doom-org-gcal #:key stateless?)
   (append
    (let ((name 'org-gcal))
      (list
@@ -6952,8 +6991,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                       evil?)
   (let ((org-dir "org"))
     (append
-     (doom-org-services #:evil? evil?
-                        #:org-dir org-dir)
+     (doom-org #:evil? evil?
+               #:org-dir org-dir)
 
      (list
       (when stateless?
@@ -6962,10 +7001,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
          #:state '(((#:path . ,(string-append org-dir "/"))
                     (#:store . #:persist)))))))))
 
-(define* (doom-org-services #:key
-                            stateless?
-                            evil?
-                            org-dir)
+(define* (doom-org #:key
+                   stateless?
+                   evil?
+                   org-dir)
   (append
    (let ((name 'org))
      (list
@@ -7121,16 +7160,8 @@ use_guixs() {
     )
 
    (if doom?
-       (doom-javascript-services #:tree-sitter? doom-tree-sitter?)
+       (doom-javascript #:tree-sitter? doom-tree-sitter?)
        '())))
-
-(define* (doom-javascript-services #:key tree-sitter?)
-  (list
-   (doom-service
-    'javascript
-    #:modules `((#:lang
-                 (json ,@(if tree-sitter? '(+tree-sitter) '()))
-                 (javascript ,@(if tree-sitter? '(+tree-sitter) '())))))))
 #+end_src
 **** Proton VPN
 #+begin_src scheme
@@ -8438,6 +8469,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
                                           (#:doom? . ,doom?)
+                                          (#:doom-org? . ,doom-org?)
                                           (#:doom-tree-sitter? doom-tree-sitter?))))
       he-shared-opts))))
 
