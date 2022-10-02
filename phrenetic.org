@@ -1498,6 +1498,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             he-doom
             doom-service
+            he-guix
             he-nix
             he-flatpak
             he-kmonad
@@ -1582,52 +1583,19 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
              `(#:persist-dir ,persist-dir
                #:machine-dir ,machine-dir)))
 
-   (let ((guix-profile ".guix-profile")
-         (guix-current "guix/current"))
-     (list
-      (home-stateless-service
-       'home
-       #:state (append
-                '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
-                   (#:store . #:machine))
-                  ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-                   (#:store . #:machine)
-                   (#:mode . #o700))
-                  ((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
-                   (#:store . #:machine))
-                  ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-                   (#:store . #:machine)))
-                (or extra-state '()))
-       #:ignore `(".guix-home"
-                  ,guix-profile
-                  (,guix-current #:xdg-base "XDG_CONFIG_HOME")))
-
-      (simple-service
-       'stateless-guix-ensure-profiles
-       home-activation-service-type
-       #~(#$stateless-ensure-profiles-gexp
-          (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-            `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
-              (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))))
+   (list
+    (home-stateless-service
+     'home
+     #:state (append
+              '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
+                 (#:store . #:machine))
+                ((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
+                 (#:store . #:machine)
+                 (#:mode . #o700)))
+              (or extra-state '()))
+     #:ignore '(".guix-home")))
 
    (stateless-skeletons)))
-
-(define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils))
-    #~(lambda (profiles)
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-
-        (let ((no-follow-file-exists? (lambda (file)
-                                        (false-if-exception (lstat file)))))
-          (for-each
-           (lambda (i)
-             (let ((link (car i))
-                   (profile (cdr i)))
-               (when (and (no-follow-file-exists? profile)
-                          (not (no-follow-file-exists? link)))
-                 (mkdir-p (dirname link))
-                 (symlink profile link))))
-           profiles)))))
 
 (define org-dir "org")
 (define work-dir "work")
@@ -5076,6 +5044,47 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    (#:store . #:persist))))))))
 #+end_src
 *** Package management
+#+begin_src scheme
+(define stateless-ensure-profiles-gexp
+  (with-imported-modules '((guix build utils))
+    #~(lambda (profiles)
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (let ((no-follow-file-exists? (lambda (file)
+                                        (false-if-exception (lstat file)))))
+          (for-each
+           (lambda (i)
+             (let ((link (car i))
+                   (profile (cdr i)))
+               (when (and (no-follow-file-exists? profile)
+                          (not (no-follow-file-exists? link)))
+                 (mkdir-p (dirname link))
+                 (symlink profile link))))
+           profiles)))))
+#+end_src
+**** Guix
+#+begin_src scheme
+(define* (he-guix #:key stateless?)
+  (if stateless?
+      (let ((guix-profile ".guix-profile")
+            (guix-current "guix/current"))
+        (list
+         (simple-service
+          'guix-ensure-profiles
+          home-activation-service-type
+          #~(#$stateless-ensure-profiles-gexp
+             (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+               `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
+                 (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))
+
+         (home-stateless-service
+          'guix
+          #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
+                     (#:store . #:machine)))
+          #:ignore `(,guix-profile
+                     (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
+      '()))
+#+end_src
 **** Nix
 #+begin_src scheme
 (define* (he-nix #:key
@@ -7651,6 +7660,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                         #:email email
                                         #:org-dir org-dir))
          '())
+     (he-guix #:stateless? stateless?)
      (if nix?
          (he-nix #:stateless? stateless?
                  #:doom? doom?
