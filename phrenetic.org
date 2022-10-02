@@ -6902,26 +6902,40 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Doom calendar
 #+begin_src scheme
-(define* (he-doom-calendar #:key stateless?)
+(define* (he-doom-calendar #:key
+                           stateless?
+                           org?)
   (append
    (list
     (doom-service
      'calendar
      #:modules '((#:app
-                  calendar))
-     #:config
-     '((after! org-gcal
-               (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
-                     org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-                     org-gcal-recurring-events-mode 'nested))))
+                  calendar))))
 
-    (when stateless?
-      (doom-stateless-service
-       'doom-calendar
-       #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
-                  (#:store . #:machine))
-                 ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
-                  (#:store . #:machine))))))
+   (if org?
+       (doom-org-gcal-services #:stateless? stateless?) '())))
+
+(define* (doom-org-gcal-services #:key stateless?)
+  (append
+   (let ((name 'org-gcal))
+     (list
+      (doom-service
+       name
+       #:modules '((#:app
+                    calendar))
+       #:config
+       '((after! org-gcal
+                 (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+                       org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+                       org-gcal-recurring-events-mode 'nested))))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
+                    (#:store . #:machine))
+                   ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
+                    (#:store . #:machine)))))))
 
    (doom-dash)))
 #+end_src
@@ -7612,6 +7626,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   (login-shell #:shell/bash)
                   (interactive-shell #:shell/zsh)
                   doom?
+                  doom-org?
                   doom-evil?
                   doom-tree-sitter?
                   console?
@@ -7654,10 +7669,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          '())
      (if doom?
          (append
-          (he-doom-calendar #:stateless? stateless?)
-          (he-doom-org #:stateless? stateless?
-                       #:evil? doom-evil?
-                       #:org-dir org-dir))
+          (he-doom-calendar #:stateless? stateless?
+                            #:org? doom-org?)
+          (if doom-org?
+              (he-doom-org #:stateless? stateless?
+                           #:evil? doom-evil?
+                           #:org-dir org-dir)
+              '()))
          '())
      (he-direnv #:stateless? stateless?
                 #:doom? doom?
@@ -8371,12 +8389,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (main-he sessions)
   (he:create-he
    (let* ((doom? #t)
+          (doom-org? doom?)
           (doom-evil? doom?)
           (doom-tree-sitter? doom?))
      (apply
       he:he-base
       #:email "pharcosyle@gmail.com"
       #:doom? doom?
+      #:doom-org? doom-org?
       #:doom-evil? doom-evil?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
