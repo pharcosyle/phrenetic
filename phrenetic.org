@@ -1514,8 +1514,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             time-format
             he-xdg
             he-mesa
-            he-gtk
-            he-qt
             he-doom-themes+fonts
             he-dbus
             he-gdm
@@ -5750,75 +5748,6 @@ Some colors from the original Atom theme on which I based mine that might be use
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)))))))
 #+end_src
-**** Graphical toolkits
-***** GTK
-It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see [[https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland][GTK 3 settings on Wayland · swaywm/sway Wiki · GitHub]].
-#+begin_src scheme
-(define* (he-gtk #:key
-                 stateless?
-                 theme
-                 font
-                 font-monospace)
-  (list
-   (simple-service
-    'gtk-add-packages
-    home-profile-service-type
-    (list arc-theme
-          ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
-          hicolor-icon-theme
-          adwaita-icon-theme
-          ;; papirus-icon-theme ; TODO Remove for now, it massively increases guix build time. Why?
-          gnome-themes-extra))
-
-   (simple-service
-    'gtk-settings-and-dconf
-    home-multi-xdg-configuration-files-service-type
-    `(("gtk-3.0/settings.ini"
-       ,(ini-file
-         "gtk-3.0-settings.ini"
-         `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
-      ("dconf/user"
-       ,(computed-file
-         "dconf-user"
-         #~(system*
-            #$(file-append dconf "/bin/dconf")
-            "compile"
-            #$output
-            ;; Target of `compile` must be a directory.
-            #$(file-union
-               "dconf-keyfiledir"
-               `(("dconf-keyfile"
-                  ,(ini-file
-                    "dconf-keyfile"
-                    `((org/gnome/desktop/interface
-                       ((gtk-theme . ,(quoted-symbol
-                                       (case theme
-                                         ((#:theme/light) "Arc")
-                                         ((#:theme/dark) "Arc-Dark"))))
-                        (font-name . ,(quoted-symbol
-                                       (font-value font)))
-                        (monospace-font-name . ,(quoted-symbol
-                                                 (font-value font-monospace)))))))))))))))
-
-   (when stateless?
-     (home-stateless-service
-      'gtk
-      #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)))))))
-
-(define (quoted-symbol s)
-  (string->symbol (string-append "'" s "'")))
-#+end_src
-***** Qt
-#+begin_src scheme
-(define* (he-qt #:key stateless?)
-  (list
-   (when stateless?
-     (home-stateless-service
-      'qt
-      #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
-#+end_src
 **** D-Bus
 #+begin_src scheme
 (define (he-dbus)
@@ -7286,36 +7215,46 @@ use_guixs() {
 **** Apps
 ***** PulseAudio Volume Control
 #+begin_src scheme
-(define* (he-pavucontrol #:key stateless?)
-  (list
-   (simple-service
-    'pavucontrol-add-package
-    home-profile-service-type
-    (list pavucontrol))
+(define* (he-pavucontrol #:key
+                         stateless?
+                         gtk-services)
+  (append
+   (list
+    (simple-service
+     'pavucontrol-add-package
+     home-profile-service-type
+     (list pavucontrol))
 
-   (when stateless?
-     (home-stateless-service
-      'pavucontrol
-      #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
+    (when stateless?
+      (home-stateless-service
+       'pavucontrol
+       #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:store . #:machine))))))
+
+   (or gtk-services '())))
 #+end_src
 ***** Image processing
 ****** GIMP
 #+begin_src scheme
-(define* (he-gimp #:key stateless?)
-  (list
-   (simple-service
-    'gimp-add-package
-    home-profile-service-type
-    (list gimp))
+(define* (he-gimp #:key
+                  stateless?
+                  gtk-services)
+  (append
+   (list
+    (simple-service
+     'gimp-add-package
+     home-profile-service-type
+     (list gimp))
 
-   (when stateless?
-     (home-stateless-service
-      'gimp
-      #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine))
-                ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
+    (when stateless?
+      (home-stateless-service
+       'gimp
+       #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:store . #:machine))
+                 ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:store . #:machine))))))
+
+   (or gtk-services '())))
 #+end_src
 ***** Terminals
 ****** Alacritty
@@ -7413,47 +7352,51 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 (define* (he-chromium #:key
                       stateless?
                       wayland?
+                      gtk-services
                       flavors)
-  (list
-   (when (chromium? flavors)
-     (simple-service
-      'chromium-add-packages
-      home-profile-service-type
-      (append
-       (if (member #:ungoogled-chromium flavors)
-           (list (if wayland?
-                     ungoogled-chromium/wayland
-                     ungoogled-chromium))
-           '())
-       (if (member #:chromium flavors)
-           (list chromium+drm)
-           '())
-       (list ublock-origin/chromium))))
+  (append
+   (list
+    (when (chromium? flavors)
+      (simple-service
+       'chromium-add-packages
+       home-profile-service-type
+       (append
+        (if (member #:ungoogled-chromium flavors)
+            (list (if wayland?
+                      ungoogled-chromium/wayland
+                      ungoogled-chromium))
+            '())
+        (if (member #:chromium flavors)
+            (list chromium+drm)
+            '())
+        (list ublock-origin/chromium))))
 
-   (when stateless?
-     (home-stateless-service
-      'chromium
-      #:state (append
-               (if (chromium? flavors)
-                   '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:store . #:machine)
-                      (#:mode . #o700))
-                     ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                      (#:store . #:machine)
-                      (#:mode . #o700)))
-                   '())
-               (if (chrome? flavors)
-                   '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:store . #:machine)
-                      (#:mode . #o700))
-                     ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                      (#:store . #:machine)
-                      (#:mode . #o700)))
-                   '())
-               '(((#:path . ".pki/nssdb/")
-                  (#:store . #:machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))))))))
+    (when stateless?
+      (home-stateless-service
+       'chromium
+       #:state (append
+                (if (chromium? flavors)
+                    '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                       (#:store . #:machine)
+                       (#:mode . #o700))
+                      ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                       (#:store . #:machine)
+                       (#:mode . #o700)))
+                    '())
+                (if (chrome? flavors)
+                    '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+                       (#:store . #:machine)
+                       (#:mode . #o700))
+                      ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+                       (#:store . #:machine)
+                       (#:mode . #o700)))
+                    '())
+                '(((#:path . ".pki/nssdb/")
+                   (#:store . #:machine)
+                   (#:mode . #o700)
+                   (#:parent-dir-perms . ((#:mode . #o700)))))))))
+
+   (or gtk-services '())))
 
 (define (chromium? flavors)
   (or (member #:ungoogled-chromium flavors)
@@ -7481,32 +7424,37 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
 #+begin_src scheme
 (define* (he-firefox #:key
                      stateless?
-                     wayland?)
-  (list
-   (simple-service
-    'firefox-add-package
-    home-profile-service-type
-    (list (if wayland?
-              firefox/wayland
-              firefox)))
+                     wayland?
+                     gtk-services)
+  (append
+   (list
+    (simple-service
+     'firefox-add-package
+     home-profile-service-type
+     (list (if wayland?
+               firefox/wayland
+               firefox)))
 
-   (when stateless?
-     (home-stateless-service
-      'firefox
-      #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700)
-                 (#:parent-dir-perms . ((#:mode . #o700))))
-                ((#:path . ".mozilla/firefox")
-                 (#:store . #:machine)
-                 (#:mode . #o700)
-                 (#:parent-dir-perms . ((#:mode . #o700))))
-                ((#:path . ".mozilla/extensions")
-                 (#:store . #:machine)
-                 (#:mode . #o700)
-                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
+    (when stateless?
+      (home-stateless-service
+       'firefox
+       #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:store . #:machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/firefox")
+                  (#:store . #:machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/extensions")
+                  (#:store . #:machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+
+   (or gtk-services '())))
 #+end_src
 ****** Nyxt
+- TODO Add ~gtk-services~ param if Nyxt uses gtk settings (font, light/dark theme).
 #+begin_src scheme
 (define* (he-nyxt #:key
                   stateless?
@@ -7540,19 +7488,93 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
 ***** Video
 ****** VLC
 #+begin_src scheme
-(define* (he-vlc #:key stateless?)
+(define* (he-vlc #:key
+                 stateless?
+                 qt-services)
+  (append
+   (list
+    (simple-service
+     'vlc-add-package
+     home-profile-service-type
+     (list vlc))
+
+    (when stateless?
+      (home-stateless-service
+       'vlc
+       #:state '(((#:path . ("vlc/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:store . #:machine))
+                 ((#:path . ("vlc/" #:xdg-base "XDG_DATA_HOME"))
+                  (#:store . #:machine))))))
+
+   (or qt-services '())))
+#+end_src
+***** Graphical toolkits
+****** GTK
+It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see [[https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland][GTK 3 settings on Wayland · swaywm/sway Wiki · GitHub]].
+#+begin_src scheme
+(define* (gtk-services #:key
+                       stateless?
+                       theme
+                       font
+                       font-monospace)
   (list
    (simple-service
-    'vlc-add-package
+    'gtk-add-packages
     home-profile-service-type
-    (list vlc))
+    (list arc-theme
+          ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
+          hicolor-icon-theme
+          adwaita-icon-theme
+          ;; papirus-icon-theme ; TODO Remove for now, it massively increases guix build time. Why?
+          gnome-themes-extra))
+
+   (simple-service
+    'gtk-settings-and-dconf
+    home-multi-xdg-configuration-files-service-type
+    `(("gtk-3.0/settings.ini"
+       ,(ini-file
+         "gtk-3.0-settings.ini"
+         `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
+      ("dconf/user"
+       ,(computed-file
+         "dconf-user"
+         #~(system*
+            #$(file-append dconf "/bin/dconf")
+            "compile"
+            #$output
+            ;; Target of `compile` must be a directory.
+            #$(file-union
+               "dconf-keyfiledir"
+               `(("dconf-keyfile"
+                  ,(ini-file
+                    "dconf-keyfile"
+                    `((org/gnome/desktop/interface
+                       ((gtk-theme . ,(quoted-symbol
+                                       (case theme
+                                         ((#:theme/light) "Arc")
+                                         ((#:theme/dark) "Arc-Dark"))))
+                        (font-name . ,(quoted-symbol
+                                       (font-value font)))
+                        (monospace-font-name . ,(quoted-symbol
+                                                 (font-value font-monospace)))))))))))))))
 
    (when stateless?
      (home-stateless-service
-      'vlc
-      #:state '(((#:path . ("vlc/" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine))
-                ((#:path . ("vlc/" #:xdg-base "XDG_DATA_HOME"))
+      'gtk
+      #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
+                 (#:store . #:machine)))))))
+
+(define (quoted-symbol s)
+  (string->symbol (string-append "'" s "'")))
+#+end_src
+****** Qt
+#+begin_src scheme
+(define* (qt-services #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'qt
+      #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:store . #:machine)))))))
 #+end_src
 *** Projects
@@ -7687,11 +7709,6 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                 '())
             (he-xdg #:stateless? stateless?)
             (he-mesa #:stateless? stateless?)
-            (he-gtk #:stateless? stateless?
-                    #:theme theme
-                    #:font font-variable-pitch
-                    #:font-monospace font-mono)
-            (he-qt #:stateless? stateless?)
             (if dbus?
                 (he-dbus) '())
             (if display-manager
@@ -7736,21 +7753,33 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
                    ;; (he-kanshi)
                    ))
                 '())
-            (he-pavucontrol #:stateless? stateless?)
-            ;; (he-gimp #:stateless? stateless?)
-            (he-alacritty #:colors colors
-                          #:font font-mono)
-            (he-vterm #:doom? doom?
-                      #:setup-zsh? (equal? interactive-shell #:shell/zsh))
-            (he-chromium #:stateless? stateless?
-                         #:wayland? wayland?
-                         #:flavors chromium-flavors)
-            (he-firefox #:stateless? stateless?
-                        #:wayland? wayland?)
-            (he-nyxt #:stateless? stateless?
-                     #:doom? doom?)
-            ;; (he-vlc #:stateless? stateless?)
-            ))
+            (let ((gtk (gtk-services #:stateless? stateless?
+                                     #:theme theme
+                                     #:font font-variable-pitch
+                                     #:font-monospace font-mono))
+                  ;; (qt (qt-services #:stateless? stateless?))
+                  )
+              (append
+               (he-pavucontrol #:stateless? stateless?
+                               #:gtk-services gtk)
+               ;; (he-gimp #:stateless? stateless?
+               ;;          #:gtk-services gtk)
+               (he-alacritty #:colors colors
+                             #:font font-mono)
+               (he-vterm #:doom? doom?
+                         #:setup-zsh? (equal? interactive-shell #:shell/zsh))
+               (he-chromium #:stateless? stateless?
+                            #:wayland? wayland?
+                            #:gtk-services gtk
+                            #:flavors chromium-flavors)
+               (he-firefox #:stateless? stateless?
+                           #:wayland? wayland?
+                           #:gtk-services gtk)
+               (he-nyxt #:stateless? stateless?
+                        #:doom? doom?)
+               ;; (he-vlc #:stateless? stateless?
+               ;;         #:qt-services qt)
+               ))))
          '())
      (if projects
          (he-projects #:work-dir work-dir
