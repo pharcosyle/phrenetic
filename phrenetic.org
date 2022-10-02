@@ -6532,33 +6532,19 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                               config '())))))
     (style-css (if style
                    style '())))))
-
-(define* (waybar-volume #:key show-percentage?)
+#+end_src
+******** Backlight
+#+begin_src scheme
+(define* (waybar-backlight #:key show-percentage?)
   (waybar-module
-   'pulseaudio#sink
-   (let ((base-format (string-append
-                       (if show-percentage? "{volume}% " "")
-                       "{icon}")))
-     `((format . ,base-format)
-       (format-muted . "🔇")
-       (format-bluetooth . ,(string-append base-format ""))
-       (format-icons . ((default . #(🔈 🔉 🔊 📢))))
-       (tooltip-format . "{desc} is on {volume}%")
-       (on-click . ,#~(let ((cmd #$(file-append pavucontrol "/bin/pavucontrol")))
-                        (string-append "\"" cmd "\"")))))))
-
-(define* (waybar-microphone #:key show-percentage?)
-  (waybar-module
-   'pulseaudio#source
-   `((format . "{format_source}")
-     (format-source . ,(string-append
-                        (if show-percentage? "{volume}% " "")
-                        ""))
-     (format-source-muted . "")
-     (tooltip-format . "{source_desc} is on {source_volume}%")
-     (on-click . ,#~(let ((cmd (string-append #$(file-append pavucontrol "/bin/pavucontrol") " --tab=4")))
-                      (string-append "\"" cmd "\""))))))
-
+   'backlight
+   `((format . ,(string-append
+                 "{icon} "
+                 (if show-percentage? "{percent}" "")))
+     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑)))))
+#+end_src
+******** Battery
+#+begin_src scheme
 (define* (waybar-battery #:key show-percentage?)
   (waybar-module
    'battery
@@ -6586,15 +6572,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       ((color . @orange)))
      (#{#battery.full}#
       ((color . @green))))))
-
-(define* (waybar-backlight #:key show-percentage?)
-  (waybar-module
-   'backlight
-   `((format . ,(string-append
-                 "{icon} "
-                 (if show-percentage? "{percent}" "")))
-     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑)))))
-
+#+end_src
+******** Clock
+#+begin_src scheme
 (define* (waybar-clock #:key
                        date-format
                        time-format)
@@ -6606,24 +6586,90 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                                "}")))
    '()
    #:placement 'modules-left))
-
+#+end_src
+******** CPU
+#+begin_src scheme
 (define (waybar-cpu)
   (waybar-module
    'cpu
    '((format . " {usage}%"))))
-
+#+end_src
+******** Idle inhibitor
+#+begin_src scheme
 (define (waybar-idle-inhibitor)
   (waybar-module
    'idle_inhibitor
    '((format . {icon})
      (format-icons . ((activated . )
                       (deactivated . ))))))
-
+#+end_src
+******** Memory
+#+begin_src scheme
 (define (waybar-memory)
   (waybar-module
    'memory
    '((format . " {}%"))))
+#+end_src
+******** Microphone
+#+begin_src scheme
+(define* (waybar-microphone #:key show-percentage?)
+  (waybar-module
+   'pulseaudio#source
+   `((format . "{format_source}")
+     (format-source . ,(string-append
+                        (if show-percentage? "{volume}% " "")
+                        ""))
+     (format-source-muted . "")
+     (tooltip-format . "{source_desc} is on {source_volume}%")
+     (on-click . ,#~(let ((cmd (string-append #$(file-append pavucontrol "/bin/pavucontrol") " --tab=4")))
+                      (string-append "\"" cmd "\""))))))
+#+end_src
+******** Tray
+#+begin_src scheme
+(define (waybar-tray)
+  (waybar-module
+   'tray
+   `()
+   `(((#{#tray}# menu)
+      ((color . @fg)
+       (background . @bg)
+       (border . (solid 1px))
+       (border-color . @bg-alt)))
 
+     ((#{#tray}# menu menuitem)
+      ((padding-top . 0px)
+       (padding-bottom . 0px)
+       (margin-top . 0.1em)
+       (margin-bottom . 0em)))
+
+     ((#{#tray}# menu menuitem:hover)
+      ((background . none)))
+
+     ((#{#tray}# menu separator)
+      ((background . @bg-alt)
+       (padding-top . 1px)
+       (margin-top . 0.2em)
+       (margin-bottom . 0.2em))))))
+#+end_src
+******** Volume
+#+begin_src scheme
+(define* (waybar-volume #:key show-percentage?)
+  (waybar-module
+   'pulseaudio#sink
+   (let ((base-format (string-append
+                       (if show-percentage? "{volume}% " "")
+                       "{icon}")))
+     `((format . ,base-format)
+       (format-muted . "🔇")
+       (format-bluetooth . ,(string-append base-format ""))
+       (format-icons . ((default . #(🔈 🔉 🔊 📢))))
+       (tooltip-format . "{desc} is on {volume}%")
+       (on-click . ,#~(let ((cmd #$(file-append pavucontrol "/bin/pavucontrol")))
+                        (string-append "\"" cmd "\"")))))))
+#+end_src
+******** Sway
+********* Sway window
+#+begin_src scheme
 (define (waybar-sway-window)
   (waybar-module
    'sway/window
@@ -6632,7 +6678,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       ((margin-left . 1em)
        (margin-right . 1em))))
    #:placement 'modules-center))
-
+#+end_src
+********* Sway workspaces
+#+begin_src scheme
 (define* (waybar-sway-workspaces
           #:key
           persistent-workspaces
@@ -6674,31 +6722,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      ((#{#workspaces}# button.urgent)
       ((color . @red))))
    #:placement 'modules-left))
-
-(define (waybar-tray)
-  (waybar-module
-   'tray
-   `()
-   `(((#{#tray}# menu)
-      ((color . @fg)
-       (background . @bg)
-       (border . (solid 1px))
-       (border-color . @bg-alt)))
-
-     ((#{#tray}# menu menuitem)
-      ((padding-top . 0px)
-       (padding-bottom . 0px)
-       (margin-top . 0.1em)
-       (margin-bottom . 0em)))
-
-     ((#{#tray}# menu menuitem:hover)
-      ((background . none)))
-
-     ((#{#tray}# menu separator)
-      ((background . @bg-alt)
-       (padding-top . 1px)
-       (margin-top . 0.2em)
-       (margin-bottom . 0.2em))))))
 #+end_src
 ***** Menus and launchers
 ****** Rofi
