@@ -4332,8 +4332,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-user #:email email)
    (doom-keymaps)
    (doom-emacs-lisp)
-   (doom-markdown)
-   (doom-guix #:stateless? stateless?)))
+   (doom-markdown)))
 #+end_src
 ****** General :bindings:
 #+begin_src scheme
@@ -4814,79 +4813,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
    (doom-dash)))
 #+end_src
-****** Guix :bindings:
-#+begin_src scheme
-(define* (doom-guix #:key stateless?)
-  (append
-   (let ((name 'guix))
-     (list
-      (doom-service
-       name
-       #:packages
-       '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
-         (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
-         (package! guix-packaging ; REVIEW trying out
-                   :recipe (:host github
-                            :repo "ryanprior/emacs-guix-packaging"
-                            :files (:defaults "snippets"))
-                   :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
-       #:config
-       '((after! guix
-                 (set-popup-rules!
-                  '(("^\\*Guix" :height 0.5))))
-         (use-package! guix-devel
-                       :hook (scheme-mode . guix-devel-mode))
-         (use-package! guix-popup
-                       :defer t
-                       :init
-                       (map! :leader
-                             "l" #'guix))  ; REVIEW temporary binding?
-         (use-package! guix-prettify
-                       :hook (doom-first-buffer . global-guix-prettify-mode))
-
-         ;; TODO once I'm done packaging Doom figure out how to enable this
-         ;; (use-package! guix-contributing)
-
-         (use-package! guix-packaging
-                       :defer t
-                       :init
-                       (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
-                    (#:store . #:machine)))))))
-
-   (doom-guile-scheme #:stateless? stateless?)))
-#+end_src
-******* Guile Scheme
-#+begin_src scheme
-(define* (doom-guile-scheme #:key stateless?)
-  (append
-   (let ((name 'guile-scheme))
-     (list
-      (doom-service
-       name
-       #:modules '((#:lang
-                    (scheme +guile)))
-       #:config
-       '((after! scheme
-                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
-
-         ;; TODO Maybe do this if popping to the side is too annoying
-         ;; (after! geiser-repl
-         ;;   (setq geiser-repl-use-other-window nil))
-         ))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
-
-   (doom-transient #:stateless? stateless?)))
-#+end_src
 ***** Languages
 #+begin_src scheme
 (define* (doom-ts-lang lang
@@ -5009,26 +4935,105 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 **** Guix
 #+begin_src scheme
-(define* (he-guix #:key stateless?)
-  (if stateless?
-      (let ((guix-profile ".guix-profile")
-            (guix-current "guix/current"))
-        (list
-         (simple-service
-          'guix-ensure-profiles
-          home-activation-service-type
-          #~(#$stateless-ensure-profiles-gexp
-             (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-               `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
-                 (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))
+(define* (he-guix #:key
+                  stateless?
+                  doom?)
+  (append
+   (if stateless?
+       (let ((guix-profile ".guix-profile")
+             (guix-current "guix/current"))
+         (list
+          (simple-service
+           'guix-ensure-profiles
+           home-activation-service-type
+           #~(#$stateless-ensure-profiles-gexp
+              (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
+                `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
+                  (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))
 
-         (home-stateless-service
-          'guix
-          #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
-                     (#:store . #:machine)))
-          #:ignore `(,guix-profile
-                     (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
-      '()))
+          (home-stateless-service
+           'guix
+           #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
+                      (#:store . #:machine)))
+           #:ignore `(,guix-profile
+                      (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
+       '())
+
+   (if doom?
+       (doom-guix #:stateless? stateless?) '())))
+#+end_src
+***** Doom Guix :bindings:
+#+begin_src scheme
+(define* (doom-guix #:key stateless?)
+  (append
+   (let ((name 'guix))
+     (list
+      (doom-service
+       name
+       #:packages
+       '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+         (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
+         (package! guix-packaging ; REVIEW trying out
+                   :recipe (:host github
+                            :repo "ryanprior/emacs-guix-packaging"
+                            :files (:defaults "snippets"))
+                   :pin "5bbd1f1a268b3dfd813a75125ca88cbf0bef6529"))
+       #:config
+       '((after! guix
+                 (set-popup-rules!
+                  '(("^\\*Guix" :height 0.5))))
+         (use-package! guix-devel
+                       :hook (scheme-mode . guix-devel-mode))
+         (use-package! guix-popup
+                       :defer t
+                       :init
+                       (map! :leader
+                             "l" #'guix))  ; REVIEW temporary binding?
+         (use-package! guix-prettify
+                       :hook (doom-first-buffer . global-guix-prettify-mode))
+
+         ;; TODO once I'm done packaging Doom figure out how to enable this
+         ;; (use-package! guix-contributing)
+
+         (use-package! guix-packaging
+                       :defer t
+                       :init
+                       (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
+                    (#:store . #:machine)))))))
+
+   (doom-guile-scheme #:stateless? stateless?)))
+#+end_src
+****** Guile Scheme
+#+begin_src scheme
+(define* (doom-guile-scheme #:key stateless?)
+  (append
+   (let ((name 'guile-scheme))
+     (list
+      (doom-service
+       name
+       #:modules '((#:lang
+                    (scheme +guile)))
+       #:config
+       '((after! scheme
+                 (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
+
+         ;; TODO Maybe do this if popping to the side is too annoying
+         ;; (after! geiser-repl
+         ;;   (setq geiser-repl-use-other-window nil))
+         ))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
+                    (#:store . #:persist)))))))
+
+   (doom-transient #:stateless? stateless?)))
 #+end_src
 **** Nix
 #+begin_src scheme
