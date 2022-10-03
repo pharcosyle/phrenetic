@@ -812,67 +812,72 @@ Must succeed [[*File systems][File systems]] component. No dependencies are requ
 ***** Stateless
 Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
 #+begin_src scheme
-(define-system-comp (stateless #:key
-                               persist-dir
-                               machine-dir
-                               who)
-  (file-systems
-   (->> (operating-system-file-systems os)
-        (cons* (file-system
-                 (device ":/root") ; HACK Guix boot will hang forever waiting for a device to appear even though this is a tmpfs. Fake it out by using a name that looks like an NFS device (see `canonicalize-device-spec'). Thus the ":/" is necessary but the name is otherwise arbitrary.
-                 (mount-point "/")
-                 (type "tmpfs")
-                 (check? #f)))
-        (map (lambda (fs)
-               (if (member (file-system-mount-point fs)
-                           `("/var/guix"
-                             ,persist-dir
-                             ,machine-dir))
-                   (file-system
-                     (inherit fs)
-                     (needed-for-boot? #t))
-                   fs)))))
-  (users
-   (map (lambda (account)
-          (if (member (user-account-name account) (map car who))
-              (user-account
-               (inherit account)
-               (create-home-directory? #f))
-              account))
-        (operating-system-users os)))
-  (services
-   (append
-    (operating-system-user-services os)
-    (list
-     (service stateless-service-type
-              `(#:persist-dir ,persist-dir
-                #:machine-dir ,machine-dir
-                #:homes ,(->> users
-                              (filter (lambda (account)
-                                        (member (user-account-name account) (map car who))))
-                              (map (lambda (account)
-                                     `(,(user-account-name account) . ,(user-account-home-directory account)))))
-                #:hes ,who))
-     (stateless-service
-      'system
-      #:state '(((#:path . "/etc/machine-id")
-                 (#:store . #:machine))
-                ((#:path . "/var/lib/random-seed")
-                 (#:store . #:machine)))
-      #:ignore '("/var/log/"))))))
+(define* (stateless os
+                    #:key
+                    persist-dir
+                    machine-dir
+                    who
+                    nix?)
+  (as-> os $
+    (system-comp
+     $
+     (file-systems
+      (->> (operating-system-file-systems os)
+           (cons* (file-system
+                    (device ":/root") ; HACK Guix boot will hang forever waiting for a device to appear even though this is a tmpfs. Fake it out by using a name that looks like an NFS device (see `canonicalize-device-spec'). Thus the ":/" is necessary but the name is otherwise arbitrary.
+                    (mount-point "/")
+                    (type "tmpfs")
+                    (check? #f)))
+           (map (lambda (fs)
+                  (if (member (file-system-mount-point fs)
+                              `("/var/guix"
+                                ,persist-dir
+                                ,machine-dir))
+                      (file-system
+                        (inherit fs)
+                        (needed-for-boot? #t))
+                      fs)))))
+     (users
+      (map (lambda (account)
+             (if (member (user-account-name account) (map car who))
+                 (user-account
+                  (inherit account)
+                  (create-home-directory? #f))
+                 account))
+           (operating-system-users os)))
+     (services
+      (append
+       (operating-system-user-services os)
+       (list
+        (service stateless-service-type
+                 `(#:persist-dir ,persist-dir
+                   #:machine-dir ,machine-dir
+                   #:homes ,(->> users
+                                 (filter (lambda (account)
+                                           (member (user-account-name account) (map car who))))
+                                 (map (lambda (account)
+                                        `(,(user-account-name account) . ,(user-account-home-directory account)))))
+                   #:hes ,who))
+        (stateless-service
+         'system
+         #:state '(((#:path . "/etc/machine-id")
+                    (#:store . #:machine))
+                   ((#:path . "/var/lib/random-seed")
+                    (#:store . #:machine)))
+         #:ignore '("/var/log/"))))))
+
+    (if nix?
+        (stateless-nix $ #:machine-dir machine-dir) $)))
 
 (define stateless-persist-dir "/.persist")
 (define stateless-machine-dir "/.machine")
 
-(define* (stateless-mountables #:key persist-dir machine-dir nix?)
-  (append
-   `(("boot" . "/boot")
-     ("guix-store" . "/gnu/store")
-     ("guix-var" . "/var/guix")
-     ("persist" . ,persist-dir)
-     ("machine" . ,machine-dir))
-   (if nix?
-       '(("nix" . "/nix")) '())))
+(define* (stateless-mountables #:key persist-dir machine-dir)
+  `(("boot" . "/boot")
+    ("guix-store" . "/gnu/store")
+    ("guix-var" . "/var/guix")
+    ("persist" . ,persist-dir)
+    ("machine" . ,machine-dir)))
 #+end_src
 ****** Service
 ******* Service type
@@ -994,6 +999,25 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+begin_src scheme
 (define stateless-service
   (stateless:service-fn stateless-service-type))
+#+end_src
+****** Nix
+#+begin_src scheme
+(define* (stateless-nix os #:key machine-dir)
+  (let ((nix-dir "/nix"))
+    (system-comp
+     os
+     (file-systems
+      (cons* (file-system
+               (device (string-append machine-dir nix-dir))
+               (mount-point nix-dir)
+               (type "none")
+               (flags '(bind-mount)))
+             (operating-system-file-systems os)))
+     (services
+      (cons* (stateless-service
+              'nix
+              #:ignore (list nix-dir))
+             (operating-system-user-services os))))))
 #+end_src
 *** Hardware-specific
 **** Console
@@ -1419,7 +1443,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            stateless?
                            stateless-persist-dir
                            stateless-machine-dir
-                           stateless-users)
+                           stateless-users
+                           nix?)
   (as-> os $
     (case filesystem
       ;; ((#:filesystem/ext4)
@@ -1444,7 +1469,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if stateless?
         (stateless $ #:persist-dir stateless-persist-dir
                    #:machine-dir stateless-machine-dir
-                   #:who stateless-users)
+                   #:who stateless-users
+                   #:nix? nix?)
         $)))
 
 (define* (with-macbook-hardware os #:key bluetooth?)
@@ -8639,8 +8665,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define root-label os:root-label)
 (define mountables (os:stateless-mountables
                     #:persist-dir stateless-persist-dir
-                    #:machine-dir stateless-machine-dir
-                    #:nix? nix?))
+                    #:machine-dir stateless-machine-dir))
 (define btrfs-mount-flags os:btrfs-mount-flags)
 (define btrfs-mount-options os:btrfs-mount-options)
 (define disk-encryption? #t)
@@ -8681,7 +8706,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                              #:stateless-machine-dir stateless-machine-dir
                              #:stateless-users `((,primary-name . ,(primary-he))
                                                  (,aux-name . ,(aux-he))
-                                                 (,guest-name . ,(guest-he))))
+                                                 (,guest-name . ,(guest-he)))
+                             #:nix? nix?)
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define installer
