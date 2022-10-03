@@ -4926,11 +4926,12 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                   channels)
   (append
    (list
-    (simple-service
-     'guix-add-channels
-     home-xdg-configuration-files-service-type
-     `(("guix/channels.scm"
-        ,channels))))
+    (when channels
+      (simple-service
+       'guix-add-channels
+       home-xdg-configuration-files-service-type
+       `(("guix/channels.scm"
+          ,channels)))))
 
    (if stateless?
        (let ((guix-profile ".guix-profile")
