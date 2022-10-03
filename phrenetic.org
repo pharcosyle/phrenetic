@@ -1022,13 +1022,13 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         (append
          (-> broadcom package-source origin-patches)
          (list
-          (local-file "patches/broadcom-sta-linux-5.17.patch")
-          (local-file "patches/broadcom-sta-linux-5.18.patch")
-          (local-file "patches/broadcom-sta-pedantic-fix.patch"))))))))
+          (local-file "packages/patches/broadcom-sta-linux-5.17.patch")
+          (local-file "packages/patches/broadcom-sta-linux-5.18.patch")
+          (local-file "packages/patches/broadcom-sta-pedantic-fix.patch"))))))))
 #+end_src
 ******* Patches
 :PROPERTIES:
-:meta-dir+: /patches
+:meta-dir+: /packages/patches
 :VISIBILITY: content
 :END:
 ******** Linux 5.17
