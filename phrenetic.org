@@ -388,7 +388,7 @@ Run with ~sudo~.
 (define* (account #:key
                   name
                   comment
-                  shell
+                  ;; shell
                   admin?
                   password
                   salt)
@@ -398,10 +398,9 @@ Run with ~sudo~.
    (group "users")
    (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())))
-   (shell (case shell
-            ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-            ;; ((#:shell/zsh) (file-append zsh "/bin/zsh"))
-            (else (default-shell))))
+   ;; (shell (case shell
+   ;;          ((#:shell/bash) ...)
+   ;;          ((#:shell/zsh) ...)))
    (password (if password
                  (crypt password (or salt "toosimple"))
                  #f))))
@@ -7751,7 +7750,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   stateless?
                   stateless-persist-dir
                   stateless-machine-dir
-                  (login-shell #:shell/bash)
                   (interactive-shell #:shell/zsh)
                   doom?
                   doom-calendar?
@@ -7768,173 +7766,174 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   tty-start
                   sessions
                   projects)
-  (append
-   (if stateless?
-       (he-stateless #:persist-dir stateless-persist-dir
-                     #:machine-dir stateless-machine-dir)
-       '())
-   (he-shells #:stateless? stateless?
-              #:doom? doom?
-              #:doom-tree-sitter? doom-tree-sitter?
-              #:login-shell login-shell
-              #:interactive-shell interactive-shell)
-   (he-emacs)
-   (if doom?
-       (he-doom #:stateless? stateless?
-                #:services (doom-main #:stateless? stateless?
-                                      #:evil? doom-evil?
-                                      #:email email))
-       '())
-   (he-guix #:stateless? stateless?
-            #:channels guix-channels)
-   (if nix?
-       (he-nix #:stateless? stateless?
-               #:doom? doom?
-               #:doom-tree-sitter? doom-tree-sitter?
-               #:login-shell login-shell)
-       '())
-   (if doom?
-       (append
-        (if doom-calendar?
-            (he-doom-calendar #:stateless? stateless?
-                              #:org? doom-org?)
-            '())
-        (if doom-org?
-            (he-doom-org #:stateless? stateless?
-                         #:evil? doom-evil?)
-            '()))
-       '())
-   (he-direnv #:stateless? stateless?
-              #:doom? doom?
-              #:shells (list interactive-shell))
-   (he-protonvpn #:stateless? stateless?)
-   (he-ssh)
-   (he-git #:stateless? stateless?
-           #:doom? doom?
-           #:email email)
-   (he-miscellaneous)
-   (if console?
-       (if kmonad?
-           (he-kmonad #:doom? doom?) '())
-       '())
-   (if desktop?
-       (let* ((theme #:theme/dark)
-              (light-colors light-colors)
-              (dark-colors dark-colors)
-              (colors dark-colors)
-              (font-mono font-mono)
-              (font-sans font-sans)
-              (font-serif font-serif)
-              (font-unicode font-unicode)
-              (font-variable-pitch font-sans)
-              (dbus? (not display-manager))
-              (wayland? #t)
-              (sway? (member #:session/sway (or sessions '()))))
+  (let ((login-shell #:shell-bash))
+    (append
+     (if stateless?
+         (he-stateless #:persist-dir stateless-persist-dir
+                       #:machine-dir stateless-machine-dir)
+         '())
+     (he-shells #:stateless? stateless?
+                #:doom? doom?
+                #:doom-tree-sitter? doom-tree-sitter?
+                #:login-shell login-shell
+                #:interactive-shell interactive-shell)
+     (he-emacs)
+     (if doom?
+         (he-doom #:stateless? stateless?
+                  #:services (doom-main #:stateless? stateless?
+                                        #:evil? doom-evil?
+                                        #:email email))
+         '())
+     (he-guix #:stateless? stateless?
+              #:channels guix-channels)
+     (if nix?
+         (he-nix #:stateless? stateless?
+                 #:doom? doom?
+                 #:doom-tree-sitter? doom-tree-sitter?
+                 #:login-shell login-shell)
+         '())
+     (if doom?
          (append
-          (if pipewire?
-              (he-pipewire #:stateless? stateless?
-                           #:dbus? dbus?
-                           #:sway? sway?)
+          (if doom-calendar?
+              (he-doom-calendar #:stateless? stateless?
+                                #:org? doom-org?)
               '())
-          (he-flatpak #:stateless? stateless?
-                      #:wayland? wayland?)
-          (he-fonts #:stateless? stateless?
-                    #:fonts (list font-mono
-                                  font-sans
-                                  font-serif
-                                  font-unicode)
-                    #:extra-font-packages useful-font-packages)
-          (if doom?
-              (he-doom-themes+fonts #:theme theme
-                                    #:light-colors light-colors
-                                    #:dark-colors dark-colors
-                                    #:font font-mono
-                                    #:font-variable-pitch font-variable-pitch
-                                    #:font-unicode font-unicode
-                                    #:font-serif font-serif)
-              '())
-          (he-xdg #:stateless? stateless?)
-          (he-mesa #:stateless? stateless?)
-          (if dbus?
-              (he-dbus) '())
-          (if display-manager
-              (case display-manager
-                ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
-              (he-desktop-tty #:tty-number tty-start
-                              #:start (sway-start #:pipewire? pipewire?)))
-          (if (member #:session/gnome (or sessions '()))
-              (he-gnome #:stateless? stateless?) '())
-          (if sway?
-              (let ((date-format date-format)
-                    (time-format time-format))
-                (append
-                 (he-wm-common #:sway? sway?)
-                 (he-sway #:doom? doom?
-                          #:pipewire? pipewire?
-                          #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                          #:screen-locker (swaylock-screen-locker-immediate)
-                          #:idle-manager (swayidle-idle-manager)
-                          #:application-launcher (rofi-application-launcher #:wayland? wayland?)
-                          #:default-terminal (alacritty-terminal))
-                 (he-swaylock #:colors colors
+          (if doom-org?
+              (he-doom-org #:stateless? stateless?
+                           #:evil? doom-evil?)
+              '()))
+         '())
+     (he-direnv #:stateless? stateless?
+                #:doom? doom?
+                #:shells (list interactive-shell))
+     (he-protonvpn #:stateless? stateless?)
+     (he-ssh)
+     (he-git #:stateless? stateless?
+             #:doom? doom?
+             #:email email)
+     (he-miscellaneous)
+     (if console?
+         (if kmonad?
+             (he-kmonad #:doom? doom?) '())
+         '())
+     (if desktop?
+         (let* ((theme #:theme/dark)
+                (light-colors light-colors)
+                (dark-colors dark-colors)
+                (colors dark-colors)
+                (font-mono font-mono)
+                (font-sans font-sans)
+                (font-serif font-serif)
+                (font-unicode font-unicode)
+                (font-variable-pitch font-sans)
+                (dbus? (not display-manager))
+                (wayland? #t)
+                (sway? (member #:session/sway (or sessions '()))))
+           (append
+            (if pipewire?
+                (he-pipewire #:stateless? stateless?
+                             #:dbus? dbus?
+                             #:sway? sway?)
+                '())
+            (he-flatpak #:stateless? stateless?
+                        #:wayland? wayland?)
+            (he-fonts #:stateless? stateless?
+                      #:fonts (list font-mono
+                                    font-sans
+                                    font-serif
+                                    font-unicode)
+                      #:extra-font-packages useful-font-packages)
+            (if doom?
+                (he-doom-themes+fonts #:theme theme
+                                      #:light-colors light-colors
+                                      #:dark-colors dark-colors
+                                      #:font font-mono
+                                      #:font-variable-pitch font-variable-pitch
+                                      #:font-unicode font-unicode
+                                      #:font-serif font-serif)
+                '())
+            (he-xdg #:stateless? stateless?)
+            (he-mesa #:stateless? stateless?)
+            (if dbus?
+                (he-dbus) '())
+            (if display-manager
+                (case display-manager
+                  ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
+                (he-desktop-tty #:tty-number tty-start
+                                #:start (sway-start #:pipewire? pipewire?)))
+            (if (member #:session/gnome (or sessions '()))
+                (he-gnome #:stateless? stateless?) '())
+            (if sway?
+                (let ((date-format date-format)
+                      (time-format time-format))
+                  (append
+                   (he-wm-common #:sway? sway?)
+                   (he-sway #:doom? doom?
+                            #:pipewire? pipewire?
+                            #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
+                            #:screen-locker (swaylock-screen-locker-immediate)
+                            #:idle-manager (swayidle-idle-manager)
+                            #:application-launcher (rofi-application-launcher #:wayland? wayland?)
+                            #:default-terminal (alacritty-terminal))
+                   (he-swaylock #:colors colors
+                                #:font font-variable-pitch
+                                #:date-format date-format
+                                #:time-format time-format)
+                   (he-swayidle #:sway? sway?
+                                #:screen-locker (swaylock-screen-locker))
+                   (he-mako #:sway? sway?
+                            #:menu (rofi-menu #:wayland? wayland?)
+                            #:colors colors
+                            #:font font-variable-pitch)
+                   (he-waybar #:colors colors
                               #:font font-variable-pitch
-                              #:date-format date-format
-                              #:time-format time-format)
-                 (he-swayidle #:sway? sway?
-                              #:screen-locker (swaylock-screen-locker))
-                 (he-mako #:sway? sway?
-                          #:menu (rofi-menu #:wayland? wayland?)
-                          #:colors colors
-                          #:font font-variable-pitch)
-                 (he-waybar #:colors colors
-                            #:font font-variable-pitch
-                            #:sway? sway?
-                            #:modules (waybar-modules #:sway? sway?
-                                                      #:date-format date-format
-                                                      #:time-format time-format))
-                 (if doom?
-                     (he-doom-app-launcher) '())
-                 (he-rofi #:stateless? stateless?
-                          #:wayland? wayland?
-                          #:colors colors
-                          #:font font-variable-pitch)
-                 (if doom?
-                     (he-doom-trash) '())
-                 ;; (he-kanshi)
-                 ))
-              '())
-          (let ((gtk (gtk-services #:stateless? stateless?
-                                   #:theme theme
-                                   #:font font-variable-pitch
-                                   #:font-monospace font-mono))
-                ;; (qt (qt-services #:stateless? stateless?))
-                )
-            (append
-             (he-pavucontrol #:stateless? stateless?
-                             #:gtk-services gtk)
-             ;; (he-gimp #:stateless? stateless?
-             ;;          #:gtk-services gtk)
-             (he-alacritty #:colors colors
-                           #:font font-mono)
-             (if doom?
-                 (he-doom-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh)) '())
-             (he-chromium #:stateless? stateless?
-                          #:wayland? wayland?
-                          #:gtk-services gtk
-                          #:flavors chromium-flavors)
-             (he-firefox #:stateless? stateless?
-                         #:wayland? wayland?
-                         #:gtk-services gtk)
-             (he-nyxt #:stateless? stateless?
-                      #:doom? doom?)
-             ;; (he-vlc #:stateless? stateless?
-             ;;         #:qt-services qt)
-             ))))
-       '())
-   (if projects
-       (he-projects #:stateless? stateless?
-                    #:projects projects)
-       '())))
+                              #:sway? sway?
+                              #:modules (waybar-modules #:sway? sway?
+                                                        #:date-format date-format
+                                                        #:time-format time-format))
+                   (if doom?
+                       (he-doom-app-launcher) '())
+                   (he-rofi #:stateless? stateless?
+                            #:wayland? wayland?
+                            #:colors colors
+                            #:font font-variable-pitch)
+                   (if doom?
+                       (he-doom-trash) '())
+                   ;; (he-kanshi)
+                   ))
+                '())
+            (let ((gtk (gtk-services #:stateless? stateless?
+                                     #:theme theme
+                                     #:font font-variable-pitch
+                                     #:font-monospace font-mono))
+                  ;; (qt (qt-services #:stateless? stateless?))
+                  )
+              (append
+               (he-pavucontrol #:stateless? stateless?
+                               #:gtk-services gtk)
+               ;; (he-gimp #:stateless? stateless?
+               ;;          #:gtk-services gtk)
+               (he-alacritty #:colors colors
+                             #:font font-mono)
+               (if doom?
+                   (he-doom-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh)) '())
+               (he-chromium #:stateless? stateless?
+                            #:wayland? wayland?
+                            #:gtk-services gtk
+                            #:flavors chromium-flavors)
+               (he-firefox #:stateless? stateless?
+                           #:wayland? wayland?
+                           #:gtk-services gtk)
+               (he-nyxt #:stateless? stateless?
+                        #:doom? doom?)
+               ;; (he-vlc #:stateless? stateless?
+               ;;         #:qt-services qt)
+               ))))
+         '())
+     (if projects
+         (he-projects #:stateless? stateless?
+                      #:projects projects)
+         '()))))
 #+end_src
 * Common
 :PROPERTIES:
