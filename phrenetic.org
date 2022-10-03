@@ -8497,12 +8497,28 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 
 (define* (primary-he)
-  (main-he primary-he-sessions))
+  (he:create-he
+   (apply
+    he:he-base
+    #:email "pharcosyle@gmail.com"
+    #:kmonad? #t
+    #:sessions primary-he-sessions
+    #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
+                 ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
+                                        (#:doom? . ,doom?)
+                                        (#:doom-org? . ,doom-org?)
+                                        (#:doom-tree-sitter? doom-tree-sitter?))))
+    he-shared-opts)))
 
 (define primary-he-sessions '(#:session/sway))
 
 (define (aux-he)
-  (main-he aux-he-sessions))
+  (he:create-he
+   (apply
+    he:he-base
+    #:email "pharcosyle@gmail.com"
+    #:sessions aux-he-sessions
+    he-shared-opts)))
 
 (define aux-he-sessions primary-he-sessions)
 
@@ -8515,31 +8531,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define guest-he-sessions '(;; #:session/gnome
                             #:session/sway))
-
-(define (main-he sessions)
-  (he:create-he
-   (let* ((doom? #t)
-          (doom-calendar? doom?)
-          (doom-org? doom?)
-          (doom-evil? doom?)
-          (doom-tree-sitter? doom?))
-     (apply
-      he:he-base
-      #:email "pharcosyle@gmail.com"
-      #:doom? doom?
-      #:doom-calendar? doom-calendar?
-      #:doom-org? doom-org?
-      #:doom-evil? doom-evil?
-      #:doom-tree-sitter? doom-tree-sitter?
-      #:kmonad? #t
-      #:guix-channels (local-file "frostfire-channels-lock")
-      #:sessions sessions
-      #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
-                   ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
-                                          (#:doom? . ,doom?)
-                                          (#:doom-org? . ,doom-org?)
-                                          (#:doom-tree-sitter? doom-tree-sitter?))))
-      he-shared-opts))))
 
 
 (define nix? #t)
@@ -8559,7 +8550,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (append
    os+he-shared-opts
    `(#:stateless-persist-dir ,stateless-persist-dir
-     #:stateless-machine-dir ,stateless-machine-dir)))
+     #:stateless-machine-dir ,stateless-machine-dir
+     #:guix-channels (local-file "frostfire-channels-lock"))))
+
+
+(define doom? #t)
+(define doom-calendar? doom?)
+(define doom-org? doom?)
+(define doom-evil? doom?)
+(define doom-tree-sitter? doom?)
 
 
 (define efi? #t)
