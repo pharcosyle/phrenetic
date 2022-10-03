@@ -1493,7 +1493,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (append-map delete-duplicates list-index remove))
+  #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
   #:export (create-he
             he-stateless
             he-shells
@@ -1547,6 +1547,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-calendar
             he-doom-org
             he-direnv
+            direnv-service-type
             ;; he-nano
             he-node
             he-protonvpn
@@ -7117,28 +7118,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+begin_src scheme
 (define* (he-direnv #:key
                     doom?
-                    shells
-                    whitelist-dirs)
+                    shells)
   (append
    (list
     (simple-service
      'direnv-add-package
      home-profile-service-type
      (list direnv))
-
-    (when whitelist-dirs
-      (simple-service
-       'direnv-config
-       home-xdg-configuration-files-service-type
-       `(("direnv/direnv.toml"
-          ,(toml-file
-            "direnv-config"
-            `((whitelist ((prefix . ,(->> whitelist-dirs
-                                          (map (lambda (dir)
-                                                 "/.persist/home/pharcosyle/work_for_now"))
-                                          ;; (map (lambda (dir)
-                                          ;;        (string-append "~/" dir)))
-                                          serialize-toml-array))))))))))
 
     (simple-service
      'direnv-rc
@@ -7186,7 +7172,27 @@ use_guixs() {
 	fi
 }
 #+end_src
-***** TOML serialization
+***** Whitelist service
+#+begin_src scheme
+(define direnv-whitelist-service-type
+  (service-type
+   (name 'direnv-whitelist)
+   (extensions
+    (list (service-extension home-xdg-configuration-files-service-type
+                             (lambda (whitelist-entries)
+                               `(("direnv/direnv.toml"
+                                  ,(toml-file
+                                    "direnv-config"
+                                    (if (null? whitelist-entries)
+                                        '()
+                                        `((whitelist ((exact . ,(serialize-toml-array whitelist-entries)))))))))))))
+   (compose concatenate)
+   (extend (lambda (_ whitelist-entries)
+             whitelist-entries))
+   (default-value #f)
+   (description "Whitelist for Direnv.")))
+#+end_src
+****** TOML serialization
 #+begin_src scheme
 (define (toml-file name config)
   (ini-file name config))
