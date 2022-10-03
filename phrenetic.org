@@ -43,7 +43,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages cryptsetup) #:select (cryptsetup))
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
-  #:use-module ((gnu packages linux) #:select (btrfs-progs e2fsprogs util-linux+udev))
+  #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
   #:use-module ((gnu packages package-management) #:select (guix))
   #:use-module (phrenetic utils)
   #:export (installer-package))
@@ -61,9 +61,7 @@ Run with ~sudo~.
                             filesystem
                             mountables
                             btrfs-mount-flags
-                            btrfs-mount-options
-                            swapfile
-                            swapfile-size)
+                            btrfs-mount-options)
   (program-file
    "installer"
    #~(begin
@@ -185,14 +183,6 @@ Run with ~sudo~.
            (mkdirp-cmd boot-target-on-mount)
            (cmd mount-bin boot-partition boot-target-on-mount)))
 
-       (let ((swapfile-on-mount (string-append mount-dir #$swapfile)))
-         (cmd #$(file-append coreutils "/bin/truncate") "--size" "0" swapfile-on-mount)
-         (when (equal? #$filesystem #:filesystem/btrfs)
-           (cmd #$(file-append e2fsprogs "/bin/chattr") "+C" swapfile-on-mount))
-         (cmd #$(file-append util-linux+udev "/bin/fallocate") "--length" #$swapfile-size swapfile-on-mount)
-         (chmod swapfile-on-mount #o600)
-         (cmd #$(file-append util-linux+udev "/sbin/mkswap") swapfile-on-mount))
-
        (let ((source-dir "/etc/config-source")
              (configs-dir "phrenetic/configs"))
          (cmd #$(file-append guix "/bin/guix") "time-machine"
@@ -244,10 +234,11 @@ Run with ~sudo~.
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
+  #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
-  #:use-module ((gnu packages linux) #:select (brightnessctl kbd pipewire-0.3))
+  #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux+udev))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services base)
@@ -304,7 +295,6 @@ Run with ~sudo~.
             stateless-persist-dir
             stateless-machine-dir
             stateless-mountables
-            stateless-swapfile
             console-keyboard-layouts
             macbook
             macbook-kb-layout
@@ -771,12 +761,54 @@ Must succeed [[*File systems][File systems]] component.
 ***** Swap
 Must succeed [[*File systems][File systems]] component. No dependencies are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
-(define-system-comp (swap #:key swapfile)
-  (swap-devices
-   (list
-    (swap-space
-     (target swapfile)))))
+(define* (swap os
+               #:key
+               stateless?
+               stateless-machine-dir
+               no-cow?)
+  (let ((swapfile (string-append
+                   (if stateless?
+                       (string-append stateless-machine-dir "/")
+                       "/")
+                   ".swap")))
+    (system-comp
+     os
+     (swap-devices
+      (list
+       (swap-space
+        (target swapfile))))
+     (services
+      (append
+       (operating-system-user-services os)
+       (list
+        (simple-service
+         'create-swapfile
+         activation-service-type
+         (create-swapfile-gexp #:swapfile swapfile
+                               #:no-cow? no-cow?)))
+       (if stateless?
+           (list
+            (stateless-service
+             'swapfile
+             #:ignore (list swapfile)))
+           '()))))))
+
+(define* (create-swapfile-gexp #:key
+                               swapfile
+                               no-cow?)
+  #~(begin
+      (when (not (file-exists? #$swapfile))
+        (system* #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
+        (when #$no-cow?
+          (system* #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
+        (system* #$(file-append util-linux+udev "/bin/fallocate") "--length" "8G" #$swapfile)
+        (chmod #$swapfile #o600)
+        (system* #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile))))
 #+end_src
+****** TODO [#E] Dynamically-determined swapfile size
+/Otherwise/ make it an argument.
+- At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
+- Make it 1.5x memory size if disk size allows.
 ***** Stateless
 Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] components. To be useful, the stateless service's activation must come before that of other services that create state (to this end the ~stateless-service-type~ is appended, not prepended, to operating system services) and including this component after /all/ others is the safest play.
 #+begin_src scheme
@@ -841,9 +873,6 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
      ("machine" . ,machine-dir))
    (if nix?
        '(("nix" . "/nix")) '())))
-
-(define (stateless-swapfile machine-dir)
-  (string-append machine-dir "/.swap"))
 #+end_src
 ****** Service
 ******* Service type
@@ -1387,7 +1416,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            disk-encryption?
                            luks-label
                            luks-uuid
-                           swapfile
                            stateless?
                            stateless-persist-dir
                            stateless-machine-dir
@@ -1410,7 +1438,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                                     ((#:filesystem/btrfs)
                                                      (map cdr mountables))))
         $)
-    (swap $ #:swapfile swapfile)
+    (swap $ #:stateless? stateless?
+          #:stateless-machine-dir stateless-machine-dir
+          #:no-cow? (equal? filesystem #:filesystem/btrfs))
     (if stateless?
         (stateless $ #:persist-dir stateless-persist-dir
                    #:machine-dir stateless-machine-dir
@@ -8622,7 +8652,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define btrfs-mount-options os:btrfs-mount-options)
 (define disk-encryption? #t)
 (define luks-label os:luks-label)
-(define swapfile (os:stateless-swapfile stateless-machine-dir))
 
 
 (define frostfire
@@ -8654,7 +8683,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                              #:disk-encryption? disk-encryption?
                              #:luks-label luks-label
                              #:luks-uuid "<<frostfire-luks-uuid>>"
-                             #:swapfile swapfile
                              #:stateless? stateless?
                              #:stateless-persist-dir stateless-persist-dir
                              #:stateless-machine-dir stateless-machine-dir
@@ -8674,9 +8702,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                      #:filesystem filesystem
                      #:mountables mountables
                      #:btrfs-mount-flags btrfs-mount-flags
-                     #:btrfs-mount-options btrfs-mount-options
-                     #:swapfile swapfile
-                     #:swapfile-size "24G"))
+                     #:btrfs-mount-options btrfs-mount-options))
 
 (define primary (primary-he))
 (define aux (aux-he))
