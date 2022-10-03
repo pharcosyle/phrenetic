@@ -5803,6 +5803,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                          (zprofile
                           (list start)))))))))
 #+end_src
+****** TODO [#E] Figure out how to add autostart TTY shell extension to /end/ of profile
+If it appears before other profile code (as it currently does, the Nix sourcing) it'll never be run.
 **** Sessions
 #+begin_src scheme
 (define* (session-start exe #:rest content)
