@@ -7116,7 +7116,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 **** Direnv
 #+begin_src scheme
 (define* (he-direnv #:key
-                    stateless?
                     doom?
                     shells
                     whitelist-dirs)
@@ -7824,8 +7823,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            #:evil? doom-evil?)
               '()))
          '())
-     (he-direnv #:stateless? stateless?
-                #:doom? doom?
+     (he-direnv #:doom? doom?
                 #:shells interactive-shells)
      (he-protonvpn #:stateless? stateless?)
      (he-ssh)
