@@ -5782,7 +5782,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+begin_src scheme
 (define* (he-desktop-tty #:key
                          tty-number
-                         start)
+                         start-cmd
   (list
    (simple-service
     'desktop-tty-start-session
@@ -7887,7 +7887,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (case display-manager
                   ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
                 (he-desktop-tty #:tty-number tty-start
-                                #:start (sway-start #:pipewire? pipewire?)))
+                                #:start-cmd (sway-start #:pipewire? pipewire?)))
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if sway?
