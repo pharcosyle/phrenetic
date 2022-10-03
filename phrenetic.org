@@ -7728,19 +7728,21 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                       projects)
   (let ((work-dir "work"))
     (append
-     (append-map
-      (match-lambda
-        ((dir . opts)
-         (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
-                ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
-                (proj-file (string-append dir* "/project.scm")))
-           (if (file-exists? proj-file)
-               ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
-               (apply (load proj-file) (->> opts
-                                            (acons #:dir dir*)
-                                            alist->list))
-               '()))))
-      projects)
+     (if projects
+         (append-map
+          (match-lambda
+            ((dir . opts)
+             (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
+                    ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
+                    (proj-file (string-append dir* "/project.scm")))
+               (if (file-exists? proj-file)
+                   ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
+                   (apply (load proj-file) (->> opts
+                                                (acons #:dir dir*)
+                                                alist->list))
+                   '()))))
+          projects)
+         '())
 
      (list
       (when stateless?
@@ -8567,7 +8569,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    os+he-shared-opts
    `(#:stateless-persist-dir ,stateless-persist-dir
      #:stateless-machine-dir ,stateless-machine-dir
-     #:guix-channels (local-file "frostfire-channels-lock"))))
+     ;; #:guix-channels (local-file "frostfire-channels-lock") ; TODO Not working (or working sporadically) for some reason. Very, very strange.
+     )))
 
 
 (define doom? #t)
