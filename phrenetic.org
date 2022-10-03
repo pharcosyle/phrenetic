@@ -7205,6 +7205,11 @@ use_guixs() {
 #+begin_src scheme
 ;; (define (he-nano)
 ;;   (list
+;;    ;; (simple-service
+;;    ;;  'nano-add-package
+;;    ;;  home-profile-service-type
+;;    ;;  (list nano))
+
 ;;    (simple-service
 ;;     'nano-add-config
 ;;     home-xdg-configuration-files-service-type
@@ -7220,7 +7225,7 @@ use_guixs() {
   (append
    (list
     (simple-service
-     'node-add-packages
+     'node-add-package
      home-profile-service-type
      (list node))
 
