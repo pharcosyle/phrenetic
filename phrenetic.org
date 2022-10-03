@@ -4986,7 +4986,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
     (home-stateless-service
      'guile
-     #:state '(((#:path . (".guile_history"))
+     #:state '(((#:path . ".guile_history")
                 (#:store . #:persist))
                ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
                 (#:store . #:machine)))))
@@ -7079,7 +7079,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (when stateless?
         (home-stateless-service
          'org
-         #:state '(((#:path . ,(string-append org-dir "/"))
+         #:state `(((#:path . ,(string-append org-dir "/"))
                     (#:store . #:persist)))))))))
 
 (define* (doom-org #:key
@@ -7771,7 +7771,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       (when stateless?
         (home-stateless-service
          'projects
-         #:state '(((#:path . ,(string-append work-dir "/"))
+         #:state `(((#:path . ,(string-append work-dir "/"))
                     (#:store . #:persist)))))))))
 #+end_src
 **** Project helpers
@@ -7829,6 +7829,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                         #:email email))
          '())
      (he-guix #:stateless? stateless?
+              #:doom? doom?
               #:channels guix-channels)
      (if nix?
          (he-nix #:stateless? stateless?
