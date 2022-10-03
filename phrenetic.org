@@ -32,11 +32,11 @@
 
 * Install
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ebullient/install.scm")
+:header-args+: :tangle (meta-in-dir "phrenetic/install.scm")
 :END:
 Run with ~sudo~.
 #+begin_src scheme
-(define-module (ebullient install)
+(define-module (phrenetic install)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix packages)
@@ -45,7 +45,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
   #:use-module ((gnu packages linux) #:select (btrfs-progs e2fsprogs util-linux+udev))
   #:use-module ((gnu packages package-management) #:select (guix))
-  #:use-module (ebullient utils)
+  #:use-module (phrenetic utils)
   #:export (installer-package))
 #+end_src
 ** Program
@@ -194,7 +194,7 @@ Run with ~sudo~.
          (cmd #$(file-append util-linux+udev "/sbin/mkswap") swapfile-on-mount))
 
        (let ((source-dir "/etc/config-source")
-             (configs-dir "ebullient/configs"))
+             (configs-dir "phrenetic/configs"))
          (cmd #$(file-append guix "/bin/guix") "time-machine"
               (string-append "--channels=" source-dir "/" configs-dir "/" os-name "-channels-lock")
               "--"
@@ -232,11 +232,11 @@ Run with ~sudo~.
 #+end_src
 * System
 :PROPERTIES:
-:meta-dir+: /ebullient/system
-:header-args+: :tangle (meta-in-dir "core.scm")
+:meta-dir+: /phrenetic
+:header-args+: :tangle (meta-in-dir "system.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient system core)
+(define-module (phrenetic system)
   #:use-module ((guix hash) #:select (vcs-file?))
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix gexp)
@@ -264,9 +264,9 @@ Run with ~sudo~.
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
-  #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
-  #:use-module ((ebullient stateless) #:prefix stateless:)
-  #:use-module (ebullient utils)
+  #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
+  #:use-module ((phrenetic stateless) #:prefix stateless:)
+  #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((ice-9 rdelim) #:select (read-string))
   #:use-module ((srfi srfi-1) #:select (any remove iota))
@@ -1022,9 +1022,9 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
         (append
          (-> broadcom package-source origin-patches)
          (list
-          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-linux-5.17.patch"
-          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-linux-5.18.patch"
-          "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/system/patches/broadcom-sta-pedantic-fix.patch")))))))
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/phrenetic/patches/broadcom-sta-linux-5.17.patch"
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/phrenetic/patches/broadcom-sta-linux-5.18.patch"
+          "/.persist/home/pharcosyle/work_for_now/phrenetic/phrenetic/patches/broadcom-sta-pedantic-fix.patch")))))))
 #+end_src
 ******* Patches
 :PROPERTIES:
@@ -1424,11 +1424,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 * Home
 :PROPERTIES:
-:meta-dir+: /ebullient/home
-:header-args+: :tangle (meta-in-dir "core.scm")
+:meta-dir+: /phrenetic
+:header-args+: :tangle (meta-in-dir "home.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home core)
+(define-module (phrenetic home)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix packages)
@@ -1483,15 +1483,15 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module ((chromium chromium) #:select (chromium+drm))
-  #:use-module ((ebullient home packages aws) #:select (awscli-2))
-  #:use-module ((ebullient home packages clojure) #:select (clojure-tools))
-  #:use-module ((ebullient home packages datomic) #:select (datomic-cli-tools))
-  #:use-module ((ebullient home packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((ebullient home packages emacs) #:select (emacs-fully-loaded))
-  #:use-module ((ebullient home packages fonts) #:select (font-adobe-source-code-pro))
-  #:use-module ((ebullient packages haskell-apps) #:select (kmonad))
-  #:use-module ((ebullient stateless) #:prefix stateless:)
-  #:use-module (ebullient utils)
+  #:use-module ((phrenetic packages aws) #:select (awscli-2))
+  #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
+  #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
+  #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
+  #:use-module ((phrenetic packages emacs) #:select (emacs-fully-loaded))
+  #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-code-pro))
+  #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
+  #:use-module ((phrenetic stateless) #:prefix stateless:)
+  #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map delete-duplicates list-index remove))
   #:export (create-he
@@ -1908,14 +1908,14 @@ SAVEHIST=$HISTSIZE
 :header-args+: :tangle (meta-in-dir "emacs.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home packages emacs)
+(define-module (phrenetic packages emacs)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (libgccjit-12))
-  #:use-module (ebullient utils)
+  #:use-module (phrenetic utils)
   #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
 #+end_src
@@ -2230,7 +2230,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
 :meta-dir+: /packages
 :END:
 #+begin_src scheme :tangle (meta-in-dir "doom-emacs.scm")
-(define-module (ebullient home packages doom-emacs)
+(define-module (phrenetic packages doom-emacs)
   #:use-module (guix build-system copy)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -2238,7 +2238,7 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((ebullient home packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
+  #:use-module ((phrenetic packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
   (let ((commit "285b460c80e455fabaf036f0eb48575637586a46")
@@ -2305,7 +2305,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
 :header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home packages emacs-xyz)
+(define-module (phrenetic packages emacs-xyz)
   #:use-module (guix build-system copy)
   #:use-module (guix build-system emacs)
   #:use-module (guix download)
@@ -2316,7 +2316,7 @@ Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them com
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
   #:use-module ((gnu packages compression) #:select (unzip))
-  #:use-module (ebullient utils))
+  #:use-module (phrenetic utils))
 #+end_src
 ****** guix-contributing
 #+begin_src scheme
@@ -2434,13 +2434,13 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 :header-args+: :tangle (meta-in-dir "all-the-icons-fonts.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient home packages all-the-icons-fonts)
+(define-module (phrenetic packages all-the-icons-fonts)
   #:use-module (guix build-system font)
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
   #:use-module ((gnu packages fonts) #:select (font-google-material-design-icons font-awesome))
-  #:use-module (ebullient utils))
+  #:use-module (phrenetic utils))
 
 (define-public all-the-icons-fonts
   (let ((commit "4a4d6269b8b85b0b15954f063e6ce378630d80c0")
@@ -2830,7 +2830,7 @@ Extremely WIP, basically just a scratchpad
 ****** first attempts
 Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
 #+begin_src scheme :tangle no
-(define-module (ebullient home packaging-doom-wip)
+(define-module (phrenetic packaging-doom-wip)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -2838,8 +2838,8 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
   #:use-module ((guix licenses) #:prefix license:)
   ;; #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module (ebullient home packages emacs)
-  #:use-module (ebullient home packages doom-emacs)
+  #:use-module (phrenetic packages emacs)
+  #:use-module (phrenetic packages doom-emacs)
   )
 
 ;; (define doom-inputs
@@ -3087,7 +3087,7 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
 ****** second attempt
 Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 #+begin_src scheme :tangle no
-(define-module (ebullient home packaging-wip)
+(define-module (phrenetic packaging-wip)
   ;; #:use-module (guix build-system trivial)
   ;; #:use-module (guix gexp)
   ;; #:use-module (guix git-download)
@@ -3095,14 +3095,14 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
   ;; #:use-module ((guix licenses) #:prefix license:)
   ;; ;; #:use-module ((gnu packages emacs) #:select (emacs))
   ;; #:use-module ((gnu packages version-control) #:select (git))
-  ;; #:use-module (ebullient home packages emacs)
-  ;; #:use-module (ebullient home packages doom-emacs)
+  ;; #:use-module (phrenetic packages emacs)
+  ;; #:use-module (phrenetic packages doom-emacs)
 
   #:use-module ((guix packages) #:select (package-input-rewriting))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-minimal emacs-no-x emacs-next emacs-next-pgtk emacs-xwidgets emacs-no-x-toolkit emacs-wide-int))
 
   )
-(define emacs-variant (@ (ebullient home packages emacs) emacs-29-pgtk+native-comp))
+(define emacs-variant (@ (phrenetic packages emacs) emacs-29-pgtk+native-comp))
 
 ;; TODO does this rewrite recursively?
 ;; package-input-rewriting/spec says it specifically does this while package-input-rewriting does not. And what about using `package-mapping'? I can check the final product for references to emacs/emacs-minimal but still read over the source code of each later. What about native-inputs, sometimes emacs(-minimal) is in there.
@@ -3115,14 +3115,14 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 
                              ;; TODO maybe ths should be in a nested `package-input-rewriting' or having packages with themselves as input rewrites
                              ;; will cause problems, I donno. Putting this here for now.
-                             (,(@ (gnu packages emacs-xyz) emacs-dash) . ,(@ (ebullient home packages emacs-xyz) emacs-dash)))))
+                             (,(@ (gnu packages emacs-xyz) emacs-dash) . ,(@ (phrenetic packages emacs-xyz) emacs-dash)))))
 
 ;; (define-public test-reftex
 ;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-company-reftex)))
 ;; (define-public test-dash-existing
 ;;   (with-emacs-variant (@ (gnu packages emacs-xyz) emacs-dash)))
 ;; (define-public test-dash
-;;   (with-emacs-variant (@ (ebullient home packages emacs-xyz) emacs-dash)))
+;;   (with-emacs-variant (@ (phrenetic packages emacs-xyz) emacs-dash)))
 
 ;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-build-farm))
 ;; (define orig-pkg (@ (gnu packages emacs-xyz) emacs-cider))
@@ -3154,7 +3154,7 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 (use-modules (gnu packages)
              (guix profiles)
              ;; ((srfi srfi-1) #:select (remove))
-             ;; (ebullient utils)
+             ;; (phrenetic utils)
              )
 
 ;; (define (doom-ps)
@@ -3200,8 +3200,8 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 ;;       (remove null?)))
 
 (use-modules (gnu packages emacs-xyz)
-             (ebullient home packages emacs-xyz)
-             ;; (ebullient home packages emacs-xyz-batch)
+             (phrenetic packages emacs-xyz)
+             ;; (phrenetic packages emacs-xyz-batch)
              )
 
 (define (str->pkg x)
@@ -3295,7 +3295,7 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 ****** active WIP
 ******* clojure part
 ******** clj file
-I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the source block options here.
+I had =:tangle phrenetic/src/protostar/hickeyland.clj :comments link= for the source block options here.
 #+begin_src clojure :tangle no
 (ns protostar.hickeyland
   (:require [clojure.alpha.spec :as s]
@@ -3899,8 +3899,8 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 
 
 (require '[clojure.java.shell :refer [sh]])
-(def eb-dir "/home/pharcosyle/work/phrenetic/ebullient")
-(def guix-repl-cmd ["guix" "repl" "-L" "." "--" "ebullient/home/packaging-runner.scm"])
+(def eb-dir "/home/pharcosyle/work/phrenetic/phrenetic")
+(def guix-repl-cmd ["guix" "repl" "-L" "." "--" "phrenetic/packaging-runner.scm"])
 (defn sh-call [f & args]
   (apply sh (concat guix-repl-cmd
                     [(name f)]
@@ -4074,7 +4074,7 @@ I had =:tangle ebullient/src/protostar/hickeyland.clj :comments link= for the so
 ;; - spec that both host and repo must be specified so in inheritance one isn't overridden without the other?
 #+end_src
 ******** deps
-Had =:tangle ebullient/deps.edn :comments link=
+Had =:tangle phrenetic/deps.edn :comments link=
 #+begin_src clojure :tangle no
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
@@ -4098,9 +4098,9 @@ Had =:tangle ebullient/deps.edn :comments link=
                       {:git/tag "v0.5.0" :git/sha "48c3c67"}}}}}
 #+end_src
 ******* guix part
-Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
+Had =:tangle phrenetic/lokke/ns/phrenetic/packaging-wip.clj :comments link=
 #+begin_src clojure :tangle no
-(ns ebullient.home.packaging-wip
+(ns phrenetic.packaging-wip
   (:require [guile :refer [command-line]]
             [guile.guix.base32 :refer [bytevector->nix-base32-string]]
             [guile.guix.git :refer [latest-repository-commit]]
@@ -4213,12 +4213,12 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/packaging-wip.clj :comments link=
 Had =:tangle (meta-in-dir "packaging-runner.scm")=
 #+begin_src scheme :tangle no
 (use-modules (lokke ns))
-(require #(ebullient.home.packaging-wip))
+(require #(phrenetic.packaging-wip))
 #+end_src
 ******* test clj
-Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
+Had =:tangle phrenetic/lokke/ns/phrenetic/test-clj.clj :comments link=
 #+begin_src clojure :tangle no
-(ns ebullient.home.test-clj
+(ns phrenetic.test-clj
   (:require [guile.guix.gexp :as g]
             [guile.guix.packages :refer [package package-description]]))
 
@@ -4248,7 +4248,7 @@ Had =:tangle ebullient/lokke/ns/ebullient/home/test-clj.clj :comments link=
 Had =tangle (meta-in-dir "test-scm.scm")=
 #+begin_src scheme :tangle no
 (use-modules (lokke ns))
-(require #(ebullient.home.test-clj))
+(require #(phrenetic.test-clj))
 #+end_src
 ******* elisp
 Had =:tangle (meta-in-dir "parse-doom-packages.el")=
@@ -5201,7 +5201,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     doom?
                     (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
                     ;; (kbd (local-file "config.kbd"))
-                    (kbd (local-file "../../mine.kbd")))
+                    (kbd (local-file "../mine.kbd")))
   (list
    (service kmonad-service-type kbd)
 
@@ -5458,9 +5458,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 - Try out =font-adobe-source-sans-pro= in place of =font-iosevka-aile=?
 ***** Source Code Pro :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
-(define-module (ebullient home packages fonts)
+(define-module (phrenetic packages fonts)
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
-  #:use-module (ebullient utils))
+  #:use-module (phrenetic utils))
 
 (define-public font-adobe-source-code-pro
   (with-git-version
@@ -6123,8 +6123,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                       time-format
                       date-format
                       ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
-                      ;; (image "/home/pharcosyle/work/phrenetic/ebullient/home/alucard_bg.png")
-                      (image "/.persist/home/pharcosyle/work_for_now/phrenetic/ebullient/home/alucard_bg.png")
+                      ;; (image "/home/pharcosyle/work/phrenetic/phrenetic/alucard_bg.png")
+                      (image "/.persist/home/pharcosyle/work_for_now/phrenetic/phrenetic/alucard_bg.png")
                       ;; (image wallpaper)
                       extra-config)
   (list
@@ -6719,7 +6719,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     [[https://github.com/guix-mirror/guix/commit/fc89b50b7bb2edbc38b20adf8c899934dedcb6c3][gnu: awscli: Do not propagate inputs. · guix-mirror/guix@fc89b50 · GitHub]]
     This is for v1, might not apply here. At the time of this writing, this commit is only two hours old, see if there's any follow-up.
 #+begin_src scheme
-(define-module (ebullient home packages aws)
+(define-module (phrenetic packages aws)
   #:use-module (guix build-system python)
   #:use-module (guix download)
   #:use-module (guix gexp)
@@ -6876,7 +6876,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ***** Clojure tools :package:
 #+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
-(define-module (ebullient home packages clojure)
+(define-module (phrenetic packages clojure)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
@@ -6959,7 +6959,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ***** Datomic CLI tools :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
-(define-module (ebullient home packages datomic)
+(define-module (phrenetic packages datomic)
   #:use-module (guix build-system copy)
   #:use-module (guix download)
   #:use-module (guix gexp)
@@ -7940,7 +7940,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 * Common
 :PROPERTIES:
-:meta-dir+: /ebullient
+:meta-dir+: /phrenetic
 :END:
 ** Packages
 :PROPERTIES:
@@ -7948,13 +7948,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 :END:
 *** KMonad :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "haskell-apps.scm")
-(define-module (ebullient packages haskell-apps)
+(define-module (phrenetic packages haskell-apps)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad) #:prefix haskell-apps:)
   #:use-module ((gnu packages haskell-check) #:select (ghc-hspec hspec-discover))
-  #:use-module (ebullient utils))
+  #:use-module (phrenetic utils))
 
 (define-public kmonad
   (let ((commit "cbdace2bb7b27e47c2397e662265a28a1030b7c7"))
@@ -7981,12 +7981,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 :header-args+: :tangle (meta-in-dir "stateless.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient stateless)
+(define-module (phrenetic stateless)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module (gnu services)
-  #:use-module (ebullient utils)
+  #:use-module (phrenetic utils)
   #:export (service-fn
             extend-proc
             activate-gexp
@@ -8250,10 +8250,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 * Utils
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "ebullient/utils.scm")
+:header-args+: :tangle (meta-in-dir "phrenetic/utils.scm")
 :END:
 #+begin_src scheme
-(define-module (ebullient utils)
+(define-module (phrenetic utils)
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module (gnu services)
@@ -8440,16 +8440,16 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: /ebullient/configs
+:meta-dir+: /phrenetic/configs
 :END:
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
-(define-module (ebullient configs frostfire)
+(define-module (phrenetic configs frostfire)
   #:use-module ((guix gexp) #:select (local-file))
-  #:use-module ((ebullient home core) #:prefix he:)
-  #:use-module (ebullient install)
-  #:use-module ((ebullient system core) #:prefix os:)
-  #:use-module (ebullient utils)
+  #:use-module ((phrenetic home) #:prefix he:)
+  #:use-module (phrenetic install)
+  #:use-module ((phrenetic system) #:prefix os:)
+  #:use-module (phrenetic utils)
   #:use-module ((srfi srfi-1) #:select (delete-duplicates))
   #:export (frostfire
             installer
@@ -9506,9 +9506,7 @@ Public License instead of this License.  But first, please read
 
 !/meta.el
 
-!/ebullient/
-/ebullient/*
-!/ebullient/home/
-/ebullient/home/*
-!ebullient/home/alucard_bg.png
+!/phrenetic/
+/phrenetic/*
+!phrenetic/alucard_bg.png
 #+end_src
