@@ -5239,7 +5239,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     ;; (kbd (local-file "config.kbd"))
                     (kbd (local-file "../mine.kbd")))
   (list
-   (service kmonad-service-type kbd)
+   (simple-service
+    'kmonad
+    home-shepherd-service-type
+    (kmonad-shepherd-service kbd))
 
    (when doom?
      (doom-service
@@ -5248,9 +5251,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              :recipe (:host github
                                       :repo "kmonad/kbd-mode")
                              :pin "4a26abcbfc04208f437fd6b6a5bf3217b124db84"))))))
-#+end_src
-***** Service
-#+begin_src scheme
+
 (define (kmonad-shepherd-service kbd)
   (list
    (shepherd-service
@@ -5263,14 +5264,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                       (getenv "HOME")))
                           "/kmonad.log")))
     (stop #~(make-kill-destructor)))))
-
-(define kmonad-service-type
-  (service-type
-   (name 'home-kmonad)
-   (extensions
-    (list (service-extension home-shepherd-service-type
-                             kmonad-shepherd-service)))
-   (description "Run KMonad.")))
 #+end_src
 *** Desktop
 #+begin_src scheme
