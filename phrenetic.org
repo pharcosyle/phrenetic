@@ -5783,14 +5783,25 @@ Some colors from the original Atom theme on which I based mine that might be use
 (define* (he-desktop-tty #:key
                          tty-number
                          start-cmd
+                         login-shell)
   (list
-   (simple-service
-    'desktop-tty-start-session
-    home-shell-profile-service-type
-    (list
-     (mixed-text-file
-      "start-on-tty"
-      #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start))))))
+   (let ((name 'desktop-tty-start-session)
+         (start (mixed-text-file
+                 "start-on-tty"
+                 #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start-cmd))))
+     (case login-shell
+       ((#:shell/bash)
+        (simple-service name
+                        home-bash-service-type
+                        (home-bash-extension
+                         (bash-profile
+                          (list start)))))
+       ((#:shell/zsh)
+        (simple-service name
+                        home-zsh-service-type
+                        (home-zsh-extension
+                         (zprofile
+                          (list start)))))))))
 #+end_src
 **** Sessions
 #+begin_src scheme
@@ -7887,7 +7898,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (case display-manager
                   ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
                 (he-desktop-tty #:tty-number tty-start
-                                #:start-cmd (sway-start #:pipewire? pipewire?)))
+                                #:start-cmd (sway-start #:pipewire? pipewire?)
+                                #:login-shell login-shell))
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if sway?
