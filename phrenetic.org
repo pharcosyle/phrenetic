@@ -4983,7 +4983,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
     (home-stateless-service
      'guile
-     #:state '(((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
+     #:state '(((#:path . (".guile_history"))
+                (#:store . #:persist))
+               ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
                 (#:store . #:machine)))))
 
    (if doom?
