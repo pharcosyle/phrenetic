@@ -193,14 +193,15 @@ Run with ~sudo~.
          (chmod swapfile-on-mount #o600)
          (cmd #$(file-append util-linux+udev "/sbin/mkswap") swapfile-on-mount))
 
-       (let ((source-dir "/etc/config-source"))
+       (let ((source-dir "/etc/config-source")
+             (configs-dir "ebullient/configs"))
          (cmd #$(file-append guix "/bin/guix") "time-machine"
-              (string-append "--channels=" source-dir "/exuberant/" os-name "-channels-lock")
+              (string-append "--channels=" source-dir "/" configs-dir "/" os-name "-channels-lock")
               "--"
               "system"
               (string-append "--load-path=" source-dir)
               "init"
-              (string-append source-dir "/exuberant/" #$os-name)
+              (string-append source-dir "/" configs-dir "/" #$os-name)
               mount-dir))
 
        (cmd umount-bin (string-append mount-dir #$boot-target))
@@ -8439,11 +8440,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: /exuberant
+:meta-dir+: /ebullient/configs
 :END:
 ** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm") :noweb yes
-(define-module (exuberant frostfire)
+(define-module (ebullient configs frostfire)
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((ebullient home core) #:prefix he:)
   #:use-module (ebullient install)
