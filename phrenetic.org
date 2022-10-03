@@ -1680,13 +1680,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     doom?
                     doom-tree-sitter?
                     login-shell
-                    interactive-shell
+                    interactive-shells
                     (bashrc (local-file "bashrc"))
                     (zshrc (local-file "zshrc")))
-  (let ((setup-shell? (lambda (shell)
-                        (member shell (list login-shell interactive-shell)))))
-    (append
-     (if (setup-shell? #:shell/bash)
+  (append
+   (append-map
+    (lambda (shell)
+      (case shell
+        ((#:shell/bash)
          (list
           (service home-bash-service-type
                    (home-bash-configuration
@@ -1696,9 +1697,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (home-stateless-service
              'bash
              #:state '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:store . #:persist))))))
-         '())
-     (if (setup-shell? #:shell/zsh)
+                        (#:store . #:persist)))))))
+        ((#:shell/zsh)
          (list
           (service home-zsh-service-type
                    (home-zsh-configuration
@@ -1710,22 +1710,23 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
              #:state '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
                         (#:store . #:persist))
                        ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
-                        (#:store . #:machine))))))
-         '())
+                        (#:store . #:machine)))))))))
+    (cons login-shell interactive-shells))
 
-     (list
-      (when-not (equal? login-shell interactive-shell)
+   (list
+    (let ((default-interactive-shell (car interactive-shells)))
+      (when-not (equal? login-shell default-interactive-shell)
                 (simple-service
                  'set-shell-env-var
                  home-environment-variables-service-type
-                 `(("SHELL" . ,(case interactive-shell
+                 `(("SHELL" . ,(case default-interactive-shell
                                  ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                                 ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))))
+                                 ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))
 
-     (if doom?
-         (doom-shells #:stateless? stateless?
-                      #:tree-sitter? doom-tree-sitter?)
-         '()))))
+   (if doom?
+       (doom-shells #:stateless? stateless?
+                    #:tree-sitter? doom-tree-sitter?)
+       '())))
 #+end_src
 **** Bash
 ***** Bashrc
@@ -7750,7 +7751,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   stateless?
                   stateless-persist-dir
                   stateless-machine-dir
-                  (interactive-shell #:shell/zsh)
+                  (interactive-shells '(#:shell/zsh))
                   doom?
                   doom-calendar?
                   doom-org?
@@ -7766,7 +7767,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   tty-start
                   sessions
                   projects)
-  (let ((login-shell #:shell-bash))
+  (let ((login-shell #:shell/bash))
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
@@ -7776,7 +7777,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 #:doom? doom?
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
-                #:interactive-shell interactive-shell)
+                #:interactive-shells interactive-shells)
      (he-emacs)
      (if doom?
          (he-doom #:stateless? stateless?
@@ -7805,7 +7806,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          '())
      (he-direnv #:stateless? stateless?
                 #:doom? doom?
-                #:shells (list interactive-shell))
+                #:shells interactive-shells)
      (he-protonvpn #:stateless? stateless?)
      (he-ssh)
      (he-git #:stateless? stateless?
@@ -7916,7 +7917,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                (he-alacritty #:colors colors
                              #:font font-mono)
                (if doom?
-                   (he-doom-vterm #:setup-zsh? (equal? interactive-shell #:shell/zsh)) '())
+                   (he-doom-vterm #:setup-zsh? (member #:shell/zsh interactive-shells)) '())
                (he-chromium #:stateless? stateless?
                             #:wayland? wayland?
                             #:gtk-services gtk
