@@ -7034,6 +7034,17 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                     (#:store . #:machine)))))))
 
    (doom-dash)))
+
+;; TODO
+;; - This comonent no longers depens on doom-user so don't rely on user-mail-address?
+;; - nb: also it uses `org-directory'
+;; '((after! org-gcal
+;;           (setq ;; TODO `elisp-serialize' doesn't like the unquotes.
+;;                 ;; org-gcal-fetch-file-alist (let ((cal-dir concat org-directory "/cal"))
+;;                 ;;                             `((user-mail-address . ,(concat cal-dir "/" user-mail-address ".org"))
+;;                 ;;                               ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat cal-dir "/contacts.org"))
+;;                 ;;                               ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
+;;                 )))
 #+end_src
 **** Doom org :bindings:
 #+begin_src scheme
