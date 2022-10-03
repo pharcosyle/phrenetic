@@ -2100,7 +2100,10 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
          $)
     (apply merge-with
            (lambda (ms ms*)
-             (merge-with append ms ms*))
+             (merge-with
+              (lambda (flags flags*)
+                (delete-duplicates (append flags flags*)))
+              ms ms*))
            $)
     (sort $ (lambda (a b)
               (let ((idx (lambda (entry)
