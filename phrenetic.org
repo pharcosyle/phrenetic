@@ -195,7 +195,7 @@ Run with ~sudo~.
 
        (let ((source-dir "/etc/config-source"))
          (cmd #$(file-append guix "/bin/guix") "time-machine"
-              (string-append "--channels=" source-dir "/exuberant/channels-lock")
+              (string-append "--channels=" source-dir "/exuberant/" os-name "-channels-lock")
               "--"
               "system"
               (string-append "--load-path=" source-dir)
@@ -8532,7 +8532,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:doom-evil? doom-evil?
       #:doom-tree-sitter? doom-tree-sitter?
       #:kmonad? #t
-      #:guix-channels (local-file "channels-lock")
+      #:guix-channels (local-file "frostfire-channels-lock")
       #:sessions sessions
       #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                    ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
@@ -8643,7 +8643,7 @@ frostfire
 bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 *** Channels
-#+begin_src scheme :tangle (meta-in-dir "channels")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'rde)
         (url "https://git.sr.ht/~abcdw/rde")
@@ -8666,7 +8666,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        %default-channels)
 #+end_src
 **** COMMENT From project channel
-#+begin_src scheme :tangle (meta-in-dir "channels")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'phrenetic)
         (url "https://github.com/pharcosyle/phrenetic")
@@ -8674,7 +8674,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        %default-channels)
 #+end_src
 **** COMMENT From project channel (local)
-#+begin_src scheme :tangle (meta-in-dir "channels")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'phrenetic)
         (url "file:///home/pharcosyle/work/phrenetic")
@@ -8682,7 +8682,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
        %default-channels)
 #+end_src
 *** Channels lock :version:
-#+begin_src scheme :tangle (meta-in-dir "channels-lock")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
        (name 'guix)
        (url "https://git.savannah.gnu.org/git/guix.git")
@@ -8724,7 +8724,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
         "3bc21255be98efb7a0e4b8de060c27bf60ae44f7")))
 #+end_src
 **** COMMENT From project channel
-#+begin_src scheme :tangle (meta-in-dir "channels-lock")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
        (name 'guix)
        (url "https://git.savannah.gnu.org/git/guix.git")
@@ -8744,7 +8744,7 @@ bdda56af-6ca0-4953-bc13-d5af8715e0e5
         "bbc78abdfee8daf0e43b4348b7452ffe9340fb5c")))
 #+end_src
 **** COMMENT From project channel (local)
-#+begin_src scheme :tangle (meta-in-dir "channels-lock")
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
        (name 'guix)
        (url "https://git.savannah.gnu.org/git/guix.git")
