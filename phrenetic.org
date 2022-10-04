@@ -494,6 +494,7 @@ Must succeed [[*Accounts][Accounts]] component.
      (append (map service-kind %base-services)
              (list network-manager-service-type
                    gdm-service-type
+                   gdm-file-system-service
                    screen-locker-service-type))))))
 #+end_src
 **** Pipewire
@@ -564,12 +565,15 @@ Must succeed [[*Accounts][Accounts]] component.
                          auto-login?
                          auto-login-user)
   (services
-   (cons* (service gdm-service-type
-                   (gdm-configuration
-                    (auto-login? auto-login?)
-                    (default-user auto-login-user)
-                    (wayland? wayland?)))
-          (operating-system-user-services os))))
+   (append
+    (operating-system-user-services os)
+    (list
+     (service gdm-service-type
+              (gdm-configuration
+               (auto-login? auto-login?)
+               (default-user auto-login-user)
+               (wayland? wayland?)))
+     gdm-file-system-service))))
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
