@@ -1016,7 +1016,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                (device nix-machine-dir)
                (mount-point nix-dir)
                (type "none")
-               (flags '(bind-mount)))
+               (flags '(bind-mount))
+               (check? #f))
              (operating-system-file-systems os)))
      (services
       (append
