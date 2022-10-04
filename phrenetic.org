@@ -785,11 +785,10 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
       (append
        (operating-system-user-services os)
        (list
-        (simple-service
-         'create-swapfile
-         activation-service-type
-         (create-swapfile-gexp #:swapfile swapfile
-                               #:no-cow? no-cow?)))
+        (simple-service 'create-swapfile
+                        activation-service-type
+                        (create-swapfile-gexp #:swapfile swapfile
+                                              #:no-cow? no-cow?)))
        (if stateless?
            (list
             (stateless-service
