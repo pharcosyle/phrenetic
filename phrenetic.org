@@ -491,11 +491,12 @@ Must succeed [[*Accounts][Accounts]] component.
     (operating-system-user-services os)
     (remove-services
      %desktop-services
-     (append (map service-kind %base-services)
-             (list network-manager-service-type
-                   gdm-service-type
-                   gdm-file-system-service
-                   screen-locker-service-type))))))
+     (append
+      (map service-kind %base-services)
+      (list network-manager-service-type
+            screen-locker-service-type
+            gdm-service-type
+            (service-kind gdm-file-system-service)))))))
 #+end_src
 **** Pipewire
 #+begin_src scheme
