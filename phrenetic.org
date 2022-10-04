@@ -1006,21 +1006,32 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 ****** Nix
 #+begin_src scheme
 (define* (stateless-nix os #:key machine-dir)
-  (let ((nix-dir "/nix"))
+  (let* ((nix-dir "/nix")
+         (nix-machine-dir (string-append machine-dir nix-dir)))
     (system-comp
      os
      (file-systems
       (cons* (file-system
-               (device (string-append machine-dir nix-dir))
+               (device nix-machine-dir)
                (mount-point nix-dir)
                (type "none")
                (flags '(bind-mount)))
              (operating-system-file-systems os)))
      (services
-      (cons* (stateless-service
-              'nix
-              #:ignore (list nix-dir))
-             (operating-system-user-services os))))))
+      (append
+       (operating-system-user-services os)
+       (list
+        (simple-service 'create-nix-dir
+                        activation-service-type
+                        (create-nix-dir-gexp nix-machine-dir))
+        (stateless-service
+         'nix
+         #:ignore (list nix-dir))))))))
+
+(define (create-nix-dir-gexp nix-dir)
+  #~(begin
+      (when (not (file-exists? #$nix-dir))
+        (mkdir #$nix-dir))))
 #+end_src
 *** Hardware-specific
 **** Console
