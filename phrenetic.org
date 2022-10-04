@@ -788,8 +788,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
        (list
         (simple-service 'create-swapfile
                         activation-service-type
-                        (create-swapfile-gexp #:swapfile swapfile
-                                              #:no-cow? no-cow?)))
+                        (create-swapfile-gexp swapfile no-cow?)))
        (if stateless?
            (list
             (stateless-service
@@ -797,9 +796,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
              #:ignore (list swapfile)))
            '()))))))
 
-(define* (create-swapfile-gexp #:key
-                               swapfile
-                               no-cow?)
+(define (create-swapfile-gexp swapfile no-cow?)
   #~(begin
       (when (not (file-exists? #$swapfile))
         (system* #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
