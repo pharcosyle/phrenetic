@@ -759,7 +759,7 @@ Must succeed [[*File systems][File systems]] component.
 (define luks-label "ciphered")
 #+end_src
 ***** Swap
-Must succeed [[*File systems][File systems]] component. No dependencies are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
+No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
 (define* (swap os
                #:key
