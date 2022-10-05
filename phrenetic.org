@@ -5906,7 +5906,7 @@ If it appears before other profile code (as it currently does, the Nix sourcing)
     ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
     ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
   (if pipewire?
-      '(("RTC_USE_PIPEWIRE" . "true")) '())))
+      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; Might not be necessary: as far as I can tell this is only relevant to Chromium (equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer) and the Guix already sets `rtc_use_pipewire=true' in the ungoogled-chromium configure flags.
 #+end_src
 ***** Desktop environments
 ****** GNOME
@@ -7566,6 +7566,7 @@ setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Web browsers
+If =ungoogled-chromium= had a wrapper script that added ~--ozone-platform-hint=auto~ it would avoid the necessity of having two different packages for X/Wayland.
 ****** Chromium
 #+begin_src scheme
 (define* (he-chromium #:key
