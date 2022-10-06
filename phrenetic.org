@@ -128,8 +128,6 @@ Run with ~sudo~.
                     (cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
                (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" #$luks-label root-partition)
                (cmd cryptsetup-bin "open" root-partition crypt-name)
-               (cmd cryptsetup-bin "luksUUID" root-partition)
-               (user-pause "Take note of your LUKS UUID.")
                crypt-mapping)
              root-partition))
 
@@ -739,11 +737,11 @@ Must succeed [[*File systems][File systems]] component.
 (define* (disk-encryption os
                           #:key
                           label
-                          source-uuid
                           (target "deciphered")
                           encrypted-mount-points)
   (let ((encrypted-device (mapped-device
-                           (source (uuid source-uuid))
+                           ;; (source label)
+                           (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
                            (targets (list target))
                            (type luks-device-mapping))))
     (system-comp
@@ -1452,7 +1450,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            btrfs-mount-options
                            disk-encryption?
                            luks-label
-                           luks-uuid
                            stateless?
                            stateless-persist-dir
                            stateless-machine-dir
@@ -1469,7 +1466,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               #:options btrfs-mount-options)))
     (if disk-encryption?
         (disk-encryption $ #:label luks-label
-                         #:source-uuid luks-uuid
                          #:encrypted-mount-points (case filesystem
                                                     ;; ((#:filesystem/ext4)
                                                     ;;  ...)
@@ -8717,7 +8713,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                              #:btrfs-mount-options btrfs-mount-options
                              #:disk-encryption? disk-encryption?
                              #:luks-label luks-label
-                             #:luks-uuid "<<frostfire-luks-uuid>>"
                              #:stateless? stateless?
                              #:stateless-persist-dir stateless-persist-dir
                              #:stateless-machine-dir stateless-machine-dir
@@ -8745,11 +8740,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define guest (guest-he))
 
 frostfire
-#+end_src
-*** LUKS UUID :external_state:
-#+name: frostfire-luks-uuid
-#+begin_src org
-bdda56af-6ca0-4953-bc13-d5af8715e0e5
 #+end_src
 *** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
