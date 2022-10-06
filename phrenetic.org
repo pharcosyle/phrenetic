@@ -738,7 +738,7 @@ Must succeed [[*File systems][File systems]] component.
                           #:key
                           label
                           (target "deciphered")
-                          encrypted-mount-points)
+                          mount-points)
   (let ((encrypted-device (mapped-device
                            ;; (source label)
                            (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
@@ -751,7 +751,7 @@ Must succeed [[*File systems][File systems]] component.
              (operating-system-mapped-devices os)))
      (file-systems
       (map (lambda (fs)
-             (if (member (file-system-mount-point fs) encrypted-mount-points)
+             (if (member (file-system-mount-point fs) mount-points)
                  (file-system
                    (inherit fs)
                    (dependencies (cons* encrypted-device
@@ -1466,11 +1466,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               #:options btrfs-mount-options)))
     (if disk-encryption?
         (disk-encryption $ #:label luks-label
-                         #:encrypted-mount-points (case filesystem
-                                                    ;; ((#:filesystem/ext4)
-                                                    ;;  ...)
-                                                    ((#:filesystem/btrfs)
-                                                     (map cdr mountables))))
+                         #:mount-points (case filesystem
+                                          ;; ((#:filesystem/ext4)
+                                          ;;  ...)
+                                          ((#:filesystem/btrfs)
+                                           (map cdr mountables))))
         $)
     (swap $ #:stateless? stateless?
           #:stateless-machine-dir stateless-machine-dir
