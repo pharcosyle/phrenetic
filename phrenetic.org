@@ -1545,7 +1545,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu system keyboard)
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
-  #:use-module (rde home services gtk)
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
@@ -7750,16 +7749,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           gnome-themes-extra))
 
    (simple-service
-    'gtk-settings
-    home-gtk3-with-multi-service-type
-    (home-gtk3-configuration
-     (settings
-      `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark))))))))
-
-   (simple-service
-    'gtk-dconf
+    'gtk-settings-and-dconf
     home-multi-xdg-configuration-files-service-type
-    `(("dconf/user"
+    `(("gtk-3.0/settings.ini"
+       ,(ini-file
+         "gtk-3.0-settings.ini"
+         `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
+      ("dconf/user"
        ,(computed-file
          "dconf-user"
          #~(system*
@@ -7788,6 +7784,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
                  (#:store . #:machine)))))))
 
+(define (quoted-symbol s)
+  (string->symbol (string-append "'" s "'")))
+
 (define home-multi-xdg-configuration-files-service-type
   (service-type
    (inherit home-xdg-configuration-files-service-type)
@@ -7797,21 +7796,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (delete-duplicates $ (lambda (a b)
                                    (equal? (car a) (car b))))
             (apply append $))))))
-
-(define home-gtk3-with-multi-service-type
-  (let ((base home-gtk3-service-type))
-    (service-type
-     (inherit base)
-     (extensions
-      (map (lambda (ext)
-             (if (equal? (service-extension-target ext) home-xdg-configuration-files-service-type)
-                 (service-extension home-multi-xdg-configuration-files-service-type
-                                    (service-extension-compute ext))
-                 ext))
-           (service-type-extensions base))))))
-
-(define (quoted-symbol s)
-  (string->symbol (string-append "'" s "'")))
 #+end_src
 ****** Qt
 #+begin_src scheme
