@@ -5310,7 +5310,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                    #:key (ini-serialize ini-serialize))
   (apply mixed-text-file name (ini-serialize config)))
 
-(define (font-value font)
+(define (font-specification font)
   (string-join
    (list
     (assoc-ref font #:font/name)
@@ -6330,7 +6330,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                       (as-> color $
                             (assoc-ref colors $)
                             (string-append $ (or alpha ""))))))
-           `((global ((font . ,(string->symbol (font-value font)))
+           `((global ((font . ,(string->symbol (font-specification font)))
                       (max-icon-size . ,(string->symbol "32"))
                       (text-color . ,(string->symbol (clr #:color/fg)))
                       (background-color . ,(string->symbol (clr #:color/bg "1A"))) ; TODO why isn't the transparency working right?
@@ -6711,7 +6711,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
          ((modi . "run,ssh,drun")
           (drun-show-actions . #t)
           (show-icons . #t)
-          (font . ,(font-value font))
+          (font . ,(font-specification font))
 
           (kb-row-tab . "")
           (kb-row-select . "Tab")
@@ -7774,9 +7774,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                          ((#:theme/light) "Arc")
                                          ((#:theme/dark) "Arc-Dark"))))
                         (font-name . ,(quoted-symbol
-                                       (font-value font)))
+                                       (font-specification font)))
                         (monospace-font-name . ,(quoted-symbol
-                                                 (font-value font-monospace)))))))))))))))
+                                                 (font-specification font-monospace)))))))))))))))
 
    (when stateless?
      (home-stateless-service
