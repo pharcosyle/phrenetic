@@ -7756,36 +7756,23 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          "gtk-3.0-settings.ini"
          `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
       ("dconf/user"
-       ,(computed-file
+       ,(dconf-db
          "dconf-user"
-         #~(system*
-            #$(file-append dconf "/bin/dconf")
-            "compile"
-            #$output
-            ;; Target of `compile` must be a directory.
-            #$(file-union
-               "dconf-keyfiledir"
-               `(("dconf-keyfile"
-                  ,(ini-file
-                    "dconf-keyfile"
-                    `((org/gnome/desktop/interface
-                       ((gtk-theme . ,(quoted-symbol
-                                       (case theme
-                                         ((#:theme/light) "Arc")
-                                         ((#:theme/dark) "Arc-Dark"))))
-                        (font-name . ,(quoted-symbol
-                                       (font-specification font)))
-                        (monospace-font-name . ,(quoted-symbol
-                                                 (font-specification font-monospace)))))))))))))))
+         `((org/gnome/desktop/interface
+            ((gtk-theme . ,(quoted-symbol
+                            (case theme
+                              ((#:theme/light) "Arc")
+                              ((#:theme/dark) "Arc-Dark"))))
+             (font-name . ,(quoted-symbol
+                            (font-specification font)))
+             (monospace-font-name . ,(quoted-symbol
+                                      (font-specification font-monospace))))))))))
 
    (when stateless?
      (home-stateless-service
       'gtk
       #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
                  (#:store . #:machine)))))))
-
-(define (quoted-symbol s)
-  (string->symbol (string-append "'" s "'")))
 
 (define home-multi-xdg-configuration-files-service-type
   (service-type
@@ -7796,6 +7783,23 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (delete-duplicates $ (lambda (a b)
                                    (equal? (car a) (car b))))
             (apply append $))))))
+
+(define (dconf-db name settings)
+  (computed-file
+   name
+   #~(system*
+      #$(file-append dconf "/bin/dconf")
+      "compile"
+      #$output
+      #$(file-union ; Target of `compile` must be a directory.
+         "dconf-keyfiledir"
+         `(("dconf-keyfile"
+            ,(ini-file
+              "dconf-keyfile"
+              settings)))))))
+
+(define (quoted-symbol s)
+  (string->symbol (string-append "'" s "'")))
 #+end_src
 ****** Qt
 #+begin_src scheme
