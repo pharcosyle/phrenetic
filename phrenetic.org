@@ -5816,7 +5816,6 @@ Some colors from the original Atom theme on which I based mine that might be use
     (list
      (shepherd-service
       (provision '(dbus))
-      (stop  #~(make-kill-destructor))
       (start #~(make-forkexec-constructor
                 (list #$(file-append dbus "/bin/dbus-daemon")
                       "--nofork"
@@ -5828,7 +5827,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                             (or (getenv "XDG_LOG_HOME")
                                 (format #f "~a/.local/var/log"
                                         (getenv "HOME")))
-                            "/dbus.log"))))))))
+                            "/dbus.log")))
+      (stop  #~(make-kill-destructor)))))))
 #+end_src
 **** Login management
 ***** Display managers
