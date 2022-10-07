@@ -241,6 +241,7 @@ Run with ~sudo~.
   #:use-module (gnu services)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
+  #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module ((gnu services networking) #:select (network-manager-service-type))
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
@@ -253,6 +254,8 @@ Run with ~sudo~.
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
+  #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
@@ -1046,7 +1049,20 @@ Must succeed [[*Bootloader][Bootloader]] component.
 (define* (macbook os #:key bluetooth?)
   (-> os
       (macbook-wireless #:bluetooth? bluetooth?)
+      macbook-camera
       macbook-power-key))
+
+(define (with-blacklist kernel-args new-kernel-args)
+  (let* ((blacklist-param "modprobe.blacklist")
+         (blacklist? (lambda (arg)
+                       (string-prefix? blacklist-param arg))))
+    (if (any blacklist? kernel-args)
+        (map (lambda (arg)
+               (if (blacklist? arg)
+                   (string-append arg "," new-kernel-args)
+                   arg))
+             kernel-args)
+        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
 #+end_src
 ***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
@@ -1060,18 +1076,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
              (operating-system-firmware os)
              (if bluetooth?
                  (list broadcom-bt-firmware) '()))))
-
-(define (with-blacklist kernel-args new-kernel-args)
-  (let* ((blacklist-param "modprobe.blacklist")
-         (blacklist? (lambda (arg)
-                       (string-prefix? blacklist-param arg))))
-    (if (any blacklist? kernel-args)
-        (map (lambda (arg)
-               (if (blacklist? arg)
-                   (string-append arg "," new-kernel-args)
-                   arg))
-             kernel-args)
-        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
 #+end_src
 ****** Broadcom STA :upstream:
 #+begin_src scheme
@@ -1347,6 +1351,134 @@ index d13fb98..97ae2a6 100644
  	wl = wl_attach(pdev->vendor, pdev->device, pci_resource_start(pdev, 0), PCI_BUS, pdev,
  		pdev->irq, bar1_addr, bar1_size);
  
+#+end_src
+***** Camera :upstream:
+Colors could probably be improved by adding sensor calibration files, as described on the wiki: [[https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files][Extracting the sensor calibration files · patjak/facetimehd Wiki · GitHub]]
+Adapt the Nix module like I did for the kernel module and firmware:
+- [[https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/hardware/video/webcam/facetimehd.nix][nixpkgs/facetimehd.nix at master · NixOS/nixpkgs · GitHub]]
+- [[https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/firmware/facetimehd-calibration/default.nix][nixpkgs/default.nix at master · NixOS/nixpkgs · GitHub]]
+#+begin_src scheme
+(define-system-comp (macbook-camera)
+  (kernel-loadable-modules (cons* facetimehd
+                                  (operating-system-kernel-loadable-modules os)))
+  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
+                                    "bdc_pci"))
+  (firmware (cons* facetimehd-firmware
+                   (operating-system-firmware os)))
+  (services
+   (cons* (simple-service 'facetimehd
+                          kernel-module-loader-service-type
+                          '("facetimehd"))
+          (operating-system-user-services os))))
+#+end_src
+****** Linux module :package:version:
+:PROPERTIES:
+:meta-dir+: /packages
+:END:
+#+begin_src scheme :tangle (meta-in-dir "facetimehd.scm")
+(define-module (phrenetic packages facetimehd)
+  #:use-module (guix build-system linux-module)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((guix licenses) #:prefix license:))
+
+(define-public facetimehd
+  (package
+    (name "facetimehd")
+    (version "0.5.18")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/patjak/facetimehd")
+             (commit version)))
+       (sha256
+        (base32
+         "1598pzjnbij3knvqmk2yslj26wmqiqjqgqgcw9p9jx6z7bdjvvsh"))))
+    (build-system linux-module-build-system)
+    (arguments
+     '(#:tests? #f))
+    (synopsis "Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description synopsis)
+    (home-page "https://github.com/patjak/facetimehd")
+    (license license:gpl2)
+    (supported-systems '("i686-linux" "x86_64-linux"))))
+#+end_src
+****** Firmware :package:version:
+#+begin_src scheme :tangle (meta-in-dir "facetimehd-firmware.scm")
+(define-module (phrenetic packages facetimehd-firmware)
+  #:use-module (guix build-system trivial)
+  #:use-module (guix gexp)
+  #:use-module (guix download)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages base) #:select (coreutils))
+  #:use-module ((gnu packages compression) #:select (gzip xz))
+  #:use-module ((gnu packages cpio) #:select (cpio))
+  #:use-module ((gnu packages curl) #:select (curl))
+  #:use-module ((nonguix licenses) #:prefix license:))
+
+(define-public facetimehd-firmware
+  (package
+    (name "facetimehd-firmware")
+    (version "1.43")
+    (source
+     (origin
+       (method url-fetch)
+       (uri "https://updates.cdn-apple.com/2019/cert/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1/OSXUpd10.11.5.dmg")
+       (sha256
+        (base32
+         "009kfk1nrrialgp69c5smzgbmd5xpvk35xmqr2fzb15h6pp33ka6"))))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:builder
+       ,(with-imported-modules '((guix build utils))
+          #~(begin
+              (use-modules ((guix build utils) #:select (invoke mkdir-p search-input-file)))
+
+              (define (exe name)
+                (search-input-file %build-inputs (string-append "/bin/" name)))
+
+              (let ((source "source")
+                    (firmware-in "./System/Library/Extensions/AppleCameraInterface.kext/Contents/MacOS/AppleCameraInterface")
+                    (firmware-out "firmware.bin"))
+                (let ((offset 204909802)
+                      (size 207733123))
+                  (invoke (exe "curl")
+                          "--range" (string-append
+                                     (number->string offset) "-" (number->string size))
+                          "--output" source
+                          (string-append "file://" #$source)))
+                (system
+                 (string-join
+                  (list (exe "xz") "--decompress" "--stdout" source
+                        "|"
+                        (exe "cpio") "--format=odc" "--extract" "--make-directories" firmware-in)))
+                (let ((offset 81920)
+                      (size 603715))
+                  (invoke (exe "dd")
+                          (string-append "if=" firmware-in)
+                          (string-append "of=" firmware-out ".gz")
+                          (string-append "skip=" (number->string offset))
+                          (string-append "count=" (number->string size))
+                          "bs=1"))
+                (let ((firmware-dir (string-append #$output "/lib/firmware/facetimehd")))
+                  (mkdir-p firmware-dir)
+                  (system
+                   (string-join
+                    (list (exe "gunzip") "--stdout" (string-append firmware-out ".gz")
+                          ">"
+                          (string-append firmware-dir "/" firmware-out))))))))))
+    (native-inputs
+     (list coreutils
+           cpio
+           curl
+           gzip
+           xz))
+    (synopsis "FacetimeHD firmware")
+    (description synopsis)
+    (home-page "https://github.com/patjak/facetimehd-firmware")
+    (license license:nonfree)
+    (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
 ***** Power key
 Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
