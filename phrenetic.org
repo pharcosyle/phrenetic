@@ -1052,10 +1052,10 @@ Must succeed [[*Bootloader][Bootloader]] component.
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
 #+begin_src scheme
 (define-system-comp (macbook-wireless #:key bluetooth?)
-  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
-                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
   (kernel-loadable-modules (cons* (broadcom-with-patch-updates broadcom-sta)
                                   (operating-system-kernel-loadable-modules os)))
+  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
+                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma,bdc_pci"))
   (firmware (append
              (if bluetooth? (list broadcom-bt-firmware) '())
              (operating-system-firmware os))))
