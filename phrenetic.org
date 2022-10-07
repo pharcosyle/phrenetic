@@ -1061,19 +1061,17 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
              (if bluetooth?
                  (list broadcom-bt-firmware) '()))))
 
-(define (with-blacklist kernel-args new)
-
-  (define blacklist-param "modprobe.blacklist")
-  (define (blacklist? ka)
-    (string-prefix? blacklist-param ka))
-
-  (if (any blacklist? kernel-args)
-      (map (lambda (arg)
-             (if (blacklist? arg)
-                 (string-append arg "," new)
-                 arg))
-           kernel-args)
-      (cons* (string-append blacklist-param "=" new) kernel-args)))
+(define (with-blacklist kernel-args new-kernel-args)
+  (let* ((blacklist-param "modprobe.blacklist")
+         (blacklist? (lambda (arg)
+                       (string-prefix? blacklist-param arg))))
+    (if (any blacklist? kernel-args)
+        (map (lambda (arg)
+               (if (blacklist? arg)
+                   (string-append arg "," new-kernel-args)
+                   arg))
+             kernel-args)
+        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
 #+end_src
 ****** Broadcom STA :upstream:
 #+begin_src scheme
