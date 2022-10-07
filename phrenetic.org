@@ -5535,7 +5535,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 **** Date/time formats
 #+begin_src scheme
-(define date-format "%a %b %e")
+(define date-format "%a %b %-d")
 
 (define time-format "%-I:%M %p")
 #+end_src
@@ -6534,8 +6534,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (waybar-module
    'clock
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     (format . ,(string-append "{:" date-format "  "
-                               ((@ (ice-9 string-fun) string-replace-substring) time-format "%-I" "%I") ; Workaround for https://github.com/Alexays/Waybar/issues/1452.
+     ;; Workarounds for https://github.com/Alexays/Waybar/issues/1452.
+     (format . ,(string-append "{:"
+                               ((@ (ice-9 string-fun) string-replace-substring) date-format "%-d" "%d")
+                               "  "
+                               ((@ (ice-9 string-fun) string-replace-substring) time-format "%-I" "%I")
                                "}")))
    '()
    #:placement 'modules-left))
