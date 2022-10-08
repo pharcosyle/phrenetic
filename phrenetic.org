@@ -65,7 +65,7 @@ Run with ~sudo~.
    "installer"
    (with-imported-modules '((guix build utils))
      #~(begin
-         (use-modules ((guix build utils) #:select (mkdir-p))
+         (use-modules ((guix build utils) #:select (invoke mkdir-p))
                       ((ice-9 match) #:select (match-lambda))
                       ((ice-9 readline) #:select (readline))
                       ((ice-9 string-fun) #:select (string-replace-substring)))
@@ -73,7 +73,7 @@ Run with ~sudo~.
          (define* (cmd command #:rest args)
            (display (string-join (cons (basename command) args) " "))
            (newline)
-           (apply system* (cons command args)))
+           (apply invoke (cons command args)))
 
          (define* (read-user-input prompt #:key default)
            (let ((input (readline (string-append prompt
@@ -90,7 +90,7 @@ Run with ~sudo~.
          (define (display-block-devices)
            (display "Block devices:")
            (newline)
-           (system* #$(file-append util-linux+udev "/bin/lsblk"))
+           (invoke #$(file-append util-linux+udev "/bin/lsblk"))
            (newline))
 
          (display-block-devices)
@@ -796,14 +796,16 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
            '()))))))
 
 (define (create-swapfile-gexp swapfile no-cow?)
-  #~(begin
-      (when (not (file-exists? #$swapfile))
-        (system* #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
-        (when #$no-cow?
-          (system* #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
-        (system* #$(file-append util-linux+udev "/bin/fallocate") "--length" "8G" #$swapfile)
-        (chmod #$swapfile #o600)
-        (system* #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile))))
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (invoke)))
+        (when (not (file-exists? #$swapfile))
+          (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
+          (when #$no-cow?
+            (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
+          (invoke #$(file-append util-linux+udev "/bin/fallocate") "--length" "8G" #$swapfile)
+          (chmod #$swapfile #o600)
+          (invoke #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile)))))
 #+end_src
 ****** TODO [#E] Dynamically-determined swapfile size
 /Otherwise/ make it an argument.
@@ -7915,16 +7917,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (dconf-db name settings)
   (computed-file
    name
-   #~(system*
-      #$(file-append dconf "/bin/dconf")
-      "compile"
-      #$output
-      #$(file-union ; Target of `compile` must be a directory.
-         "dconf-keyfiledir"
-         `(("dconf-keyfile"
-            ,(ini-file
-              "dconf-keyfile"
-              settings)))))))
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules ((guix build utils) #:select (invoke)))
+         (invoke
+          #$(file-append dconf "/bin/dconf")
+          "compile"
+          #$output
+          #$(file-union ; Target of `compile` must be a directory.
+             "dconf-keyfiledir"
+             `(("dconf-keyfile"
+                ,(ini-file
+                  "dconf-keyfile"
+                  settings)))))))))
 
 (define (quoted-symbol s)
   (string->symbol (string-append "'" s "'")))
