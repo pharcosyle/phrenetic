@@ -40,7 +40,6 @@ Run with ~sudo~.
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages cryptsetup) #:select (cryptsetup))
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
   #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
@@ -64,97 +63,96 @@ Run with ~sudo~.
                             btrfs-mount-options)
   (program-file
    "installer"
-   #~(begin
-       (use-modules ((ice-9 match) #:select (match-lambda))
-                    ((ice-9 readline) #:select (readline))
-                    ((ice-9 string-fun) #:select (string-replace-substring)))
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules ((guix build utils) #:select (mkdir-p))
+                      ((ice-9 match) #:select (match-lambda))
+                      ((ice-9 readline) #:select (readline))
+                      ((ice-9 string-fun) #:select (string-replace-substring)))
 
-       (define* (cmd command #:rest args)
-         (display (string-join (cons (basename command) args) " "))
-         (newline)
-         (apply system* (cons command args)))
+         (define* (cmd command #:rest args)
+           (display (string-join (cons (basename command) args) " "))
+           (newline)
+           (apply system* (cons command args)))
 
-       (define* (read-user-input prompt #:key default)
-         (let ((input (readline (string-append prompt
-                                               (if default
-                                                   (string-append " (default " default ")") "")
-                                               ": "))))
-           (if (string-null? input)
-               (or default (exit))
-               input)))
+         (define* (read-user-input prompt #:key default)
+           (let ((input (readline (string-append prompt
+                                                 (if default
+                                                     (string-append " (default " default ")") "")
+                                                 ": "))))
+             (if (string-null? input)
+                 (or default (exit))
+                 input)))
 
-       (define (user-pause text)
-         (readline (string-append text " Press enter to continue.")))
+         (define (user-pause text)
+           (readline (string-append text " Press enter to continue.")))
 
-       (define (display-block-devices)
-         (display "Block devices:")
-         (newline)
-         (system* #$(file-append util-linux+udev "/bin/lsblk"))
-         (newline))
+         (define (display-block-devices)
+           (display "Block devices:")
+           (newline)
+           (system* #$(file-append util-linux+udev "/bin/lsblk"))
+           (newline))
 
-       (display-block-devices)
-       (define device
-         (read-user-input "Enter device (for exmple, /dev/sda)"))
+         (display-block-devices)
+         (define device
+           (read-user-input "Enter device (for exmple, /dev/sda)"))
 
-       (let ((parted-bin #$(file-append parted "/sbin/parted"))
-             (align "optimal")
-             (boot-size "1GB"))
-         (cmd parted-bin device "mklabel" "gpt")
-         (for-each (match-lambda
-                     ((label start end)
-                      (cmd parted-bin "--align" align device "mkpart" label start end)))
-                   `(("sky" "0%" ,boot-size)
-                     ("earth" ,boot-size "100%")))
-         (cmd parted-bin device "set" "1" (if #$efi? "esp" "bios_grub") "on")
-         (for-each (lambda (n)
-                     (cmd parted-bin device "align-check" align n))
-                   '("1" "2")))
-       (user-pause "Check that disks are aligned.")
+         (let ((parted-bin #$(file-append parted "/sbin/parted"))
+               (align "optimal")
+               (boot-size "1GB"))
+           (cmd parted-bin device "mklabel" "gpt")
+           (for-each (match-lambda
+                       ((label start end)
+                        (cmd parted-bin "--align" align device "mkpart" label start end)))
+                     `(("sky" "0%" ,boot-size)
+                       ("earth" ,boot-size "100%")))
+           (cmd parted-bin device "set" "1" (if #$efi? "esp" "bios_grub") "on")
+           (for-each (lambda (n)
+                       (cmd parted-bin device "align-check" align n))
+                     '("1" "2")))
+         (user-pause "Check that disks are aligned.")
 
-       (display-block-devices)
-       (define boot-partition
-         (read-user-input (string-append "Boot partition")
-                          #:default (string-append device "1")))
-       (define root-partition
-         (read-user-input (string-append "Root partition")
-                          #:default (string-append device "2")))
+         (display-block-devices)
+         (define boot-partition
+           (read-user-input (string-append "Boot partition")
+                            #:default (string-append device "1")))
+         (define root-partition
+           (read-user-input (string-append "Root partition")
+                            #:default (string-append device "2")))
 
-       (cmd #$(file-append dosfstools "/sbin/mkfs.fat") "-F" "32" "-n" #$boot-label boot-partition)
+         (cmd #$(file-append dosfstools "/sbin/mkfs.fat") "-F" "32" "-n" #$boot-label boot-partition)
 
-       (define system-root
-         (if #$disk-encryption?
-             (let* ((crypt-name "deciphered-new")
-                    (crypt-mapping (string-append "/dev/mapper/" crypt-name))
-                    (cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
-               (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" #$luks-label root-partition)
-               (cmd cryptsetup-bin "open" root-partition crypt-name)
-               crypt-mapping)
-             root-partition))
+         (define system-root
+           (if #$disk-encryption?
+               (let* ((crypt-name "deciphered-new")
+                      (crypt-mapping (string-append "/dev/mapper/" crypt-name))
+                      (cryptsetup-bin #$(file-append cryptsetup "/bin/cryptsetup")))
+                 (cmd cryptsetup-bin "luksFormat" "--type" "luks2" "--pbkdf" "pbkdf2" "--label" #$luks-label root-partition)
+                 (cmd cryptsetup-bin "open" root-partition crypt-name)
+                 crypt-mapping)
+               root-partition))
 
-       (case #$filesystem
-         ;; ((#:filesystem/ext4)
-         ;;  (cmd #$(file-append e2fsprogs "/sbin/mkfs.ext4") "-L" #$root-label system-root))
-         ((#:filesystem/btrfs)
-          (cmd #$(file-append btrfs-progs "/bin/mkfs.btrfs") "--label" #$root-label system-root)))
+         (case #$filesystem
+           ;; ((#:filesystem/ext4)
+           ;;  (cmd #$(file-append e2fsprogs "/sbin/mkfs.ext4") "-L" #$root-label system-root))
+           ((#:filesystem/btrfs)
+            (cmd #$(file-append btrfs-progs "/bin/mkfs.btrfs") "--label" #$root-label system-root)))
 
-       (define mount-dir
-         (read-user-input (string-append "Mount directory")
-                          #:default "/mnt"))
+         (define mount-dir
+           (read-user-input (string-append "Mount directory")
+                            #:default "/mnt"))
 
-       (define mount-bin "/run/setuid-programs/mount")
-       (define umount-bin "/run/setuid-programs/umount")
+         (define mount-bin "/run/setuid-programs/mount")
+         (define umount-bin "/run/setuid-programs/umount")
 
-       (when (equal? #$filesystem #:filesystem/btrfs)
-         (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
-           (cmd mount-bin system-root mount-dir)
-           (for-each (lambda (subvol)
-                       (cmd btrfs-bin "subvolume" "create" (string-append mount-dir "/" subvol)))
-                     (map car '#$mountables))
-           (cmd umount-bin mount-dir)))
+         (when (equal? #$filesystem #:filesystem/btrfs)
+           (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
+             (cmd mount-bin system-root mount-dir)
+             (for-each (lambda (subvol)
+                         (cmd btrfs-bin "subvolume" "create" (string-append mount-dir "/" subvol)))
+                       (map car '#$mountables))
+             (cmd umount-bin mount-dir)))
 
-       (let* ((mkdir-bin #$(file-append coreutils "/bin/mkdir"))
-              (mkdirp-cmd (lambda (dir)
-                            (cmd mkdir-bin "-p" dir))))
          (case #$filesystem
            ;; ((#:filesystem/ext4)
            ;;  (cmd mount-bin system-root mount-dir))
@@ -163,7 +161,7 @@ Run with ~sudo~.
              (match-lambda
                ((subvol . mount-point)
                 (let ((path-on-mount (string-append mount-dir mount-point)))
-                  (mkdirp-cmd path-on-mount)
+                  (mkdir-p path-on-mount)
                   (cmd mount-bin "-o"
                        (string-append
                         "subvol=" subvol
@@ -178,29 +176,29 @@ Run with ~sudo~.
                        system-root path-on-mount))))
              '#$mountables)))
          (let ((boot-target-on-mount (string-append mount-dir #$boot-target)))
-           (mkdirp-cmd boot-target-on-mount)
-           (cmd mount-bin boot-partition boot-target-on-mount)))
+           (mkdir-p boot-target-on-mount)
+           (cmd mount-bin boot-partition boot-target-on-mount))
 
-       (let ((source-dir "/etc/config-source")
-             (configs-dir "phrenetic/configs"))
-         (cmd #$(file-append guix "/bin/guix") "time-machine"
-              (string-append "--channels=" source-dir "/" configs-dir "/" os-name "-channels-lock")
-              "--"
-              "system"
-              (string-append "--load-path=" source-dir)
-              "init"
-              (string-append source-dir "/" configs-dir "/" #$os-name)
-              mount-dir))
+         (let ((source-dir "/etc/config-source")
+               (configs-dir "phrenetic/configs"))
+           (cmd #$(file-append guix "/bin/guix") "time-machine"
+                (string-append "--channels=" source-dir "/" configs-dir "/" os-name "-channels-lock")
+                "--"
+                "system"
+                (string-append "--load-path=" source-dir)
+                "init"
+                (string-append source-dir "/" configs-dir "/" #$os-name)
+                mount-dir))
 
-       (cmd umount-bin (string-append mount-dir #$boot-target))
-       (case #$filesystem
-         ;; ((#:filesystem/ext4)
-         ;;  (cmd umount-bin mount-dir))
-         ((#:filesystem/btrfs)
-          (for-each
-           (lambda (mount-point)
-             (cmd umount-bin (string-append mount-dir mount-point)))
-           (map cdr '#$mountables)))))))
+         (cmd umount-bin (string-append mount-dir #$boot-target))
+         (case #$filesystem
+           ;; ((#:filesystem/ext4)
+           ;;  (cmd umount-bin mount-dir))
+           ((#:filesystem/btrfs)
+            (for-each
+             (lambda (mount-point)
+               (cmd umount-bin (string-append mount-dir mount-point)))
+             (map cdr '#$mountables))))))))
 #+end_src
 ** Package
 #+begin_src scheme
