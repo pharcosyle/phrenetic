@@ -468,8 +468,8 @@ Run with ~sudo~.
 **** Fonts
 #+begin_src scheme
 (define-system-comp (console-fonts #:key
-                                   (hidpi? #t)
-                                   number-of-ttys)
+                                   number-of-ttys
+                                   (hidpi? #t))
   (services
    (cons* (service console-font-service-type
                    (map (lambda (n)
