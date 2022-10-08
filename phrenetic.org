@@ -647,6 +647,7 @@ Must succeed [[*Accounts][Accounts]] component.
        (map (lambda (terminal-config)
               (if (equal? (greetd-terminal-vt terminal-config)
                           (number->string tty-number))
+                  ;; It'd be better to set user/command for initial-session rather than default-session (auto-login would only occur on the first start) but the Guix configuration doesn't have that option (yet?).
                   (greetd-terminal-configuration
                    (inherit terminal-config)
                    (default-session-user user)
