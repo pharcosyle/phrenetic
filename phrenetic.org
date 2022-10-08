@@ -557,7 +557,7 @@ Must succeed [[*Accounts][Accounts]] component.
         '()))))
 #+end_src
 **** Login management
-***** Display managers
+***** Login managers
 ****** GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key
@@ -1513,7 +1513,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   pipewire?
                   bluetooth?
                   bluetooth-users
-                  display-manager
+                  login-manager
                   tty-start
                   auto-login?
                   auto-login-user
@@ -1544,9 +1544,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               (bluetooth $ #:who bluetooth-users
                          #:stateless? stateless?)
               $)
-          (if display-manager
-              (case display-manager
-                ((#:dm/gdm) (gdm $ #:auto-login? auto-login?
+          (if login-manager
+              (case login-manager
+                ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
                                  #:auto-login-user auto-login-user)))
               (desktop-tty $ #:tty-number tty-start
                            #:auto-login? auto-login?
@@ -5958,7 +5958,7 @@ Some colors from the original Atom theme on which I based mine that might be use
       (stop  #~(make-kill-destructor)))))))
 #+end_src
 **** Login management
-***** Display managers
+***** Login managers
 ****** GDM
 #+begin_src scheme
 (define* (he-gdm #:key stateless?)
@@ -6016,10 +6016,10 @@ If it appears before other profile code (as it currently does, the Nix sourcing)
               (chmod f #o555)))))))
 
 (define (xdg-current-desktop-env-var val)
-  `("XDG_CURRENT_DESKTOP" . ,val)) ; "Normally" provided by a display manager.
+  `("XDG_CURRENT_DESKTOP" . ,val)) ; "Normally" provided by a login manager.
 
 (define xdg-session-type-wayland-env-var
-  '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a display manager.
+  '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a login manager.
 
 ;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
 (define* (wayland-env-vars #:key pipewire?)
@@ -8006,7 +8006,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   kmonad?
                   desktop?
                   pipewire?
-                  display-manager
+                  login-manager
                   tty-start
                   sessions
                   projects)
@@ -8070,7 +8070,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (font-serif font-serif)
                 (font-unicode font-unicode)
                 (font-variable-pitch font-sans)
-                (dbus? (not display-manager))
+                (dbus? (not login-manager))
                 (wayland? #t)
                 (sway? (member #:session/sway (or sessions '()))))
            (append
@@ -8100,9 +8100,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (he-mesa #:stateless? stateless?)
             (if dbus?
                 (he-dbus) '())
-            (if display-manager
-                (case display-manager
-                  ((#:dm/gdm) (he-gdm #:stateless? stateless?)))
+            (if login-manager
+                (case login-manager
+                  ((#:lm/gdm) (he-gdm #:stateless? stateless?)))
                 (he-desktop-tty #:tty-number tty-start
                                 #:start-cmd (sway-start #:pipewire? pipewire?)
                                 #:login-shell login-shell))
@@ -8784,7 +8784,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
-    ;; #:display-manager #:dm/gdm
+    ;; #:login-manager #:lm/gdm
     #:tty-start 2))
 
 (define he-shared-opts
