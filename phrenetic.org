@@ -327,6 +327,11 @@ Run with ~sudo~.
        (with-syntax ((os (datum->syntax x 'os)))
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
+
+(define (remove-services services kinds)
+  (remove (lambda (s)
+            (member (service-kind s) kinds))
+          services))
 #+end_src
 *** Source
 #+begin_src scheme
@@ -347,8 +352,20 @@ Run with ~sudo~.
 #+begin_src scheme
 (define-system-comp (base-services)
   (services
-   (append %base-services
-           (operating-system-user-services os))))
+   (append
+    (operating-system-user-services os)
+    (as-> %base-services $
+      (remove-services $ (list login-service-type
+                               agetty-service-type
+                               mingetty-service-type))
+      (cons* (service greetd-service-type
+                      (greetd-configuration
+                       (terminals
+                        (map (lambda (n)
+                               (greetd-terminal-configuration
+                                (terminal-vt (number->string n))))
+                             (iota 6 1)))))
+             $)))))
 #+end_src
 *** NSS
 #+begin_src scheme
@@ -476,12 +493,6 @@ Must succeed [[*Accounts][Accounts]] component.
           (operating-system-user-services os))))
 #+end_src
 *** Desktop
-#+begin_src scheme
-(define (remove-services services kinds)
-  (remove (lambda (s)
-            (member (service-kind s) kinds))
-          services))
-#+end_src
 **** Desktop services
 #+begin_src scheme
 (define-system-comp (desktop-services)
@@ -583,12 +594,13 @@ Must succeed [[*Accounts][Accounts]] component.
                                  auto-login-user)
   (services
    (cons* (switch-to-tty-service #:tty-number tty-number)
-          (let ((services (operating-system-user-services os)))
-            (if auto-login?
-                (with-auto-login-to-tty services
-                                        #:tty-number tty-number
-                                        #:user auto-login-user)
-                services)))))
+          ;; (let ((services (operating-system-user-services os)))
+          ;;   (if auto-login?
+          ;;       (with-auto-login-to-tty services
+          ;;                               #:tty-number tty-number
+          ;;                               #:user auto-login-user)
+          ;;       services))
+          (operating-system-user-services os))))
 
 (define* (switch-to-tty-service #:key tty-number)
   (simple-service
@@ -603,16 +615,16 @@ Must succeed [[*Accounts][Accounts]] component.
                 (invoke #$(file-append kbd "/bin/chvt")
                         #$(number->string tty-number))))))))
 
-(define* (with-auto-login-to-tty services #:key tty-number user)
-  (modify-services services
-    (mingetty-service-type
-     config =>
-     (if (equal? (mingetty-configuration-tty config)
-                 (string-append "tty" (number->string tty-number)))
-         (mingetty-configuration
-          (inherit config)
-          (auto-login user))
-         config))))
+;; (define* (with-auto-login-to-tty services #:key tty-number user)
+;;   (modify-services services
+;;     (mingetty-service-type
+;;      config =>
+;;      (if (equal? (mingetty-configuration-tty config)
+;;                  (string-append "tty" (number->string tty-number)))
+;;          (mingetty-configuration
+;;           (inherit config)
+;;           (auto-login user))
+;;          config))))
 #+end_src
 **** Sessions
 ***** Desktop environments
