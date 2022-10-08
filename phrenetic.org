@@ -556,8 +556,8 @@ Must succeed [[*Accounts][Accounts]] component.
   (services
    (append
     (operating-system-user-services os)
-    ;; (list
-    ;;  (bluetooth-service #:auto-enable? #t))
+    (list
+     (bluetooth-service #:auto-enable? #t))
     (if stateless?
         (list
          (stateless-service
@@ -1549,10 +1549,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (if pipewire?
               (pipewire-multimedia $) $)
           (network-manager $ #:stateless? stateless?)
-          (if bluetooth?
-              (bluetooth $ #:who bluetooth-users
-                         #:stateless? stateless?)
-              $)
+          ;; (if bluetooth?
+          ;;     (bluetooth $ #:who bluetooth-users
+          ;;                #:stateless? stateless?)
+          ;;     $)
           (if login-manager
               (case login-manager
                 ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
