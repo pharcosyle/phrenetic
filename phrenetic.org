@@ -505,6 +505,7 @@ Must succeed [[*Accounts][Accounts]] component.
       (map service-kind %base-services)
       (list screen-locker-service-type
             network-manager-service-type
+            wpa-supplicant-service-type
             gdm-service-type
             (service-kind gdm-file-system-service)))))))
 #+end_src
@@ -527,7 +528,8 @@ Must succeed [[*Accounts][Accounts]] component.
    (append
     (operating-system-user-services os)
     (list
-     (service network-manager-service-type))
+     (service network-manager-service-type)
+     (service wpa-supplicant-service-type))
     (if stateless?
         (list
          (stateless-service
