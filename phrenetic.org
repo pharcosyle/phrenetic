@@ -233,6 +233,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
+  #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux+udev))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
@@ -240,7 +241,7 @@ Run with ~sudo~.
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
-  #:use-module ((gnu services networking) #:select (network-manager-service-type))
+  #:use-module ((gnu services networking) #:select (network-manager-service-type wpa-supplicant-service-type))
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
   #:use-module (gnu services sound)
@@ -511,18 +512,27 @@ Must succeed [[*Accounts][Accounts]] component.
                              profile-service-type
                              (list network-manager-applet)))
             gdm-service-type
-            (service-kind gdm-file-system-service)))))))
+            (service-kind gdm-file-system-service)
+            pulseaudio-service-type
+            alsa-service-type))))))
 #+end_src
-**** Pipewire
+**** Multimedia
+***** PulseAudio and ALSA
+#+begin_src scheme
+(define-system-comp (pulseaudio+alsa)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list pulseaudio-service-type
+          alsa-service-type))))
+#+end_src
+***** Pipewire
 #+begin_src scheme
 (define-system-comp (pipewire-multimedia)
   (services
-   (as-> (operating-system-user-services os) $
-         (remove-services $ (list pulseaudio-service-type
-                                  alsa-service-type))
-         (cons* (udev-rules-service 'pipewire-add-udev-rules
-                                    pipewire-0.3)
-                $))))
+   (cons* (udev-rules-service 'pipewire-add-udev-rules
+                              pipewire-0.3)
+          (operating-system-user-services os))))
 #+end_src
 **** Network
 ***** Network manager
@@ -1553,7 +1563,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (as-> $ $
           (desktop-services $)
           (if pipewire?
-              (pipewire-multimedia $) $)
+              (pipewire-multimedia $)
+              (pulseaudio+alsa $))
           (network-manager $ #:stateless? stateless?)
           ;; (if bluetooth?
           ;;     (bluetooth $ #:who bluetooth-users
