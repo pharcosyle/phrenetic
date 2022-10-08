@@ -506,6 +506,10 @@ Must succeed [[*Accounts][Accounts]] component.
       (list screen-locker-service-type
             network-manager-service-type
             wpa-supplicant-service-type
+            (service-kind
+             (simple-service 'network-manager-applet
+                             profile-service-type
+                             (list network-manager-applet)))
             gdm-service-type
             (service-kind gdm-file-system-service)))))))
 #+end_src
