@@ -303,6 +303,10 @@ Run with ~sudo~.
             with-bootloader
             with-filesystems
             with-macbook-hardware))
+
+;; Not exported. Probably an oversight that'll get fixed at some point.
+(define greetd-terminals (@@ (gnu services base) greetd-terminals))
+(define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
 #+end_src
 ** Create
 #+begin_src scheme
@@ -608,18 +612,17 @@ Must succeed [[*Accounts][Accounts]] component.
 ***** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
-                                 tty-number
+                                 (tty-number 2)
                                  auto-login?
                                  auto-login-user)
   (services
    (cons* (switch-to-tty-service #:tty-number tty-number)
-          ;; (let ((services (operating-system-user-services os)))
-          ;;   (if auto-login?
-          ;;       (with-auto-login-to-tty services
-          ;;                               #:tty-number tty-number
-          ;;                               #:user auto-login-user)
-          ;;       services))
-          (operating-system-user-services os))))
+          (let ((services (operating-system-user-services os)))
+            (if auto-login?
+                (with-auto-login-to-tty services
+                                        #:tty-number tty-number
+                                        #:user auto-login-user)
+                services)))))
 
 (define* (switch-to-tty-service #:key tty-number)
   (simple-service
@@ -634,16 +637,22 @@ Must succeed [[*Accounts][Accounts]] component.
                 (invoke #$(file-append kbd "/bin/chvt")
                         #$(number->string tty-number))))))))
 
-;; (define* (with-auto-login-to-tty services #:key tty-number user)
-;;   (modify-services services
-;;     (mingetty-service-type
-;;      config =>
-;;      (if (equal? (mingetty-configuration-tty config)
-;;                  (string-append "tty" (number->string tty-number)))
-;;          (mingetty-configuration
-;;           (inherit config)
-;;           (auto-login user))
-;;          config))))
+(define* (with-auto-login-to-tty services #:key tty-number user)
+  (modify-services services
+    (greetd-service-type
+     config =>
+     (greetd-configuration
+      (inherit config)
+      (terminals
+       (map (lambda (terminal-config)
+              (if (equal? (greetd-terminal-vt terminal-config)
+                          (number->string tty-number))
+                  (greetd-terminal-configuration
+                   (inherit terminal-config)
+                   (default-session-user user)
+                   (default-session-command "default-session-start"))
+                  terminal-config))
+            (greetd-terminals config)))))))
 #+end_src
 **** Sessions
 ***** Desktop environments
@@ -1542,7 +1551,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   bluetooth?
                   bluetooth-users
                   login-manager
-                  tty-start
                   auto-login?
                   auto-login-user
                   sessions)
@@ -1578,8 +1586,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                 (case login-manager
                   ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
                                    #:auto-login-user auto-login-user)))
-                (desktop-tty $ #:tty-number tty-start
-                             #:auto-login? auto-login?
+                (desktop-tty $ #:auto-login? auto-login?
                              #:auto-login-user auto-login-user))
             (if (member #:session/gnome (or sessions '()))
                 (gnome-desktop $) $)
@@ -6002,32 +6009,27 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
-(define* (he-desktop-tty #:key
-                         tty-number
-                         start-cmd
-                         login-shell)
+(define* (he-desktop-tty #:key start-cmd)
   (list
-   (let ((name 'desktop-tty-start-session)
-         (start (mixed-text-file
-                 "start-on-tty"
-                 #~(format #f "[ $(tty) = /dev/tty~a ] && exec ~a" #$tty-number #$start-cmd))))
-     (case login-shell
-       ((#:shell/bash)
-        (simple-service name
-                        home-bash-service-type
-                        (home-bash-extension
-                         (bash-profile
-                          (list start)))))
-       ;; ((#:shell/zsh)
-       ;;  (simple-service name
-       ;;                  home-zsh-service-type
-       ;;                  (home-zsh-extension
-       ;;                   (zprofile
-       ;;                    (list start)))))
-       ))))
+   (simple-service
+    'desktop-tty-default-session-start
+    home-profile-service-type
+    (list (default-session-start start-cmd)))))
+
+(define (default-session-start cmd)
+  (package
+    (inherit blank-package)
+    (name "default-session-start")
+    (source cmd)
+    (build-system trivial-build-system)
+    (arguments
+     `(#:builder
+       ,#~(begin
+            (let* ((bin (string-append #$output "/bin")))
+              (mkdir #$output)
+              (mkdir bin)
+              (symlink #$source (string-append bin "/default-session-start"))))))))
 #+end_src
-****** TODO [#E] Figure out how to add autostart TTY shell extension to /end/ of profile
-If it appears before other profile code (as it currently does, the Nix sourcing) it'll never be run.
 **** Sessions
 #+begin_src scheme
 (define* (session-start exe #:rest content)
@@ -8038,7 +8040,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   desktop?
                   pipewire?
                   login-manager
-                  tty-start
                   sessions
                   projects)
   (let ((login-shell #:shell/bash))
@@ -8134,9 +8135,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (if login-manager
                 (case login-manager
                   ((#:lm/gdm) (he-gdm #:stateless? stateless?)))
-                (he-desktop-tty #:tty-number tty-start
-                                #:start-cmd (sway-start #:pipewire? pipewire?)
-                                #:login-shell login-shell))
+                (he-desktop-tty #:start-cmd (sway-start #:pipewire? pipewire?)))
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if sway?
@@ -8816,7 +8815,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     #:desktop? #t
     #:pipewire? #t
     ;; #:login-manager #:lm/gdm
-    #:tty-start 2))
+    ))
 
 (define he-shared-opts
   (append
