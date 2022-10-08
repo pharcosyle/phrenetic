@@ -1384,10 +1384,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
           (operating-system-user-services os))))
 #+end_src
 ****** Linux module :package:version:
-:PROPERTIES:
-:meta-dir+: /packages
-:END:
-#+begin_src scheme :tangle (meta-in-dir "facetimehd.scm")
+#+begin_src scheme :tangle (meta-in-dir "packages/facetimehd.scm")
 (define-module (phrenetic packages facetimehd)
   #:use-module (guix build-system linux-module)
   #:use-module (guix git-download)
@@ -1417,7 +1414,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
 ****** Firmware :package:version:
-#+begin_src scheme :tangle (meta-in-dir "facetimehd-firmware.scm")
+#+begin_src scheme :tangle (meta-in-dir "packages/facetimehd-firmware.scm")
 (define-module (phrenetic packages facetimehd-firmware)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
