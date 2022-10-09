@@ -1676,7 +1676,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home-services version-control)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium ungoogled-chromium/wayland))
-  #:use-module ((gnu packages compression) #:select (zip unzip))
+  #:use-module ((gnu packages compression) #:select (zip unzip zstd))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont font-awesome))
@@ -2148,7 +2148,6 @@ SAVEHIST=$HISTSIZE
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (phrenetic utils)
@@ -2199,16 +2198,6 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
                   (("\\(expand-file-name \"src\" source-directory\\)")
                    (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
 #+end_src
-***** TODO [#E] =zstd=
-Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executable instead of just adding it to the propagated inputs. It's a bit tricky (see the ~strip-double-wrap~ build phase in the emacs package definition) and I don't want to mess it up and introduce possibly subtle problems.
-#+begin_src scheme
-(define-public (with-zstd emacs)
-  (package
-    (inherit emacs)
-    (propagated-inputs
-     (modify-inputs (package-propagated-inputs emacs)
-       (prepend zstd)))))
-#+end_src
 ***** Path integration improvements
 #+begin_src scheme
 (define-public (with-path-integration-improvements emacs)
@@ -2240,13 +2229,21 @@ Add to emacs program wrapper, i.e. by using ~wrap-program~ on the emacs executab
 #+end_src
 ***** Emacs fully loaded :package:
 #+begin_src scheme
+;; TODO Delete this on next Emacs rebuild.
+(define (with-zstd emacs)
+  (package
+    (inherit emacs)
+    (propagated-inputs
+     (modify-inputs (package-propagated-inputs emacs)
+       (prepend (@ (gnu packages compression) zstd))))))
+
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
           emacs-pgtk emacs)
       ;; with-libgccjit-latest
       with-findable-C-source
-      with-zstd
-      with-path-integration-improvements))
+      with-path-integration-improvements
+      with-zstd))
 
 (define emacs-fully-loaded (emacs-fully-loaded* #:pgtk? #t))
 #+end_src
@@ -4558,6 +4555,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                  #:icons? icons?)
    (doom-user #:email email)
    (doom-keymaps)
+   (doom-undo #:stateless? stateless?)
    (doom-emacs-lisp)
    (doom-markdown)))
 #+end_src
@@ -4608,8 +4606,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
           (#:emacs
            electric
-           (ibuffer ,@(if icons? '(+icons) '()))
-           undo)
+           (ibuffer ,@(if icons? '(+icons) '())))
 
           (#:checkers
            (syntax ,@(if childframe? '(+childframe) '())))
@@ -4756,14 +4753,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                       #'turn-on-smartparens-strict-mode
                       (defun biome-modify-sp-strict-mode-map-h ()
                         (map! :map smartparens-strict-mode-map
-                              :i "DEL" #'sp-backward-delete-char))))
-
-         (after! undo-fu
-                 (setq undo-fu-ignore-keyboard-quit t))
-
-         ;; (after! undo-tree
-         ;;   (setq undo-tree-visualizer-timestamps t))
-         )
+                              :i "DEL" #'sp-backward-delete-char)))))
 
        (if evil?
            '((after! evil
@@ -4797,9 +4787,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                   ((#:path . ("projectile.projects" #:doom-base #:cache))
                    (#:store . #:persist))
                   ((#:path . ("projectile.cache" #:doom-base #:cache))
-                   (#:store . #:machine))
-
-                  ((#:path . ("undo-fu-session/" #:doom-base #:cache))
                    (#:store . #:machine))
 
                   ((#:path . ("workspaces/autosave/" #:doom-base #:data))
@@ -5028,6 +5015,34 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (biome--trans "C-S-i" "<backtab>"))))
 
    (doom-dash)))
+#+end_src
+****** Undo
+#+begin_src scheme
+(define* (doom-undo #:key stateless?)
+  (let ((name 'undo))
+    (list
+     (doom-service
+      name
+      #:modules '((#:emacs
+                   undo))
+      #:config
+      '((after! undo-fu
+                (setq undo-fu-ignore-keyboard-quit t))
+
+        ;; (after! undo-tree
+        ;;   (setq undo-tree-visualizer-timestamps t))
+        ))
+
+     (when stateless?
+       (doom-stateless-service
+        name
+        #:state '(((#:path . ("undo-fu-session/" #:doom-base #:cache))
+                   (#:store . #:machine)))))
+
+     (simple-service
+      (symbol-append 'doom- name '-add-zstd)
+      home-profile-service-type
+      (list zstd)))))
 #+end_src
 ***** Languages
 #+begin_src scheme
