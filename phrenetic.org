@@ -1769,11 +1769,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-mako
             he-waybar
             waybar-modules
-            he-doom-app-launcher
-            he-rofi
-            rofi-menu
-            rofi-application-launcher
-            he-doom-trash
             he-kanshi
             he-aws
             he-clojure
@@ -1787,6 +1782,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-protonvpn
             he-ssh
             he-doom-dired
+            he-doom-app-launcher
+            he-rofi
+            rofi-menu
+            rofi-application-launcher
+            he-doom-trash
             he-git
             he-miscellaneous
             he-pavucontrol
@@ -6836,90 +6836,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       ((color . @red))))
    #:placement 'modules-left))
 #+end_src
-***** Menus and launchers
-****** Doom app launcher
-#+begin_src scheme
-(define (he-doom-app-launcher)
-  (list
-   (doom-service
-    'app-launcher
-    #:packages
-    '((package! app-launcher
-                :recipe (:host github
-                         :repo "SebastienWae/app-launcher")
-                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
-#+end_src
-****** Rofi
-#+begin_src scheme
-(define* (he-rofi #:key
-                  stateless?
-                  wayland?
-                  colors
-                  font)
-  (list
-   (service
-    home-rofi-service-type
-    (home-rofi-configuration
-     (rofi (get-rofi wayland?))
-     ;; TODO Trying out Andrew Tropin's confguration as-is for now, revisit later.
-     (config-rasi
-      `((configuration
-         ((modi . "run,ssh,drun")
-          (drun-show-actions . #t)
-          (show-icons . #t)
-          (font . ,(font-specification font))
-
-          (kb-row-tab . "")
-          (kb-row-select . "Tab")
-          (kb-secondary-paste . "Control+y")
-          (kb-remove-word-forward . "Alt+d")
-          (kb-remove-word-back . "Control+w,Control+BackSpace")
-          (kb-clear-line . "Control+slash")
-          (kb-page-next . "Control+v")
-          (kb-page-prev . "Alt+v")))
-
-        ,#~"@theme \"paper-float\""
-        ;; ,@(let ((clr (lambda* (color #:optional alpha)
-        ;;                (as-> color $
-        ;;                      (assoc-ref colors $)
-        ;;                      (string-append $ (or alpha ""))))))
-        ;;     `((*
-        ;;        (;; (white . ,(clr #:color/fg))
-        ;;         ;; (black . ,(clr #:color/bg))
-        ;;         ;; (grey . ,(clr #:color/...))
-        ;;         ;; (blue . ,(clr #:color/blue))
-        ;;         (background . "#000000BF")))))
-        ;; (window
-        ;;  ((transparency . "real")))
-        ))))
-
-   (when stateless?
-     (home-stateless-service
-      'rofi
-      #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:persist)))))))
-
-(define* (rofi-menu #:key wayland?)
-  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -dmenu -p"))
-
-(define* (rofi-application-launcher #:key wayland?)
-  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -show drun"))
-
-(define (get-rofi wayland?)
-  (if wayland?
-      rofi-wayland
-      rofi))
-#+end_src
-***** Trash management
-****** Doom trash
-#+begin_src scheme
-(define (he-doom-trash)
-  (list
-   (doom-service
-    'trash
-    #:packages
-    '((package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")))))
-#+end_src
 ***** Display configuration
 ****** Kanshi
 #+begin_src scheme
@@ -7526,6 +7442,90 @@ use_guixs() {
      (if dirvish?
          (doom-transient) '()))))
 #+end_src
+**** Menus and launchers
+***** Doom app launcher
+#+begin_src scheme
+(define (he-doom-app-launcher)
+  (list
+   (doom-service
+    'app-launcher
+    #:packages
+    '((package! app-launcher
+                :recipe (:host github
+                         :repo "SebastienWae/app-launcher")
+                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
+#+end_src
+***** Rofi
+#+begin_src scheme
+(define* (he-rofi #:key
+                  stateless?
+                  wayland?
+                  colors
+                  font)
+  (list
+   (service
+    home-rofi-service-type
+    (home-rofi-configuration
+     (rofi (get-rofi wayland?))
+     ;; TODO Trying out Andrew Tropin's confguration as-is for now, revisit later.
+     (config-rasi
+      `((configuration
+         ((modi . "run,ssh,drun")
+          (drun-show-actions . #t)
+          (show-icons . #t)
+          (font . ,(font-specification font))
+
+          (kb-row-tab . "")
+          (kb-row-select . "Tab")
+          (kb-secondary-paste . "Control+y")
+          (kb-remove-word-forward . "Alt+d")
+          (kb-remove-word-back . "Control+w,Control+BackSpace")
+          (kb-clear-line . "Control+slash")
+          (kb-page-next . "Control+v")
+          (kb-page-prev . "Alt+v")))
+
+        ,#~"@theme \"paper-float\""
+        ;; ,@(let ((clr (lambda* (color #:optional alpha)
+        ;;                (as-> color $
+        ;;                      (assoc-ref colors $)
+        ;;                      (string-append $ (or alpha ""))))))
+        ;;     `((*
+        ;;        (;; (white . ,(clr #:color/fg))
+        ;;         ;; (black . ,(clr #:color/bg))
+        ;;         ;; (grey . ,(clr #:color/...))
+        ;;         ;; (blue . ,(clr #:color/blue))
+        ;;         (background . "#000000BF")))))
+        ;; (window
+        ;;  ((transparency . "real")))
+        ))))
+
+   (when stateless?
+     (home-stateless-service
+      'rofi
+      #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:persist)))))))
+
+(define* (rofi-menu #:key wayland?)
+  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -dmenu -p"))
+
+(define* (rofi-application-launcher #:key wayland?)
+  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -show drun"))
+
+(define (get-rofi wayland?)
+  (if wayland?
+      rofi-wayland
+      rofi))
+#+end_src
+**** Trash
+***** Doom trash
+#+begin_src scheme
+(define (he-doom-trash)
+  (list
+   (doom-service
+    'trash
+    #:packages
+    '((package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")))))
+#+end_src
 **** Version control
 ***** Git
 #+begin_src scheme
@@ -8089,6 +8089,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  #:doom-tree-sitter? doom-tree-sitter?
                  #:login-shell login-shell)
          '())
+     (he-direnv #:doom? doom?
+                #:shells interactive-shells)
+     (he-protonvpn #:stateless? stateless?)
+     (he-ssh)
+     (he-git #:stateless? stateless?
+             #:doom? doom?
+             #:email email)
      (if doom?
          (append
           (if doom-calendar?
@@ -8098,19 +8105,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           (if doom-org?
               (he-doom-org #:stateless? stateless?
                            #:evil? doom-evil?)
-              '()))
+              '())
+          (he-doom-dired #:stateless? stateless?
+                         #:icons? doom-icons?)
+          (he-doom-app-launcher)
+          (he-doom-trash))
          '())
-     (he-direnv #:doom? doom?
-                #:shells interactive-shells)
-     (he-protonvpn #:stateless? stateless?)
-     (he-ssh)
-     (if doom?
-         (he-doom-dired #:stateless? stateless?
-                        #:icons? doom-icons?)
-         '())
-     (he-git #:stateless? stateless?
-             #:doom? doom?
-             #:email email)
      (he-miscellaneous)
      (if console?
          (if kmonad?
@@ -8190,17 +8190,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                               #:modules (waybar-modules #:sway? sway?
                                                         #:date-format date-format
                                                         #:time-format time-format))
-                   (if doom?
-                       (he-doom-app-launcher) '())
-                   (he-rofi #:stateless? stateless?
-                            #:wayland? wayland?
-                            #:colors colors
-                            #:font font-variable-pitch)
-                   (if doom?
-                       (he-doom-trash) '())
                    ;; (he-kanshi)
                    ))
                 '())
+            (he-rofi #:stateless? stateless?
+                     #:wayland? wayland?
+                     #:colors colors
+                     #:font font-variable-pitch)
             (let ((gtk (gtk-services #:stateless? stateless?
                                      #:theme theme
                                      #:font font-variable-pitch
