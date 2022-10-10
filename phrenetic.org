@@ -635,7 +635,7 @@ Must succeed [[*Accounts][Accounts]] component.
      (one-shot? #t)
      (start #~(lambda ()
                 (invoke #$(file-append kbd "/bin/chvt")
-                        #$(number->string tty-number))))))))
+                        (number->string #$tty-number))))))))
 
 (define* (with-auto-login-to-tty services #:key tty-number user)
   (modify-services services
