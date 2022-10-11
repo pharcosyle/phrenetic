@@ -1709,6 +1709,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
+  #:use-module ((gnu system shadow) #:select (default-skeletons))
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
@@ -1815,7 +1816,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 ** Components
 #+begin_src scheme
 (define* (skeleton-file file)
-  (string-append "/etc/skel/" file))
+  (-> (default-skeletons)
+      (assoc-ref file)
+      car))
 
 (define very-big-history 1000000)
 #+end_src
@@ -5222,9 +5225,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      'guile-add-config
      home-files-service-type
      `((".guile"
-        ,(local-file (skeleton-file ".guile") "guile"))
+        ,(skeleton-file ".guile"))
        (".gdbinit"
-        ,(local-file (skeleton-file ".gdbinit") "gdbinit"))))
+        ,(skeleton-file ".gdbinit"))))
 
     (home-stateless-service
      'guile
@@ -7519,19 +7522,20 @@ use_guixs() {
 #+end_src
 **** Text editors
 ***** Nano
+The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp.
 #+begin_src scheme
 ;; (define (he-nano)
 ;;   (list
-;;    ;; (simple-service
-;;    ;;  'nano-add-package
-;;    ;;  home-profile-service-type
-;;    ;;  (list nano))
+;;    (simple-service
+;;     'nano-add-package
+;;     home-profile-service-type
+;;     (list nano))
 
 ;;    (simple-service
 ;;     'nano-add-config
 ;;     home-xdg-configuration-files-service-type
 ;;     `(("nano/nanorc"
-;;        ,(local-file (skeleton-file ".config/nano/nanorc")))))))
+;;        ,(skeleton-file ".nanorc"))))))
 #+end_src
 **** Trash
 ***** Doom trash
