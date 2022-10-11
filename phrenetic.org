@@ -1777,7 +1777,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-org
             he-direnv
             direnv-service-type
-            ;; he-nano
             he-node
             he-protonvpn
             he-ssh
@@ -1786,6 +1785,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-rofi
             rofi-menu
             rofi-application-launcher
+            ;; he-nano
             he-doom-trash
             he-git
             he-miscellaneous
@@ -7373,21 +7373,6 @@ use_guixs() {
         (string-append "[ " $ " ]")
         (string->symbol $)))
 #+end_src
-**** Nano
-#+begin_src scheme
-;; (define (he-nano)
-;;   (list
-;;    ;; (simple-service
-;;    ;;  'nano-add-package
-;;    ;;  home-profile-service-type
-;;    ;;  (list nano))
-
-;;    (simple-service
-;;     'nano-add-config
-;;     home-xdg-configuration-files-service-type
-;;     `(("nano/nanorc"
-;;        ,(local-file (skeleton-file ".config/nano/nanorc")))))))
-#+end_src
 **** Node
 #+begin_src scheme
 (define* (he-node #:key
@@ -7530,6 +7515,22 @@ use_guixs() {
   (if wayland?
       rofi-wayland
       rofi))
+#+end_src
+**** Text editors
+***** Nano
+#+begin_src scheme
+;; (define (he-nano)
+;;   (list
+;;    ;; (simple-service
+;;    ;;  'nano-add-package
+;;    ;;  home-profile-service-type
+;;    ;;  (list nano))
+
+;;    (simple-service
+;;     'nano-add-config
+;;     home-xdg-configuration-files-service-type
+;;     `(("nano/nanorc"
+;;        ,(local-file (skeleton-file ".config/nano/nanorc")))))))
 #+end_src
 **** Trash
 ***** Doom trash
