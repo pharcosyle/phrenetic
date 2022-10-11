@@ -702,7 +702,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                timezone
                                locale)
   (host-name host-name)
-  (timezone timezone)
+  (timezone (or timezone "Etc/UTC"))
   (locale (or locale "en_US.utf8")))
 #+end_src
 **** File systems and boot
