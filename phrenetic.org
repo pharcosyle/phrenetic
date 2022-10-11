@@ -1443,6 +1443,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
 ****** Firmware :package:version:
+This is very messy, I naively ported the package from Nix. Ideally I'd rewrite it to not use ~curl~ (copy out the byte range with ~dd~ or guile / guix utils), not rely on ~system~ and use it for things like piping and appending command output, etc.
 #+begin_src scheme :tangle (meta-in-dir "packages/facetimehd-firmware.scm")
 (define-module (phrenetic packages facetimehd-firmware)
   #:use-module (guix build-system trivial)
