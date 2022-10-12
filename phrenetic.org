@@ -1734,6 +1734,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-stateless
             he-shells
             he-emacs
+            emacs-program
+            emacs-new-frame
             he-doom
             doom-service
             doom-web
@@ -1784,6 +1786,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-ssh
             he-doom-dired
             he-doom-app-launcher
+            doom-menu
+            doom-app-launcher
             he-rofi
             rofi-menu
             rofi-application-launcher
@@ -1796,6 +1800,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-alacritty
             alacritty-terminal
             he-doom-vterm
+            doom-vterm-terminal
             he-chromium
             chromium-flavors
             he-firefox
@@ -2129,7 +2134,7 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Emacs
 #+begin_src scheme
-(define* (he-emacs #:key (emacs emacs-fully-loaded))
+(define* (he-emacs #:key emacs)
   (list
    (simple-service
     'emacs-add-package
@@ -2141,6 +2146,93 @@ SAVEHIST=$HISTSIZE
     home-environment-variables-service-type
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
+
+(define emacs emacs-fully-loaded)
+
+(define (emacs-program emacs)
+  (file-append emacs "/bin/emacs"))
+
+(define (emacs-new-frame emacs)
+  #~(string-append #$(file-append emacs "/bin/emacsclient") " --create-frame"))
+#+end_src
+**** Handler
+#+begin_src scheme
+(define (emacs-handler emacs)
+  (lambda* (name
+            exprs
+            #:key
+            assistant?
+            assistant-title
+            minibuffer?
+            stdin?)
+    (program-file
+     (string-append "emacs-handler-" name)
+     (let ((eval-expr
+            #~(lambda (args input)
+                `(with-selected-frame
+                  (make-frame '(,@(if #$assistant?
+                                      `((name . ,(string-append #$assistant-title " - Emacs Assistant"))) '())
+                                ,@(if #$minibuffer?
+                                      '((minibuffer . only)) '())))
+                  (let ((args ',args)
+                        (input ,(or input 'nil)))
+                    ,@(if #$minibuffer?
+                          '((unwind-protect
+                             (progn
+                              #$@exprs)
+                             (delete-frame)))
+                          '#$exprs)))))
+           (serialize
+            #~(lambda (expr)
+                (with-output-to-string
+                  (lambda ()
+                    (write expr))))))
+       #~(begin
+           (use-modules ((ice-9 popen) #:select (close-pipe open-pipe*))
+                        ((ice-9 textual-ports) #:select (get-string-all put-string)))
+           (let* ((args (cdr (command-line)))
+                  (input (if #$stdin?
+                             (string-drop-right (get-string-all (current-input-port)) 1)
+                             #f))
+                  (pipe (open-pipe* OPEN_READ
+                                    #$(file-append emacs "/bin/emacsclient")
+                                    "--eval"
+                                    (#$serialize
+                                     (#$eval-expr args input)))))
+             (put-string (current-output-port)
+                         (let ((output (get-string-all pipe)))
+                           ;; `emacsclient' output is a sexp so strings will have quotes around them. Work around this particular case, it's presently the only one that matters (for dmenu-like functionality).
+                           (string-trim-both (string-drop-right output 1) #\")))
+             (close-pipe pipe)))))))
+
+(define emacs-assistant-window-params
+  '((#:width . 50)
+    (#:height . 50)))
+#+end_src
+**** XDG service
+#+begin_src scheme
+(define* (emacs-xdg-service name
+                            xdg-name
+                            program
+                            #:key
+                            (exec-argument "%u")
+                            default-for)
+  (let ((file (symbol-append 'emacs- name)))
+    (simple-service
+     (symbol-append 'emacs-xdg- name)
+     home-xdg-mime-applications-service-type
+     (home-xdg-mime-applications-configuration
+      (desktop-entries
+       (list
+        (xdg-desktop-entry
+         (file (symbol->string file))
+         (name (string-append "Emacs [" xdg-name "]"))
+         (config `((exec . ,#~(string-append #$program " " #$exec-argument))
+                   (icon . "emacs")))
+         (type 'application))))
+      (default (map (lambda (mime-type)
+                      `(,mime-type . ,(symbol-append file '.desktop)))
+                    (or default-for '())))))))
 #+end_src
 **** Emacs packages
 :PROPERTIES:
@@ -4809,8 +4901,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       "s-J" #'scroll-up-command
       "s-K" #'scroll-down-command)
 
-    (map! "s-A" #'app-launcher-run-app)
-
     ;; I don't think I'll ever need this with Sway. Is it worth keeping this and having an "I'm not on Sway / some WM" conditional around it?
     ;; (add-to-list 'initial-frame-alist '(fullscreen . fullboth))
 
@@ -6149,6 +6239,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                   application-launcher
                   default-terminal
                   (backup-terminal default-terminal)
+                  emacs
+                  emacs-new-frame
                   (bg-image wallpaper)
                   extra-config)
   (list
@@ -6213,6 +6305,8 @@ Some colors from the original Atom theme on which I based mine that might be use
         (bindsym $mod+Return exec $term)
         (bindsym --to-code $mod+Shift+d exec $menu)
         (bindsym --to-code $mod+Control+Shift+l exec $lock)
+        (bindsym $mod+y exec ,emacs-new-frame)
+        (bindsym $mod+Shift+y exec ,emacs)
 
         ;; Manipulating windows.
         (bindsym --to-code $mod+Shift+c kill)
@@ -6288,6 +6382,13 @@ Some colors from the original Atom theme on which I based mine that might be use
                  -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
                  -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
         (gaps left 78) ; To accommodate the crack in my screen.
+
+        ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+        (for_window "[title=\".* - Emacs Assistant\"]"
+                    floating enable,
+                    resize set
+                    width ,(assoc-ref emacs-assistant-window-params #:width) ppt
+                    height ,(assoc-ref emacs-assistant-window-params #:height) ppt)
 
         ,@(or extra-config '())))))
 
@@ -7426,25 +7527,34 @@ use_guixs() {
 #+begin_src scheme
 (define* (he-doom-dired #:key
                         stateless?
-                        icons?)
-  (let ((dirvish? #t))
+                        icons?
+                        emacs-handler)
+  (let ((name 'dired)
+        (dirvish? #t))
     (append
-     (let ((name 'dired))
-       (list
-        (doom-service
-         name
-         #:modules `((#:emacs
-                      (dired ,@(if icons? '(+icons) '())
-                             ,@(if dirvish? '(+dirvish) '())))))
+     (list
+      (doom-service
+       name
+       #:modules `((#:emacs
+                    (dired ,@(if icons? '(+icons) '())
+                           ,@(if dirvish? '(+dirvish) '())))))
 
-        (when (and stateless? dirvish?)
-          (doom-stateless-service
-           name
-           #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
-                      (#:store . #:machine)))))))
+      (when (and stateless? dirvish?)
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
+                    (#:store . #:machine))))))
 
      (if dirvish?
-         (doom-transient) '()))))
+         (doom-transient) '())
+
+     (list
+      (emacs-xdg-service name
+                         "file"
+                         (emacs-handler
+                          "dired"
+                          '((dired (car args))))
+                         #:default-for '(inode/directory))))))
 #+end_src
 **** Menus and launchers
 ***** Doom app launcher
@@ -7458,6 +7568,23 @@ use_guixs() {
                 :recipe (:host github
                          :repo "SebastienWae/app-launcher")
                 :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
+
+(define (doom-menu emacs-handler)
+  (emacs-handler
+   "menu"
+   '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
+   #:assistant? #t
+   #:assistant-title "Menu"
+   #:minibuffer? #t
+   #:stdin? #t))
+
+(define (doom-app-launcher emacs-handler)
+  (emacs-handler
+   "app-launcher"
+   '((app-launcher-run-app))
+   #:assistant? #t
+   #:assistant-title "Application Launcher"
+   #:minibuffer? #t))
 #+end_src
 ***** Rofi
 #+begin_src scheme
@@ -7741,6 +7868,11 @@ Does this belong in [[*Apps][Apps]]?
       (home-zsh-extension
        (zshrc
         (list (local-file "zsh-vterm"))))))))
+
+(define (doom-vterm-terminal emacs-handler)
+  (emacs-handler
+   "vterm"
+   '((+vterm/here))))
 #+end_src
 ******* Configure zsh for vterm
 - TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
@@ -8082,8 +8214,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   login-manager
                   sessions
                   projects)
-  (let ((login-shell #:shell/bash)
-        (doom-icons? #:t))
+  (let* ((login-shell #:shell/bash)
+         (emacs emacs)
+         (emacs-handler (emacs-handler emacs))
+         (doom-icons? #:t))
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
@@ -8094,7 +8228,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 #:doom-tree-sitter? doom-tree-sitter?
                 #:login-shell login-shell
                 #:interactive-shells interactive-shells)
-     (he-emacs)
+     (he-emacs #:emacs emacs)
      (if doom?
          (he-doom #:stateless? stateless?
                   #:services (doom-main #:stateless? stateless?
@@ -8129,7 +8263,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            #:evil? doom-evil?)
               '())
           (he-doom-dired #:stateless? stateless?
-                         #:icons? doom-icons?)
+                         #:icons? doom-icons?
+                         #:emacs-handler emacs-handler)
           (he-doom-app-launcher)
           (he-doom-trash))
          '())
@@ -8194,8 +8329,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                             #:screen-locker (swaylock-screen-locker-immediate)
                             #:idle-manager (swayidle-idle-manager)
-                            #:application-launcher (rofi-application-launcher #:wayland? wayland?)
-                            #:default-terminal (alacritty-terminal))
+                            #:application-launcher (doom-app-launcher emacs-handler)
+                            ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
+                            #:default-terminal (alacritty-terminal)
+                            #:backup-terminal (doom-vterm-terminal emacs-handler)
+                            #:emacs (emacs-program emacs)
+                            #:emacs-new-frame (emacs-new-frame emacs))
                    (he-swaylock #:colors colors
                                 #:font font-variable-pitch
                                 #:date-format date-format
@@ -8203,7 +8342,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    (he-swayidle #:sway? sway?
                                 #:screen-locker (swaylock-screen-locker))
                    (he-mako #:sway? sway?
-                            #:menu (rofi-menu #:wayland? wayland?)
+                            #:menu (doom-menu emacs-handler)
                             #:colors colors
                             #:font font-variable-pitch)
                    (he-waybar #:colors colors
