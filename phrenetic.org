@@ -1736,7 +1736,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-stateless
             he-shells
             he-emacs
-            emacs-program
+            emacs-editor
             emacs-new-frame
             he-doom
             doom-service
@@ -2140,7 +2140,7 @@ SAVEHIST=$HISTSIZE
 
 (define emacs emacs-fully-loaded)
 
-(define (emacs-program emacs)
+(define (emacs-editor emacs)
   (file-append emacs "/bin/emacs"))
 
 (define (emacs-new-frame emacs)
@@ -8258,7 +8258,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
                             #:default-terminal (alacritty-terminal)
                             #:backup-terminal (doom-vterm-terminal emacs-handler)
-                            #:emacs (emacs-program emacs)
+                            #:emacs (emacs-editor emacs)
                             #:emacs-new-frame (emacs-new-frame emacs))
                    (he-swaylock #:colors colors
                                 #:font font-variable-pitch
