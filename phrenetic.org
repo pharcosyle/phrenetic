@@ -5589,7 +5589,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       stateless?
                       dbus?)
   (append
-   (pipewire-services #:stateless? stateless?)
+   (pipewire-services #:stateless? stateless?
+                      #:dbus? dbus?)
    (wireplumber-services #:stateless? stateless?)))
 
 (define* (pipewire-services #:key
