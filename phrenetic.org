@@ -331,11 +331,6 @@ Run with ~sudo~.
        (with-syntax ((os (datum->syntax x 'os)))
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
-
-(define (remove-services services kinds)
-  (remove (lambda (s)
-            (member (service-kind s) kinds))
-          services))
 #+end_src
 *** Source
 #+begin_src scheme
@@ -1091,18 +1086,6 @@ Must succeed [[*Bootloader][Bootloader]] component.
       (macbook-wireless #:bluetooth? bluetooth?)
       macbook-camera
       macbook-power-key))
-
-(define (with-blacklist kernel-args new-kernel-args)
-  (let* ((blacklist-param "modprobe.blacklist")
-         (blacklist? (lambda (arg)
-                       (string-prefix? blacklist-param arg))))
-    (if (any blacklist? kernel-args)
-        (map (lambda (arg)
-               (if (blacklist? arg)
-                   (string-append arg "," new-kernel-args)
-                   arg))
-             kernel-args)
-        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
 #+end_src
 ***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
@@ -1535,6 +1518,27 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 (define macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
+***** Shared
+#+begin_src scheme
+(define (with-blacklist kernel-args new-kernel-args)
+  (let* ((blacklist-param "modprobe.blacklist")
+         (blacklist? (lambda (arg)
+                       (string-prefix? blacklist-param arg))))
+    (if (any blacklist? kernel-args)
+        (map (lambda (arg)
+               (if (blacklist? arg)
+                   (string-append arg "," new-kernel-args)
+                   arg))
+             kernel-args)
+        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
+#+end_src
+*** Shared
+#+begin_src scheme
+(define (remove-services services kinds)
+  (remove (lambda (s)
+            (member (service-kind s) kinds))
+          services))
+#+end_src
 ** Templates
 #+begin_src scheme
 (define* (os-base os
@@ -1814,14 +1818,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (filter service? services))))
 #+end_src
 ** Components
-#+begin_src scheme
-(define* (skeleton-file file)
-  (-> (default-skeletons)
-      (assoc-ref file)
-      car))
-
-(define very-big-history 1000000)
-#+end_src
 *** Stateless
 #+begin_src scheme
 (define* (he-stateless #:key
@@ -5237,24 +5233,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    (#:store . #:persist))))))))
 #+end_src
 *** Package management
-#+begin_src scheme
-(define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils))
-    #~(lambda (profiles)
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-
-        (let ((no-follow-file-exists? (lambda (file)
-                                        (false-if-exception (lstat file)))))
-          (for-each
-           (lambda (i)
-             (let ((link (car i))
-                   (profile (cdr i)))
-               (when (and (no-follow-file-exists? profile)
-                          (not (no-follow-file-exists? link)))
-                 (mkdir-p (dirname link))
-                 (symlink profile link))))
-           profiles)))))
-#+end_src
 **** Guix
 #+begin_src scheme
 (define* (he-guix #:key
@@ -5532,6 +5510,25 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # flatpak install --user flathub-beta com.obsproject.Studio
 # ...
 #+end_src
+**** Shared
+#+begin_src scheme
+(define stateless-ensure-profiles-gexp
+  (with-imported-modules '((guix build utils))
+    #~(lambda (profiles)
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (let ((no-follow-file-exists? (lambda (file)
+                                        (false-if-exception (lstat file)))))
+          (for-each
+           (lambda (i)
+             (let ((link (car i))
+                   (profile (cdr i)))
+               (when (and (no-follow-file-exists? profile)
+                          (not (no-follow-file-exists? link)))
+                 (mkdir-p (dirname link))
+                 (symlink profile link))))
+           profiles)))))
+#+end_src
 *** Console
 **** KMonad
 #+begin_src scheme
@@ -5568,21 +5565,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (stop #~(make-kill-destructor)))))
 #+end_src
 *** Desktop
-#+begin_src scheme
-(define* (ini-file name config
-                   #:key (ini-serialize ini-serialize))
-  (apply mixed-text-file name (ini-serialize config)))
-
-(define (font-specification font)
-  (string-join
-   (list
-    (assoc-ref font #:font/name)
-    (number->string
-     (assoc-ref font #:font/size)))
-   " "))
-
-(define wallpaper (local-file "alucard_bg.png"))
-#+end_src
 **** Pipewire
 #+begin_src scheme
 (define* (he-pipewire #:key
@@ -6109,43 +6091,6 @@ Some colors from the original Atom theme on which I based mine that might be use
               (symlink #$source (string-append bin "/default-session-start"))))))))
 #+end_src
 **** Sessions
-#+begin_src scheme
-(define* (session-start exe #:rest content)
-  (package
-    (inherit blank-package)
-    (name (string-append "session-" exe))
-    (source (apply mixed-text-file exe content))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:builder
-       ,#~(begin
-            (let* ((bin (string-append #$output "/bin"))
-                   (f (string-append bin "/" #$exe)))
-              (mkdir #$output)
-              (mkdir bin)
-              (copy-file #$source f)
-              (chmod f #o555)))))))
-
-(define (xdg-current-desktop-env-var val)
-  `("XDG_CURRENT_DESKTOP" . ,val)) ; "Normally" provided by a login manager.
-
-(define xdg-session-type-wayland-env-var
-  '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a login manager.
-
-;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
-(define* (wayland-env-vars #:key pipewire?)
- ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
- (append
-  '(("SDL_VIDEODRIVER" . "wayland")
-    ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
-    ("CLUTTER_BACKEND" . "wayland")
-    ("ELM_ENGINE" . "wayland_egl")
-    ("ECORE_EVAS_ENGINE" . "wayland-egl")
-    ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
-    ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
-  (if pipewire?
-      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; Might not be necessary: as far as I can tell this is only relevant to Chromium (equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer) and the Guix already sets `rtc_use_pipewire=true' in the ungoogled-chromium configure flags.
-#+end_src
 ***** Desktop environments
 ****** GNOME
 #+begin_src scheme
@@ -6941,6 +6886,60 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (home-kanshi-configuration
      (config
       `(,@(or extra-config '())))))))
+#+end_src
+***** Shared
+#+begin_src scheme
+(define* (session-start exe #:rest content)
+  (package
+    (inherit blank-package)
+    (name (string-append "session-" exe))
+    (source (apply mixed-text-file exe content))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:builder
+       ,#~(begin
+            (let* ((bin (string-append #$output "/bin"))
+                   (f (string-append bin "/" #$exe)))
+              (mkdir #$output)
+              (mkdir bin)
+              (copy-file #$source f)
+              (chmod f #o555)))))))
+
+(define (xdg-current-desktop-env-var val)
+  `("XDG_CURRENT_DESKTOP" . ,val)) ; "Normally" provided by a login manager.
+
+(define xdg-session-type-wayland-env-var
+  '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a login manager.
+
+;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
+(define* (wayland-env-vars #:key pipewire?)
+ ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
+ (append
+  '(("SDL_VIDEODRIVER" . "wayland")
+    ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
+    ("CLUTTER_BACKEND" . "wayland")
+    ("ELM_ENGINE" . "wayland_egl")
+    ("ECORE_EVAS_ENGINE" . "wayland-egl")
+    ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
+    ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+  (if pipewire?
+      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; Might not be necessary: as far as I can tell this is only relevant to Chromium (equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer) and the Guix already sets `rtc_use_pipewire=true' in the ungoogled-chromium configure flags.
+#+end_src
+**** Shared
+#+begin_src scheme
+(define* (ini-file name config
+                   #:key (ini-serialize ini-serialize))
+  (apply mixed-text-file name (ini-serialize config)))
+
+(define (font-specification font)
+  (string-join
+   (list
+    (assoc-ref font #:font/name)
+    (number->string
+     (assoc-ref font #:font/size)))
+   " "))
+
+(define wallpaper (local-file "alucard_bg.png"))
 #+end_src
 *** Programs
 **** AWS
@@ -8110,6 +8109,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (equal? (service-kind s) home-profile-service-type))
      svcs))
 #+end_src
+*** Shared
+#+begin_src scheme
+(define* (skeleton-file file)
+  (-> (default-skeletons)
+      (assoc-ref file)
+      car))
+
+(define very-big-history 1000000)
+#+end_src
 ** Templates
 #+begin_src scheme
 (define* (he-base #:key
@@ -8355,25 +8363,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             extend-proc
             activate-gexp
             diff-tool-package))
-
-(define state-dir-lookup
-  #~(lambda (persist-dir machine-dir)
-      (lambda (k)
-        (case k
-          ((#:persist) persist-dir)
-          ((#:machine) machine-dir)))))
-
-(define symlink-to-state?
-  (with-imported-modules '((guix build utils))
-    #~(lambda (state-dirs)
-        (lambda (file)
-          (use-modules ((guix build utils) #:select (symbolic-link?))
-                       ((srfi srfi-1) #:select (any)))
-
-          (and (symbolic-link? file)
-               (any (lambda (state-dir)
-                      (string-prefix? state-dir (readlink file)))
-                    state-dirs))))))
 #+end_src
 *** Services
 **** Service extension
@@ -8612,6 +8601,27 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               (mkdir bin)
               (symlink #$source (string-append bin "/" #$bin-name))))))))
 #+end_src
+*** Shared
+#+begin_src scheme
+(define state-dir-lookup
+  #~(lambda (persist-dir machine-dir)
+      (lambda (k)
+        (case k
+          ((#:persist) persist-dir)
+          ((#:machine) machine-dir)))))
+
+(define symlink-to-state?
+  (with-imported-modules '((guix build utils))
+    #~(lambda (state-dirs)
+        (lambda (file)
+          (use-modules ((guix build utils) #:select (symbolic-link?))
+                       ((srfi srfi-1) #:select (any)))
+
+          (and (symbolic-link? file)
+               (any (lambda (state-dir)
+                      (string-prefix? state-dir (readlink file)))
+                    state-dirs))))))
+#+end_src
 * Utils
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "phrenetic/utils.scm")
@@ -8752,6 +8762,24 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (home-page #f)
     (license #f)))
 
+(define* (with-git-version pkg #:key version commit hash)
+  (with-git pkg
+            #:upstream-version version
+            #:commit commit
+            #:hash hash))
+
+(define* (with-git-commit pkg
+                          #:key
+                          (upstream-version (package-version pkg))
+                          (revision "0")
+                          commit
+                          hash)
+  (with-git pkg
+            #:upstream-version upstream-version
+            #:revision revision
+            #:commit commit
+            #:hash hash))
+
 (define* (with-git pkg
                    #:key
                    upstream-version
@@ -8773,24 +8801,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
-
-(define* (with-git-version pkg #:key version commit hash)
-  (with-git pkg
-            #:upstream-version version
-            #:commit commit
-            #:hash hash))
-
-(define* (with-git-commit pkg
-                          #:key
-                          (upstream-version (package-version pkg))
-                          (revision "0")
-                          commit
-                          hash)
-  (with-git pkg
-            #:upstream-version upstream-version
-            #:revision revision
-            #:commit commit
-            #:hash hash))
 
 (define (with-git-url pkg url)
   (package
