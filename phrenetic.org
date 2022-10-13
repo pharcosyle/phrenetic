@@ -6167,7 +6167,7 @@ Some colors from the original Atom theme on which I based mine that might be use
     'sway-add-packages
     home-profile-service-type
     (list (sway-start-package #:pipewire? pipewire?)
-          qtwayland ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency.
+          qtwayland ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
           xdg-desktop-portal-wlr
