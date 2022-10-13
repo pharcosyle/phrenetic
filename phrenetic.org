@@ -1793,7 +1793,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             ;; he-nano
             he-doom-trash
             he-git
-            he-miscellaneous
+            he-misc-progs
             he-pavucontrol
             he-gimp
             he-alacritty
@@ -7670,12 +7670,12 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                 (#:ui
                  (vc-gutter +pretty)))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
 #+end_src
-**** Miscellaneous
+**** Miscellaneous programs
 #+begin_src scheme
-(define (he-miscellaneous)
+(define (he-misc-progs)
   (list
    (simple-service
-    'miscellaneous-add-packages
+    'misc-progs-add-packages
     home-profile-service-type
     (list curl
           zip
@@ -8194,7 +8194,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           (he-doom-app-launcher)
           (he-doom-trash))
          '())
-     (he-miscellaneous)
+     (he-misc-progs)
      (if console?
          (if kmonad?
              (he-kmonad #:doom? doom?) '())
