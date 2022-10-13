@@ -6287,7 +6287,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
         (floating_modifier $mod normal)
 
-        (bindsym --to-code $mod+Shift+r reload)
+        (bindsym $mod+Shift+r reload)
 
         ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
         ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
@@ -6299,14 +6299,14 @@ Some colors from the original Atom theme on which I based mine that might be use
         ;; Launching external applications.
         (bindsym $mod+Control+Shift+Return exec $backup-term)
         (bindsym $mod+Return exec $term)
-        (bindsym --to-code $mod+Shift+d exec $menu)
-        (bindsym --to-code $mod+Control+Shift+l exec $lock)
+        (bindsym $mod+Shift+d exec $menu)
+        (bindsym $mod+Control+Shift+l exec $lock)
         (bindsym $mod+y exec ,emacs-new-frame)
         (bindsym $mod+Shift+y exec ,emacs)
 
         ;; Manipulating windows.
-        (bindsym --to-code $mod+Shift+c kill)
-        (bindsym --to-code $mod+Shift+f fullscreen)
+        (bindsym $mod+Shift+c kill)
+        (bindsym $mod+Shift+f fullscreen)
         (bindsym $mod+Shift+space floating)
         (bindsym $mod+Control+space focus mode_toggle)
         (bindsym $mod+h focus left)
@@ -6329,8 +6329,8 @@ Some colors from the original Atom theme on which I based mine that might be use
            (iota 10 1))
 
         ;; Scratchpad settings.
-        (bindsym --to-code $mod+Shift+minus move scratchpad)
-        (bindsym --to-code $mod+minus scratchpad show)
+        (bindsym $mod+Shift+minus move scratchpad)
+        (bindsym $mod+minus scratchpad show)
 
         (default_border pixel)
         (default_floating_border pixel)
