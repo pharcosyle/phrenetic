@@ -1790,7 +1790,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             doom-app-launcher
             he-rofi
             rofi-menu
-            rofi-application-launcher
+            rofi-app-launcher
             ;; he-nano
             he-doom-trash
             he-git
@@ -6236,7 +6236,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                   (xwayland? #t)
                   (screen-locker #~(string-append #$(file-append elogind "/bin/loginctl") " lock-session"))
                   idle-manager
-                  application-launcher
+                  app-launcher
                   default-terminal
                   (backup-terminal default-terminal)
                   emacs
@@ -6286,7 +6286,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (set $mod ,sway-mod)
         (set $term ,default-terminal)
         (set $backup-term ,backup-terminal)
-        (set $menu ,application-launcher)
+        (set $menu ,app-launcher)
         (set $lock ,screen-locker)
 
         (floating_modifier $mod normal)
@@ -7583,7 +7583,7 @@ use_guixs() {
    "app-launcher"
    '((app-launcher-run-app))
    #:assistant? #t
-   #:assistant-title "Application Launcher"
+   #:assistant-title "App Launcher"
    #:minibuffer? #t))
 #+end_src
 ***** Rofi
@@ -7639,7 +7639,7 @@ use_guixs() {
 (define* (rofi-menu #:key wayland?)
   #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -dmenu -p"))
 
-(define* (rofi-application-launcher #:key wayland?)
+(define* (rofi-app-launcher #:key wayland?)
   #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -show drun"))
 
 (define (get-rofi wayland?)
@@ -8329,7 +8329,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                             #:screen-locker (swaylock-screen-locker-immediate)
                             #:idle-manager (swayidle-idle-manager)
-                            #:application-launcher (doom-app-launcher emacs-handler)
+                            #:app-launcher (doom-app-launcher emacs-handler)
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
                             #:default-terminal (alacritty-terminal)
                             #:backup-terminal (doom-vterm-terminal emacs-handler)
