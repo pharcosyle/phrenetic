@@ -6598,16 +6598,17 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
          (let ((clr (lambda* (color #:optional alpha)
                       (as-> color $
                             (assoc-ref colors $)
-                            (string-append $ (or alpha ""))))))
+                            (string-append $ (or alpha ""))
+                            (string->symbol $)))))
            `((global ((font . ,(string->symbol (font-specification font)))
-                      (max-icon-size . ,(string->symbol "32"))
-                      (text-color . ,(string->symbol (clr #:color/fg)))
-                      (background-color . ,(string->symbol (clr #:color/bg "1A"))) ; TODO why isn't the transparency working right?
-                      (border-color . ,(string->symbol (clr #:color/accent)))
-                      (border-size . ,(string->symbol "2"))
-                      (border-radius . ,(string->symbol "8"))))
-             (urgency=low ((border-color . ,(string->symbol (clr #:color/green)))))
-             (urgency=high ((border-color . ,(string->symbol (clr #:color/red)))))))
+                      (max-icon-size . 32)
+                      (text-color . ,(clr #:color/fg))
+                      (background-color . ,(clr #:color/bg "1A")) ; TODO why isn't the transparency working right?
+                      (border-color . ,(clr #:color/accent))
+                      (border-size . 2)
+                      (border-radius . 8)))
+             (urgency=low ((border-color . ,(clr #:color/green))))
+             (urgency=high ((border-color . ,(clr #:color/red))))))
          #:ini-serialize
          (lambda (config)
            (ini-serialize config #:equal-string "="))))))
