@@ -5587,18 +5587,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (he-pipewire #:key
                       stateless?
-                      dbus?
-                      sway?)
+                      dbus?)
   (append
-   (pipewire-services #:stateless? stateless?
-                      #:sway? sway?)
-   (wireplumber-services #:stateless? stateless?
-                         #:sway? sway?)))
+   (pipewire-services #:stateless? stateless?)
+   (wireplumber-services #:stateless? stateless?)))
 
 (define* (pipewire-services #:key
                             stateless?
-                            dbus?
-                            sway?)
+                            dbus?)
   (list
    (simple-service
     'pipewire-add-package
@@ -5623,8 +5619,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))
+      (stop  #~(make-kill-destructor)))
      (shepherd-service
       (provision '(pipewire-pulse pulseaudio))
       (requirement '(pipewire pipewire-media-session))
@@ -5638,8 +5633,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))))
+      (stop  #~(make-kill-destructor)))))
 
    (simple-service
     'pipewire-add-alsa-config
@@ -5658,13 +5652,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
          "}" "\n"))))
 
-   (when sway?
-     (simple-service
-      'pipewire-sway-start
-      home-sway-service-type
-      '((exec herd start pipewire)
-        (exec herd start pipewire-pulse))))
-
    (when stateless?
      (home-stateless-service
       'pipewire
@@ -5674,9 +5661,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 ***** Wireplumber
 #+begin_src scheme
-(define* (wireplumber-services #:key
-                               stateless?
-                               sway?)
+(define* (wireplumber-services #:key stateless?)
   (list
    (simple-service
     'wireplumber-add-package
@@ -5700,14 +5685,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
-      (stop  #~(make-kill-destructor))
-      (auto-start? #f))))
-
-   (when sway?
-     (simple-service
-      'wireplumber-sway-start
-      home-sway-service-type
-      '((exec herd start wireplumber))))
+      (stop  #~(make-kill-destructor)))))
 
    (when stateless?
      (home-stateless-service
@@ -8228,8 +8206,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
            (append
             (if pipewire?
                 (he-pipewire #:stateless? stateless?
-                             #:dbus? dbus?
-                             #:sway? sway?)
+                             #:dbus? dbus?)
                 '())
             (he-flatpak #:stateless? stateless?
                         #:wayland? wayland?)
