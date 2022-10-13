@@ -2167,7 +2167,9 @@ SAVEHIST=$HISTSIZE
             #~(lambda (args input)
                 `(with-selected-frame
                   (make-frame '(,@(if #$assistant?
-                                      `((name . ,(string-append #$assistant-title " - Emacs Assistant"))) '())
+                                      `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
+                                        (alpha . 90)) ; Upgrade this to `alpha-background' when Emacs 29 is released.
+                                      '())
                                 ,@(if #$minibuffer?
                                       '((minibuffer . only)) '())))
                   (let ((args ',args)
