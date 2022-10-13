@@ -1704,7 +1704,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
   #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep rofi wl-clipboard))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
@@ -1713,8 +1713,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
-  #:use-module (rde home services xdisorg)
-  #:use-module ((rde packages) #:select (rofi-wayland (sway-latest . sway)))
+  #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
@@ -1788,9 +1787,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-app-launcher
             doom-menu
             doom-app-launcher
-            he-rofi
-            rofi-menu
-            rofi-app-launcher
             ;; he-nano
             he-doom-trash
             he-git
@@ -7586,64 +7582,7 @@ use_guixs() {
 #+end_src
 ***** Rofi
 #+begin_src scheme
-(define* (he-rofi #:key
-                  stateless?
-                  wayland?
-                  colors
-                  font)
-  (list
-   (service
-    home-rofi-service-type
-    (home-rofi-configuration
-     (rofi (get-rofi wayland?))
-     ;; TODO Trying out Andrew Tropin's confguration as-is for now, revisit later.
-     (config-rasi
-      `((configuration
-         ((modi . "run,ssh,drun")
-          (drun-show-actions . #t)
-          (show-icons . #t)
-          (font . ,(font-specification font))
-
-          (kb-row-tab . "")
-          (kb-row-select . "Tab")
-          (kb-secondary-paste . "Control+y")
-          (kb-remove-word-forward . "Alt+d")
-          (kb-remove-word-back . "Control+w,Control+BackSpace")
-          (kb-clear-line . "Control+slash")
-          (kb-page-next . "Control+v")
-          (kb-page-prev . "Alt+v")))
-
-        ,#~"@theme \"paper-float\""
-        ;; ,@(let ((clr (lambda* (color #:optional alpha)
-        ;;                (as-> color $
-        ;;                      (assoc-ref colors $)
-        ;;                      (string-append $ (or alpha ""))))))
-        ;;     `((*
-        ;;        (;; (white . ,(clr #:color/fg))
-        ;;         ;; (black . ,(clr #:color/bg))
-        ;;         ;; (grey . ,(clr #:color/...))
-        ;;         ;; (blue . ,(clr #:color/blue))
-        ;;         (background . "#000000BF")))))
-        ;; (window
-        ;;  ((transparency . "real")))
-        ))))
-
-   (when stateless?
-     (home-stateless-service
-      'rofi
-      #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:persist)))))))
-
-(define (rofi-menu wayland?)
-  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -dmenu -p"))
-
-(define (rofi-app-launcher wayland?)
-  #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -show drun"))
-
-(define (get-rofi wayland?)
-  (if wayland?
-      rofi-wayland
-      rofi))
+;; ...
 #+end_src
 **** Text editors
 ***** Nano
@@ -8352,10 +8291,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    ;; (he-kanshi)
                    ))
                 '())
-            (he-rofi #:stateless? stateless?
-                     #:wayland? wayland?
-                     #:colors colors
-                     #:font font-variable-pitch)
             (let ((gtk (gtk-services #:stateless? stateless?
                                      #:theme theme
                                      #:font font-variable-pitch
