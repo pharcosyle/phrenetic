@@ -7636,10 +7636,10 @@ use_guixs() {
       #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:persist)))))))
 
-(define* (rofi-menu #:key wayland?)
+(define (rofi-menu wayland?)
   #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -dmenu -p"))
 
-(define* (rofi-app-launcher #:key wayland?)
+(define (rofi-app-launcher wayland?)
   #~(string-append #$(file-append (get-rofi wayland?) "/bin/rofi") " -show drun"))
 
 (define (get-rofi wayland?)
