@@ -2159,55 +2159,59 @@ SAVEHIST=$HISTSIZE
 #+end_src
 **** Handler
 #+begin_src scheme
-(define (emacs-handler emacs)
-  (lambda* (name
-            exprs
-            #:key
-            assistant?
-            assistant-title
-            minibuffer?
-            stdin?)
-    (program-file
-     (string-append "emacs-handler-" name)
-     (let ((eval-expr
-            #~(lambda (args input)
-                `(with-selected-frame
-                  (make-frame '(,@(if #$assistant?
-                                      `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
-                                        (alpha . 90)) ; Upgrade this to `alpha-background' when Emacs 29 is released.
-                                      '())
-                                ,@(if #$minibuffer?
-                                      '((minibuffer . only)) '())))
-                  (let ((args ',args)
-                        (input ,(or input 'nil)))
-                    ,@(if #$minibuffer?
-                          '((unwind-protect
-                             (progn
-                              #$@exprs)
-                             (delete-frame)))
-                          '#$exprs)))))
-           (serialize
-            #~(lambda (expr)
-                (with-output-to-string
-                  (lambda ()
-                    (write expr))))))
-       #~(begin
-           (use-modules ((ice-9 popen) #:select (close-pipe open-pipe*))
-                        ((ice-9 textual-ports) #:select (get-string-all put-string)))
-           (let* ((args (cdr (command-line)))
-                  (input (if #$stdin?
-                             (string-drop-right (get-string-all (current-input-port)) 1)
-                             #f))
-                  (pipe (open-pipe* OPEN_READ
-                                    #$(file-append emacs "/bin/emacsclient")
-                                    "--eval"
-                                    (#$serialize
-                                     (#$eval-expr args input)))))
-             (put-string (current-output-port)
-                         (let ((output (get-string-all pipe)))
-                           ;; `emacsclient' output is a sexp so strings will have quotes around them. Work around this particular case, it's presently the only one that matters (for dmenu-like functionality).
-                           (string-trim-both (string-drop-right output 1) #\")))
-             (close-pipe pipe)))))))
+(define* (emacs-handler emacs #:rest more)
+  (lambda* (#:rest args)
+    (apply emacs-handler* emacs args)))
+
+(define* (emacs-handler* emacs
+                         name
+                         exprs
+                         #:key
+                         assistant?
+                         assistant-title
+                         minibuffer?
+                         stdin?)
+  (program-file
+   (string-append "emacs-handler-" name)
+   (let ((eval-expr
+          #~(lambda (args input)
+              `(with-selected-frame
+                (make-frame '(,@(if #$assistant?
+                                    `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
+                                      (alpha . 90)) ; Upgrade this to `alpha-background' when Emacs 29 is released.
+                                    '())
+                              ,@(if #$minibuffer?
+                                    '((minibuffer . only)) '())))
+                (let ((args ',args)
+                      (input ,(or input 'nil)))
+                  ,@(if #$minibuffer?
+                        '((unwind-protect
+                           (progn
+                            #$@exprs)
+                           (delete-frame)))
+                        '#$exprs)))))
+         (serialize
+          #~(lambda (expr)
+              (with-output-to-string
+                (lambda ()
+                  (write expr))))))
+     #~(begin
+         (use-modules ((ice-9 popen) #:select (close-pipe open-pipe*))
+                      ((ice-9 textual-ports) #:select (get-string-all put-string)))
+         (let* ((args (cdr (command-line)))
+                (input (if #$stdin?
+                           (string-drop-right (get-string-all (current-input-port)) 1)
+                           #f))
+                (pipe (open-pipe* OPEN_READ
+                                  #$(file-append emacs "/bin/emacsclient")
+                                  "--eval"
+                                  (#$serialize
+                                   (#$eval-expr args input)))))
+           (put-string (current-output-port)
+                       (let ((output (get-string-all pipe)))
+                         ;; `emacsclient' output is a sexp so strings will have quotes around them. Work around this particular case, it's presently the only one that matters (for dmenu-like functionality).
+                         (string-trim-both (string-drop-right output 1) #\")))
+           (close-pipe pipe))))))
 
 (define emacs-assistant-window-params
   '((#:width . 50)
