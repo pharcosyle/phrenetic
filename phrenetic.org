@@ -1715,6 +1715,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (default-skeletons))
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
+  #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
@@ -1803,6 +1804,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-git
             he-misc-progs
             he-pavucontrol
+            he-zoom
             he-gimp
             he-alacritty
             alacritty-terminal
@@ -7792,6 +7794,31 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 
    (or gtk-services '())))
 #+end_src
+***** Messaging
+****** Zoom
+Doesn't work for me at the moment. As of this writing the package is brand new so wait a while and see if there any developments/updates/fixes (though I suspect the issue(s) lie with me, I was getting errors, possibly similar ones, when I tried to install Zoom through Nix).
+#+begin_src scheme
+(define* (he-zoom #:key
+                 stateless?
+                 qt-services)
+  (append
+   (list
+    (simple-service
+     'zoom-add-package
+     home-profile-service-type
+     (list zoom))
+
+    ;; (when stateless?
+    ;;   (home-stateless-service
+    ;;    'zoom
+    ;;    #:state '(((#:path . ("zoom/" #:xdg-base "XDG_CONFIG_HOME"))
+    ;;               (#:store . #:machine))
+    ;;              ((#:path . ("zoom/" #:xdg-base "XDG_DATA_HOME"))
+    ;;               (#:store . #:machine)))))
+    )
+
+   (or qt-services '())))
+#+end_src
 ***** Image processing
 ****** GIMP
 #+begin_src scheme
@@ -8391,6 +8418,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               (append
                (he-pavucontrol #:stateless? stateless?
                                #:gtk-services gtk)
+               ;; (he-zoom #:stateless? stateless?
+               ;;          #:qt-services qt)
                ;; (he-gimp #:stateless? stateless?
                ;;          #:gtk-services gtk)
                (he-alacritty #:colors colors
