@@ -6793,8 +6793,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                         ""))
      (format-source-muted . "")
      (tooltip-format . "{source_desc} is on {source_volume}%")
-     (on-click . ,#~(let ((cmd (string-append #$(file-append pavucontrol "/bin/pavucontrol") " --tab=4")))
-                      (string-append "\"" cmd "\""))))))
+     (on-click . ,#~(let ((cmd (list
+                                #$(file-append pavucontrol "/bin/pavucontrol")
+                                "--tab=4")))
+                      (string-append "\"" (string-join cmd) "\""))))))
 #+end_src
 ******** Tray
 #+begin_src scheme
