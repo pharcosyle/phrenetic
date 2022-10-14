@@ -2142,10 +2142,13 @@ SAVEHIST=$HISTSIZE
 (define emacs emacs-fully-loaded)
 
 (define (emacs-editor emacs)
-  (file-append emacs "/bin/emacs"))
+  (list
+   (file-append emacs "/bin/emacs")))
 
 (define (emacs-new-frame emacs)
-  #~(string-append #$(file-append emacs "/bin/emacsclient") " --create-frame"))
+  (list
+   (file-append emacs "/bin/emacsclient")
+   "--create-frame"))
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -6302,16 +6305,18 @@ Some colors from the original Atom theme on which I based mine that might be use
                                  emacs
                                  emacs-new-frame)
   (let ((executions
-         `((exec ,idle-manager)))
+         `((exec ,@idle-manager)))
         (bindings
          (append
-          `((bindsym $mod+Return exec ,terminal)
-            (bindsym $mod+Control+Shift+Return exec ,(or backup-terminal terminal))
-            (bindsym $mod+Shift+d exec ,app-launcher)
-            (bindsym $mod+Control+Shift+l exec ,(or screen-locker
-                                                    #~(string-append #$(file-append elogind "/bin/loginctl") " lock-session")))
-            (bindsym $mod+Shift+y exec ,emacs)
-            (bindsym $mod+y exec ,emacs-new-frame))
+          `((bindsym $mod+Return exec ,@terminal)
+            (bindsym $mod+Control+Shift+Return exec ,@(or backup-terminal terminal))
+            (bindsym $mod+Shift+d exec ,@app-launcher)
+            (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
+                                                     (list
+                                                      (file-append elogind "/bin/loginctl")
+                                                      "lock-session")))
+            (bindsym $mod+Shift+y exec ,@emacs)
+            (bindsym $mod+y exec ,@emacs-new-frame))
           (sway-backlight)
           (sway-volume)
           (sway-player)
@@ -6463,10 +6468,14 @@ Some colors from the original Atom theme on which I based mine that might be use
           ,@(or extra-config '()))))))))
 
 (define (swaylock-screen-locker)
-  "/run/setuid-programs/swaylock")
+  (list
+   "/run/setuid-programs/swaylock"))
 
 (define (swaylock-screen-locker-immediate)
-  #~(string-append #$(swaylock-screen-locker) " --grace=0"))
+  (append
+   (swaylock-screen-locker)
+   (list
+    "--grace=0")))
 #+end_src
 ******* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
@@ -6485,7 +6494,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (home-swayidle-configuration
      (config
       `(,@(if screen-locker
-              (let ((lock-cmd-quoted (format #f "'~a'" screen-locker)))
+              (let ((lock-cmd-quoted (format #f "'~a'" (string-join screen-locker))))
                 `((lock ,lock-cmd-quoted)
                   (before-sleep ,lock-cmd-quoted)
                   (timeout ,lock-timeout ,lock-cmd-quoted)))
@@ -6503,7 +6512,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
 
 (define (swayidle-idle-manager)
-  #~(string-append #$(file-append swayidle "/bin/swayidle") " -w"))
+  (list
+   (file-append swayidle "/bin/swayidle")
+   "-w"))
 #+end_src
 ***** Notification daemons
 ****** Mako
@@ -6552,7 +6563,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         ,@(let ((makoctl (file-append mako "/bin/makoctl")))
             `((bindsym $mod+m exec ,makoctl dismiss)
               (bindsym $mod+Shift+m exec ,makoctl restore)
-              (bindsym $mod+Control+m exec ,makoctl menu ,menu "\"Notification action\""))))))))
+              (bindsym $mod+Control+m exec ,makoctl menu ,@menu "\"Notification action\""))))))))
 #+end_src
 ***** Status bars
 ****** Waybar
@@ -7551,21 +7562,23 @@ use_guixs() {
                 :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
 
 (define (doom-menu emacs-handler)
-  (emacs-handler
-   "menu"
-   '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
-   #:assistant? #t
-   #:assistant-title "Menu"
-   #:minibuffer? #t
-   #:stdin? #t))
+  (list
+   (emacs-handler
+    "menu"
+    '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
+    #:assistant? #t
+    #:assistant-title "Menu"
+    #:minibuffer? #t
+    #:stdin? #t)))
 
 (define (doom-app-launcher emacs-handler)
-  (emacs-handler
-   "app-launcher"
-   '((app-launcher-run-app))
-   #:assistant? #t
-   #:assistant-title "App Launcher"
-   #:minibuffer? #t))
+  (list
+   (emacs-handler
+    "app-launcher"
+    '((app-launcher-run-app))
+    #:assistant? #t
+    #:assistant-title "App Launcher"
+    #:minibuffer? #t)))
 #+end_src
 ***** Rofi
 #+begin_src scheme
@@ -7774,7 +7787,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
        string-capitalize))
 
 (define (alacritty-terminal)
-  (file-append alacritty "/bin/alacritty"))
+  (list
+   (file-append alacritty "/bin/alacritty")))
 #+end_src
 ****** Doom vterm
 Does this belong in [[*Apps][Apps]]?
@@ -7795,9 +7809,10 @@ Does this belong in [[*Apps][Apps]]?
         (list (local-file "zsh-vterm"))))))))
 
 (define (doom-vterm-terminal emacs-handler)
-  (emacs-handler
-   "vterm"
-   '((+vterm/here))))
+  (list
+   (emacs-handler
+    "vterm"
+    '((+vterm/here)))))
 #+end_src
 ******* Configure zsh for vterm
 - TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
