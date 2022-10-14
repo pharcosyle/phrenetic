@@ -6574,45 +6574,45 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                           ((name . color)
                            (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
                    (apply string-append))
-              (*
-               ((font-family . #(FontAwesome
-                                 ,@(if font
-                                       (list
-                                        (-> font (assoc-ref #:font/name) string->symbol))
-                                       '())))
-                ,@(if transitions? '() '((transition . none)))
-                (box-shadow . none)
-                (text-shadow . none)
-                (min-height . 0)))
+         (*
+          ((font-family . #(FontAwesome
+                            ,@(if font
+                                  (list
+                                   (-> font (assoc-ref #:font/name) string->symbol))
+                                  '())))
+           ,@(if transitions? '() '((transition . none)))
+           (box-shadow . none)
+           (text-shadow . none)
+           (min-height . 0)))
 
-              (tooltip
-               ((border . (solid @bg-alt))
-                (background . @bg)
-                (opacity . 0.9)))
+         (tooltip
+          ((border . (solid @bg-alt))
+           (background . @bg)
+           (opacity . 0.9)))
 
-              ((tooltip label)
-               ((color . @fg)
-                (padding . 0)))
+         ((tooltip label)
+          ((color . @fg)
+           (padding . 0)))
 
-              (#{#waybar}#
-               ((color . @fg)
-                (background . @bg)))
+         (#{#waybar}#
+          ((color . @fg)
+           (background . @bg)))
 
-              (#((.modules-right label)
-                 (.modules-right image))
-               ((margin . (0.4em 0.2em))
-                (padding . (0 0.4em))
-                (background . @bg-alt)
-                (border-radius . 0.2em)))
+         (#((.modules-right label)
+            (.modules-right image))
+          ((margin . (0.4em 0.2em))
+           (padding . (0 0.4em))
+           (background . @bg-alt)
+           (border-radius . 0.2em)))
 
-              ;; To accommodate the crack in my screen.
-              (.modules-left
-               ((margin-left . 82px)))
-              ;; (.modules-left
-              ;;  ((margin-left . 0.2em)))
+         ;; To accommodate the crack in my screen.
+         (.modules-left
+          ((margin-left . 82px)))
+         ;; (.modules-left
+         ;;  ((margin-left . 0.2em)))
 
-              (.modules-right
-               ((margin-right . 0.2em))))))))
+         (.modules-right
+          ((margin-right . 0.2em))))))))
 
    modules
 
