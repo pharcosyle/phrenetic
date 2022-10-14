@@ -6332,11 +6332,11 @@ Some colors from the original Atom theme on which I based mine that might be use
          (step->symbol (lambda (op)
                          (symbol-append op (string->symbol (number->string step)) '%)))
          (pactl (file-append pulseaudio "/bin/pactl")))
-    `((bindsym --locked XF86AudioRaiseVolume "\\\n"
-       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+    `((bindsym --locked XF86AudioRaiseVolume
+       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false;"
        exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '+))
-      (bindsym --locked XF86AudioLowerVolume "\\\n"
-               exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+      (bindsym --locked XF86AudioLowerVolume
+               exec ,pactl set-sink-mute @DEFAULT_SINK@ "false;"
                exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '-))
       (bindsym --locked XF86AudioMute
                exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
