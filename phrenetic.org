@@ -8389,9 +8389,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                        ;; (applet-gammastep)
                                        (applet-udiskie))
                             #:app-launcher (doom-app-launcher emacs-handler)
-                            ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
-                            #:terminal (alacritty-terminal)
-                            #:backup-terminal (doom-vterm-terminal emacs-handler)
+                            #:terminal (doom-vterm-terminal emacs-handler)
+                            #:backup-terminal (alacritty-terminal)
                             #:emacs (emacs-editor emacs)
                             #:emacs-new-frame (emacs-new-frame emacs))
                    (he-swaylock #:colors colors
