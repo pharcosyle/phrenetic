@@ -6027,9 +6027,34 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 **** D-Bus
 #+begin_src scheme
+;; TODO Upstream Guix one isn't working for some reason, use my old one (below) for now.
+;; (define (he-dbus)
+;;   (list
+;;    (service home-dbus-service-type)))
+
 (define (he-dbus)
   (list
-   (service home-dbus-service-type)))
+   (simple-service
+    'dbus-set-address-env-var
+    home-environment-variables-service-type
+    '(("DBUS_SESSION_BUS_ADDRESS" . "unix:path=$XDG_RUNTIME_DIR/bus")))
+
+   (simple-service
+    'dbus-add-shepherd-daemon
+    home-shepherd-service-type
+    (list
+     (shepherd-service
+      (provision '(dbus))
+      (start #~(make-forkexec-constructor
+                (list #$(file-append dbus "/bin/dbus-daemon")
+                      "--nofork" "--session"
+                      (string-append "--address="
+                                     "unix:path="
+                                     (or (getenv "XDG_RUNTIME_DIR")
+                                         (string-append "/run/user/" (getuid)))
+                                     "/bus"))
+                #:log-file (#$home-shepherd-service-log-file "dbus.log")))
+      (stop  #~(make-kill-destructor)))))))
 #+end_src
 **** Login management
 ***** Login managers
