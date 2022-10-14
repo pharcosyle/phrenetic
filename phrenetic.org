@@ -6127,18 +6127,18 @@ Some colors from the original Atom theme on which I based mine that might be use
                   doom?
                   pipewire?
                   (sway-mod 'Mod1)
-                  kb-layout
-                  (kb-repeat-delay 200)
-                  (kb-repeat-rate 40)
                   (xwayland? #t)
-                  (screen-locker #~(string-append #$(file-append elogind "/bin/loginctl") " lock-session"))
+                  (bg-image wallpaper)
+                  kb-layout
+                  kb-repeat-delay
+                  kb-repeat-rate
                   idle-manager
+                  screen-locker
                   app-launcher
-                  default-terminal
-                  (backup-terminal default-terminal)
+                  terminal
+                  backup-terminal
                   emacs
                   emacs-new-frame
-                  (bg-image wallpaper)
                   extra-config)
   (list
    (simple-service
@@ -6158,33 +6158,7 @@ Some colors from the original Atom theme on which I based mine that might be use
      (config
       `((xwayland ,(if xwayland? 'enable 'disable))
 
-        (input type:keyboard
-               ,(append
-                 (if kb-layout
-                     (append
-                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
-                      (if-let ((variant (keyboard-layout-variant kb-layout)))
-                              `((xkb_variant ,variant)) '())
-                      (if-let ((model (keyboard-layout-model kb-layout)))
-                              `((xkb_model ,model)) '())
-                      (let ((options (keyboard-layout-options kb-layout)))
-                        (if (null? options)
-                            '()
-                            `((xkb_options ,(string-join
-                                             (keyboard-layout-options kb-layout) ","))))))
-                     '())
-                 `((repeat_delay ,kb-repeat-delay))
-                 `((repeat_rate ,kb-repeat-rate))))
-
-        (input type:touchpad
-               ((natural_scroll enabled)
-                (tap enabled)))
-
         (set $mod ,sway-mod)
-        (set $term ,default-terminal)
-        (set $backup-term ,backup-terminal)
-        (set $menu ,app-launcher)
-        (set $lock ,screen-locker)
 
         (floating_modifier $mod normal)
 
@@ -6196,14 +6170,6 @@ Some colors from the original Atom theme on which I based mine that might be use
         ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
         (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
               DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
-
-        ;; Launching external applications.
-        (bindsym $mod+Return exec $term)
-        (bindsym $mod+Control+Shift+Return exec $backup-term)
-        (bindsym $mod+Shift+d exec $menu)
-        (bindsym $mod+Control+Shift+l exec $lock)
-        (bindsym $mod+y exec ,emacs-new-frame)
-        (bindsym $mod+Shift+y exec ,emacs)
 
         ;; Manipulating windows.
         (bindsym $mod+Shift+c kill)
@@ -6224,7 +6190,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         ,@(append-map
            (lambda (x)
              `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                        workspace number ,x)
+                workspace number ,x)
                (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
                         move container to workspace number ,x)))
            (iota 10 1))
@@ -6236,35 +6202,6 @@ Some colors from the original Atom theme on which I based mine that might be use
         (default_border pixel)
         (default_floating_border pixel)
         (gaps inner 8)
-
-        (exec ,idle-manager)
-
-        ,@(let* ((step 10)
-                 (step->symbol (lambda (op)
-                                 (symbol-append (string->symbol (number->string step)) '% op)))
-                 (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
-            `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
-              (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-))))
-
-        ,@(let* ((step 5)
-                 (step->symbol (lambda (op)
-                                 (symbol-append op (string->symbol (number->string step)) '%)))
-                 (pactl (file-append pulseaudio "/bin/pactl")))
-            `((bindsym --locked XF86AudioRaiseVolume "\\\n"
-                       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                       exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '+))
-              (bindsym --locked XF86AudioLowerVolume "\\\n"
-                       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
-                       exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '-))
-              (bindsym --locked XF86AudioMute
-                       exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
-              (bindsym --locked XF86AudioMicMute
-                       exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle)))
-
-        ,@(let ((playerctl (file-append playerctl "/bin/playerctl")))
-            `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
-              (bindsym --locked XF86AudioPrev exec ,playerctl previous)
-              (bindsym --locked XF86AudioNext exec ,playerctl next)))
 
         ,@(if bg-image
               `((output * bg ,bg-image fill)) '())
@@ -6287,6 +6224,18 @@ Some colors from the original Atom theme on which I based mine that might be use
                     width ,(assoc-ref emacs-assistant-window-params #:width) ppt
                     height ,(assoc-ref emacs-assistant-window-params #:height) ppt)
 
+        ,@(sway-input #:kb-layout kb-layout
+                      #:kb-repeat-delay kb-repeat-delay
+                      #:kb-repeat-rate kb-repeat-rate)
+
+        ,@(sway-external-programs #:idle-manager idle-manager
+                                  #:screen-locker screen-locker
+                                  #:app-launcher app-launcher
+                                  #:terminal terminal
+                                  #:backup-terminal backup-terminal
+                                  #:emacs emacs
+                                  #:emacs-new-frame emacs-new-frame)
+
         ,@(or extra-config '())))))
 
    (simple-service
@@ -6294,8 +6243,6 @@ Some colors from the original Atom theme on which I based mine that might be use
     home-run-on-change-service-type
     `(("files/.config/sway/config"
        ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
-
-   (sway-screenshot-service)
 
    (when doom?
      (doom-service
@@ -6316,16 +6263,99 @@ Some colors from the original Atom theme on which I based mine that might be use
            (wayland-env-vars pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
+******* Input
+#+begin_src scheme
+(define* (sway-input #:key
+                     kb-layout
+                     kb-repeat-delay
+                     kb-repeat-rate)
+  `((input type:keyboard
+           ,(append
+             (if kb-layout
+                 (append
+                  `((xkb_layout ,(keyboard-layout-name kb-layout)))
+                  (if-let ((variant (keyboard-layout-variant kb-layout)))
+                          `((xkb_variant ,variant)) '())
+                  (if-let ((model (keyboard-layout-model kb-layout)))
+                          `((xkb_model ,model)) '())
+                  (let ((options (keyboard-layout-options kb-layout)))
+                    (if (null? options)
+                        '()
+                        `((xkb_options ,(string-join
+                                         (keyboard-layout-options kb-layout) ","))))))
+                 '())
+             `((repeat_delay ,(or kb-repeat-delay 200)))
+             `((repeat_rate ,(or kb-repeat-rate 40)))))
+
+    (input type:touchpad
+           ((natural_scroll enabled)
+            (tap enabled)))))
+#+end_src
+******* External programs
+#+begin_src scheme
+(define* (sway-external-programs #:key
+                                 idle-manager
+                                 screen-locker
+                                 app-launcher
+                                 terminal
+                                 backup-terminal
+                                 emacs
+                                 emacs-new-frame)
+  (let ((executions
+         `((exec ,idle-manager)))
+        (bindings
+         (append
+          `((bindsym $mod+Return exec ,terminal)
+            (bindsym $mod+Control+Shift+Return exec ,(or backup-terminal terminal))
+            (bindsym $mod+Shift+d exec ,app-launcher)
+            (bindsym $mod+Control+Shift+l exec ,(or screen-locker
+                                                    #~(string-append #$(file-append elogind "/bin/loginctl") " lock-session")))
+            (bindsym $mod+Shift+y exec ,emacs)
+            (bindsym $mod+y exec ,emacs-new-frame))
+          (sway-backlight)
+          (sway-volume)
+          (sway-player)
+          (sway-screenshot))))
+
+    (append executions bindings)))
+
+(define (sway-backlight)
+  (let* ((step 10)
+         (step->symbol (lambda (op)
+                         (symbol-append (string->symbol (number->string step)) '% op)))
+         (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
+    `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
+      (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
+
+(define (sway-volume)
+  (let* ((step 5)
+         (step->symbol (lambda (op)
+                         (symbol-append op (string->symbol (number->string step)) '%)))
+         (pactl (file-append pulseaudio "/bin/pactl")))
+    `((bindsym --locked XF86AudioRaiseVolume "\\\n"
+       exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+       exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '+))
+      (bindsym --locked XF86AudioLowerVolume "\\\n"
+               exec ,pactl set-sink-mute @DEFAULT_SINK@ "false; \\\n"
+               exec ,pactl set-sink-volume @DEFAULT_SINK@ ,(step->symbol '-))
+      (bindsym --locked XF86AudioMute
+               exec ,pactl set-sink-mute @DEFAULT_SINK@ toggle)
+      (bindsym --locked XF86AudioMicMute
+               exec ,pactl set-source-mute @DEFAULT_SOURCE@ toggle))))
+
+(define (sway-player)
+  (let ((playerctl (file-append playerctl "/bin/playerctl")))
+    `((bindsym --locked XF86AudioPlay exec ,playerctl play-pause)
+      (bindsym --locked XF86AudioPrev exec ,playerctl previous)
+      (bindsym --locked XF86AudioNext exec ,playerctl next))))
+
+(define (sway-screenshot)
+  `((bindsym $mod+grave exec ,shot-output)
+    (bindsym $mod+Control+grave exec ,swappy-clipboard)
+    (bindsym $mod+Shift+grave exec ,shot-window-or-selection)))
+#+end_src
 ******* Screenshot
 #+begin_src scheme
-(define (sway-screenshot-service)
-  (simple-service
-   'sway-screenshot
-   home-sway-service-type
-   `((bindsym $mod+grave exec ,shot-output)
-     (bindsym $mod+Control+grave exec ,swappy-clipboard)
-     (bindsym $mod+Shift+grave exec ,shot-window-or-selection))))
-
 (define subject-output
   #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
             #$(file-append sway "/bin/swaymsg")
@@ -8230,11 +8260,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    (he-sway #:doom? doom?
                             #:pipewire? pipewire?
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
-                            #:screen-locker (swaylock-screen-locker-immediate)
                             #:idle-manager (swayidle-idle-manager)
+                            #:screen-locker (swaylock-screen-locker-immediate)
                             #:app-launcher (doom-app-launcher emacs-handler)
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
-                            #:default-terminal (alacritty-terminal)
+                            #:terminal (alacritty-terminal)
                             #:backup-terminal (doom-vterm-terminal emacs-handler)
                             #:emacs (emacs-editor emacs)
                             #:emacs-new-frame (emacs-new-frame emacs))
