@@ -1765,7 +1765,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-desktop-tty
             he-gnome
             gnome-start
-            he-wm-common
             he-sway
             sway-start
             he-swaylock
@@ -1779,6 +1778,12 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             waybar-status-bar
             waybar-modules
             he-kanshi
+            he-applet-network-manager
+            applet-network-manager
+            he-applet-gammastep
+            applet-gammastep
+            he-applet-udiskie
+            applet-udiskie
             he-aws
             he-clojure
             he-datomic
@@ -6104,28 +6109,6 @@ Some colors from the original Atom theme on which I based mine that might be use
    "exec " (file-append gnome-session "/bin/gnome-session")))
 #+end_src
 ***** Window managers
-****** Common
-#+begin_src scheme
-(define* (he-wm-common #:key sway?)
-  (wm-common-applets #:sway? sway?))
-
-(define* (wm-common-applets #:key sway?)
-  (list
-   ;; The only one I know for sure needs to be installed is gammastep (the applet can't find its icon otherwise) but install the rest too just in case.
-   (simple-service
-    'wm-common-applet-add-packages
-    home-profile-service-type
-    (list network-manager-applet
-          gammastep
-          udiskie))
-   (when sway?
-     (simple-service
-      'sway-start-applets
-      home-sway-service-type
-      `((exec ,(file-append network-manager-applet "/bin/nm-applet") --indicator)
-        ;; (exec ,(file-append gammastep "/bin/gammastep-indicator") -l 44:-123) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
-        (exec ,(file-append udiskie "/bin/udiskie") --tray))))))
-#+end_src
 ****** Sway
 #+begin_src scheme
 (define* (he-sway #:key
@@ -6141,6 +6124,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                   screen-locker
                   notifier
                   status-bar
+                  applets
                   app-launcher
                   terminal
                   backup-terminal
@@ -6239,6 +6223,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                                   #:screen-locker screen-locker
                                   #:notifier notifier
                                   #:status-bar status-bar
+                                  #:applets applets
                                   #:app-launcher app-launcher
                                   #:terminal terminal
                                   #:backup-terminal backup-terminal
@@ -6307,15 +6292,21 @@ Some colors from the original Atom theme on which I based mine that might be use
                                  screen-locker
                                  notifier
                                  status-bar
+                                 applets
                                  app-launcher
                                  terminal
                                  backup-terminal
                                  emacs
                                  emacs-new-frame)
   (let ((executions
-         `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
-           (exec ,@idle-manager)
-           (exec ,@(assoc-ref notifier #:notifier/daemon))))
+         (append
+          `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
+            (exec ,@idle-manager)
+            (exec ,@(assoc-ref notifier #:notifier/daemon)))
+
+          (map (lambda (applet)
+                 `(exec ,@applet))
+               applets)))
 
         (bindings
          (append
@@ -6927,6 +6918,50 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (home-kanshi-configuration
      (config
       `(,@(or extra-config '())))))))
+#+end_src
+***** Applets
+****** Network manager
+#+begin_src scheme
+(define (he-applet-network-manager)
+  (list
+   (simple-service
+    'applet-network-manager-add-package
+    home-profile-service-type
+    (list network-manager-applet))))
+
+(define (applet-network-manager)
+  (list
+   (file-append network-manager-applet "/bin/nm-applet")
+   "--indicator"))
+#+end_src
+****** Gammastep
+#+begin_src scheme
+(define (he-applet-gammastep)
+  (list
+   ;; The applet can't find its icon unless the package is installed.
+   (simple-service
+    'applet-gammastep-add-package
+    home-profile-service-type
+    (list gammastep))))
+
+(define (applet-gammastep)
+  (list
+   (file-append gammastep "/bin/gammastep-indicator")
+   "-l" "44:-123")) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
+#+end_src
+****** Udiskie
+#+begin_src scheme
+(define (he-applet-udiskie)
+  (list
+   (simple-service
+    'applet-udiskie-add-package
+    home-profile-service-type
+    (list udiskie))))
+
+(define (applet-udiskie)
+  (list
+   (file-append udiskie "/bin/udiskie")
+   "--tray"))
 #+end_src
 ***** Shared
 #+begin_src scheme
@@ -8294,7 +8329,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (let ((date-format date-format)
                       (time-format time-format))
                   (append
-                   (he-wm-common #:sway? sway?)
                    (he-sway #:doom? doom?
                             #:pipewire? pipewire?
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
@@ -8302,6 +8336,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:screen-locker (swaylock-screen-locker-immediate)
                             #:notifier (mako-notifier (doom-menu emacs-handler))
                             #:status-bar (waybar-status-bar)
+                            #:applets (list
+                                       (applet-network-manager)
+                                       ;; (applet-gammastep)
+                                       (applet-udiskie))
                             #:app-launcher (doom-app-launcher emacs-handler)
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
                             #:terminal (alacritty-terminal)
@@ -8322,7 +8360,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                         #:date-format date-format
                                                         #:time-format time-format))
                    ;; (he-kanshi)
-                   ))
+                   (he-applet-network-manager)
+                   ;; (he-applet-gammastep)
+                   (he-applet-udiskie)))
                 '())
             (let ((gtk (gtk-services #:stateless? stateless?
                                      #:theme theme
