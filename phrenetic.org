@@ -1774,6 +1774,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-swayidle
             swayidle-idle-manager
             he-mako
+            mako-notifier
             he-waybar
             waybar-modules
             he-kanshi
@@ -6137,6 +6138,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                   kb-repeat-rate
                   idle-manager
                   screen-locker
+                  notifier
                   app-launcher
                   terminal
                   backup-terminal
@@ -6233,6 +6235,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
         ,@(sway-external-programs #:idle-manager idle-manager
                                   #:screen-locker screen-locker
+                                  #:notifier notifier
                                   #:app-launcher app-launcher
                                   #:terminal terminal
                                   #:backup-terminal backup-terminal
@@ -6299,13 +6302,16 @@ Some colors from the original Atom theme on which I based mine that might be use
 (define* (sway-external-programs #:key
                                  idle-manager
                                  screen-locker
+                                 notifier
                                  app-launcher
                                  terminal
                                  backup-terminal
                                  emacs
                                  emacs-new-frame)
   (let ((executions
-         `((exec ,@idle-manager)))
+         `((exec ,@idle-manager)
+           (exec ,@(assoc-ref notifier #:notifier/daemon))))
+
         (bindings
          (append
           `((bindsym $mod+Return exec ,@terminal)
@@ -6317,12 +6323,18 @@ Some colors from the original Atom theme on which I based mine that might be use
                                                       "lock-session")))
             (bindsym $mod+Shift+y exec ,@emacs)
             (bindsym $mod+y exec ,@emacs-new-frame))
+          (sway-notifications notifier)
           (sway-backlight)
           (sway-volume)
           (sway-player)
           (sway-screenshot))))
 
     (append executions bindings)))
+
+(define (sway-notifications notifier)
+  `((bindsym $mod+m exec ,@(assoc-ref notifier #:notifier/dismiss))
+    (bindsym $mod+Shift+m exec ,@(assoc-ref notifier #:notifier/restore))
+    (bindsym $mod+Control+m exec ,@(assoc-ref notifier #:notifier/menu))))
 
 (define (sway-backlight)
   (let* ((step 10)
@@ -6521,8 +6533,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ****** Mako
 #+begin_src scheme
 (define* (he-mako #:key
-                  sway?
-                  menu
                   colors
                   font)
   (list
@@ -6554,17 +6564,19 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
              (urgency=high ((border-color . ,(clr #:color/red))))))
          #:ini-serialize
          (lambda (config)
-           (ini-serialize config #:equal-string "="))))))
+           (ini-serialize config #:equal-string "="))))))))
 
-   (when sway?
-     (simple-service
-      'mako-add-to-sway
-      home-sway-service-type
-      `((exec ,(file-append mako "/bin/mako"))
-        ,@(let ((makoctl (file-append mako "/bin/makoctl")))
-            `((bindsym $mod+m exec ,makoctl dismiss)
-              (bindsym $mod+Shift+m exec ,makoctl restore)
-              (bindsym $mod+Control+m exec ,makoctl menu ,@menu "\"Notification action\""))))))))
+(define (mako-notifier menu)
+  (let ((makoctl (file-append mako "/bin/makoctl")))
+    `((#:notifier/daemon . ,(list (file-append mako "/bin/mako")))
+      (#:notifier/dismiss . ,(list makoctl
+                                   "dismiss"))
+      (#:notifier/restore . ,(list makoctl
+                                   "restore"))
+      (#:notifier/menu . ,`(makoctl
+                            "menu"
+                            ,@menu
+                            "\"Notification action\"")))))
 #+end_src
 ***** Status bars
 ****** Waybar
@@ -8280,6 +8292,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78")
                             #:idle-manager (swayidle-idle-manager)
                             #:screen-locker (swaylock-screen-locker-immediate)
+                            #:notifier (mako-notifier (doom-menu emacs-handler))
                             #:app-launcher (doom-app-launcher emacs-handler)
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
                             #:terminal (alacritty-terminal)
@@ -8292,9 +8305,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                 #:time-format time-format)
                    (he-swayidle #:session #:session/sway
                                 #:screen-locker (swaylock-screen-locker))
-                   (he-mako #:sway? sway?
-                            #:menu (doom-menu emacs-handler)
-                            #:colors colors
+                   (he-mako #:colors colors
                             #:font font-variable-pitch)
                    (he-waybar #:colors colors
                               #:font font-variable-pitch
