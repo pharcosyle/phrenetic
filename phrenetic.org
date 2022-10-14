@@ -2178,7 +2178,8 @@ SAVEHIST=$HISTSIZE
               `(with-selected-frame
                 (make-frame '(,@(if #$assistant?
                                     `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
-                                      (alpha . 90)) ; Upgrade this to `alpha-background' when Emacs 29 is released.
+                                      ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
+                                      )
                                     '())
                               ,@(if #$minibuffer?
                                     '((minibuffer . only)) '())))
@@ -6705,9 +6706,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (waybar-module
    'backlight
    `((format . ,(string-append
-                 "{icon} "
-                 (if show-percentage? "{percent}" "")))
-     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑)))))
+                 "{icon}"
+                 (if show-percentage? " {percent}" "")))
+     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑))))) ; TODO These aren't displaying for some reason.
 #+end_src
 ******** Battery
 #+begin_src scheme
@@ -6715,8 +6716,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (waybar-module
    'battery
    (let ((base-format (string-append
-                       "{icon} "
-                       (if show-percentage? "{capacity}%" ""))))
+                       "{icon}"
+                       (if show-percentage? " {capacity}%" ""))))
      `((format . ,base-format)
        (format-charging . ,(string-append "⚡ " base-format))
        (states . ((empty . 10)
@@ -8186,7 +8187,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #~(string-append
      (or (getenv "XDG_LOG_HOME")
          (string-append (getenv "HOME") "/.local/var/log"))
-     "/" file))
+     "/" #$file))
 
 (define very-big-history 1000000)
 #+end_src
