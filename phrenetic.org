@@ -6128,8 +6128,8 @@ Some colors from the original Atom theme on which I based mine that might be use
 ****** Sway
 #+begin_src scheme
 (define* (he-sway #:key
-                  doom?
                   pipewire?
+                  doom?
                   (sway-mod 'Mod1)
                   (xwayland? #t)
                   (bg-image wallpaper)
@@ -6231,9 +6231,11 @@ Some colors from the original Atom theme on which I based mine that might be use
 
        (if bg-image
            `((output * bg ,bg-image fill)) '())
+
        (sway-input #:kb-layout kb-layout
                    #:kb-repeat-delay kb-repeat-delay
                    #:kb-repeat-rate kb-repeat-rate)
+
        (sway-external-programs #:idle-manager idle-manager
                                #:screen-locker screen-locker
                                #:notifier notifier
@@ -6244,6 +6246,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                                #:backup-terminal backup-terminal
                                #:emacs emacs
                                #:emacs-new-frame emacs-new-frame)
+
        (or extra-config '())))))
 
    (simple-service
@@ -8336,8 +8339,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (font-unicode font-unicode)
                 (font-variable-pitch font-sans)
                 (dbus? (not login-manager))
-                (wayland? #t)
-                (sway? (member #:session/sway (or sessions '()))))
+                (wayland? #t))
            (append
             (if pipewire?
                 (he-pipewire #:stateless? stateless?
@@ -8370,12 +8372,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (he-desktop-tty #:start-cmd (sway-start pipewire?)))
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
-            (if sway?
+            (if (member #:session/sway (or sessions '()))
                 (let ((date-format date-format)
                       (time-format time-format))
                   (append
-                   (he-sway #:doom? doom?
-                            #:pipewire? pipewire?
+                   (he-sway #:pipewire? pipewire?
+                            #:doom? doom?
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
                             #:idle-manager (swayidle-idle-manager)
                             #:screen-locker (swaylock-screen-locker-immediate)
@@ -8401,7 +8403,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:font font-variable-pitch)
                    (he-waybar #:colors colors
                               #:font font-variable-pitch
-                              #:modules (waybar-modules #:sway? sway?
+                              #:modules (waybar-modules #:sway? #t
                                                         #:date-format date-format
                                                         #:time-format time-format))
                    ;; (he-kanshi)
