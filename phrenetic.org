@@ -6817,8 +6817,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (format-bluetooth . ,(string-append base-format ""))
        (format-icons . ((default . #(🔈 🔉 🔊 📢))))
        (tooltip-format . "{desc} is on {volume}%")
-       (on-click . ,#~(let ((cmd #$(file-append pavucontrol "/bin/pavucontrol")))
-                        (string-append "\"" cmd "\"")))))))
+       (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
 #+end_src
 ******** Sway
 ********* Sway window
