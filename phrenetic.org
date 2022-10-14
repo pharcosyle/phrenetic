@@ -2211,9 +2211,10 @@ SAVEHIST=$HISTSIZE
                                   (#$serialize
                                    (#$eval-expr args input)))))
            (put-string (current-output-port)
-                       (let ((output (get-string-all pipe)))
-                         ;; `emacsclient' output is a sexp so strings will have quotes around them. Work around this particular case, it's presently the only one that matters (for dmenu-like functionality).
-                         (string-trim-both (string-drop-right output 1) #\")))
+                       (let* ((res* (get-string-all pipe))
+                              (end (string-take-right res* 1)) ; EOF or newline or something? Donno if this matters, doing it just in case.
+                              (res (string-trim-both (string-drop-right res* 1) #\"))) ; `emacsclient' output is a sexp so strings will have quotes around them. Work around just this particular case, for now it's the only one that matters (for the dmenu-like functionality).
+                         (string-append res end)))
            (close-pipe pipe))))))
 
 (define emacs-assistant-window-params
