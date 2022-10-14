@@ -5572,11 +5572,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (provision '(kmonad))
     (start #~(make-forkexec-constructor
               (list #$(file-append kmonad "/bin/kmonad") #$kbd)
-              #:log-file (string-append
-                          (or (getenv "XDG_LOG_HOME")
-                              (format #f "~a/.local/var/log"
-                                      (getenv "HOME")))
-                          "/kmonad.log")))
+              #:log-file (#$home-shepherd-service-log-file "kmonad.log")))
     (stop #~(make-kill-destructor)))))
 #+end_src
 *** Desktop
@@ -5609,11 +5605,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        '(dbus) '()))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/pipewire.log")
+                #:log-file (#$home-shepherd-service-log-file "pipewire.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -5623,11 +5615,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (requirement '(pipewire pipewire-media-session))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/pipewire-pulse.log")
+                #:log-file (#$home-shepherd-service-log-file "pipewire-pulse.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -5675,11 +5663,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (requirement '(pipewire))
       (start #~(make-forkexec-constructor
                 (list #$(file-append wireplumber "/bin/wireplumber"))
-                #:log-file (string-append
-                            (or (getenv "XDG_LOG_HOME")
-                                (format #f "~a/.local/var/log"
-                                        (getenv "HOME")))
-                            "/wireplumber.log")
+                #:log-file (#$home-shepherd-service-log-file "wireplumber.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -8197,6 +8181,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (-> (default-skeletons)
       (assoc-ref file)
       car))
+
+(define (home-shepherd-service-log-file file)
+  #~(string-append
+     (or (getenv "XDG_LOG_HOME")
+         (string-append (getenv "HOME") "/.local/var/log"))
+     "/" file))
 
 (define very-big-history 1000000)
 #+end_src
