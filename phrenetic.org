@@ -1776,6 +1776,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-mako
             mako-notifier
             he-waybar
+            waybar-status-bar
             waybar-modules
             he-kanshi
             he-aws
@@ -6139,6 +6140,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                   idle-manager
                   screen-locker
                   notifier
+                  status-bar
                   app-launcher
                   terminal
                   backup-terminal
@@ -6236,6 +6238,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         ,@(sway-external-programs #:idle-manager idle-manager
                                   #:screen-locker screen-locker
                                   #:notifier notifier
+                                  #:status-bar status-bar
                                   #:app-launcher app-launcher
                                   #:terminal terminal
                                   #:backup-terminal backup-terminal
@@ -6303,13 +6306,15 @@ Some colors from the original Atom theme on which I based mine that might be use
                                  idle-manager
                                  screen-locker
                                  notifier
+                                 status-bar
                                  app-launcher
                                  terminal
                                  backup-terminal
                                  emacs
                                  emacs-new-frame)
   (let ((executions
-         `((exec ,@idle-manager)
+         `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
+           (exec ,@idle-manager)
            (exec ,@(assoc-ref notifier #:notifier/daemon))))
 
         (bindings
@@ -6323,7 +6328,9 @@ Some colors from the original Atom theme on which I based mine that might be use
                                                       "lock-session")))
             (bindsym $mod+Shift+y exec ,@emacs)
             (bindsym $mod+y exec ,@emacs-new-frame))
+
           (sway-notifications notifier)
+          (sway-status-bar status-bar)
           (sway-backlight)
           (sway-volume)
           (sway-player)
@@ -6335,6 +6342,9 @@ Some colors from the original Atom theme on which I based mine that might be use
   `((bindsym $mod+m exec ,@(assoc-ref notifier #:notifier/dismiss))
     (bindsym $mod+Shift+m exec ,@(assoc-ref notifier #:notifier/restore))
     (bindsym $mod+Control+m exec ,@(assoc-ref notifier #:notifier/menu))))
+
+(define (sway-status-bar status-bar)
+  `((bindsym $mod+backslash exec ,@(assoc-ref status-bar #:status-bar/toggle))))
 
 (define (sway-backlight)
   (let* ((step 10)
@@ -6584,7 +6594,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define* (he-waybar #:key
                     colors
                     font
-                    sway?
                     modules
                     transitions?)
   (append
@@ -6661,15 +6670,14 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        `(("files/.config/waybar/style.css"
           ,reload-cmd)
          ("files/.config/waybar/config"
-          ,reload-cmd))))
+          ,reload-cmd)))))))
 
-    ;; I could pass the waybar command to the sway module (like I do with the screen locker and idle manager) instead of making this module aware of Sway, however the the `bar' command can take other arguments (see https://man.archlinux.org/man/sway-bar.5.en) that I might perhaps need in the future (though I think they only apply to swaybar, not waybar).
-    (when sway?
-      (simple-service
-       'waybar-add-to-sway
-       home-sway-service-type
-       `((bar swaybar_command ,(file-append waybar "/bin/waybar"))
-         (bindsym $mod+backslash exec ,(file-append psmisc "/bin/killall") -SIGUSR1 waybar)))))))
+(define (waybar-status-bar)
+  `((#:status-bar/command . ,(list
+                              (file-append waybar "/bin/waybar")))
+    (#:status-bar/toggle . ,(list
+                             (file-append psmisc "/bin/killall")
+                             "-SIGUSR1" "waybar"))))
 
 (define* (waybar-modules #:key
                          sway?
@@ -8293,6 +8301,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:idle-manager (swayidle-idle-manager)
                             #:screen-locker (swaylock-screen-locker-immediate)
                             #:notifier (mako-notifier (doom-menu emacs-handler))
+                            #:status-bar (waybar-status-bar)
                             #:app-launcher (doom-app-launcher emacs-handler)
                             ;; TODO Switch vterm and alacritty as default/backup once I get vterm set up.
                             #:terminal (alacritty-terminal)
@@ -8309,7 +8318,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:font font-variable-pitch)
                    (he-waybar #:colors colors
                               #:font font-variable-pitch
-                              #:sway? sway?
                               #:modules (waybar-modules #:sway? sway?
                                                         #:date-format date-format
                                                         #:time-format time-format))
