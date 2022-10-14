@@ -2642,7 +2642,7 @@ performance of a hand rolled config (or better).")
       (license license:expat))))
 #+end_src
 ***** WAIT Doom tests :wait_on_doom:
-Nonfunctional at the moment ([[doom:core/core-cli.el::212][hlissner has them commented out]]) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
+Nonfunctional at the moment (hlissner has them commented out) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
 ***** Emacs packages :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
@@ -6452,7 +6452,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                    (as-> color $
                          (assoc-ref colors $)
                          (string-drop $ 1)
-                         (string-append $ (or alpha ""))))))
+                         (string-append $ (or alpha "")))))
+            (alpha "7f")) ; 50%
         `((daemonize)
 
           (font . ,(assoc-ref font #:font/name))
@@ -6466,12 +6467,12 @@ Some colors from the original Atom theme on which I based mine that might be use
 
           (key-hl-color . ,(clr #:color/green))
           (bs-hl-color . ,(clr #:color/yellow))
-          (inside-color . ,(clr #:color/bg "7F"))
+          (inside-color . ,(clr #:color/bg alpha))
 
           (ring-color . ,(clr #:color/bg))
-          (ring-clear-color . ,(clr #:color/bg "7F"))
-          (ring-ver-color . ,(clr #:color/bg "7F"))
-          (ring-wrong-color . ,(clr #:color/bg "7F"))
+          (ring-clear-color . ,(clr #:color/bg alpha))
+          (ring-ver-color . ,(clr #:color/bg alpha))
+          (ring-wrong-color . ,(clr #:color/bg alpha))
 
           (text-clear-color . ,(clr #:color/orange))
           (text-ver-color . ,(clr #:color/blue))
