@@ -6484,7 +6484,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ****** Swayidle
 #+begin_src scheme
 (define* (he-swayidle #:key
-                      sway?
+                      session
                       screen-locker
                       (lock-timeout 300)
                       extra-config)
@@ -6501,15 +6501,16 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
               '())
         ,@(or extra-config '())))))
 
-   (when sway?
-     (let* ((swaymsg (file-append sway "/bin/swaymsg"))
-            (swaymsg-cmd (lambda (cmd)
-                           #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-            (idle-timeout (+ lock-timeout 30)))
-       (simple-service
-        'swayidle-add-sway-dpms
-        home-swayidle-service-type
-        `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on"))))))))
+   (case session
+     ((#:session/sway)
+      (let* ((swaymsg (file-append sway "/bin/swaymsg"))
+             (swaymsg-cmd (lambda (cmd)
+                            #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
+             (idle-timeout (+ lock-timeout 30)))
+        (simple-service
+         'swayidle-add-sway-dpms
+         home-swayidle-service-type
+         `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on")))))))))
 
 (define (swayidle-idle-manager)
   (list
@@ -8289,7 +8290,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                 #:font font-variable-pitch
                                 #:date-format date-format
                                 #:time-format time-format)
-                   (he-swayidle #:sway? sway?
+                   (he-swayidle #:session #:session/sway
                                 #:screen-locker (swaylock-screen-locker))
                    (he-mako #:sway? sway?
                             #:menu (doom-menu emacs-handler)
