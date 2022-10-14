@@ -6506,7 +6506,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (home-swayidle-configuration
      (config
       `(,@(if screen-locker
-              (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join #$screen-locker))))
+              (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
                 `((lock ,lock-cmd-quoted)
                   (before-sleep ,lock-cmd-quoted)
                   (timeout ,lock-timeout ,lock-cmd-quoted)))
