@@ -8183,11 +8183,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       (assoc-ref file)
       car))
 
-(define (home-shepherd-service-log-file file)
-  #~(string-append
-     (or (getenv "XDG_LOG_HOME")
-         (string-append (getenv "HOME") "/.local/var/log"))
-     "/" #$file))
+(define home-shepherd-service-log-file
+  #~(lambda (file)
+      (string-append
+       (or (getenv "XDG_LOG_HOME")
+           (string-append (getenv "HOME") "/.local/var/log"))
+       "/" file)))
 
 (define very-big-history 1000000)
 #+end_src
