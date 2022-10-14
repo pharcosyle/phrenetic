@@ -6166,7 +6166,7 @@ Some colors from the original Atom theme on which I based mine that might be use
    (simple-service
     'sway-add-packages
     home-profile-service-type
-    (list (sway-start-package #:pipewire? pipewire?)
+    (list (sway-start-package pipewire?)
           qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
           swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
           xdg-desktop-portal
@@ -6324,18 +6324,18 @@ Some colors from the original Atom theme on which I based mine that might be use
       'sway
       #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215"))))))
 
-(define* (sway-start #:key pipewire?)
-  (file-append (sway-start-package #:pipewire? pipewire?) "/bin/" sway-start-exe))
+(define (sway-start pipewire?)
+  (file-append (sway-start-package pipewire?) "/bin/" sway-start-exe))
 
 (define sway-start-exe "sway-start")
 
-(define* (sway-start-package #:key pipewire?)
+(define (sway-start-package pipewire?)
   (session-start
    sway-start-exe
    (environment-variable-shell-definitions
     (cons* (xdg-current-desktop-env-var "sway")
            xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
-           (wayland-env-vars #:pipewire? pipewire?)))
+           (wayland-env-vars pipewire?)))
    "exec " (file-append sway "/bin/sway")))
 #+end_src
 ******* Sway screenshot
@@ -6911,7 +6911,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   '("XDG_SESSION_TYPE" . "wayland")) ; "Normally" provided by a login manager.
 
 ;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
-(define* (wayland-env-vars #:key pipewire?)
+(define (wayland-env-vars pipewire?)
  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
  (append
   '(("SDL_VIDEODRIVER" . "wayland")
@@ -8240,7 +8240,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (if login-manager
                 (case login-manager
                   ((#:lm/gdm) (he-gdm #:stateless? stateless?)))
-                (he-desktop-tty #:start-cmd (sway-start #:pipewire? pipewire?)))
+                (he-desktop-tty #:start-cmd (sway-start pipewire?)))
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if sway?
