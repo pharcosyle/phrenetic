@@ -1672,7 +1672,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (guix packages)
   #:use-module (gnu home)
   #:use-module (gnu home services)
-  #:use-module (gnu home services desktop)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services ssh)
@@ -2148,8 +2147,6 @@ SAVEHIST=$HISTSIZE
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
 
-(define emacs emacs-fully-loaded)
-
 (define (emacs-editor emacs)
   (list
    (file-append emacs "/bin/emacs")))
@@ -2158,6 +2155,8 @@ SAVEHIST=$HISTSIZE
   (list
    (file-append emacs "/bin/emacsclient")
    "--create-frame"))
+
+(define emacs emacs-fully-loaded)
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -6030,11 +6029,6 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 **** D-Bus
 #+begin_src scheme
-;; TODO Upstream Guix one isn't working for some reason, use my old one (below) for now.
-;; (define (he-dbus)
-;;   (list
-;;    (service home-dbus-service-type)))
-
 (define (he-dbus)
   (list
    (simple-service
@@ -6162,7 +6156,7 @@ Some colors from the original Atom theme on which I based mine that might be use
    (service
     home-sway-service-type
     (home-sway-configuration
-     (package sway) ; Remove this when I'm not using `sway-latest` any more.
+     (package sway) ; Remove this when I'm not using RDE's `sway-latest` any more (at the time of this writing, RDE has version  1.7 which Guix only has on core-updates).
      (config
       (append
        `((xwayland ,(if xwayland? 'enable 'disable))
