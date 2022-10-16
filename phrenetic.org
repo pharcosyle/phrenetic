@@ -71,7 +71,7 @@ Run with ~sudo~.
                       ((ice-9 string-fun) #:select (string-replace-substring)))
 
          (define* (cmd command #:rest args)
-           (display (string-join (cons (basename command) args) " "))
+           (display (string-join (cons (basename command) args)))
            (newline)
            (apply invoke (cons command args)))
 
@@ -2325,14 +2325,12 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
                    (cons start-of-list
                          (map wrap-in-quotes
                               (list "~/.config/guix/current/bin"
-                                    "~/.guix-home/profile/bin")))
-                   " ")))
+                                    "~/.guix-home/profile/bin"))))))
                (substitute* "man.el"
                  (("\"/usr/local/include\"" last-item)
                   (string-join
                    (list last-item
-                         (wrap-in-quotes "~/.guix-home/profile/include"))
-                   " ")))))))))))
+                         (wrap-in-quotes "~/.guix-home/profile/include")))))))))))))
 #+end_src
 ***** Emacs fully loaded :package:
 #+begin_src scheme
@@ -7015,8 +7013,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (list
     (assoc-ref font #:font/name)
     (number->string
-     (assoc-ref font #:font/size)))
-   " "))
+     (assoc-ref font #:font/size)))))
 
 (define wallpaper (local-file "alucard_bg.png"))
 #+end_src
