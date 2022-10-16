@@ -2258,7 +2258,6 @@ SAVEHIST=$HISTSIZE
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
   #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (phrenetic utils)
-  #:use-module ((srfi srfi-1) #:select (remove))
   #:export (emacs-fully-loaded))
 #+end_src
 ***** Emacs PGTK :version:
@@ -2269,16 +2268,13 @@ SAVEHIST=$HISTSIZE
     (with-git-commit $ #:upstream-version "28.1.91"
                      #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
                      #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
-    (let ((emacs $))
-      (package
-        (inherit emacs)
-        (source
-         (origin
-           (inherit (package-source emacs))
-           (patches
-            (remove (lambda (patch)
-                      (string-suffix? "emacs-pgtk-super-key-fix.patch" patch))
-                    (-> emacs package-source origin-patches)))))))))
+    (package
+      (inherit $)
+      (source
+       (origin
+         (inherit (package-source $))
+         (patches
+          (-> emacs package-source origin-patches)))))))
 #+end_src
 ***** HOLD Libgccjit latest
 This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
