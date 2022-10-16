@@ -2336,21 +2336,12 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
 #+end_src
 ***** Emacs fully loaded :package:
 #+begin_src scheme
-;; TODO Delete this on next Emacs rebuild.
-(define (with-zstd emacs)
-  (package
-    (inherit emacs)
-    (propagated-inputs
-     (modify-inputs (package-propagated-inputs emacs)
-       (prepend (@ (gnu packages compression) zstd))))))
-
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
           emacs-pgtk emacs)
       ;; with-libgccjit-latest
       with-findable-C-source
-      with-path-integration-improvements
-      with-zstd))
+      with-path-integration-improvements))
 
 (define emacs-fully-loaded (emacs-fully-loaded* #:pgtk? #t))
 #+end_src
