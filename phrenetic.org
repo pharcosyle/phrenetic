@@ -2355,8 +2355,7 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
        `(("DOOMLOCALDIR" . ,doom-local)
          ("DOOMPROFILELOADFILE" . ,(string-append doom-local "/profile-load.el"))))))
 
-   (if services
-       services '())
+   (or services '())
 
    (if stateless?
      (list
