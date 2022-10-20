@@ -8390,10 +8390,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                (he-chromium #:stateless? stateless?
                             #:wayland? wayland?
                             #:gtk-services gtk
-                            #:flavors chromium-flavors)
-               (he-firefox #:stateless? stateless?
-                           #:wayland? wayland?
-                           #:gtk-services gtk)
+                            ;; #:flavors chromium-flavors
+                            #:flavors '(#:google-chrome))
+               ;; (he-firefox #:stateless? stateless?
+               ;;             #:wayland? wayland?
+               ;;             #:gtk-services gtk)
                (he-nyxt #:stateless? stateless?
                         #:doom? doom?)
                ;; (he-vlc #:stateless? stateless?
