@@ -6563,14 +6563,22 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                     colors
                     font
                     modules
-                    transitions?)
+                    transitions?
+                    height
+                    output
+                    extra-config)
   (append
    (list
     (service
      home-waybar-service-type
      (home-waybar-configuration
-      (config #(((position . top)
-                 (name . main))))
+      (config `#(((position . top)
+                  (name . main)
+                  ,@(if height
+                        `((height . ,height)) '())
+                  ,@(if output
+                        `((output . ,output)) '())
+                  ,@(or extra-config '()))))
       (style-css
        `(,#~#$(->> `(("fg" . #:color/fg)
                      ("bg" . #:color/bg)
