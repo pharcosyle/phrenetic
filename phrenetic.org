@@ -5317,6 +5317,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        name
        #:modules '((#:lang
                     (scheme +guile)))
+       #:packages
+       '((package! geiser :pin "3123a38e9ea036db9d9a884e7bb414490813e93c")) ; TODO Manual bump, remove this when Doom bumps the module.
+
        #:config
        '((after! scheme
                  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
@@ -5343,7 +5346,11 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       (doom-service
        name
        #:packages
-       '((package! guix :pin "c9aef52121b458297e70bb50f49f7276b4a8d759")
+       '((package! guix
+                   :recipe (:fork
+                            (:host nil
+                             :repo "https://git.savannah.gnu.org/git/guix/emacs-guix.git"))
+                   :pin "cf5b7a402ea503c3dcda85a86b9a6c6dd01896e0")
          (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
          (package! guix-packaging ; REVIEW trying out
                    :recipe (:host github
@@ -5363,6 +5370,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                              "l" #'guix))  ; REVIEW temporary binding?
          (use-package! guix-prettify
                        :hook (doom-first-buffer . global-guix-prettify-mode))
+         (after! guix-pcomplete
+                 (fmakunbound 'pcomplete/guix)) ; Don't use pcompletion, it doesn't work (I get an error: "Unknown # object: #~").
 
          ;; TODO once I'm done packaging Doom figure out how to enable this
          ;; (use-package! guix-contributing)
