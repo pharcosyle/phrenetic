@@ -2265,9 +2265,13 @@ SAVEHIST=$HISTSIZE
 (define-public emacs-pgtk
   (as-> emacs-next-pgtk $
     (with-git-url $ "https://github.com/flatwhatson/emacs")
-    (with-git-commit $ #:upstream-version "28.2.50"
-                     #:commit "e8938d599ef0cd43ee9ef11d811f91a5b0fbc4c4"
-                     #:hash "1dfclf8rnkg2xwnb90251whmj197kn9nvk6v9hbhbsvskj5wm26s")
+    ;; TODO I get native-comp errors. Why?
+    ;; (with-git-commit $ #:upstream-version "28.2.50"
+    ;;                  #:commit "e8938d599ef0cd43ee9ef11d811f91a5b0fbc4c4"
+    ;;                  #:hash "1dfclf8rnkg2xwnb90251whmj197kn9nvk6v9hbhbsvskj5wm26s")
+    (with-git-commit $ #:upstream-version "28.1.91"
+                       #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
+                       #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
     (package
       (inherit $)
       (source
