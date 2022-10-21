@@ -1707,7 +1707,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock-effects waybar))
   #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -1718,7 +1718,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
-  #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
@@ -2257,7 +2256,6 @@ SAVEHIST=$HISTSIZE
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (phrenetic utils)
   #:export (emacs-fully-loaded))
 #+end_src
@@ -2276,16 +2274,6 @@ SAVEHIST=$HISTSIZE
          (inherit (package-source $))
          (patches
           (-> emacs package-source origin-patches)))))))
-#+end_src
-***** HOLD Libgccjit latest
-This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
-#+begin_src scheme
-(define (with-libgccjit-latest emacs)
-  (package
-    (inherit emacs)
-    (inputs
-     (modify-inputs (package-inputs emacs)
-       (replace "libgccjit" libgccjit-12)))))
 #+end_src
 ***** Findable C source
 #+begin_src scheme
@@ -2334,7 +2322,6 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
           emacs-pgtk emacs)
-      ;; with-libgccjit-latest
       with-findable-C-source
       with-path-integration-improvements))
 
@@ -6130,7 +6117,6 @@ Some colors from the original Atom theme on which I based mine that might be use
    (service
     home-sway-service-type
     (home-sway-configuration
-     (package sway) ; Remove this when I'm not using RDE's `sway-latest` any more (at the time of this writing, RDE has version  1.7 which Guix only has on core-updates).
      (config
       (append
        `((xwayland ,(if xwayland? 'enable 'disable))
@@ -9124,6 +9110,38 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 frostfire
 #+end_src
 *** Channels
+#+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
+(list (channel
+       (name 'guix)
+       (url "file:///.persist/home/pharcosyle/work_for_now/guix")
+       (branch "chris")
+       (introduction
+        (make-channel-introduction
+         "9edb3f66fd807b096b48283debdcddccfea34bad"
+         (openpgp-fingerprint
+          "BBB0 2DDF 2CEA F6A8 0D1D  E643 A2A0 6DF2 A33A 54FA"))))
+      (channel
+       (name 'rde)
+       (url "https://git.sr.ht/~abcdw/rde")
+       (introduction
+        (make-channel-introduction
+         "257cebd587b66e4d865b3537a9a88cccd7107c95"
+         (openpgp-fingerprint
+          "2841 9AC6 5038 7440 C7E9  2FFA 2208 D209 58C1 DEB0"))))
+      (channel
+       (name 'nonguix)
+       (url "file:///.persist/home/pharcosyle/work_for_now/nonguix")
+       (branch "chris")
+       (introduction
+        (make-channel-introduction
+         "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
+         (openpgp-fingerprint
+          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+      (channel
+       (name 'guix-chromium)
+       (url "https://gitlab.com/mbakke/guix-chromium")))
+#+end_src
+**** COMMENT Default
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'rde)
