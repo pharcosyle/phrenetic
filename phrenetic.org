@@ -2257,7 +2257,6 @@ SAVEHIST=$HISTSIZE
   #:use-module (guix packages)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module ((gnu packages gcc) #:select (libgccjit-12))
   #:use-module (phrenetic utils)
   #:export (emacs-fully-loaded))
 #+end_src
@@ -2276,16 +2275,6 @@ SAVEHIST=$HISTSIZE
          (inherit (package-source $))
          (patches
           (-> emacs package-source origin-patches)))))))
-#+end_src
-***** HOLD Libgccjit latest
-This isn't working, at least not with ~doom sync~. Revisit after I finish my Guix-straight integration since I probably won't be using ~doom sync~ afterward anyway. Hold off in general too, I only just switched to Guix's version of Emacs native compilation, I may learn more.
-#+begin_src scheme
-(define (with-libgccjit-latest emacs)
-  (package
-    (inherit emacs)
-    (inputs
-     (modify-inputs (package-inputs emacs)
-       (replace "libgccjit" libgccjit-12)))))
 #+end_src
 ***** Findable C source
 #+begin_src scheme
@@ -2334,7 +2323,6 @@ This isn't working, at least not with ~doom sync~. Revisit after I finish my Gui
 (define* (emacs-fully-loaded* #:key pgtk?)
   (-> (if pgtk?
           emacs-pgtk emacs)
-      ;; with-libgccjit-latest
       with-findable-C-source
       with-path-integration-improvements))
 
