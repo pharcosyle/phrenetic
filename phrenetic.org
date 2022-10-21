@@ -6620,7 +6620,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
           ((font-family . #(FontAwesome
                             ,@(if font
                                   (list
-                                   (-> font (assoc-ref #:font/name) string->symbol))
+                                   (as-> font $
+                                         (assoc-ref $ #:font/name)
+                                         (string-append "\"" $ "\"")
+                                         (string->symbol $)))
                                   '())))
            ,@(if transitions? '() '((transition . none)))
            (box-shadow . none)
