@@ -1961,6 +1961,27 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (cons login-shell interactive-shells))
 
    (list
+    (let ((name 'shells-setup-login-shell)
+          (shepherd-stop-cmd
+           (let ((shepherd (home-shepherd-configuration-shepherd (home-shepherd-configuration))))
+             (mixed-text-file
+              "shepherd-stop"
+              (file-append shepherd "/bin/herd" " stop root")))))
+      (case login-shell
+        ((#:shell/bash)
+         (simple-service name
+                         home-bash-service-type
+                         (home-bash-extension
+                          (bash-logout
+                           (list shepherd-stop-cmd)))))
+        ;; ((#:shell/zsh)
+        ;;  (simple-service name
+        ;;                  home-zsh-service-type
+        ;;                  (home-zsh-extension
+        ;;                   (zlogout
+        ;;                    (list shepherd-stop-cmd)))))
+        ))
+
     (let ((default-interactive-shell (car interactive-shells)))
       (when-not (equal? login-shell default-interactive-shell)
                 (simple-service
