@@ -1964,7 +1964,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (let ((default-interactive-shell (car interactive-shells)))
       (when-not (equal? login-shell default-interactive-shell)
                 (simple-service
-                 'set-shell-env-var
+                 'shells-set-shell-env-var
                  home-environment-variables-service-type
                  `(("SHELL" . ,(case default-interactive-shell
                                  ;; ((#:shell/bash) (file-append bash "/bin/bash"))
