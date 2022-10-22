@@ -4675,7 +4675,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            treemacs
            vi-tilde-fringe
            window-select
-           workspaces)
+           workspaces
+           zen)
 
           (#:editor
            ,@(if evil? '((evil +everywhere)) '())
@@ -7400,12 +7401,19 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                    evil?
                    org-dir)
   (append
-   (let ((name 'org))
+   (let ((name 'org)
+         (pretty? #t))
      (list
       (doom-service
        name
        #:modules '((#:lang
                     (org +journal)))
+       #:packages
+       (if pretty?
+           '((package! org-modern :pin "ed9d67d00f26148019acd67b4aac0e26360a33b1")
+             (package! org-appear :pin "60ba267c5da336e75e603f8c7ab3f44e6f4e4dac"))
+           '())
+
        #:config
        (append
         `((use-package! org
@@ -7433,6 +7441,31 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                       (map! :map evil-org-mode-map
                             :nv "C-j" #'outline-forward-same-level
                             :nv "C-k" #'outline-backward-same-level)))
+            '())
+
+        (if pretty?
+            '((after! org
+                      (setq org-hide-emphasis-markers t
+                            org-pretty-entities t
+                            ;; org-ellipsis "…"
+
+                            org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the "indentation" is retained.
+                            ;; Disable source block frings. Getting it to look good would require:
+                            ;; - disabling line numbers
+                            ;; - disabling `org-startup-indented'
+                            ;; - setting some `internal-border-width'
+                            org-modern-block-fringe nil
+                            ;; org-modern-priority nil ; Different faces for priorities aren't supported so disable this. Maybe use `org-fancy-priorities'.
+                            org-modern-todo-faces
+                            (-map (-lambda ((kw . face))
+                                           `(,kw :inverse-video t :inherit ,face))
+                                  org-todo-keyword-faces))
+
+                      (when (not line-spacing)
+                        (setq org-modern-label-border 0.3))
+
+                      (global-org-modern-mode)
+                      (add-hook! 'org-mode-hook #'org-appear-mode)))
             '())))
 
       (when stateless?
