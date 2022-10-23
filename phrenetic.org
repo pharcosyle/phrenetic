@@ -6440,10 +6440,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                       font
                       time-format
                       date-format
-                      ;; TODO `serialize-swaylock-config` doesn't presently allow gexps.
-                      ;; (image "/home/pharcosyle/work/phrenetic/phrenetic/alucard_bg.png")
-                      (image "/.persist/home/pharcosyle/work_for_now/phrenetic/phrenetic/alucard_bg.png")
-                      ;; (image wallpaper)
+                      image
                       extra-config)
   (list
    (service
@@ -6460,7 +6457,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
         `((daemonize)
 
           (font . ,(assoc-ref font #:font/name))
-          (image . ,image)
+          ,#~(string-append "image=" #$image) ; HACK `serialize-swaylock-config` doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
 
           (indicator)
           (indicator-idle-visible)
