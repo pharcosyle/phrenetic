@@ -1680,7 +1680,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
-  #:use-module ((gnu packages chromium) #:select (ungoogled-chromium ungoogled-chromium/wayland))
+  #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip zstd))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
@@ -7031,7 +7031,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
     ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
   (if pipewire?
-      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; Might not be necessary: as far as I can tell this is only relevant to Chromium (equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer) and the Guix already sets `rtc_use_pipewire=true' in the ungoogled-chromium configure flags.
+      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
 #+end_src
 **** Shared
 #+begin_src scheme
@@ -7986,12 +7986,13 @@ setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Web browsers
-If =ungoogled-chromium= had a wrapper script that added ~--ozone-platform-hint=auto~ it would avoid the necessity of having two different packages for X/Wayland.
 ****** Chromium
 #+begin_src scheme
 (define* (he-chromium #:key
                       stateless?
                       wayland?
+                      pipewire?
+                      theme
                       gtk-services
                       flavors)
   (append
@@ -8000,16 +8001,16 @@ If =ungoogled-chromium= had a wrapper script that added ~--ozone-platform-hint=a
       (simple-service
        'chromium-add-packages
        home-profile-service-type
-       (append
-        (if (member #:ungoogled-chromium flavors)
-            (list (if wayland?
-                      ungoogled-chromium/wayland
-                      ungoogled-chromium))
-            '())
-        (if (member #:chromium flavors)
-            (list chromium+drm)
-            '())
-        (list ublock-origin/chromium))))
+       (let ((wrapper (lambda (package)
+                        (chromium-wrapper package wayland? pipewire? theme))))
+         (append
+          (if (member #:ungoogled-chromium flavors)
+              (list (wrapper ungoogled-chromium))
+              '())
+          (if (member #:chromium flavors)
+              (list (wrapper chromium+drm))
+              '())
+          (list ublock-origin/chromium)))))
 
     (when stateless?
       (home-stateless-service
@@ -8038,6 +8039,32 @@ If =ungoogled-chromium= had a wrapper script that added ~--ozone-platform-hint=a
 
    (or gtk-services '())))
 
+(define (chromium-wrapper package wayland? pipewire? theme)
+  (let ((flags (append
+                (if wayland?
+                    '((#:switches . '("--ozone-platform-hint=auto"))) '())
+                (if pipewire?
+                    '((#:features . '("WebRTCPipeWireCapturer"))) '())
+                ;; Currently Chromium doesn't detect the light/dark-ness of the GTK theme for the `prefers-color-scheme' media query: https://bugs.chromium.org/p/chromium/issues/detail?id=998903
+                (if (equal? theme #:theme/dark)
+                    '((#:switches . '("--force-dark-mode"))
+                      (#:features . '("WebUIDarkMode")))
+                    '()))))
+    (as-> flags $
+          (apply merge-with append $)
+          (let ((switches-args
+                 (apply append (assoc-ref $ #:switches)))
+                (features-arg
+                 (let ((features (assoc-ref $ #:features)))
+                   (when features
+                     (string-append "--enable-features="
+                                    (string-join features ","))))))
+            (append switches-args
+                    (or (list features-arg) '())))
+          (string-join $)
+          ;; Not done yet. This is where I'd the command line args to a package wrapper like e.g. `ungoogled-chromium/wayland' does. For now just return the unmodified package.
+          package)))
+
 (define (chromium? flavors)
   (or (member #:ungoogled-chromium flavors)
       (member #:chromium flavors)))
@@ -8049,7 +8076,7 @@ If =ungoogled-chromium= had a wrapper script that added ~--ozone-platform-hint=a
                            #:google-chrome))
 #+end_src
 ******* Setup instructions
-It might be possible to configure some of these in a file or with command-line flags. Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones (just through flags or not at all).
+It might be possible to configure some of these in a file (perhaps =master-preferences.json=, changing which would require modifying and thus rebuilding the chromium package). Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones, if at all.
 ******** Chromium
 - Settings > Appearance > Use GTK+ theme
 - Settings > On startup, check "Continue where you left off"
@@ -8061,7 +8088,7 @@ It might be possible to configure some of these in a file or with command-line f
 ******** uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
 ****** Firefox
-If I want to statically configure Firefox (or one of its relatives) check out =gnu/home-services/web-browsers.scm= for ideas.
+It might be possible to statically configure Firefox (or one of its relatives), check out the Icecat profiles in =gnu/home-services/web-browsers.scm=.
 #+begin_src scheme
 (define* (he-firefox #:key
                      stateless?
@@ -8476,6 +8503,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    (he-doom-vterm #:setup-zsh? (member #:shell/zsh interactive-shells)) '())
                (he-chromium #:stateless? stateless?
                             #:wayland? wayland?
+                            #:pipewire? pipewire?
+                            #:theme theme
                             #:gtk-services gtk
                             ;; #:flavors chromium-flavors
                             #:flavors '(#:google-chrome))
