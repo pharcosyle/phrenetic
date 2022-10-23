@@ -8010,7 +8010,9 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
           (if (member #:chromium flavors)
               (list (wrapper chromium+drm))
               '())
-          (list ublock-origin/chromium)))))
+          (if (chromium? flavors)
+              (list ublock-origin/chromium)
+              '())))))
 
     (when stateless?
       (home-stateless-service
