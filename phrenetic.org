@@ -842,8 +842,8 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (chmod #$swapfile #o600)
           (invoke #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile)))))
 #+end_src
-****** TODO [#E] Dynamically-determined swapfile size
-/Otherwise/ make it an argument.
+****** TODO [#E] Don't hardcode swapfile size
+Determine it dynamically or make it an argument.
 - At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
 - Make it 1.5x memory size if disk size allows.
 ***** Stateless
@@ -1064,7 +1064,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
          #:ignore (list nix-dir))))))))
 
 (define (create-nix-dir-gexp nix-dir)
-  #~(begin
+  #~(begin ; TODO don't need this outer `begin'.
       (when (not (file-exists? #$nix-dir))
         (mkdir #$nix-dir))))
 #+end_src
@@ -2616,7 +2616,7 @@ SAVEHIST=$HISTSIZE
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list git
+       (list git ; TODO might not be necessary after I do my Guix-straight integration.
              ripgrep
              fd
              all-the-icons-fonts
@@ -7524,7 +7524,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                                   org-todo-keyword-faces))
 
                       (when (not line-spacing)
-                        (setq org-modern-label-border 0.3))
+                        (setq org-modern-label-border 0.3)) ; Chosen arbitrarily. Looks good.
 
                       (global-org-modern-mode)
                       (add-hook! 'org-mode-hook #'org-appear-mode)))
