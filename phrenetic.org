@@ -1707,7 +1707,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar))
+  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar waybar-cpu-histogram))
   #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -6809,11 +6809,23 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    #:placement 'modules-left))
 #+end_src
 ******** CPU
+- TODO histogram
+  - I don't understand the histogram output.
+  - The histogram is "jumpy", it changes width.
 #+begin_src scheme
-(define (waybar-cpu)
-  (waybar-module
-   'cpu
-   '((format . " {usage}%"))))
+(define* (waybar-cpu #:key (histogram? #t))
+  (if histogram?
+      (waybar-module
+       'custom/cpu-hist
+       `((format . {})
+         (return-type . "json")
+         (exec . ,#~(let ((cmd (string-append #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
+                                              " 2> /dev/null")))
+                      (string-append "\"" cmd "\"")))
+         (interval . 10)))
+      (waybar-module
+       'cpu
+       '((format . " {usage}%")))))
 #+end_src
 ******** Idle inhibitor
 #+begin_src scheme
