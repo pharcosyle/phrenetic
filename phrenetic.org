@@ -1750,6 +1750,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-pipewire
             light-colors
             dark-colors
+            wallpapers
+            wallpaper
             he-fonts
             font-mono
             font-sans
@@ -5706,6 +5708,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (#:color/violet . "#aeb9f3")
     (#:color/cyan . "#75e0f9")))
 #+end_src
+**** Wallpapers
+#+begin_src scheme
+(define wallpapers
+  `((#:wallpaper/alucard . ,(local-file "wallpapers/alucard.png"))))
+
+(define wallpaper (assoc-ref wallpapers #:wallpaper/alucard))
+#+end_src
 **** Fonts
 #+begin_src scheme
 (define* (he-fonts #:key
@@ -6135,7 +6144,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   portal-services
                   (sway-mod 'Mod1)
                   (xwayland? #t)
-                  (bg-image wallpaper)
+                  bg-image
                   kb-layout
                   kb-repeat-delay
                   kb-repeat-rate
@@ -7067,8 +7076,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (assoc-ref font #:font/name)
     (number->string
      (assoc-ref font #:font/size)))))
-
-(define wallpaper (local-file "alucard_bg.png"))
 #+end_src
 *** Programs
 **** AWS
@@ -8469,12 +8476,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if (member #:session/sway (or sessions '()))
-                (let ((date-format date-format)
+                (let ((wallpaper wallpaper)
+                      (date-format date-format)
                       (time-format time-format))
                   (append
                    (he-sway #:pipewire? pipewire?
                             #:doom? doom?
                             #:portal-services portal-services
+                            #:bg-image wallpaper
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
                             #:idle-manager (swayidle-idle-manager)
                             #:screen-locker (swaylock-screen-locker-immediate)
@@ -8490,6 +8499,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                             #:emacs (emacs-editor emacs)
                             #:emacs-new-frame (emacs-new-frame emacs))
                    (he-swaylock #:colors colors
+                                #:image wallpaper
                                 #:font font-variable-pitch
                                 #:date-format date-format
                                 #:time-format time-format)
@@ -10069,5 +10079,7 @@ Public License instead of this License.  But first, please read
 
 !/phrenetic/
 /phrenetic/*
-!phrenetic/alucard_bg.png
+!/phrenetic/wallpapers/
+/phrenetic/wallpapers/*
+!phrenetic/wallpapers/alucard.png
 #+end_src
