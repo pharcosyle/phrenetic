@@ -1685,7 +1685,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-google-noto font-iosevka-etoile font-liberation font-awesome))
-  #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme network-manager-applet))
@@ -5503,29 +5503,27 @@ I might need to run apps specially for Wayland, see [[https://github.com/swaywm/
 #+begin_src scheme
 (define* (he-flatpak #:key
                      stateless?
-                     wayland?)
-  (list
-   (simple-service
-    'flatpak-add-packages
-    home-profile-service-type
-    (append
-     (list flatpak)
-     (if wayland?
-         (list xdg-desktop-portal
-               xdg-desktop-portal-wlr)
-         '())))
+                     portal-services)
+  (append
+   (list
+    (simple-service
+     'flatpak-add-package
+     home-profile-service-type
+     (list flatpak))
 
-   (simple-service
-    'flatpak-exports
-    home-environment-variables-service-type
-    `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
+    (simple-service
+     'flatpak-exports
+     home-environment-variables-service-type
+     `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
 
-   (when stateless?
-     (home-stateless-service
-      'flatpak
-      #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)
-                 (#:mode . #o700)))))))
+    (when stateless?
+      (home-stateless-service
+       'flatpak
+       #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
+                  (#:store . #:machine)
+                  (#:mode . #o700))))))
+
+   (or portal-services '())))
 #+end_src
 ***** Setup instructions
 #+begin_src sh :tangle no
@@ -6134,6 +6132,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 (define* (he-sway #:key
                   pipewire?
                   doom?
+                  portal-services
                   (sway-mod 'Mod1)
                   (xwayland? #t)
                   (bg-image wallpaper)
@@ -6151,118 +6150,118 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   emacs
                   emacs-new-frame
                   extra-config)
-  (list
-   (simple-service
-    'sway-add-packages
-    home-profile-service-type
-    (list (sway-start-package pipewire?)
-          qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
-          swayhide ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
-          xdg-desktop-portal
-          xdg-desktop-portal-wlr
-          slurp)) ; This might be necessary to make xdg-desktop-portal-wlr screencasting work. See "xdpw will try to use the first chooser found in the list of hardcoded choosers..." in https://man.archlinux.org/man/xdg-desktop-portal-wlr.5.
+  (append
+   (list
+    (simple-service
+     'sway-add-packages
+     home-profile-service-type
+     (list (sway-start-package pipewire?)
+           qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
+           swayhide)) ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
-   (service
-    home-sway-service-type
-    (home-sway-configuration
-     (package sway) ; Remove this when I'm not using RDE's `sway-latest` any more (at the time of this writing, RDE has version  1.7 which Guix only has on core-updates).
-     (config
-      (append
-       `((xwayland ,(if xwayland? 'enable 'disable))
+    (service
+     home-sway-service-type
+     (home-sway-configuration
+      (package sway) ; Remove this when I'm not using RDE's `sway-latest` any more (at the time of this writing, RDE has version  1.7 which Guix only has on core-updates).
+      (config
+       (append
+        `((xwayland ,(if xwayland? 'enable 'disable))
 
-         (set $mod ,sway-mod)
+          (set $mod ,sway-mod)
 
-         (floating_modifier $mod normal)
+          (floating_modifier $mod normal)
 
-         (bindsym $mod+Shift+r reload)
+          (bindsym $mod+Shift+r reload)
 
-         ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
-         ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
-         ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
-         ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
-         (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-               DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
+          ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
+          ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
+          ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
+          ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
+          (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+                DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
 
-         ;; Manipulating windows.
-         (bindsym $mod+Shift+c kill)
-         (bindsym $mod+Shift+f fullscreen)
-         (bindsym $mod+Shift+space floating toggle)
-         (bindsym $mod+Control+space focus mode_toggle)
-         (bindsym $mod+h focus left)
-         (bindsym $mod+j focus down)
-         (bindsym $mod+k focus up)
-         (bindsym $mod+l focus right)
-         (bindsym $mod+Shift+h move left)
-         (bindsym $mod+Shift+j move down)
-         (bindsym $mod+Shift+k move up)
-         (bindsym $mod+Shift+l move right)
+          ;; Manipulating windows.
+          (bindsym $mod+Shift+c kill)
+          (bindsym $mod+Shift+f fullscreen)
+          (bindsym $mod+Shift+space floating toggle)
+          (bindsym $mod+Control+space focus mode_toggle)
+          (bindsym $mod+h focus left)
+          (bindsym $mod+j focus down)
+          (bindsym $mod+k focus up)
+          (bindsym $mod+l focus right)
+          (bindsym $mod+Shift+h move left)
+          (bindsym $mod+Shift+j move down)
+          (bindsym $mod+Shift+k move up)
+          (bindsym $mod+Shift+l move right)
 
-         ;; Moving around workspaces.
-         (bindsym $mod+tab workspace back_and_forth)
-         ,@(append-map
-            (lambda (x)
-              `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                 workspace number ,x)
-                (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                         move container to workspace number ,x)))
-            (iota 10 1))
+          ;; Moving around workspaces.
+          (bindsym $mod+tab workspace back_and_forth)
+          ,@(append-map
+             (lambda (x)
+               `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+                  workspace number ,x)
+                 (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                          move container to workspace number ,x)))
+             (iota 10 1))
 
-         ;; Scratchpad settings.
-         (bindsym $mod+Shift+minus move scratchpad)
-         (bindsym $mod+minus scratchpad show)
+          ;; Scratchpad settings.
+          (bindsym $mod+Shift+minus move scratchpad)
+          (bindsym $mod+minus scratchpad show)
 
-         (default_border pixel)
-         (default_floating_border pixel)
-         (gaps inner 8)
+          (default_border pixel)
+          (default_floating_border pixel)
+          (gaps inner 8)
 
-         (bindsym $mod+Shift+b splith)
-         (bindsym $mod+Shift+v splitv)
-         (bindsym $mod+Shift+s layout stacking)
-         (bindsym $mod+Shift+w layout tabbed)
-         (bindsym $mod+Shift+e layout toggle split)
-         (bindsym $mod+Shift+a focus parent)
-         (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
-                  -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
-                  -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
-         (gaps left 78) ; To accommodate the crack in my screen.
+          (bindsym $mod+Shift+b splith)
+          (bindsym $mod+Shift+v splitv)
+          (bindsym $mod+Shift+s layout stacking)
+          (bindsym $mod+Shift+w layout tabbed)
+          (bindsym $mod+Shift+e layout toggle split)
+          (bindsym $mod+Shift+a focus parent)
+          (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
+                   -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
+                   -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+          (gaps left 78) ; To accommodate the crack in my screen.
 
-         ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-         (for_window "[title=\".* - Emacs Assistant\"]"
-                     floating enable,
-                     resize set
-                     width ,(assoc-ref emacs-assistant-window-params #:width) ppt
-                     height ,(assoc-ref emacs-assistant-window-params #:height) ppt))
+          ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+          (for_window "[title=\".* - Emacs Assistant\"]"
+                      floating enable,
+                      resize set
+                      width ,(assoc-ref emacs-assistant-window-params #:width) ppt
+                      height ,(assoc-ref emacs-assistant-window-params #:height) ppt))
 
-       (if bg-image
-           `((output * bg ,bg-image fill)) '())
+        (if bg-image
+            `((output * bg ,bg-image fill)) '())
 
-       (sway-input #:kb-layout kb-layout
-                   #:kb-repeat-delay kb-repeat-delay
-                   #:kb-repeat-rate kb-repeat-rate)
+        (sway-input #:kb-layout kb-layout
+                    #:kb-repeat-delay kb-repeat-delay
+                    #:kb-repeat-rate kb-repeat-rate)
 
-       (sway-external-programs #:idle-manager idle-manager
-                               #:screen-locker screen-locker
-                               #:notifier notifier
-                               #:status-bar status-bar
-                               #:applets applets
-                               #:app-launcher app-launcher
-                               #:terminal terminal
-                               #:backup-terminal backup-terminal
-                               #:emacs emacs
-                               #:emacs-new-frame emacs-new-frame)
+        (sway-external-programs #:idle-manager idle-manager
+                                #:screen-locker screen-locker
+                                #:notifier notifier
+                                #:status-bar status-bar
+                                #:applets applets
+                                #:app-launcher app-launcher
+                                #:terminal terminal
+                                #:backup-terminal backup-terminal
+                                #:emacs emacs
+                                #:emacs-new-frame emacs-new-frame)
 
-       (or extra-config '())))))
+        (or extra-config '())))))
 
-   (simple-service
-    'sway-reload-config-on-change
-    home-run-on-change-service-type
-    `(("files/.config/sway/config"
-       ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
+    (simple-service
+     'sway-reload-config-on-change
+     home-run-on-change-service-type
+     `(("files/.config/sway/config"
+        ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
-   (when doom?
-     (doom-service
-      'sway
-      #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215"))))))
+    (when doom?
+      (doom-service
+       'sway
+       #:packages '((package! i3wm-config-mode :pin "188e3978807ec39eba3cb69d973c0062af324215")))))
+
+   (or portal-services '())))
 
 (define (sway-start pipewire?)
   (file-append (sway-start-package pipewire?) "/bin/" sway-start-exe))
@@ -7032,6 +7031,32 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
   (if pipewire?
       '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
+#+end_src
+**** Portals
+#+begin_src scheme
+(define* (portal-services #:key wayland?)
+  (list
+   (simple-service
+    'portals-add-packages
+    home-profile-service-type
+    (list xdg-desktop-portal
+          (if wayland?
+              xdg-desktop-portal-wlr
+              xdg-desktop-portal-gtk)))
+
+   (when wayland?
+     (simple-service
+      'portals-wlr-config
+      home-multi-xdg-configuration-files-service-type
+      `(("xdg-desktop-portal-wlr/config"
+         ,(ini-file
+           "xdg-desktop-portal-wlr-config"
+           `((screencast ((chooser_cmd . ,#~(string-append #$(file-append slurp "/bin/slurp")
+                                                           " -f %o -or -c ff0000"))
+                          (chooser_type . simple))))
+           #:ini-serialize
+           (lambda (config)
+             (ini-serialize config #:equal-string "=")))))))))
 #+end_src
 **** Shared
 #+begin_src scheme
@@ -8221,16 +8246,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
                  (#:store . #:machine)))))))
 
-(define home-multi-xdg-configuration-files-service-type
-  (service-type
-   (inherit home-xdg-configuration-files-service-type)
-   (compose
-    (lambda (exts)
-      (as-> exts $
-            (delete-duplicates $ (lambda (a b)
-                                   (equal? (car a) (car b))))
-            (apply append $))))))
-
 (define (dconf-db name settings)
   (computed-file
    name
@@ -8310,6 +8325,16 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (-> (default-skeletons)
       (assoc-ref file)
       car))
+
+(define home-multi-xdg-configuration-files-service-type
+  (service-type
+   (inherit home-xdg-configuration-files-service-type)
+   (compose
+    (lambda (exts)
+      (as-> exts $
+            (delete-duplicates $ (lambda (a b)
+                                   (equal? (car a) (car b))))
+            (apply append $))))))
 
 (define home-shepherd-service-log-file
   #~(lambda (file)
@@ -8412,14 +8437,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (font-unicode font-unicode)
                 (font-variable-pitch font-sans)
                 (dbus? (not login-manager))
-                (wayland? #t))
+                (wayland? #t)
+                (portal-services (portal-services #:wayland? wayland?)))
            (append
             (if pipewire?
                 (he-pipewire #:stateless? stateless?
                              #:dbus? dbus?)
                 '())
             (he-flatpak #:stateless? stateless?
-                        #:wayland? wayland?)
+                        #:portal-services portal-services)
             (he-fonts #:stateless? stateless?
                       #:fonts (list font-mono
                                     font-sans
@@ -8451,6 +8477,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   (append
                    (he-sway #:pipewire? pipewire?
                             #:doom? doom?
+                            #:portal-services portal-services
                             #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
                             #:idle-manager (swayidle-idle-manager)
                             #:screen-locker (swaylock-screen-locker-immediate)
