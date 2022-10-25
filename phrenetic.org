@@ -397,8 +397,7 @@ Run with ~sudo~.
                   comment
                   ;; shell
                   admin?
-                  password
-                  salt)
+                  password)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -409,7 +408,7 @@ Run with ~sudo~.
    ;;          ((#:shell/bash) ...)
    ;;          ((#:shell/zsh) ...)))
    (password (if password
-                 (crypt password (or salt "toosimple"))
+                 (crypt password (string-append "$6$" "sosalty"))
                  #f))))
 #+end_src
 *** Package management
