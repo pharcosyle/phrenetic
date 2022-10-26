@@ -1040,7 +1040,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+begin_src scheme
 (define* (stateless-nix os #:key machine-dir)
   (let* ((nix-dir "/nix")
-         (nix-machine-dir (string-append machine-dir nix-dir)))
+         (nix-machine-dir (string-append machine-dir nix-dir))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap"
     (system-comp
      os
      (file-systems
