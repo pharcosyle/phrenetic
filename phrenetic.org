@@ -1861,7 +1861,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (list (service-extension home-activation-service-type
                              (lambda (config)
                                (stateless:activate-gexp
-                                #~(#$state-with-home-expansions '#$(assoc-ref config #:state))
+                                (state-with-home-expansions (assoc-ref config #:state))
                                 homedir-gexp
                                 (assoc-ref config #:persist-dir)
                                 (assoc-ref config #:machine-dir))))
@@ -1869,8 +1869,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                              (lambda (config)
                                (list (stateless:diff-tool-package
                                       "home-stateless-diff"
-                                      #~(#$state-with-home-expansions '#$(assoc-ref config #:state))
-                                      #~(#$ignore-with-home-expansions '#$(assoc-ref config #:ignore))
+                                      (state-with-home-expansions (assoc-ref config #:state))
+                                      (ignore-with-home-expansions (assoc-ref config #:ignore))
                                       homedir-gexp
                                       (assoc-ref config #:persist-dir)
                                       (assoc-ref config #:machine-dir)
@@ -1882,6 +1882,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 
 (define homedir-gexp #~(getenv "HOME"))
 
+(define (state-with-home-expansions state)
+  #~(map (lambda (i)
+           (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
+         '#$state))
+
+(define (ignore-with-home-expansions ignore)
+  #~(map #$path-with-home-expansion '#$ignore))
+
 (define path-with-home-expansion
   #~(lambda (path)
       (cond
@@ -1891,16 +1899,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
          (lambda* (#:optional tail #:key xdg-base)
            (string-append (getenv xdg-base) "/" (or tail "")))
          path)))))
-
-(define state-with-home-expansions
-  #~(lambda (state)
-      (map (lambda (i)
-             (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
-           state)))
-
-(define ignore-with-home-expansions
-  #~(lambda (ignore)
-      (map #$path-with-home-expansion ignore)))
 #+end_src
 ****** Diff tool
 #+begin_src scheme
@@ -5586,7 +5584,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (provision '(kmonad))
     (start #~(make-forkexec-constructor
               (list #$(file-append kmonad "/bin/kmonad") #$kbd)
-              #:log-file (#$home-shepherd-service-log-file "kmonad.log")))
+              #:log-file #$(home-shepherd-service-log-file "kmonad.log")))
     (stop #~(make-kill-destructor)))))
 #+end_src
 *** Desktop
@@ -5619,7 +5617,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        '(dbus) '()))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire"))
-                #:log-file (#$home-shepherd-service-log-file "pipewire.log")
+                #:log-file #$(home-shepherd-service-log-file "pipewire.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -5629,7 +5627,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (requirement '(pipewire pipewire-media-session))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
-                #:log-file (#$home-shepherd-service-log-file "pipewire-pulse.log")
+                #:log-file #$(home-shepherd-service-log-file "pipewire-pulse.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -5677,7 +5675,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (requirement '(pipewire))
       (start #~(make-forkexec-constructor
                 (list #$(file-append wireplumber "/bin/wireplumber"))
-                #:log-file (#$home-shepherd-service-log-file "wireplumber.log")
+                #:log-file #$(home-shepherd-service-log-file "wireplumber.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
                         (default-environment-variables))))
@@ -8355,12 +8353,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                    (equal? (car a) (car b))))
             (apply append $))))))
 
-(define home-shepherd-service-log-file
-  #~(lambda (file)
-      (string-append
-       (or (getenv "XDG_LOG_HOME")
-           (string-append (getenv "HOME") "/.local/var/log"))
-       "/" file)))
+(define (home-shepherd-service-log-file file)
+  #~(string-append
+     (or (getenv "XDG_LOG_HOME")
+         (string-append (getenv "HOME") "/.local/var/log"))
+     "/" #$file))
 
 (define very-big-history 1000000)
 #+end_src
@@ -8694,8 +8691,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                      (mkdir-p (dirname backup-file))
                      (rename-file file backup-file)))))
             (when (no-follow-file-exists? target)
-              (if ((#$symlink-to-state? (list #$persist-dir
-                                              #$machine-dir))
+              (if (#$(symlink-to-state? (list persist-dir
+                                              machine-dir))
                    target)
                   (delete-file target)
                   (begin
@@ -8710,7 +8707,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  (directory-target? (string-suffix? "/" path))
                  (target (if directory-target?
                              (string-drop-right path 1) path))
-                 (state-dir ((#$state-dir-lookup #$persist-dir #$machine-dir)
+                 (state-dir (#$(state-dir-lookup persist-dir machine-dir)
                              (assoc-ref i #:store))))
             (let ((parent-dir (dirname path))
                   (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
@@ -8806,15 +8803,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                 (if (string-suffix? "/" path)
                                     (string-drop-right path 1) path))
                               (state->paths #$state))
-                         (#$symlink-to-state? (list #$persist-dir
-                                                    #$machine-dir)))
+                         #$(symlink-to-state? (list persist-dir
+                                                    machine-dir)))
              (make-known-files+dirs #$ignore)
              (or #$additional-known '()))))
 
          (define (diff-state)
            (let ((finder
                   (lambda (store state)
-                    (let ((state-dir ((#$state-dir-lookup #$persist-dir #$machine-dir)
+                    (let ((state-dir (#$(state-dir-lookup persist-dir machine-dir)
                                       store)))
                       (find-diff
                        (string-append state-dir #$base-dir)
@@ -8861,24 +8858,22 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 *** Shared
 #+begin_src scheme
-(define state-dir-lookup
-  #~(lambda (persist-dir machine-dir)
-      (lambda (k)
-        (case k
-          ((#:persist) persist-dir)
-          ((#:machine) machine-dir)))))
+(define (state-dir-lookup persist-dir machine-dir)
+  #~(lambda (k)
+      (case k
+        ((#:persist) #$persist-dir)
+        ((#:machine) #$machine-dir))))
 
-(define symlink-to-state?
+(define (symlink-to-state? state-dirs)
   (with-imported-modules '((guix build utils))
-    #~(lambda (state-dirs)
-        (lambda (file)
-          (use-modules ((guix build utils) #:select (symbolic-link?))
-                       ((srfi srfi-1) #:select (any)))
+    #~(lambda (file)
+        (use-modules ((guix build utils) #:select (symbolic-link?))
+                     ((srfi srfi-1) #:select (any)))
 
-          (and (symbolic-link? file)
-               (any (lambda (state-dir)
-                      (string-prefix? state-dir (readlink file)))
-                    state-dirs))))))
+        (and (symbolic-link? file)
+             (any (lambda (state-dir)
+                    (string-prefix? state-dir (readlink file)))
+                  #$state-dirs)))))
 #+end_src
 * Utils
 :PROPERTIES:
