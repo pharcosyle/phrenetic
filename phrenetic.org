@@ -2199,47 +2199,55 @@ SAVEHIST=$HISTSIZE
                          stdin?)
   (program-file
    (string-append "emacs-handler-" name)
-   (let ((eval-expr
-          #~(lambda (args input)
-              `(with-selected-frame
-                (make-frame '(,@(if #$assistant?
-                                    `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
-                                      ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
-                                      )
-                                    '())
-                              ,@(if #$minibuffer?
-                                    '((minibuffer . only)) '())))
-                (let ((args ',args)
-                      (input ,(or input 'nil)))
-                  ,@(if #$minibuffer?
-                        '((unwind-protect
-                           (progn
-                            #$@exprs)
-                           (delete-frame)))
-                        '#$exprs)))))
-         (serialize
-          #~(lambda (expr)
-              (with-output-to-string
-                (lambda ()
-                  (write expr))))))
-     #~(begin
-         (use-modules ((ice-9 popen) #:select (close-pipe open-pipe*))
-                      ((ice-9 textual-ports) #:select (get-string-all put-string)))
-         (let* ((args (cdr (command-line)))
-                (input (if #$stdin?
-                           (string-drop-right (get-string-all (current-input-port)) 1)
-                           #f))
-                (pipe (open-pipe* OPEN_READ
-                                  #$(file-append emacs "/bin/emacsclient")
-                                  "--eval"
-                                  (#$serialize
-                                   (#$eval-expr args input)))))
-           (put-string (current-output-port)
-                       (let* ((res* (get-string-all pipe))
-                              (end (string-take-right res* 1)) ; EOF or newline or something? Donno if this matters, doing it just in case.
-                              (res (string-trim-both (string-drop-right res* 1) #\"))) ; `emacsclient' output is a sexp so strings will have quotes around them. Work around just this particular case, for now it's the only one that matters (for the dmenu-like functionality).
-                         (string-append res end)))
-           (close-pipe pipe))))))
+   #~(begin
+       (use-modules ((ice-9 popen) #:select (close-pipe open-pipe*))
+                    ((ice-9 textual-ports) #:select (get-string-all put-string)))
+
+       (let* ((args (cdr (command-line)))
+              (input (if #$stdin?
+                         (string-drop-right (get-string-all (current-input-port)) 1)
+                         #f))
+              (pipe (let ((cmd (list
+                                #$(file-append emacs "/bin/emacsclient")
+                                "--eval"
+                                (#$serialize-eval-expr
+                                 (#$(eval-expr exprs
+                                               assistant?
+                                               assistant-title
+                                               minibuffer?)
+                                    args input)))))
+                      (apply open-pipe* OPEN_READ cmd))))
+         (put-string (current-output-port)
+                     (let* ((res* (get-string-all pipe))
+                            (end (string-take-right res* 1)) ; EOF or newline or something? Donno if this matters, doing it just in case.
+                            (res (string-trim-both (string-drop-right res* 1) #\"))) ; `emacsclient' output is a sexp so strings will have quotes around them. Work around just this particular case, for now it's the only one that matters (for the dmenu-like functionality).
+                       (string-append res end)))
+         (close-pipe pipe)))))
+
+(define (eval-expr exprs assistant? assistant-title minibuffer?)
+  #~(lambda (args input)
+      `(with-selected-frame
+        (make-frame '(,@(if #$assistant?
+                            `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
+                              ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
+                              )
+                            '())
+                      ,@(if #$minibuffer?
+                            '((minibuffer . only)) '())))
+        (let ((args ',args)
+              (input ,(or input 'nil)))
+          ,@(if #$minibuffer?
+                '((unwind-protect
+                   (progn
+                    #$@exprs)
+                   (delete-frame)))
+                '#$exprs)))))
+
+(define serialize-eval-expr
+  #~(lambda (expr)
+      (with-output-to-string
+        (lambda ()
+          (write expr)))))
 
 (define emacs-assistant-window-params
   '((#:width . 50)
