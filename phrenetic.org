@@ -987,7 +987,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 
         (let* ((log-dir "/var/log")
                (log-state-dir (string-append #$state-dir log-dir)))
-          (rmdir log-dir) ; HACK At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes.
+          (rmdir log-dir) ; At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes.
           (mkdir-p log-state-dir)
           (symlink log-state-dir log-dir)))))
 #+end_src
