@@ -924,7 +924,9 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (extensions
     (list (service-extension boot-service-type
                              (lambda (config)
-                               (populate-gexp (assoc-ref config #:machine-dir))))
+                               (gexps->gexp
+                                (list populate-gexp
+                                      (symlink-log-dir-gexp (assoc-ref config #:machine-dir))))))
           (service-extension activation-service-type
                              (lambda (config)
                                (stateless:activate-gexp
@@ -953,18 +955,19 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (compose identity)
    (extend stateless:extend-proc)
    (description "Initialize a stateless system.")))
-#+end_src
-******** Populate
-#+begin_src scheme
-(define (populate-gexp log-state-dir)
+
+(define (gexps->gexp gexps)
+  #~(begin
+      #$@gexps))
+
+(define populate-gexp
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
-                            '((guix build utils)
-                              (gnu build install)))
+                            '((gnu build install)))
       #~(begin
-          (use-modules ((guix build utils) #:select (mkdir-p))
-                       ((gnu build install) #:select (populate-root-file-system)))
+          (use-modules ((gnu build install) #:select (populate-root-file-system)))
 
+          ;; HACK Use `populate-root-file-system' (noramlly run during system install) to set up the empty root but we don't want ALL of the changes it makes so undo those.
           (let* ((system-path "/var/guix/profiles/system")
                  (system-1-path "/var/guix/profiles/system-1-link")
                  (system-1-exists? (file-exists? system-1-path))
@@ -975,13 +978,18 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
             (populate-root-file-system system-1-link ""
                                        #:extras `((,system-path -> ,system-link)))
             (unless system-1-exists?
-              (delete-file system-1-path)))
+              (delete-file system-1-path)))))))
 
-          (let* ((dir "/var/log")
-                 (state-dir (string-append #$log-state-dir dir)))
-            (rmdir dir) ; It already exists, created by `populate-root-file-system'.
-            (mkdir-p state-dir)
-            (symlink state-dir dir))))))
+(define (symlink-log-dir-gexp state-dir)
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (mkdir-p)))
+
+        (let* ((log-dir "/var/log")
+               (log-state-dir (string-append #$state-dir log-dir)))
+          (rmdir log-dir) ; HACK At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes.
+          (mkdir-p log-state-dir)
+          (symlink log-state-dir log-dir)))))
 #+end_src
 ******** Users
 #+begin_src scheme
