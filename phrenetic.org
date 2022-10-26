@@ -1057,15 +1057,11 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
        (list
         (simple-service 'create-nix-dir
                         activation-service-type
-                        (create-nix-dir-gexp nix-machine-dir))
+                        #~(when (not (file-exists? #$nix-machine-dir))
+                            (mkdir #$nix-machine-dir)))
         (stateless-service
          'nix
          #:ignore (list nix-dir))))))))
-
-(define (create-nix-dir-gexp nix-dir)
-  #~(begin ; TODO don't need this outer `begin'.
-      (when (not (file-exists? #$nix-dir))
-        (mkdir #$nix-dir))))
 #+end_src
 *** Hardware-specific
 **** Console
