@@ -943,7 +943,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                        (list
                                         (assoc-ref config #:persist-dir)
                                         (assoc-ref config #:machine-dir)))
-                                      (activate-home-shepherd-services
+                                      (activate-he-shepherd-services
                                        (assoc-ref config #:hes)))))
           (service-extension profile-service-type
                              (lambda (config)
@@ -1014,7 +1014,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+end_src
 ******** Users
 #+begin_src scheme
-(define (user-homes-shepherd-service user-homes state-dirs)
+(define (user-homes-shepherd-service homes state-dirs)
   (shepherd-service
    (provision '(stateless-user-homes))
    (requirement '(file-systems))
@@ -1037,10 +1037,10 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                         (lambda (state-dir)
                           (mkdirp-user-home (string-append state-dir home) uid gid))
                         '#$state-dirs)))
-                   '#$user-homes))
+                   '#$homes))
                 #t)))))
 
-(define (activate-home-shepherd-services hes)
+(define (activate-he-shepherd-services hes)
   (let ((svc
          (lambda (user he)
            (shepherd-service
@@ -1069,7 +1069,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+begin_src scheme
 (define* (stateless-nix os #:key machine-dir)
   (let* ((nix-dir "/nix")
-         (nix-machine-dir (string-append machine-dir nix-dir))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap"
+         (nix-machine-dir (string-append machine-dir nix-dir))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file sysmte (at "/").
     (system-comp
      os
      (file-systems
