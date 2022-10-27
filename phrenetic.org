@@ -396,8 +396,7 @@ Run with ~sudo~.
                   name
                   comment
                   ;; shell
-                  admin?
-                  password)
+                  admin?)
   (user-account
    (name name)
    (comment (or comment ""))
@@ -407,9 +406,7 @@ Run with ~sudo~.
    ;; (shell (case shell
    ;;          ((#:shell/bash) ...)
    ;;          ((#:shell/zsh) ...)))
-   (password (if password
-                 (crypt password (string-append "$6$" "sosalty"))
-                 #f))))
+   ))
 #+end_src
 *** Package management
 **** Guix
@@ -9136,8 +9133,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    (#:comment . "Phil Coulson")
                    (#:admin? . #t))
                   ((#:name . ,guest-name)
-                   (#:comment . "Speak Friend and Enter")
-                   (#:password . "mellon")))
+                   (#:comment . "Speak Friend and Enter")))
    #:kmonad? #t
    #:kmonad-users (list primary-name)
    #:bluetooth? bluetooth?
