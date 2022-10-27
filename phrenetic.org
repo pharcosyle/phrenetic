@@ -888,6 +888,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
         (service stateless-service-type
                  `(#:persist-dir ,persist-dir
                    #:machine-dir ,machine-dir
+                   #:password-users ,(map car who)
                    #:homes ,(->> users
                                  (filter (lambda (account)
                                            (member (user-account-name account) (map car who))))
@@ -926,6 +927,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                              (lambda (config)
                                (gexps->gexp
                                 (list populate-gexp
+                                      (populate-passwords-gexp (assoc-ref config #:password-users)
+                                                               (assoc-ref config #:persist-dir))
                                       (symlink-log-dir-gexp (assoc-ref config #:machine-dir))))))
           (service-extension activation-service-type
                              (lambda (config)
@@ -979,6 +982,27 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                        #:extras `((,system-path -> ,system-link)))
             (unless system-1-exists?
               (delete-file system-1-path)))))))
+
+;; HACK Guix assumes /etc/shadow is persistent between reboots and doesn't allow specifying a password file (like Nix's `passwordFile') so imitate this functionality by writing a shadow file on every boot populated with our users and their password hashes. The file doesn't have to be complete: Guix will add the missing entries (for system accounts, etc).
+(define (populate-passwords-gexp users state-dir)
+  (with-imported-modules (source-module-closure
+                          '((gnu build accounts)))
+    #~(begin
+        (use-modules ((gnu build accounts) #:select (shadow-entry write-shadow))
+                     ((ice-9 textual-ports) #:select (get-line)))
+
+        (define (get-password user)
+          (let ((password-file (string-append #$state-dir "/.passwords/" user)))
+            (if (file-exists? password-file)
+                (call-with-input-file password-file get-line)
+                #f)))
+
+        (write-shadow
+         (map (lambda (user)
+                (shadow-entry
+                 (name user)
+                 (password (or (get-password user) ""))))
+              users)))))
 
 (define (symlink-log-dir-gexp state-dir)
   (with-imported-modules '((guix build utils))
