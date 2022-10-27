@@ -926,7 +926,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
     (list (service-extension boot-service-type
                              (lambda (config)
                                (gexps->gexp
-                                (list populate-gexp
+                                (list populate-root-gexp
                                       (populate-passwords-gexp (assoc-ref config #:password-users)
                                                                (assoc-ref config #:persist-dir))
                                       (symlink-log-dir-gexp (assoc-ref config #:machine-dir))))))
@@ -963,7 +963,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
   #~(begin
       #$@gexps))
 
-(define populate-gexp
+(define populate-root-gexp
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
                             '((gnu build install)))
@@ -2269,9 +2269,9 @@ SAVEHIST=$HISTSIZE
 
 (define serialize-eval-expr
   #~(lambda (expr)
-      (with-output-to-string
-        (lambda ()
-          (write expr)))))
+      (call-with-output-string
+        (lambda (port)
+          (write expr port)))))
 
 (define emacs-assistant-window-params
   '((#:width . 50)
