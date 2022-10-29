@@ -849,7 +849,9 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                     #:key
                     persist-dir
                     machine-dir
-                    who
+                    hes
+                    state-users
+                    password-users
                     nix?)
   (as-> os $
     (system-comp
@@ -877,16 +879,15 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
         (service stateless-service-type
                  `(#:persist-dir ,persist-dir
                    #:machine-dir ,machine-dir
-                   #:password-files ,(->> who
-                                          (map car)
-                                          (map (lambda (user)
-                                                 (string-append persist-dir "/.passwords/" user))))
+                   #:hes ,hes
                    #:homes ,(->> (operating-system-users os)
                                  (filter (lambda (account)
-                                           (member (user-account-name account) (map car who))))
+                                           (member (user-account-name account) state-users)))
                                  (map (lambda (account)
                                         `(,(user-account-name account) . ,(user-account-home-directory account)))))
-                   #:hes ,who))
+                   #:password-files ,(map (lambda (user)
+                                            (string-append persist-dir "/.passwords/" user))
+                                          (cons "root" password-users))))
         (stateless-service
          'system
          #:state '(((#:path . "/etc/machine-id")
@@ -1658,7 +1659,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            stateless?
                            stateless-persist-dir
                            stateless-machine-dir
-                           stateless-users
+                           stateless-hes
+                           stateless-state-users
+                           stateless-password-users
                            nix?)
   (as-> os $
     (case filesystem
@@ -1683,7 +1686,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if stateless?
         (stateless $ #:persist-dir stateless-persist-dir
                    #:machine-dir stateless-machine-dir
-                   #:who stateless-users
+                   #:hes stateless-hes
+                   #:state-users stateless-state-users
+                   #:password-users stateless-password-users
                    #:nix? nix?)
         $)))
 
@@ -9161,6 +9166,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (he:create-he
    (apply
     he:he-base
+    #:stateless? stateless?
     #:email "pharcosyle@gmail.com"
     #:kmonad? #t
     #:sessions primary-he-sessions
@@ -9199,8 +9205,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define stateless-machine-dir os:stateless-machine-dir)
 
 (define os+he-shared-opts
-  `(#:stateless? ,stateless?
-    #:nix? ,nix?
+  `(#:nix? ,nix?
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
@@ -9273,9 +9278,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                              #:stateless? stateless?
                              #:stateless-persist-dir stateless-persist-dir
                              #:stateless-machine-dir stateless-machine-dir
-                             #:stateless-users `((,primary-name . ,(primary-he))
-                                                 (,aux-name . ,(aux-he))
-                                                 (,guest-name . ,(guest-he)))
+                             #:stateless-hes `((,primary-name . ,(primary-he))
+                                               (,aux-name . ,(aux-he))
+                                               (,guest-name . ,(guest-he)))
+                             #:stateless-state-users (list primary-name)
+                             #:stateless-password-users (list primary-name
+                                                              aux-name
+                                                              guest-name)
                              #:nix? nix?)
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
