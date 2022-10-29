@@ -870,14 +870,6 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                         (inherit fs)
                         (needed-for-boot? #t))
                       fs)))))
-     (users
-      (map (lambda (account)
-             (if (member (user-account-name account) (map car who))
-                 (user-account
-                  (inherit account)
-                  (create-home-directory? #f))
-                 account))
-           (operating-system-users os)))
      (services
       (append
        (operating-system-user-services os)
@@ -889,7 +881,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                           (map car)
                                           (map (lambda (user)
                                                  (string-append persist-dir "/.passwords/" user))))
-                   #:homes ,(->> users
+                   #:homes ,(->> (operating-system-users os)
                                  (filter (lambda (account)
                                            (member (user-account-name account) (map car who))))
                                  (map (lambda (account)
@@ -931,18 +923,20 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                       (symlink-log-dir-gexp (assoc-ref config #:machine-dir))))))
           (service-extension activation-service-type
                              (lambda (config)
-                               (stateless:activate-gexp
-                                `',(assoc-ref config #:state)
-                                ""
-                                (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir))))
+                               (gexps->gexp
+                                (list (create-state-homes
+                                       (assoc-ref config #:homes)
+                                       (list (assoc-ref config #:persist-dir)
+                                             (assoc-ref config #:machine-dir)))
+                                      (stateless:activate-gexp
+                                       `',(assoc-ref config #:state)
+                                       ""
+                                       (assoc-ref config #:persist-dir)
+                                       (assoc-ref config #:machine-dir))))))
           (service-extension shepherd-root-service-type
                              (lambda (config)
                                (cons* (user-homes-shepherd-service
-                                       (assoc-ref config #:homes)
-                                       (list
-                                        (assoc-ref config #:persist-dir)
-                                        (assoc-ref config #:machine-dir)))
+                                       (map cdr (assoc-ref config #:homes)))
                                       (activate-he-shepherd-services
                                        (assoc-ref config #:hes)))))
           (service-extension profile-service-type
@@ -1014,30 +1008,44 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+end_src
 ******** Users
 #+begin_src scheme
-(define (user-homes-shepherd-service homes state-dirs)
+(define (create-state-homes-gexp homes state-dirs)
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (mkdir-p))
+                     ((ice-9 match) #:select (match-lambda)))
+
+        (for-each
+         (match-lambda
+           ((user . home)
+            (for-each (lambda (state-dir)
+                        (let ((dir (string-append state-dir home)))
+                          (mkdir-p dir)
+                          (chmod dir #o700)
+                          (let ((pw (getpwnam user)))
+                            (chown dir (passwd:uid pw) (passwd:gid pw)))))
+                      '#$state-dirs)))
+         '#$homes))))
+
+;; HACK Clear the home directories because the `user-homes' shepherd service puts skeleton files in them. Only do this on startup activation, not reconfigure activation: determine which it is by checking for the presence of ".guix-home".
+(define (user-homes-shepherd-service homedirs)
   (shepherd-service
    (provision '(stateless-user-homes))
-   (requirement '(file-systems))
+   (requirement '(user-homes))
    (one-shot? #t)
    (start (with-imported-modules '((guix build utils))
             #~(lambda ()
-                (let ((mkdirp-user-home
-                       (lambda (dir uid gid)
-                         (mkdir-p dir)
-                         (chmod dir #o700)
-                         (chown dir uid gid))))
-                  (for-each
-                   (lambda (user-home)
-                     (let* ((pw (getpwnam (car user-home)))
-                            (uid (passwd:uid pw))
-                            (gid (passwd:gid pw))
-                            (home (cdr user-home)))
-                       (mkdirp-user-home home uid gid)
-                       (for-each
-                        (lambda (state-dir)
-                          (mkdirp-user-home (string-append state-dir home) uid gid))
-                        '#$state-dirs)))
-                   '#$homes))
+                (use-modules ((gnu build utils) #:select (delete-file-recursively))
+                             ((ice-9 ftw) #:select (scandir)))
+
+                (define (delete-directory-contents dir)
+                  (for-each delete-file-recursively
+                            (scandir dir (lambda (name)
+                                           (not (member name '("." "..")))))))
+                (for-each
+                 (lambda (home)
+                   (when (not (file-exists? (string-append home "/.guix-home")))
+                     (delete-directory-contents home)))
+                 '#$homedirs)
                 #t)))))
 
 (define (activate-he-shepherd-services hes)
