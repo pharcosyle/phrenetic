@@ -944,7 +944,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
               config
               (append exts
                       (if (assoc-ref config #:symlink-log?)
-                          '((#:ignore . '("/var/log/"))) '())))))
+                          (list '((#:ignore . '("/var/log/"))))
+                          '())))))
    (description "Initialize a stateless system.")))
 #+end_src
 ******** Boot
@@ -1926,8 +1927,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extend (lambda (config exts)
              (stateless:extend-proc
               config
-              (append exts '((#:ignore . '(".guix-home")))))))
-   (extend stateless:extend-proc)
+              (append exts
+                      (list '((#:ignore . '(".guix-home"))))))))
    (description "Initialize a stateless home.")))
 
 (define homedir-gexp #~(getenv "HOME"))
@@ -8692,10 +8693,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 **** Extend procedure
 #+begin_src scheme
 (define (extend-proc config exts)
-  (let ((exts (apply merge-with append exts)))
+  (let ((exts* (apply merge-with append exts)))
     (->> (apply list->alist config)
-         (acons #:state (assoc-ref exts #:state))
-         (acons #:ignore (assoc-ref exts #:ignore)))))
+         (acons #:state (assoc-ref exts* #:state))
+         (acons #:ignore (assoc-ref exts* #:ignore)))))
 #+end_src
 *** Activate
 #+begin_src scheme
