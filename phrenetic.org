@@ -1068,9 +1068,6 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (one-shot? #t)
    (start (with-imported-modules '((guix build utils))
             #~(lambda ()
-                (use-modules ((gnu build utils) #:select (delete-file-recursively))
-                             ((ice-9 ftw) #:select (scandir)))
-
                 (define (delete-directory-contents dir)
                   (for-each delete-file-recursively
                             (scandir dir (lambda (name)
@@ -1081,7 +1078,9 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                      (when (not (file-exists? (string-append home "/.guix-home")))
                        (delete-directory-contents home))))
                  '#$users)
-                #t)))))
+                #t)))
+   (modules '(((guix build utils) #:select (delete-file-recursively))
+              ((ice-9 ftw) #:select (scandir))))))
 #+end_src
 ******** Shared
 #+begin_src scheme
@@ -1927,7 +1926,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extend (lambda (config exts)
              (stateless:extend-proc
               config
-              (cons '((#:ignore . '(".guix-home")))
+              (cons '((#:ignore . (".guix-home")))
                     exts))))
    (description "Initialize a stateless home.")))
 
@@ -8933,7 +8932,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
         (and (symbolic-link? file)
              (any (lambda (state-dir)
                     (string-prefix? state-dir (readlink file)))
-                  #$state-dirs)))))
+                  '#$state-dirs)))))
 #+end_src
 * Utils
 :PROPERTIES:
