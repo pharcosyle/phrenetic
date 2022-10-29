@@ -1673,7 +1673,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            stateless-hes
                            stateless-state-users
                            stateless-password-users
-                           nix?)
+                           stateless-nix?)
   (as-> os $
     (case filesystem
       ;; ((#:filesystem/ext4)
@@ -1700,7 +1700,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                    #:hes stateless-hes
                    #:state-users stateless-state-users
                    #:password-users stateless-password-users
-                   #:nix? nix?)
+                   #:nix? stateless-nix?)
         $)))
 
 (define* (with-macbook-hardware os #:key bluetooth?)
@@ -9199,7 +9199,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                                       (,guest-name . ,guest-he-stateless?)))
                              #:stateless-password-users (list primary-name
                                                               aux-name)
-                             #:nix? nix?)
+                             #:stateless-nix? nix?)
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
