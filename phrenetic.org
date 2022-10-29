@@ -925,7 +925,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
           (service-extension activation-service-type
                              (lambda (config)
                                (gexps->gexp
-                                (list (create-state-homes
+                                (list (create-state-homes-gexp
                                        (assoc-ref config #:homes)
                                        (list (assoc-ref config #:persist-dir)
                                              (assoc-ref config #:machine-dir)))
@@ -5356,12 +5356,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (".gdbinit"
         ,(skeleton-file ".gdbinit"))))
 
-    (home-stateless-service
-     'guile
-     #:state '(((#:path . ".guile_history")
-                (#:store . #:persist))
-               ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-                (#:store . #:machine)))))
+    (when stateless?
+      (home-stateless-service
+       'guile
+       #:state '(((#:path . ".guile_history")
+                  (#:store . #:persist))
+                 ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:store . #:machine))))))
 
    (if doom?
        (doom-guile #:stateless? stateless?) '())))
