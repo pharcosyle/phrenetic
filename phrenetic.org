@@ -2464,18 +2464,18 @@ SAVEHIST=$HISTSIZE
                                `(("emacs" ,doom-emacs)
                                  ("doom" ,(doom-private config)))))))
    (compose identity)
-   (extend (lambda (_ additional)
-             (doom-extend additional)))
+   (extend (lambda (_ exts)
+             (doom-extend exts)))
    (default-value #f)
    (description "Install and configure Doom.")))
 #+end_src
 ****** Extend procedure
 #+begin_src scheme
-(define (doom-extend additional)
+(define (doom-extend exts)
   (let ((field (lambda (k)
                  (map (lambda (i)
                         (or (assoc-ref i k) '()))
-                      additional))))
+                      exts))))
     `((#:init-file . ,(init-file (field #:modules)))
       (#:config-file . ,(config-file (field #:config)))
       (#:packages-file . ,(packages-file (field #:packages)))
@@ -8686,11 +8686,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Extend procedure
 #+begin_src scheme
-(define (extend-proc config additional)
-  (let ((additional* (apply merge-with append additional)))
+(define (extend-proc config exts)
+  (let ((exts (apply merge-with append exts)))
     (->> (apply list->alist config)
-         (acons #:state (assoc-ref additional* #:state))
-         (acons #:ignore (assoc-ref additional* #:ignore)))))
+         (acons #:state (assoc-ref exts #:state))
+         (acons #:ignore (assoc-ref exts #:ignore)))))
 #+end_src
 *** Activate
 #+begin_src scheme
