@@ -884,7 +884,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:password-files ,(map (lambda (user)
                                             (string-append persist-dir "/.passwords/" user))
                                           (cons "root" password-users))
-                   #:symlink-var-log? #t))
+                   #:symlink-log? #t))
         (stateless-service
          'system
          #:state '(((#:path . "/etc/machine-id")
@@ -916,7 +916,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                              (lambda (config)
                                (boot-gexp
                                 (assoc-ref config #:password-files)
-                                (assoc-ref config #:symlink-var-log?)
+                                (assoc-ref config #:symlink-log?)
                                 (assoc-ref config #:machine-dir))))
           (service-extension activation-service-type
                              (lambda (config)
@@ -943,20 +943,20 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
              (stateless:extend-proc
               config
               (append exts
-                      (if (assoc-ref config #:symlink-var-log?)
+                      (if (assoc-ref config #:symlink-log?)
                           '((#:ignore . '("/var/log/"))))
                       '()))))
    (description "Initialize a stateless system.")))
 #+end_src
 ******** Boot
 #+begin_src scheme
-(define (boot-gexp password-files symlink-var-log? machine-dir)
+(define (boot-gexp password-files symlink-log? machine-dir)
   (gexps->gexp
    (append
     (list populate-root-gexp
           (populate-passwords-gexp password-files))
-    (if symlink-var-log?
-        (list (symlink-var-log-gexp machine-dir))))))
+    (if symlink-log?
+        (list (symlink-log-gexp machine-dir))))))
 
 (define populate-root-gexp
   (with-extensions (list guile-gcrypt)
@@ -997,7 +997,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                 "")))))
               password-files)))))
 
-(define (symlink-var-log-gexp state-dir)
+(define (symlink-log-gexp state-dir)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p)))
