@@ -883,14 +883,14 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:state-users ,state-users
                    #:password-files ,(map (lambda (user)
                                             (string-append persist-dir "/.passwords/" user))
-                                          (cons "root" password-users))))
+                                          (cons "root" password-users))
+                   #:symlink-var-log? #t))
         (stateless-service
          'system
          #:state '(((#:path . "/etc/machine-id")
                     (#:store . #:machine))
                    ((#:path . "/var/lib/random-seed")
-                    (#:store . #:machine)))
-         #:ignore '("/var/log/"))))))
+                    (#:store . #:machine))))))))
 
     (if nix?
         (stateless-nix $ #:machine-dir machine-dir) $)))
@@ -916,6 +916,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                              (lambda (config)
                                (boot-gexp
                                 (assoc-ref config #:password-files)
+                                (assoc-ref config #:symlink-var-log?)
                                 (assoc-ref config #:machine-dir))))
           (service-extension activation-service-type
                              (lambda (config)
@@ -938,16 +939,24 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                       (assoc-ref config #:persist-dir)
                                       (assoc-ref config #:machine-dir)))))))
    (compose identity)
-   (extend stateless:extend-proc)
+   (extend (lambda (config exts)
+             (stateless:extend-proc
+              config
+              (append exts
+                      (if (assoc-ref config #:symlink-var-log?)
+                          '((#:ignore . '("/var/log/"))))
+                      '()))))
    (description "Initialize a stateless system.")))
 #+end_src
 ******** Boot
 #+begin_src scheme
-(define (boot-gexp password-files machine-dir)
+(define (boot-gexp password-files symlink-var-log? machine-dir)
   (gexps->gexp
-   (list populate-root-gexp
-         (populate-passwords-gexp password-files)
-         (symlink-log-dir-gexp machine-dir))))
+   (append
+    (list populate-root-gexp
+          (populate-passwords-gexp password-files))
+    (if symlink-var-log?
+        (list (symlink-log-dir-gexp machine-dir))))))
 
 (define populate-root-gexp
   (with-extensions (list guile-gcrypt)
