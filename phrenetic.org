@@ -9124,7 +9124,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 :meta-dir+: /phrenetic/configs
 :END:
 ** Frostfire
-#+begin_src scheme :tangle (meta-in-dir "frostfire.scm")
+*** Core
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "frostfire.scm")
+:END:
+#+begin_src scheme
 (define-module (phrenetic configs frostfire)
   #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((phrenetic home) #:prefix he:)
@@ -9132,142 +9136,39 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:use-module ((phrenetic system) #:prefix os:)
   #:use-module (phrenetic utils)
   #:use-module ((srfi srfi-1) #:select (delete-duplicates))
-  #:export (frostfire
+  #:export (system
             installer
-            primary
-            aux
-            guest))
-
-(define* (os-base #:key
-                  primary-name
-                  aux-name
-                  guest-name
-                  bluetooth?
-                  auto-login?
-                  auto-login-user
-                  sessions)
-  (apply
-   os:os-base
-   os:blank-os
-   #:source? #t
-   #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
-   #:users-info `(((#:name . ,primary-name)
-                   (#:comment . "Krzysztof Baranowski")
-                   (#:admin? . #t))
-                  ((#:name . ,aux-name)
-                   (#:comment . "Phil Coulson")
-                   (#:admin? . #t))
-                  ((#:name . ,guest-name)
-                   (#:comment . "Mellon")))
-   #:kmonad? #t
-   #:kmonad-users (list primary-name)
-   #:bluetooth? bluetooth?
-   #:bluetooth-users (list primary-name
-                           aux-name
-                           guest-name)
-   #:auto-login? auto-login?
-   #:auto-login-user auto-login-user
-   #:sessions sessions
-   os+he-shared-opts))
-
+            primary-he
+            aux-he
+            guest-he))
 
 (define stateless? #t)
-
-
-(define* (primary-he)
-  (he:create-he
-   (apply
-    he:he-base
-    #:stateless? stateless?
-    #:email "pharcosyle@gmail.com"
-    #:kmonad? #t
-    #:sessions primary-he-sessions
-    #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
-                 ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
-                                        (#:doom? . ,doom?)
-                                        (#:doom-org? . ,doom-org?)
-                                        (#:doom-tree-sitter? doom-tree-sitter?))))
-    he-shared-opts)))
-
-(define primary-he-sessions '(#:session/sway))
-
-(define (aux-he)
-  (he:create-he
-   (apply
-    he:he-base
-    #:email "pharcosyle@gmail.com"
-    #:sessions aux-he-sessions
-    he-shared-opts)))
-
-(define aux-he-sessions primary-he-sessions)
-
-(define (guest-he)
-  (he:create-he
-   (apply
-    he:he-base
-    #:sessions guest-he-sessions
-    he-shared-opts)))
-
-(define guest-he-sessions '(;; #:session/gnome
-                            #:session/sway))
-
-
-(define nix? #t)
 (define stateless-persist-dir os:stateless-persist-dir)
 (define stateless-machine-dir os:stateless-machine-dir)
-
-(define os+he-shared-opts
-  `(#:nix? ,nix?
-    #:console? #t
-    #:desktop? #t
-    #:pipewire? #t
-    ;; #:login-manager #:lm/gdm
-    ))
-
-(define he-shared-opts
-  (append
-   os+he-shared-opts
-   `(#:stateless-persist-dir ,stateless-persist-dir
-     #:stateless-machine-dir ,stateless-machine-dir
-     #:doom? doom?
-     #:doom-calendar? doom-calendar?
-     #:doom-org? doom-org?
-     #:doom-evil? doom-evil?
-     #:doom-tree-sitter? doom-tree-sitter?
-     ;; #:guix-channels (local-file "frostfire-channels-lock") ; TODO Not working (or working sporadically) for some reason. Very, very strange.
-     )))
-
-
-(define doom? #t)
-(define doom-calendar? doom?)
-(define doom-org? doom?)
-(define doom-evil? doom?)
-(define doom-tree-sitter? doom?)
-
-
-(define efi? #t)
-(define boot-label os:boot-label)
-(define boot-target os:efi-boot-target)
-(define filesystem #:filesystem/btrfs)
-(define root-label os:root-label)
-(define mountables (os:stateless-mountables
-                    #:persist-dir stateless-persist-dir
-                    #:machine-dir stateless-machine-dir))
-(define btrfs-mount-flags os:btrfs-mount-flags)
-(define btrfs-mount-options os:btrfs-mount-options)
-(define disk-encryption? #t)
-(define luks-label os:luks-label)
-
-
-(define frostfire
+#+end_src
+**** System
+#+begin_src scheme
+(define (system)
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "mellon")
         (bluetooth? #t))
-    (-> (os-base #:primary-name primary-name
-                 #:aux-name aux-name
-                 #:guest-name guest-name
+    (-> (os-base #:users-info `(((#:name . ,primary-name)
+                                 (#:comment . "Krzysztof Baranowski")
+                                 (#:admin? . #t))
+                                ((#:name . ,aux-name)
+                                 (#:comment . "Phil Coulson")
+                                 (#:admin? . #t))
+                                ((#:name . ,guest-name)
+                                 (#:comment . "Mellon")))
+                 #:kmonad? #t
+                 #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
+                                                 (,aux-name . ,aux-he-kmonad?)
+                                                 (,guest-name . ,guest-he-kmonad?)))
                  #:bluetooth? bluetooth?
+                 #:bluetooth-users (list primary-name
+                                         aux-name
+                                         guest-name)
                  ;; #:auto-login? disk-encryption?
                  ;; #:auto-login-user primary-name
                  #:sessions (->> (list primary-he-sessions
@@ -9293,30 +9194,178 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                              #:stateless-hes `((,primary-name . ,(primary-he))
                                                (,aux-name . ,(aux-he))
                                                (,guest-name . ,(guest-he)))
-                             #:stateless-state-users (list primary-name)
+                             #:stateless-state-users (feature-users `((,primary-name . ,primary-he-stateless?)
+                                                                      (,aux-name . ,aux-he-stateless?)
+                                                                      (,guest-name . ,guest-he-stateless?)))
                              #:stateless-password-users (list primary-name
                                                               aux-name)
                              #:nix? nix?)
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
-(define installer
-  (installer-package #:os-name "frostfire"
-                     #:efi? efi?
-                     #:boot-label boot-label
-                     #:boot-target boot-target
-                     #:root-label root-label
-                     #:disk-encryption? disk-encryption?
-                     #:luks-label luks-label
-                     #:filesystem filesystem
-                     #:mountables mountables
-                     #:btrfs-mount-flags btrfs-mount-flags
-                     #:btrfs-mount-options btrfs-mount-options))
+(define (feature-users flags)
+  (->> flags
+       (filter cdr)
+       (map car)))
+#+end_src
+***** OS
+#+begin_src scheme
+(define* (os-base #:key
+                  users-info
+                  kmonad?
+                  kmonad-users
+                  bluetooth?
+                  bluetooth-users
+                  auto-login?
+                  auto-login-user
+                  sessions)
+  (apply
+   os:os-base
+   os:blank-os
+   #:source? #t
+   #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
+   #:users-info users-info
+   #:kmonad? kmonad?
+   #:kmonad-users kmonad-users
+   #:bluetooth? bluetooth?
+   #:bluetooth-users bluetooth-users
+   #:auto-login? auto-login?
+   #:auto-login-user auto-login-user
+   #:sessions sessions
+   (os+he-shared-opts)))
+#+end_src
+***** HEs
+****** Primary
+#+begin_src scheme
+(define (primary-he)
+  (he:create-he
+   (apply
+    he:he-base
+    #:stateless? primary-he-stateless?
+    #:email "pharcosyle@gmail.com"
+    #:kmonad? primary-he-kmonad?
+    #:sessions primary-he-sessions
+    #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
+                 ("Krush/hyperdrive" . ((#:stateless? . ,primary-he-stateless?)
+                                        (#:doom? . ,doom?)
+                                        (#:doom-org? . ,doom-org?)
+                                        (#:doom-tree-sitter? doom-tree-sitter?))))
+    (he-shared-opts))))
 
-(define primary (primary-he))
-(define aux (aux-he))
-(define guest (guest-he))
+(define primary-he-stateless? stateless?)
+(define primary-he-kmonad? #t)
+(define primary-he-sessions '(#:session/sway))
+#+end_src
+****** Aux
+#+begin_src scheme
+(define (aux-he)
+  (he:create-he
+   (apply
+    he:he-base
+    #:stateless? aux-he-stateless?
+    #:email "pharcosyle@gmail.com"
+    #:kmonad? aux-he-kmonad?
+    #:sessions aux-he-sessions
+    (he-shared-opts))))
 
-frostfire
+(define aux-he-stateless? #f)
+(define aux-he-kmonad? #f)
+(define aux-he-sessions primary-he-sessions)
+#+end_src
+****** Guest
+#+begin_src scheme
+(define (guest-he)
+  (he:create-he
+   (apply
+    he:he-base
+    #:stateless? guest-he-stateless?
+    #:kmonad? guest-he-kmonad?
+    #:sessions guest-he-sessions
+    (he-shared-opts))))
+
+(define guest-he-stateless? #f)
+(define guest-he-kmonad? #f)
+(define guest-he-sessions '(;; #:session/gnome
+                            #:session/sway))
+#+end_src
+****** HE shared opts
+#+begin_src scheme
+(define doom? #t)
+(define doom-calendar? doom?)
+(define doom-org? doom?)
+(define doom-evil? doom?)
+(define doom-tree-sitter? doom?)
+
+(define (he-shared-opts)
+  (append
+   (os+he-shared-opts)
+   `(#:stateless-persist-dir ,stateless-persist-dir
+     #:stateless-machine-dir ,stateless-machine-dir
+     #:doom? doom?
+     #:doom-calendar? doom-calendar?
+     #:doom-org? doom-org?
+     #:doom-evil? doom-evil?
+     #:doom-tree-sitter? doom-tree-sitter?
+     ;; #:guix-channels (local-file "frostfire-channels-lock") ; TODO Not working (or working sporadically) for some reason. Very, very strange.
+     )))
+#+end_src
+***** OS+HE shared opts
+#+begin_src scheme
+(define nix? #t)
+
+(define (os+he-shared-opts)
+  `(#:nix? ,nix?
+    #:console? #t
+    #:desktop? #t
+    #:pipewire? #t
+    ;; #:login-manager #:lm/gdm
+    ))
+#+end_src
+**** Installer
+#+begin_src scheme
+(define (installer)
+  (installer-package
+   #:os-name "frostfire"
+   #:efi? efi?
+   #:boot-label boot-label
+   #:boot-target boot-target
+   #:root-label root-label
+   #:disk-encryption? disk-encryption?
+   #:luks-label luks-label
+   #:filesystem filesystem
+   #:mountables mountables
+   #:btrfs-mount-flags btrfs-mount-flags
+   #:btrfs-mount-options btrfs-mount-options))
+#+end_src
+**** System+installer shared opts
+#+begin_src scheme
+(define efi? #t)
+(define boot-label os:boot-label)
+(define boot-target os:efi-boot-target)
+(define filesystem #:filesystem/btrfs)
+(define root-label os:root-label)
+(define mountables (if stateless?
+                       (os:stateless-mountables
+                        #:persist-dir stateless-persist-dir
+                        #:machine-dir stateless-machine-dir)
+                       ;; ...
+                       ))
+(define btrfs-mount-flags os:btrfs-mount-flags)
+(define btrfs-mount-options os:btrfs-mount-options)
+(define disk-encryption? #t)
+(define luks-label os:luks-label)
+#+end_src
+**** Module
+***** Exports
+#+begin_src scheme
+(define system (system))
+(define installer (installer))
+(define primary-he (primary-he))
+(define aux-he (aux-he))
+(define guest-he (guest-he))
+#+end_src
+***** File-evaluates-to
+#+begin_src scheme
+system
 #+end_src
 *** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
