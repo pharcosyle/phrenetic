@@ -956,7 +956,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
     (list populate-root-gexp
           (populate-passwords-gexp password-files))
     (if symlink-var-log?
-        (list (symlink-log-dir-gexp machine-dir))))))
+        (list (symlink-var-log-gexp machine-dir))))))
 
 (define populate-root-gexp
   (with-extensions (list guile-gcrypt)
@@ -997,7 +997,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                 "")))))
               password-files)))))
 
-(define (symlink-log-dir-gexp state-dir)
+(define (symlink-var-log-gexp state-dir)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p)))
