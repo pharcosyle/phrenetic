@@ -1895,12 +1895,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (list
     (service home-stateless-service-type
              `(#:persist-dir ,persist-dir
-               #:machine-dir ,machine-dir)))
-
-   (list
-    (home-stateless-service
-     'home
-     #:ignore '(".guix-home")))))
+               #:machine-dir ,machine-dir)))))
 #+end_src
 **** Service
 ***** Service type
@@ -1928,6 +1923,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                       #:additional-known
                                       guix-home-files))))))
    (compose identity)
+   (extend (lambda (config exts)
+             (stateless:extend-proc
+              config
+              (append exts '((#:ignore . '(".guix-home")))))))
    (extend stateless:extend-proc)
    (description "Initialize a stateless home.")))
 
