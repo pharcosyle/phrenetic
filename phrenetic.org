@@ -914,22 +914,16 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (extensions
     (list (service-extension boot-service-type
                              (lambda (config)
-                               (gexps->gexp
-                                (list populate-root-gexp
-                                      (populate-passwords-gexp (assoc-ref config #:password-files))
-                                      (symlink-log-dir-gexp (assoc-ref config #:machine-dir))))))
+                               (boot-gexp
+                                (assoc-ref config #:password-files)
+                                (assoc-ref config #:machine-dir))))
           (service-extension activation-service-type
                              (lambda (config)
-                               (gexps->gexp
-                                (list (create-state-homes-gexp
-                                       (assoc-ref config #:state-users)
-                                       (list (assoc-ref config #:persist-dir)
-                                             (assoc-ref config #:machine-dir)))
-                                      (stateless:activate-gexp
-                                       `',(assoc-ref config #:state)
-                                       ""
-                                       (assoc-ref config #:persist-dir)
-                                       (assoc-ref config #:machine-dir))))))
+                               (activation-gexp
+                                (assoc-ref config #:state-users)
+                                (assoc-ref config #:state)
+                                (assoc-ref config #:persist-dir)
+                                (assoc-ref config #:machine-dir))))
           (service-extension shepherd-root-service-type
                              (lambda (config)
                                (activate-he-shepherd-services
@@ -946,13 +940,15 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (compose identity)
    (extend stateless:extend-proc)
    (description "Initialize a stateless system.")))
-
-(define (gexps->gexp gexps)
-  #~(begin
-      #$@gexps))
 #+end_src
 ******** Boot
 #+begin_src scheme
+(define (boot-gexp password-files machine-dir)
+  (gexps->gexp
+   (list populate-root-gexp
+         (populate-passwords-gexp password-files)
+         (symlink-log-dir-gexp machine-dir))))
+
 (define populate-root-gexp
   (with-extensions (list guile-gcrypt)
     (with-imported-modules (source-module-closure
@@ -1005,6 +1001,16 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+end_src
 ******** Activation
 #+begin_src scheme
+(define (activation-gexp state-users state persist-dir machine-dir)
+  (gexps->gexp
+   (list (create-state-homes-gexp state-users
+                                  (list persist-dir
+                                        machine-dir))
+         (stateless:activate-gexp `',state
+                                  ""
+                                  persist-dir
+                                  machine-dir))))
+
 (define (create-state-homes-gexp users state-dirs)
   (with-imported-modules '((guix build utils))
     #~(begin
@@ -1067,6 +1073,12 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                        (delete-directory-contents home))))
                  '#$users)
                 #t)))))
+#+end_src
+******** Shared
+#+begin_src scheme
+(define (gexps->gexp gexps)
+  #~(begin
+      #$@gexps))
 #+end_src
 ******* Extension helper
 #+begin_src scheme
