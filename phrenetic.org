@@ -253,6 +253,7 @@ Run with ~sudo~.
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-sta broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module ((rde gexp) #:select (slurp-file-like))
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
@@ -886,7 +887,12 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
          #:state '(((#:path . "/etc/machine-id")
                     (#:store . #:machine))
                    ((#:path . "/var/lib/random-seed")
-                    (#:store . #:machine))))))))
+                    (#:store . #:machine)))))))
+     (sudoers-file
+      (mixed-text-file
+       "sudoers"
+       (slurp-file-like %sudoers-specification)
+       "Defaults lecture=never" "\n")))
 
     (if nix?
         (stateless-nix $ #:machine-dir machine-dir) $)))
