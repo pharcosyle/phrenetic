@@ -8123,8 +8123,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
               (list (wrapper ungoogled-chromium)) '())
           (if (member #:chromium flavors)
               (list (wrapper chromium+drm)) '())
-          (if (chromium? flavors)
-              (list ublock-origin/chromium) '())))))
+          (list ublock-origin/chromium)))))
 
     (when stateless?
       (home-stateless-service
