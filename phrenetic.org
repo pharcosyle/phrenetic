@@ -927,8 +927,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                 (assoc-ref config #:hes))))
           (service-extension profile-service-type
                              (lambda (config)
-                               (list (stateless:diff-tool-package
-                                      "stateless-diff"
+                               (list (stateless:tool-package
+                                      "stateless"
                                       `',(assoc-ref config #:state)
                                       `',(assoc-ref config #:ignore)
                                       "/"
@@ -1913,8 +1913,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 (assoc-ref config #:machine-dir))))
           (service-extension home-profile-service-type
                              (lambda (config)
-                               (list (stateless:diff-tool-package
-                                      "home-stateless-diff"
+                               (list (stateless:tool-package
+                                      "home-stateless"
                                       (state-with-home-expansions (assoc-ref config #:state))
                                       (ignore-with-home-expansions (assoc-ref config #:ignore))
                                       homedir-gexp
@@ -1950,7 +1950,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
            (string-append (getenv xdg-base) "/" (or tail "")))
          path)))))
 #+end_src
-****** Diff tool
+****** Tool
 #+begin_src scheme
 (define guix-home-files
   (with-imported-modules '((guix build utils))
@@ -8676,7 +8676,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:export (service-fn
             extend-proc
             activate-gexp
-            diff-tool-package))
+            tool-package))
 #+end_src
 *** Services
 **** Service extension
@@ -8781,18 +8781,18 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
         (for-each process-state-entry #$state))))
 #+end_src
-*** Diff tool
+*** Tool
 **** Program
 #+begin_src scheme
-(define* (diff-tool-program state
-                            ignore
-                            base-dir
-                            persist-dir
-                            machine-dir
-                            #:key
-                            additional-known)
+(define* (tool-program state
+                       ignore
+                       base-dir
+                       persist-dir
+                       machine-dir
+                       #:key
+                       additional-known)
   (program-file
-   "diff-tool"
+   "stateless-tool"
    (with-imported-modules '((guix build utils))
      #~(begin
          (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
@@ -8901,11 +8901,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Package
 #+begin_src scheme
-(define* (diff-tool-package bin-name #:rest opts)
+(define* (tool-package bin-name #:rest opts)
   (package
     (inherit blank-package)
-    (name "stateless-diff-tool")
-    (source (apply diff-tool-program opts))
+    (name "stateless-tool")
+    (source (apply tool-program opts))
     (build-system trivial-build-system)
     (arguments
      `(#:builder
