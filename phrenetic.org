@@ -305,6 +305,7 @@ Run with ~sudo~.
             with-filesystems
             with-macbook-hardware))
 
+(define %random-seed-file (@@ (gnu services base) %random-seed-file))
 ;; Not exported. Probably an oversight that'll get fixed at some point.
 (define greetd-terminals (@@ (gnu services base) greetd-terminals))
 (define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
@@ -889,9 +890,9 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:symlink-log? #t))
         (stateless-service
          'system
-         #:state '(((#:path . "/etc/machine-id")
+         #:state `(((#:path . "/etc/machine-id")
                     (#:store . #:machine))
-                   ((#:path . "/var/lib/random-seed")
+                   ((#:path . ,%random-seed-file)
                     (#:store . #:machine)))))))
      (sudoers-file
       (mixed-text-file
