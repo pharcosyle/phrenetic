@@ -7510,7 +7510,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                       evil?)
   (let ((org-dir "org"))
     (append
-     (doom-org #:evil? evil?
+     (doom-org #:stateless? stateless?
+               #:evil? evil?
                #:org-dir org-dir)
 
      (list
