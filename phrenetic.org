@@ -4732,7 +4732,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        evil?
                        icons?)
   (let ((name 'general))
-    (list
+    (cons
      (doom-service
       name
       #:modules
@@ -4932,34 +4932,43 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
        (wip-config)))
 
-     (when stateless?
-       (doom-stateless-service
-        name
-        #:state '(((#:path . ("autosave/" #:doom-base #:cache))
-                   (#:store . #:machine))
-                  ((#:path . ("bookmarks" #:doom-base #:data))
-                   (#:store . #:persist))
-                  ((#:path . ("recentf" #:doom-base #:cache))
-                   (#:store . #:persist))
-                  ((#:path . ("savehist" #:doom-base #:cache))
-                   (#:store . #:persist))
-                  ((#:path . ("saveplace" #:doom-base #:cache))
-                   (#:store . #:persist))
-                  ((#:path . ("tramp" #:doom-base #:cache))
-                   (#:store . #:machine))
-                  ((#:path . ("tramp-autosave/" #:doom-base #:cache))
-                   (#:store . #:machine))
+     (if stateless?
+         (list
+          (doom-service
+           'bookmarks-indirection
+           #:config
+           ;; The Emacs bookmark package checks the modification time of the bookmarks file and offers to reload it if it changed. In the stateless case the file is a symlink and it's modified on every reconfigure (the symlink is recreated). This both breaks the funcationality (it should be checking the target file, not the symlink) and ressults in annoying prompts on reconfigure.
+           '((after! bookmark
+                     (setq bookmark-default-file (concat doom-data-dir "bookmarks/bookmarks")))))
 
-                  ((#:path . ("scratch/" #:doom-base #:data))
-                   (#:store . #:persist))
+          (doom-stateless-service
+           name
+           #:state '(((#:path . ("autosave/" #:doom-base #:cache))
+                      (#:store . #:machine))
+                     ((#:path . ("bookmarks/" #:doom-base #:data))
+                      (#:store . #:persist))
+                     ((#:path . ("recentf" #:doom-base #:cache))
+                      (#:store . #:persist))
+                     ((#:path . ("savehist" #:doom-base #:cache))
+                      (#:store . #:persist))
+                     ((#:path . ("saveplace" #:doom-base #:cache))
+                      (#:store . #:persist))
+                     ((#:path . ("tramp" #:doom-base #:cache))
+                      (#:store . #:machine))
+                     ((#:path . ("tramp-autosave/" #:doom-base #:cache))
+                      (#:store . #:machine))
 
-                  ((#:path . ("projectile.projects" #:doom-base #:cache))
-                   (#:store . #:persist))
-                  ((#:path . ("projectile.cache" #:doom-base #:cache))
-                   (#:store . #:machine))
+                     ((#:path . ("scratch/" #:doom-base #:data))
+                      (#:store . #:persist))
 
-                  ((#:path . ("workspaces/autosave/" #:doom-base #:data))
-                   (#:store . #:machine))))))))
+                     ((#:path . ("projectile.projects" #:doom-base #:cache))
+                      (#:store . #:persist))
+                     ((#:path . ("projectile.cache" #:doom-base #:cache))
+                      (#:store . #:machine))
+
+                     ((#:path . ("workspaces/autosave/" #:doom-base #:data))
+                      (#:store . #:machine)))))
+         '()))))
 
 
 
