@@ -290,6 +290,7 @@ Run with ~sudo~.
             disk-encryption
             luks-label
             swap
+            swapfile
             stateless
             stateless-persist-dir
             stateless-machine-dir
@@ -796,35 +797,29 @@ Must succeed [[*File systems][File systems]] component.
 ***** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
-(define* (swap os
-               #:key
-               stateless?
-               stateless-machine-dir
-               no-cow?)
-  (let ((swapfile (string-append
-                   (if stateless?
-                       (string-append stateless-machine-dir "/")
-                       "/")
-                   ".swap")))
-    (system-comp
-     os
-     (swap-devices
-      (list
-       (swap-space
-        (target swapfile))))
-     (services
-      (append
-       (operating-system-user-services os)
-       (list
-        (simple-service 'create-swapfile
-                        activation-service-type
-                        (create-swapfile-gexp swapfile no-cow?)))
-       (if stateless?
-           (list
-            (stateless-service
-             'swapfile
-             #:ignore (list swapfile)))
-           '()))))))
+(define-system-comp (swap #:key
+                          target
+                          no-cow?
+                          stateless?)
+  (swap-devices
+   (list
+    (swap-space
+     (target target))))
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (simple-service 'create-swapfile
+                     activation-service-type
+                     (create-swapfile-gexp swapfile no-cow?)))
+    (if stateless?
+        (list
+         (stateless-service
+          'swapfile
+          #:ignore (list swapfile)))
+        '()))))
+
+(define swapfile "/.swap")
 
 (define (create-swapfile-gexp swapfile no-cow?)
   (with-imported-modules '((guix build utils))
@@ -1702,9 +1697,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                           ((#:filesystem/btrfs)
                                            (map cdr mountables))))
         $)
-    (swap $ #:stateless? stateless?
-          #:stateless-machine-dir stateless-machine-dir
-          #:no-cow? (equal? filesystem #:filesystem/btrfs))
+    (swap $ #:target (if stateless?
+                         (string-append stateless-machine-dir swapfile)
+                         swapfile)
+          #:no-cow? (equal? filesystem #:filesystem/btrfs)
+          #:stateless? stateless?)
     (if stateless?
         (stateless $ #:persist-dir stateless-persist-dir
                    #:machine-dir stateless-machine-dir
