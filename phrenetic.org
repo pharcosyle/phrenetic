@@ -820,12 +820,11 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           #:ignore (list swapfile)))
         '()))))
 
-(define swapfile "/.swap")
-
 (define (create-swapfile-gexp swapfile no-cow?)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (invoke)))
+
         (when (not (file-exists? #$swapfile))
           (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
           (when #$no-cow?
@@ -833,6 +832,8 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (invoke #$(file-append util-linux+udev "/bin/fallocate") "--length" "8G" #$swapfile)
           (chmod #$swapfile #o600)
           (invoke #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile)))))
+
+(define swapfile "/.swap")
 #+end_src
 ****** TODO [#E] Don't hardcode swapfile size
 Determine it dynamically or make it an argument.
