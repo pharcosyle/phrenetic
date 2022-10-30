@@ -8419,7 +8419,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define (services-packages f svcs)
   (f (lambda (s)
-       (equal? (service-kind s) home-profile-service-type))
+       (and (service? s)
+            (equal? (service-kind s) home-profile-service-type)))
      svcs))
 #+end_src
 *** Shared
