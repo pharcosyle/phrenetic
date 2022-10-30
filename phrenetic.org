@@ -945,7 +945,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
               config
               (append exts
                       (if (assoc-ref config #:symlink-log?)
-                          (list '((#:ignore . '("/var/log/"))))
+                          (list '((#:ignore . ("/var/log/"))))
                           '())))))
    (description "Initialize a stateless system.")))
 #+end_src
@@ -995,7 +995,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                   (name user)
                   (password (if (file-exists? password-file)
                                 (call-with-input-file password-file get-line)
-                                "")))))
+                                ""))
+                  (last-change #f))))
               '#$password-files)))))
 
 (define (symlink-log-gexp state-dir)
@@ -1067,10 +1068,11 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (provision '(stateless-user-homes))
    (requirement '(user-homes))
    (one-shot? #t)
-   (start (with-imported-modules '((guix build utils))
+   (start (with-imported-modules '((guix build utils)) ; Donno if `with-imported-modules' is necessary. Most of the Shepherd services in Guix (that are defined this way, i.e. with a lambda gexp) don't have it but a few do and it doesn't seem to hurt anything.
             #~(lambda ()
                 (define (delete-directory-contents dir)
-                  (for-each delete-file-recursively
+                  (for-each (lambda (name)
+                              (delete-file-recursively (string-append dir "/" name)))
                             (scandir dir (lambda (name)
                                            (not (member name '("." "..")))))))
                 (for-each
