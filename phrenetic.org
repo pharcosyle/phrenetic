@@ -881,9 +881,10 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:machine-dir ,machine-dir
                    #:hes ,hes
                    #:state-users ,state-users
-                   #:password-files ,(map (lambda (user)
-                                            (string-append persist-dir "/.passwords/" user))
-                                          (cons "root" password-users))
+                   #:password-files ,(->> password-users
+                                          (cons "root")
+                                          (map (lambda (user)
+                                                 `(,user . ,(string-append persist-dir "/.passwords/" user)))))
                    #:symlink-log? #t))
         (stateless-service
          'system
@@ -995,7 +996,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                   (password (if (file-exists? password-file)
                                 (call-with-input-file password-file get-line)
                                 "")))))
-              password-files)))))
+              '#$password-files)))))
 
 (define (symlink-log-gexp state-dir)
   (with-imported-modules '((guix build utils))
