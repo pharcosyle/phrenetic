@@ -7955,8 +7955,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     (when stateless?
       (home-stateless-service
        'pavucontrol
-       #:state '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:store . #:machine))))))
+       #:ignore '(("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))))) ; Pavucontrol overwrites the current file (or a symlink) so we can't store this, ignore it instead.
 
    (or gtk-services '())))
 #+end_src
