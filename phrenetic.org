@@ -698,16 +698,15 @@ Must succeed [[*Accounts][Accounts]] component.
   (timezone (or timezone "Etc/UTC"))
   (locale (or locale "en_US.utf8")))
 #+end_src
-**** File systems and boot
-***** Bootloader
+**** Bootloader
 #+begin_src scheme
 (define boot-label "genesis")
 #+end_src
-****** Grub
+***** Grub
 #+begin_src scheme
 ;; ...
 #+end_src
-****** Grub EFI
+***** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key
                               label
@@ -725,11 +724,11 @@ Must succeed [[*Accounts][Accounts]] component.
 
 (define efi-boot-target "/boot/efi")
 #+end_src
-***** File systems
+**** File systems
 #+begin_src scheme
 (define root-label "firmament")
 #+end_src
-****** Ext4
+***** Ext4
 #+begin_src scheme
 ;; (define-system-comp (ext4 #:key label)
 ;;   (file-systems
@@ -739,7 +738,7 @@ Must succeed [[*Accounts][Accounts]] component.
 ;;             (type "ext4"))
 ;;           (operating-system-file-systems os))))
 #+end_src
-****** Btrfs
+***** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key
                            label
@@ -766,7 +765,7 @@ Must succeed [[*Accounts][Accounts]] component.
 (define btrfs-mount-flags '(no-atime))
 (define btrfs-mount-options '("compress=zstd" "autodefrag"))
 #+end_src
-***** Disk encryption
+**** Disk encryption
 Must succeed [[*File systems][File systems]] component.
 #+begin_src scheme
 (define* (disk-encryption os
@@ -796,7 +795,7 @@ Must succeed [[*File systems][File systems]] component.
 
 (define luks-label "ciphered")
 #+end_src
-***** Swap
+**** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
 (define-system-comp (swap #:key
@@ -840,11 +839,11 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 
 (define swapfile "/.swap")
 #+end_src
-****** TODO [#E] Don't hardcode swapfile size
+***** TODO [#E] Don't hardcode swapfile size
 Determine it dynamically or make it an argument.
 - At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
 - Make it 1.5x memory size if disk size allows.
-***** Stateless
+**** Stateless
 Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] components. Including this component after /all/ others is safest: to be useful, the stateless service's activation must come before that of other services that create state (also to this end the ~stateless-service-type~ is appended, not prepended, to operating system services).
 #+begin_src scheme
 (define* (stateless os
@@ -913,8 +912,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
     ("persist" . ,persist-dir)
     ("machine" . ,machine-dir)))
 #+end_src
-****** Service
-******* Service type
+***** Service
+****** Service type
 #+begin_src scheme
 (define stateless-service-type
   (service-type
@@ -956,7 +955,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                           '())))))
    (description "Initialize a stateless system.")))
 #+end_src
-******** Boot
+******* Boot
 #+begin_src scheme
 (define (boot-gexp password-files symlink-log? machine-dir)
   (gexps->gexp
@@ -1017,7 +1016,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
           (mkdir-p log-state-dir)
           (symlink log-state-dir log-dir)))))
 #+end_src
-******** Activation
+******* Activation
 #+begin_src scheme
 (define (activation-gexp state-users state persist-dir machine-dir)
   (gexps->gexp
@@ -1046,7 +1045,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                        '#$state-dirs)))
          '#$users))))
 #+end_src
-******** Shepherd
+******* Shepherd
 #+begin_src scheme
 (define (activate-he-shepherd-services hes)
   (cons (user-homes-shepherd-service (map car hes))
@@ -1092,18 +1091,18 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (modules '(((guix build utils) #:select (delete-file-recursively))
               ((ice-9 ftw) #:select (scandir))))))
 #+end_src
-******** Shared
+******* Shared
 #+begin_src scheme
 (define (gexps->gexp gexps)
   #~(begin
       #$@gexps))
 #+end_src
-******* Extension helper
+****** Extension helper
 #+begin_src scheme
 (define stateless-service
   (stateless:service-fn stateless-service-type))
 #+end_src
-****** Nix
+***** Nix
 #+begin_src scheme
 (define* (stateless-nix os #:key machine-dir)
   (let* ((nix-dir "/nix")
@@ -9157,7 +9156,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 :meta-dir+: /phrenetic/configs
 :END:
 ** Frostfire
-*** Core
+*** Config
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "frostfire.scm")
 :END:
