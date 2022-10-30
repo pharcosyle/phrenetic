@@ -1598,7 +1598,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+begin_src scheme
 (define* (os-base os
                   #:key
-                  stateless?
                   source?
                   source-path
                   users-info
@@ -1613,7 +1612,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   login-manager
                   auto-login?
                   auto-login-user
-                  sessions)
+                  sessions
+                  stateless?)
   (let ((number-of-ttys 6))
     (as-> os $
       (if source?
@@ -9183,7 +9183,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                        aux-he-sessions
                                        guest-he-sessions)
                                  (apply append)
-                                 delete-duplicates))
+                                 delete-duplicates)
+                 #:stateless? stateless?)
         (os:with-host-info #:host-name "frostfire"
                            #:timezone "America/Los_Angeles")
         (os:with-bootloader #:efi? efi?
@@ -9225,7 +9226,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   bluetooth-users
                   auto-login?
                   auto-login-user
-                  sessions)
+                  sessions
+                  stateless?)
   (apply
    os:os-base
    os:blank-os
@@ -9239,6 +9241,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    #:auto-login? auto-login?
    #:auto-login-user auto-login-user
    #:sessions sessions
+   #:stateless? stateless?
    (os+he-shared-opts)))
 #+end_src
 ***** HEs
