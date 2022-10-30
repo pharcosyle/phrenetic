@@ -8148,7 +8148,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                 '(((#:path . ".pki/nssdb/")
                    (#:store . #:machine)
                    (#:mode . #o700)
-                   (#:parent-dir-perms . ((#:mode . #o700)))))))))
+                   (#:parent-dir-perms . ((#:mode . #o700))))))
+       #:ignore (if (chrome? flavors)
+                    '(("mimeapps.list" #:xdg-base "XDG_DATA_HOME")) ; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also it's perpetually empty. Whatever, ignore it.
+                    #f))))
 
    (or gtk-services '())))
 
