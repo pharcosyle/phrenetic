@@ -4809,6 +4809,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
          ;; (setq-default cursor-in-non-selected-windows t)
 
+         (after! bookmark
+                 (setq bookmark-save-flag 1))
+
          (after! doom-modeline
                  ;; (setq doom-modeline-checker-simple-format nil)
                  (setq doom-modeline-major-mode-icon t)
