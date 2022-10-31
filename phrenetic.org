@@ -8827,34 +8827,41 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                       ((ice-9 ftw) #:select (file-system-fold))
                       ((srfi srfi-1) #:select (any)))
 
-         (define* (find-diff dir known)
+         (define* (find-diff directory known)
            (let* ((check-path
                    (lambda (path result)
                      (let ((pred (assoc-ref known path)))
                        (if (and pred (pred path))
                            result
                            (cons path result)))))
+                  (fn
+                   (lambda (f)
+                     (lambda (path _ result)
+                       (let ((asdf (if (string-prefix? "//" path)
+                                       (string-drop path 1)
+                                       path)))
+                         (f asdf _ result)))))
                   (results
                    (file-system-fold
                     (let ((known-paths (map car known)))
-                      (lambda (dir _ _*)
-                        (and (not (member (string-append dir "/") known-paths))
-                             (any (lambda (known-path)
-                                    (string-prefix? dir known-path))
-                                  known-paths))))
-                    (lambda (file _ result)
-                      (check-path file result))
-                    (lambda (_ _* result)
-                      result)
-                    (lambda (_ _* result)
-                      result)
-                    (lambda (dir _ result)
-                      (check-path (string-append dir "/") result))
-                    (lambda (path _ errno result)
+                      (fn (lambda (dir _ _*)
+                            (and (not (member (string-append dir "/") known-paths))
+                                 (any (lambda (known-path)
+                                        (string-prefix? dir known-path))
+                                      known-paths)))))
+                    (fn (lambda (file _ result)
+                          (check-path file result)))
+                    (fn (lambda (_ _* result)
+                          result))
+                    (fn (lambda (_ _* result)
+                          result))
+                    (fn (lambda (dir _ result)
+                          (check-path (string-append dir "/") result)))
+                    (lambda (path _ errno result) ; TODO use `fn' for this.
                       (format (current-error-port) "~a: ~a~%" path (strerror errno))
                       result)
                     '()
-                    dir)))
+                    directory)))
              (sort results string<?)))
 
          (define (make-known files pred)
@@ -8899,7 +8906,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
            (let ((finder
                   (lambda (store state)
                     (let ((state-dir (#$(state-dir-lookup persist-dir machine-dir)
-                                      store)))
+                                        store)))
                       (find-diff
                        (string-append state-dir #$base-dir)
                        (make-known-files+dirs
