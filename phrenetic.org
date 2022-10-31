@@ -9237,9 +9237,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
-  (->> flags
-       (filter cdr)
-       (map car)))
+  (->> flags (filter cdr) (map car)))
 #+end_src
 ***** OS
 #+begin_src scheme
