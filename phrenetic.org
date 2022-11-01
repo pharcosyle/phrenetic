@@ -527,7 +527,7 @@ Must succeed [[*Accounts][Accounts]] component.
           (operating-system-user-services os))))
 #+end_src
 *** Desktop
-**** Desktop services
+**** Base services
 #+begin_src scheme
 (define-system-comp (desktop-base-services)
   (services
@@ -644,13 +644,12 @@ Must succeed [[*Accounts][Accounts]] component.
                                  auto-login-user)
   (services
    (cons* (switch-to-tty-service #:tty-number tty-number)
-          (let ((services (operating-system-user-services os)))
-            (if auto-login?
-                (with-auto-login-to-tty services
-                                        #:greetd? greetd?
-                                        #:tty-number tty-number
-                                        #:user auto-login-user)
-                services)))))
+          (if auto-login?
+              (with-auto-login-to-tty (operating-system-user-services os)
+                                      #:greetd? greetd?
+                                      #:tty-number tty-number
+                                      #:user auto-login-user)
+              (operating-system-user-services os)))))
 
 (define* (switch-to-tty-service #:key tty-number)
   (simple-service
