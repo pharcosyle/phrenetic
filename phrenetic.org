@@ -272,6 +272,7 @@ Run with ~sudo~.
             console-fonts
             kmonad-tool
             desktop-services
+            classic-sound
             pipewire-multimedia
             network-manager
             bluetooth
@@ -523,9 +524,9 @@ Must succeed [[*Accounts][Accounts]] component.
             alsa-service-type))))))
 #+end_src
 **** Multimedia
-***** PulseAudio and ALSA
+***** Classic sound
 #+begin_src scheme
-(define-system-comp (pulseaudio+alsa)
+(define-system-comp (classic-sound)
   (services
    (append
     (operating-system-user-services os)
@@ -1648,7 +1649,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (desktop-services $)
             (if pipewire?
                 (pipewire-multimedia $)
-                (pulseaudio+alsa $))
+                (classic-sound $))
             (network-manager $ #:stateless? stateless?)
             ;; (if bluetooth?
             ;;     (bluetooth $ #:who bluetooth-users
