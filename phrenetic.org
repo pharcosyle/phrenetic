@@ -230,6 +230,7 @@ Run with ~sudo~.
   #:use-module ((guix store) #:select (%default-substitute-urls))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
+  #:use-module ((gnu build accounts) #:select (%password-lock-file))
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
@@ -355,7 +356,7 @@ Run with ~sudo~.
 #+end_src
 *** Base services
 #+begin_src scheme
-(define-system-comp (base-services)
+(define-system-comp (base-services #:key stateless?)
   (services
    (append
     (operating-system-user-services os)
@@ -365,7 +366,68 @@ Run with ~sudo~.
            agetty-service-type
            mingetty-service-type
            console-font-service-type
-           guix-service-type)))))
+           guix-service-type))
+    (if stateless?
+        (list
+         (stateless-service
+          'base-services
+          #:state `(((#:path . ,%random-seed-file)
+                     (#:store . #:machine))
+
+
+                    ;;; TODO temporarily putting stuff here
+
+                    ;; Goes in base-services
+                    ((#:path . "/.lastweek")
+                     (#:store . #:machine))
+                    ;; Goes in desktop-base-services
+                    ((#:path . "/var/lib/upower/")
+                     (#:store . #:machine))
+                    ;; Prolly put in base-services but maybe it's a more general Linux thing
+                    ((#:path . "/var/db/nscd/")
+                     (#:store . #:machine)))
+          #:ignore `("/bin/sh"
+                     "/usr/bin/env"
+
+
+                     ;;; TODO temporarily putting stuff here
+
+                     ;; This a "guix thing", donno where it should go
+                     "/etc/static" ; TODO symlink to store
+
+                     ;; Prolly put in base-services but maybe it's a more general Linux thing
+                     "/etc/resolv.conf"
+                     "/etc/resolv.conf.bak"
+
+                     ;; Goes in desktop-base-services
+                     "/var/lib/AccountsService/" ; TODO empty directory
+                     "/var/lib/colord/" ; TODO empty directory
+                     "/var/lib/udisks2/" ; TODO empty directory
+
+
+                     "/etc/group"
+                     "/etc/passwd"
+                     "/etc/shadow"
+                     ,%password-lock-file
+
+                     "/etc/ssl" ; TODO symlink to "/run/current-system/profile/etc/ssl"
+
+                     "/etc/mtab" ; TODO symlink to "/proc/self/mounts"
+
+                     "/boot/"
+                     "/dev/"
+                     "/mnt/" ; TODO empty directory
+                     "/proc/"
+                     "/run/"
+                     "/sys/"
+                     "/tmp/"
+                     "/var/db/sudo/" ; TODO empty directory
+                     "/var/empty/" ; TODO empty directory
+                     "/var/lock/"
+                     "/var/run/"
+                     "/var/tmp/" ; TODO empty directory
+                     )))
+        '()))))
 #+end_src
 *** Login
 **** Classic
@@ -453,13 +515,18 @@ Run with ~sudo~.
     (if stateless?
         (list
          (stateless-service
-          'guix
+          'guix-pm
           #:state '(((#:path . "/etc/guix/signing-key.pub")
                      (#:store . #:machine)
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/etc/guix/signing-key.sec")
                      (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o111)))))))
+                     (#:parent-dir-perms . ((#:mode . #o111))))
+                    ((#:path . "/root/.cache/guix/")
+                     (#:store . #:machine)))
+          #:ignore '(;"/gnu/store/" ; TODO inscrutable error on system build
+                     "/var/guix/"
+                     "/etc/guix/acl")))
         '())
     (if nonguix-substitutes?
         (list (nonguix-substitutes-service)) '()))))
@@ -485,10 +552,22 @@ Run with ~sudo~.
 #+end_src
 **** Nix
 #+begin_src scheme
-(define-system-comp (nix-pm)
+(define-system-comp (nix-pm #:key stateless?)
   (services
-   (cons* (service nix-service-type)
-          (operating-system-user-services os))))
+   (append
+    (operating-system-user-services os)
+    (list
+     (service nix-service-type))
+    (if stateless?
+        (list
+         (stateless-service
+          'nix-pm
+          #:state '(((#:path . "/root/.cache/nix/")
+                     (#:store . #:machine)))
+          #:ignore '("/nix/store/"
+                     "/nix/var/nix/"
+                     "/nix/var/log/nix/")))
+        '()))))
 #+end_src
 *** Console
 **** Fonts
@@ -529,7 +608,7 @@ Must succeed [[*Accounts][Accounts]] component.
 *** Desktop
 **** Base services
 #+begin_src scheme
-(define-system-comp (desktop-base-services)
+(define-system-comp (desktop-base-services #:key stateless?)
   (services
    (append
     (operating-system-user-services os)
@@ -547,7 +626,15 @@ Must succeed [[*Accounts][Accounts]] component.
             gdm-service-type
             (service-kind gdm-file-system-service)
             pulseaudio-service-type
-            alsa-service-type))))))
+            alsa-service-type)))
+    (if stateless?
+        (list
+         (stateless-service
+          'desktop-base-services
+          #:state `(((#:path . "/etc/machine-id")
+                     (#:store . #:machine)))
+          #:ignore '("/var/cache/fontconfig/"))) ; TODO empty dir
+        '()))))
 #+end_src
 **** Multimedia
 ***** Classic sound
@@ -583,9 +670,9 @@ Must succeed [[*Accounts][Accounts]] component.
           'network-manager
           #:state '(((#:path . "/etc/NetworkManager/system-connections/")
                      (#:store . #:machine))
-                    ((#:path . "/var/lib/NetworkManager/secret_key")
+                    ((#:path . "/var/lib/NetworkManager/")
                      (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o700)))))))
+                     (#:mode . #o700)))))
         '()))))
 #+end_src
 **** Bluetooth
@@ -930,13 +1017,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                           (cons "root")
                                           (map (lambda (user)
                                                  `(,user . ,(string-append persist-dir "/.passwords/" user)))))
-                   #:symlink-log? #t))
-        (stateless-service
-         'system
-         #:state `(((#:path . "/etc/machine-id")
-                    (#:store . #:machine))
-                   ((#:path . ,%random-seed-file)
-                    (#:store . #:machine)))))))
+                   #:symlink-log? #t)))))
      (sudoers-file
       (mixed-text-file
        "sudoers"
@@ -988,14 +1069,24 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                       `',(assoc-ref config #:ignore)
                                       "/"
                                       (assoc-ref config #:persist-dir)
-                                      (assoc-ref config #:machine-dir)))))))
+                                      (assoc-ref config #:machine-dir)
+                                      #:additional-known
+                                      (system-additional-known (map car (assoc-ref config #:hes)))))))))
    (compose identity)
    (extend (lambda (config exts)
              (stateless:extend-proc
               config
               (append exts
-                      (if (assoc-ref config #:symlink-log?)
-                          (list '((#:ignore . ("/var/log/"))))
+                      (list `((#:ignore . ,(map (lambda (store)
+                                                  (string-append store "/"))
+                                                (list
+                                                 ;; TODO
+                                                 ;; (assoc-ref config #:persist-dir)
+                                                 ;; (assoc-ref config #:machine-dir)
+                                                 "/.persist"
+                                                 "/.machine")))))
+                      (if #t ; TODO (assoc-ref config #:symlink-log?)
+                          (list '((#:ignore . ("/var/log"))))
                           '())))))
    (description "Initialize a stateless system.")))
 #+end_src
@@ -1135,6 +1226,73 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (modules '(((guix build utils) #:select (delete-file-recursively))
               ((ice-9 ftw) #:select (scandir))))))
 #+end_src
+******* Tool
+#+begin_src scheme
+(define (system-additional-known users)
+  #~(append
+     #$etc-static-files
+     #$root-skeleton-files
+     #$(user-homes users)))
+
+(define etc-static-files
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (symbolic-link?))
+                     ((ice-9 ftw) #:select (scandir)))
+
+        (let ((etc-static-dir "/etc/static"))
+          (map (lambda (file)
+                 (let ((target (string-append "/etc/" file))
+                       (source (string-append etc-static-dir "/" file))
+                       ;; TODO maybe replace with `directory-exists?', for brevity.
+                       (directory? (lambda (path)
+                                     (eq? (stat:type (stat path)) 'directory))))
+                   (cons target
+                         (if (directory? source)
+                             (lambda (f)
+                               (and (symbolic-link? f)
+                                    (string-prefix? etc-static-dir (readlink f))))
+                             (const #t))))) ; TODO a file (not a directory or a symlink)
+               (scandir etc-static-dir (lambda (name)
+                                         (not (member name '("." ".."))))))))))
+
+;; TODO old implementation, remove
+;; (define etc-static-files
+;;   (with-imported-modules '((guix build utils))
+;;     #~(begin
+;;         (use-modules ((guix build utils) #:select (find-files)))
+
+;;         (let ((etc-static-dir "/etc/static"))
+;;           (map (lambda (file)
+;;                  (cons (string-append "/etc" (string-drop file (string-length etc-static-dir)))
+;;                        (if (equal? (dirname file) etc-static-dir)
+;;                            (const #t) ; TODO a file (not a directory or a symlink)
+;;                            symlink-to-store?)))
+;;                (find-files etc-static-dir))))))
+
+
+(define root-skeleton-files
+  (with-imported-modules (source-module-closure
+                          '((guix build utils)
+                            (guix utils)))
+    #~(begin
+        (use-modules ((guix build utils) #:select (find-files))
+                     ((guix utils) #:select (readlink*)))
+
+        (let ((skel-dir (readlink* "/etc/skel")))
+          (map (lambda (file)
+                 (cons (string-append "/root" (string-drop file (string-length skel-dir)))
+                       (const #t))) ; TODO a file with contents equal to the corresponding skeleton file
+               (find-files skel-dir))))))
+
+(define (user-homes users)
+  #~(map (lambda (user)
+           (let ((directory? (lambda (path)
+                               (eq? (stat:type (lstat path)) 'directory))))
+             (cons (string-append (passwd:dir (getpwnam user)) "/")
+                   directory?))) ; TODO stat or lstat probably not important
+         '#$users))
+#+end_src
 ******* Shared
 #+begin_src scheme
 (define (gexps->gexp gexps)
@@ -1147,16 +1305,17 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
   (stateless:service-fn stateless-service-type))
 #+end_src
 ***** Nix
+- TODO Ideally I'd have this in the "Nix" component but it needs the ~stateless-machine-dir~ which I (maybe?) don't want to pass around to system components.
 #+begin_src scheme
 (define* (stateless-nix os #:key machine-dir)
-  (let* ((nix-dir "/nix")
-         (nix-machine-dir (string-append machine-dir nix-dir))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file sysmte (at "/").
+  (let* ((nix-prefix "/nix")
+         (nix-machine-dir (string-append machine-dir nix-prefix))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file sysmte (at "/").
     (system-comp
      os
      (file-systems
       (cons* (file-system
                (device nix-machine-dir)
-               (mount-point nix-dir)
+               (mount-point nix-prefix)
                (type "none")
                (flags '(bind-mount))
                (check? #f))
@@ -1169,9 +1328,11 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                         activation-service-type
                         #~(when (not (file-exists? #$nix-machine-dir))
                             (mkdir #$nix-machine-dir)))
-        (stateless-service
-         'nix
-         #:ignore (list nix-dir))))))))
+        ;; TODO ignore /.machine/nix/
+        ;; (stateless-service
+        ;;  'nix
+        ;;  #:ignore ...)
+        ))))))
 #+end_src
 *** Hardware-specific
 **** Console
@@ -1669,7 +1830,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (as-> os $
       (if source?
           (source $ #:path source-path) $)
-      (base-services $)
+      (base-services $ #:stateless? stateless?)
       (if greetd?
           (greetd-login $ #:number-of-ttys number-of-ttys)
           (classic-login $ #:number-of-ttys number-of-ttys))
@@ -1678,7 +1839,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       (linux-nonfree $)
       (guix-pm $ #:stateless? stateless?)
       (if nix?
-          (nix-pm $) $)
+          (nix-pm $ #:stateless? stateless?) $)
       (if console?
           (as-> $ $
             (console-fonts $ #:number-of-ttys number-of-ttys)
@@ -1687,7 +1848,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           $)
       (if desktop?
           (as-> $ $
-            (desktop-base-services $)
+            (desktop-base-services $ #:stateless? stateless?)
             (if pipewire?
                 (pipewire-multimedia $)
                 (classic-sound $))
@@ -2020,7 +2181,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (let ((home-files
                (let* ((home-dir (getenv "HOME"))
                       (guix-home-dir (string-append
-                                      home-dir "/.guix-home/" #$home-files-directory "/")))
+                                      home-dir "/.guix-home/" #$home-files-directory "/"))) ; TODO maybe do a `readlink' here instead of appending a slash, for clarity.
                  (map (lambda (file)
                         (string-append
                          home-dir
@@ -6214,7 +6375,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
       'gdm
       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)
-                 (#:mode . #o700)))))))
+                 (#:mode . #o700)))
+      #:ignore '("/var/lib/gdm/")))))
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
@@ -8921,7 +9083,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (define (make-known-files+dirs paths)
            (map (let ((directory?
                        (lambda (path)
-                         (equal? (stat:type (lstat path)) 'directory))))
+                         (eq? (stat:type (lstat path)) 'directory))))
                   (lambda (path)
                     (cons path
                           (if (string-suffix? "/" path)
