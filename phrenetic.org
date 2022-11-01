@@ -415,7 +415,9 @@ Run with ~sudo~.
 *** Package management
 **** Guix
 #+begin_src scheme
-(define-system-comp (guix-pm #:key stateless?)
+(define-system-comp (guix-pm #:key
+                             (nonguix-substitutes? #t)
+                             stateless?)
   (services
    (append
     (operating-system-user-services os)
@@ -432,12 +434,12 @@ Run with ~sudo~.
                      (#:store . #:machine)
                      (#:parent-dir-perms . ((#:mode . #o111)))))))
         '())
-    (list
-     (nonguix-substitutes)))))
+    (if nonguix-substitutes?
+        (list (nonguix-substitutes-service) '())))))
 #+end_src
 ***** Nonguix substitutes
 #+begin_src scheme
-(define (nonguix-substitutes)
+(define (nonguix-substitutes-service)
   (simple-service
    'nonguix-substitutes
    guix-service-type
