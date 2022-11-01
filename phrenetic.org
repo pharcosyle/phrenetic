@@ -264,6 +264,8 @@ Run with ~sudo~.
   #:export (blank-os
             source
             base-services
+            classic-login
+            greetd-login
             nss
             linux-nonfree
             accounts
@@ -353,24 +355,48 @@ Run with ~sudo~.
 #+end_src
 *** Base services
 #+begin_src scheme
-(define-system-comp (base-services #:key number-of-ttys)
+(define-system-comp (base-services)
   (services
    (append
     (operating-system-user-services os)
-    (as-> %base-services $
-      (remove-services $ (list login-service-type
-                               agetty-service-type
-                               mingetty-service-type
-                               console-font-service-type
-                               guix-service-type))
-      (cons* (service greetd-service-type
-                      (greetd-configuration
-                       (terminals
-                        (map (lambda (n)
-                               (greetd-terminal-configuration
-                                (terminal-vt (number->string n))))
-                             (iota number-of-ttys 1)))))
-             $)))))
+    (remove-services
+     %base-services
+     (list login-service-type
+           agetty-service-type
+           mingetty-service-type
+           console-font-service-type
+           guix-service-type)))))
+#+end_src
+*** Login
+**** Classic
+#+begin_src scheme
+(define-system-comp (classic-login #:key number-of-ttys)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list (service login-service-type)
+          (service agetty-service-type (agetty-configuration
+                                        (extra-options '("-L"))
+                                        (term "vt100")
+                                        (tty #f)
+                                        (shepherd-requirement '(syslogd)))))
+    (map (lambda (n)
+           (service mingetty-service-type (mingetty-configuration
+                                           (tty (string-append "tty" (number->string n))))))
+         (iota number-of-ttys 1)))))
+#+end_src
+**** Greetd
+#+begin_src scheme
+(define-system-comp (greetd-login #:key number-of-ttys)
+  (services
+   (cons* (service greetd-service-type
+                   (greetd-configuration
+                    (terminals
+                     (map (lambda (n)
+                            (greetd-terminal-configuration
+                             (terminal-vt (number->string n))))
+                          (iota number-of-ttys 1)))))
+          (operating-system-user-services os))))
 #+end_src
 *** NSS
 #+begin_src scheme
@@ -612,6 +638,7 @@ Must succeed [[*Accounts][Accounts]] component.
 ***** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
+                                 greetd?
                                  (tty-number 2)
                                  auto-login?
                                  auto-login-user)
@@ -620,6 +647,7 @@ Must succeed [[*Accounts][Accounts]] component.
           (let ((services (operating-system-user-services os)))
             (if auto-login?
                 (with-auto-login-to-tty services
+                                        #:greetd? greetd?
                                         #:tty-number tty-number
                                         #:user auto-login-user)
                 services)))))
@@ -637,23 +665,33 @@ Must succeed [[*Accounts][Accounts]] component.
                 (invoke #$(file-append kbd "/bin/chvt")
                         (number->string #$tty-number))))))))
 
-(define* (with-auto-login-to-tty services #:key tty-number user)
-  (modify-services services
-    (greetd-service-type
-     config =>
-     (greetd-configuration
-      (inherit config)
-      (terminals
-       (map (lambda (terminal-config)
-              (if (equal? (greetd-terminal-vt terminal-config)
-                          (number->string tty-number))
-                  ;; It'd be better to set user/command for initial-session rather than default-session (auto-login would only occur on the first start) but the Guix configuration doesn't have that option (yet?).
-                  (greetd-terminal-configuration
-                   (inherit terminal-config)
-                   (default-session-user user)
-                   (default-session-command "default-session-start"))
-                  terminal-config))
-            (greetd-terminals config)))))))
+(define* (with-auto-login-to-tty services #:key greetd? tty-number user)
+  (if greetd?
+      (modify-services services
+        (greetd-service-type
+         config =>
+         (greetd-configuration
+          (inherit config)
+          (terminals
+           (map (lambda (terminal-config)
+                  (if (equal? (greetd-terminal-vt terminal-config)
+                              (number->string tty-number))
+                      ;; It'd be better to set user/command for initial-session rather than default-session (auto-login would only occur on the first start) but the Guix configuration doesn't have that option (yet?).
+                      (greetd-terminal-configuration
+                       (inherit terminal-config)
+                       (default-session-user user)
+                       (default-session-command "default-session-start"))
+                      terminal-config))
+                (greetd-terminals config))))))
+      (modify-services services
+        (mingetty-service-type
+         config =>
+         (if (equal? (mingetty-configuration-tty config)
+                     (string-append "tty" (number->string tty-number)))
+             (mingetty-configuration
+              (inherit config)
+              (auto-login user))
+             config)))))
 #+end_src
 **** Sessions
 ***** Desktop environments
@@ -1627,11 +1665,15 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   auto-login-user
                   sessions
                   stateless?)
-  (let ((number-of-ttys 6))
+  (let ((number-of-ttys 6)
+        (greetd? #t))
     (as-> os $
       (if source?
           (source $ #:path source-path) $)
-      (base-services $ #:number-of-ttys number-of-ttys)
+      (base-services $)
+      (if greetd?
+          (greetd-login $ #:number-of-ttys number-of-ttys)
+          (classic-login $ #:number-of-ttys number-of-ttys))
       (nss $)
       (accounts $ #:users-info users-info)
       (linux-nonfree $)
@@ -1659,7 +1701,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                 (case login-manager
                   ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
                                    #:auto-login-user auto-login-user)))
-                (desktop-tty $ #:auto-login? auto-login?
+                (desktop-tty $ #:greetd? greetd?
+                             #:auto-login? auto-login?
                              #:auto-login-user auto-login-user))
             (if (member #:session/gnome (or sessions '()))
                 (gnome-desktop $) $)
