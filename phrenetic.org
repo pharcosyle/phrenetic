@@ -1693,10 +1693,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                 (pipewire-multimedia $)
                 (classic-sound $))
             (network-manager $ #:stateless? stateless?)
-            ;; (if bluetooth?
-            ;;     (bluetooth $ #:who bluetooth-users
-            ;;                #:stateless? stateless?)
-            ;;     $)
+            (if bluetooth?
+                (bluetooth $ #:who bluetooth-users
+                           #:stateless? stateless?)
+                $)
             (if login-manager
                 (case login-manager
                   ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
@@ -9255,10 +9255,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                  #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                  (,aux-name . ,aux-he-kmonad?)
                                                  (,guest-name . ,guest-he-kmonad?)))
-                 #:bluetooth? bluetooth?
-                 #:bluetooth-users (list primary-name
-                                         aux-name
-                                         guest-name)
+                 ;; #:bluetooth? bluetooth?
+                 ;; #:bluetooth-users (list primary-name
+                 ;;                         aux-name
+                 ;;                         guest-name)
                  ;; #:auto-login? disk-encryption?
                  ;; #:auto-login-user primary-name
                  #:sessions (->> (list primary-he-sessions
