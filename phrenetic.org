@@ -273,7 +273,7 @@ Run with ~sudo~.
             nix-pm
             console-fonts
             kmonad-tool
-            desktop-services
+            desktop-base-services
             classic-sound
             pipewire-multimedia
             network-manager
@@ -529,7 +529,7 @@ Must succeed [[*Accounts][Accounts]] component.
 *** Desktop
 **** Desktop services
 #+begin_src scheme
-(define-system-comp (desktop-services)
+(define-system-comp (desktop-base-services)
   (services
    (append
     (operating-system-user-services os)
@@ -1688,7 +1688,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           $)
       (if desktop?
           (as-> $ $
-            (desktop-services $)
+            (desktop-base-services $)
             (if pipewire?
                 (pipewire-multimedia $)
                 (classic-sound $))
