@@ -523,8 +523,8 @@ Must succeed [[*Accounts][Accounts]] component.
   (services
    (append
     (operating-system-user-services os)
-    (list pulseaudio-service-type
-          alsa-service-type))))
+    (list (service pulseaudio-service-type)
+          (service alsa-service-type)))))
 #+end_src
 ***** Pipewire
 #+begin_src scheme
