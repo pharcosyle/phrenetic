@@ -360,7 +360,8 @@ Run with ~sudo~.
       (remove-services $ (list login-service-type
                                agetty-service-type
                                mingetty-service-type
-                               console-font-service-type))
+                               console-font-service-type
+                               guix-service-type))
       (cons* (service greetd-service-type
                       (greetd-configuration
                        (terminals
@@ -418,6 +419,8 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
+    (list
+     (service guix-service-type))
     (if stateless?
         (list
          (stateless-service
