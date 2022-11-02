@@ -267,7 +267,7 @@ Run with ~sudo~.
             base-services
             classic-login
             greetd-login
-            nss
+            certs
             linux-nonfree
             accounts
             guix-pm
@@ -460,9 +460,9 @@ Run with ~sudo~.
                           (iota number-of-ttys 1)))))
           (operating-system-user-services os))))
 #+end_src
-*** NSS
+*** Certificates
 #+begin_src scheme
-(define-system-comp (nss)
+(define-system-comp (certs)
   (packages
    (cons* nss-certs
           (operating-system-packages os))))
@@ -1834,7 +1834,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       (if greetd?
           (greetd-login $ #:number-of-ttys number-of-ttys)
           (classic-login $ #:number-of-ttys number-of-ttys))
-      (nss $)
+      (certs $)
       (accounts $ #:users-info users-info)
       (linux-nonfree $)
       (guix-pm $ #:stateless? stateless?)
