@@ -3,8 +3,8 @@
 
 * Table of Contents :TOC:
 - [[#install][Install]]
-  - [[#program][Program]]
   - [[#package][Package]]
+  - [[#program][Program]]
 - [[#system][System]]
   - [[#create][Create]]
   - [[#components][Components]]
@@ -46,6 +46,22 @@ Run with ~sudo~.
   #:use-module ((gnu packages package-management) #:select (guix))
   #:use-module (phrenetic utils)
   #:export (installer-package))
+#+end_src
+** Package
+#+begin_src scheme
+(define* (installer-package #:rest opts)
+  (package
+    (inherit blank-package)
+    (name "installer")
+    (source (apply installer-program opts))
+    (build-system trivial-build-system)
+    (arguments
+     `(#:builder
+       ,#~(begin
+            (let* ((bin (string-append #$output "/bin")))
+              (mkdir #$output)
+              (mkdir bin)
+              (symlink #$source (string-append bin "/install"))))))))
 #+end_src
 ** Program
 #+begin_src scheme
@@ -199,22 +215,6 @@ Run with ~sudo~.
              (lambda (mount-point)
                (cmd umount-bin (string-append mount-dir mount-point)))
              (map cdr '#$mountables))))))))
-#+end_src
-** Package
-#+begin_src scheme
-(define* (installer-package #:rest opts)
-  (package
-    (inherit blank-package)
-    (name "installer")
-    (source (apply installer-program opts))
-    (build-system trivial-build-system)
-    (arguments
-     `(#:builder
-       ,#~(begin
-            (let* ((bin (string-append #$output "/bin")))
-              (mkdir #$output)
-              (mkdir bin)
-              (symlink #$source (string-append bin "/install"))))))))
 #+end_src
 * System
 :PROPERTIES:
