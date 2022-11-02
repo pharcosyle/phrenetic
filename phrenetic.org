@@ -1211,17 +1211,21 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (one-shot? #t)
    (start (with-imported-modules '((guix build utils)) ; Donno if `with-imported-modules' is necessary. Most of the Shepherd services in Guix (that are defined this way, i.e. with a lambda gexp) don't have it but a few do and it doesn't seem to hurt anything.
             #~(lambda ()
+                (define (run)
+                  (for-each
+                   (lambda (user)
+                     (let ((home (passwd:dir (getpwnam user))))
+                       (when (not (file-exists? (string-append home "/.guix-home")))
+                         (delete-directory-contents home))))
+                   '#$users))
+
                 (define (delete-directory-contents dir)
                   (for-each (lambda (name)
                               (delete-file-recursively (string-append dir "/" name)))
                             (scandir dir (lambda (name)
                                            (not (member name '("." "..")))))))
-                (for-each
-                 (lambda (user)
-                   (let ((home (passwd:dir (getpwnam user))))
-                     (when (not (file-exists? (string-append home "/.guix-home")))
-                       (delete-directory-contents home))))
-                 '#$users)
+
+                (run)
                 #t)))
    (modules '(((guix build utils) #:select (delete-file-recursively))
               ((ice-9 ftw) #:select (scandir))))))
@@ -8946,23 +8950,26 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     #~(begin
         (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p)))
 
-        (define (mkdirp-perms dir perms)
-          (mkdir-p dir)
-          (chown dir
-                 (let ((user (assoc-ref perms #:user)))
-                   (if user
-                       (passwd:uid (getpwnam user)) -1))
-                 (let ((group (assoc-ref perms #:group)))
-                   (if group
-                       (group:gid (getgrnam group)) -1)))
-          (let ((mode (assoc-ref perms #:mode)))
-            (when mode
-              (chmod dir mode))))
+        (define (run)
+          (for-each process-state-entry #$state))
 
-        (define (no-follow-file-exists? file)
-          (false-if-exception (lstat file)))
-
-        (define timestamp (current-time))
+        (define (process-state-entry i)
+          (let* ((path (assoc-ref i #:path))
+                 (directory-target? (string-suffix? "/" path))
+                 (target (if directory-target?
+                             (string-drop-right path 1) path))
+                 (state-dir (#$(state-dir-lookup persist-dir machine-dir)
+                             (assoc-ref i #:store))))
+            (let ((parent-dir (dirname path))
+                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
+              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
+              (mkdirp-perms parent-dir parent-dir-perms))
+            (let ((state-file (string-append state-dir target)))
+              (cleanup-and-migrate target state-file state-dir)
+              (when directory-target?
+                (mkdirp-perms state-file i))
+              (when (no-follow-file-exists? state-file)
+                (symlink state-file target)))))
 
         (define (cleanup-and-migrate target state-file state-dir)
           (let ((migrate-file
@@ -9000,25 +9007,25 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                           (backup-file state-file)))
                     (migrate-file target state-file))))))
 
-        (define (process-state-entry i)
-          (let* ((path (assoc-ref i #:path))
-                 (directory-target? (string-suffix? "/" path))
-                 (target (if directory-target?
-                             (string-drop-right path 1) path))
-                 (state-dir (#$(state-dir-lookup persist-dir machine-dir)
-                             (assoc-ref i #:store))))
-            (let ((parent-dir (dirname path))
-                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
-              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
-              (mkdirp-perms parent-dir parent-dir-perms))
-            (let ((state-file (string-append state-dir target)))
-              (cleanup-and-migrate target state-file state-dir)
-              (when directory-target?
-                (mkdirp-perms state-file i))
-              (when (no-follow-file-exists? state-file)
-                (symlink state-file target)))))
+        (define (mkdirp-perms dir perms)
+          (mkdir-p dir)
+          (chown dir
+                 (let ((user (assoc-ref perms #:user)))
+                   (if user
+                       (passwd:uid (getpwnam user)) -1))
+                 (let ((group (assoc-ref perms #:group)))
+                   (if group
+                       (group:gid (getgrnam group)) -1)))
+          (let ((mode (assoc-ref perms #:mode)))
+            (when mode
+              (chmod dir mode))))
 
-        (for-each process-state-entry #$state))))
+        (define (no-follow-file-exists? file)
+          (false-if-exception (lstat file)))
+
+        (define timestamp (current-time))
+
+        (run))))
 #+end_src
 *** Tool
 **** Program
@@ -9037,6 +9044,52 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
                       ((ice-9 ftw) #:select (file-system-fold))
                       ((srfi srfi-1) #:select (any)))
+
+         (define (run)
+           (for-each
+            (lambda (path)
+              (display (string-append path "\n")))
+            (case (run-mode)
+              ((active) (diff-live))
+              ((state) (diff-state)))))
+
+         (define (run-mode)
+           (string->symbol
+            (or
+             (false-if-exception (cadr (command-line)))
+             "active")))
+
+         (define (diff-live)
+           (find-diff
+            #$base-dir
+            (append
+             (make-known (map (lambda (path)
+                                (if (string-suffix? "/" path)
+                                    (string-drop-right path 1) path))
+                              (state->paths #$state))
+                         #$(symlink-to-state? (list persist-dir
+                                                    machine-dir)))
+             (make-known-files+dirs #$ignore)
+             (or #$additional-known '()))))
+
+         (define (diff-state)
+           (let ((finder
+                  (lambda (store state)
+                    (let ((state-dir (#$(state-dir-lookup persist-dir machine-dir)
+                                        store)))
+                      (find-diff
+                       (string-append state-dir #$base-dir)
+                       (make-known-files+dirs
+                        (let ((state-in-store
+                               (filter (lambda (entry)
+                                         (equal? (assoc-ref entry #:store) store))
+                                       #$state)))
+                          (map (lambda (path)
+                                 (string-append state-dir path))
+                               (state->paths state-in-store)))))))))
+             (append
+              (finder #:persist #$state)
+              (finder #:machine #$state))))
 
          (define* (find-diff directory known)
            (let* ((check-path
@@ -9100,50 +9153,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
            (and (symbolic-link? file)
                 (store-file-name? (readlink file))))
 
-         (define (diff-live)
-           (find-diff
-            #$base-dir
-            (append
-             (make-known (map (lambda (path)
-                                (if (string-suffix? "/" path)
-                                    (string-drop-right path 1) path))
-                              (state->paths #$state))
-                         #$(symlink-to-state? (list persist-dir
-                                                    machine-dir)))
-             (make-known-files+dirs #$ignore)
-             (or #$additional-known '()))))
-
-         (define (diff-state)
-           (let ((finder
-                  (lambda (store state)
-                    (let ((state-dir (#$(state-dir-lookup persist-dir machine-dir)
-                                        store)))
-                      (find-diff
-                       (string-append state-dir #$base-dir)
-                       (make-known-files+dirs
-                        (let ((state-in-store
-                               (filter (lambda (entry)
-                                         (equal? (assoc-ref entry #:store) store))
-                                       #$state)))
-                          (map (lambda (path)
-                                 (string-append state-dir path))
-                               (state->paths state-in-store)))))))))
-             (append
-              (finder #:persist #$state)
-              (finder #:machine #$state))))
-
-         (define (run-mode)
-           (string->symbol
-            (or
-             (false-if-exception (cadr (command-line)))
-             "active")))
-
-         (for-each
-          (lambda (path)
-            (display (string-append path "\n")))
-          (case (run-mode)
-            ((active) (diff-live))
-            ((state) (diff-state))))))))
+         (run)))))
 #+end_src
 **** Package
 #+begin_src scheme
