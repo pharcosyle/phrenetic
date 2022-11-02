@@ -1065,13 +1065,14 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                              (lambda (config)
                                (list (stateless:tool-package
                                       "stateless"
-                                      `',(assoc-ref config #:state)
-                                      `',(assoc-ref config #:ignore)
+                                      (assoc-ref config #:state)
+                                      (assoc-ref config #:ignore)
                                       "/"
                                       (assoc-ref config #:persist-dir)
                                       (assoc-ref config #:machine-dir)
-                                      #:additional-known
-                                      (system-additional-known (map car (assoc-ref config #:hes)))))))))
+                                      ;; #:additional-known
+                                      ;; (system-additional-known (map car (assoc-ref config #:hes)))
+                                      ))))))
    (compose identity)
    (extend (lambda (config exts)
              (stateless:extend-proc
@@ -1158,10 +1159,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (list (create-state-homes-gexp state-users
                                   (list persist-dir
                                         machine-dir))
-         (stateless:activate-gexp `',state
-                                  ""
-                                  persist-dir
-                                  machine-dir))))
+         (activate-gexp state persist-dir machine-dir))))
 
 (define (create-state-homes-gexp users state-dirs)
   (with-imported-modules '((guix build utils))
@@ -1179,6 +1177,19 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                            (chown state-home (passwd:uid pw) (passwd:gid pw))))
                        '#$state-dirs)))
          '#$users))))
+
+(define (activate-gexp state persist-dir machine-dir)
+  (with-imported-modules (source-module-closure
+                          '((phrenetic build stateless))
+                          #:select? (lambda (name)
+                                      (or ((@ (guix modules) guix-module-name?) name)
+                                          (eq? (car name) 'phrenetic))))
+    #~(begin
+        (use-modules ((phrenetic build stateless) #:select (activate)))
+        (activate '#$state
+                  ""
+                  #$persist-dir
+                  #$machine-dir))))
 #+end_src
 ******* Shepherd
 #+begin_src scheme
@@ -1235,7 +1246,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 (define (system-additional-known users)
   #~(append
      #$etc-static-files
-     #$root-skeleton-files
+     ;; #$root-skeleton-files ; TODO commenting this I fix / am sure doesn't matter: "warning: importing module (guix config) from the host"
      #$(user-homes users)))
 
 (define etc-static-files
@@ -1950,6 +1961,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 (define-module (phrenetic home)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
+  #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
   #:use-module (gnu home)
   #:use-module (gnu home services)
@@ -2131,22 +2143,29 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extensions
     (list (service-extension home-activation-service-type
                              (lambda (config)
-                               (stateless:activate-gexp
-                                (state-with-home-expansions (assoc-ref config #:state))
-                                homedir-gexp
-                                (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir))))
-          (service-extension home-profile-service-type
-                             (lambda (config)
-                               (list (stateless:tool-package
-                                      "home-stateless"
-                                      (state-with-home-expansions (assoc-ref config #:state))
-                                      (ignore-with-home-expansions (assoc-ref config #:ignore))
-                                      homedir-gexp
-                                      (assoc-ref config #:persist-dir)
-                                      (assoc-ref config #:machine-dir)
-                                      #:additional-known
-                                      guix-home-files))))))
+                               (with-imported-modules (source-module-closure
+                                                       '((phrenetic build stateless))
+                                                       #:select? (lambda (name)
+                                                                   (or ((@ (guix modules) guix-module-name?) name)
+                                                                       (eq? (car name) 'phrenetic))))
+                                 #~(begin
+                                     (use-modules ((phrenetic build stateless) #:select (activate)))
+                                     (activate (#$state-with-home-expansions '#$(assoc-ref config #:state))
+                                               #$homedir-gexp
+                                               #$(assoc-ref config #:persist-dir)
+                                               #$(assoc-ref config #:machine-dir))))))
+          ;; (service-extension home-profile-service-type
+          ;;                    (lambda (config)
+          ;;                      (list (stateless:tool-package
+          ;;                             "home-stateless"
+          ;;                             (state-with-home-expansions (assoc-ref config #:state))
+          ;;                             (ignore-with-home-expansions (assoc-ref config #:ignore))
+          ;;                             homedir-gexp
+          ;;                             (assoc-ref config #:persist-dir)
+          ;;                             (assoc-ref config #:machine-dir)
+          ;;                             #:additional-known
+          ;;                             guix-home-files))))
+          ))
    (compose identity)
    (extend (lambda (config exts)
              (stateless:extend-proc
@@ -2157,14 +2176,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 
 (define homedir-gexp #~(getenv "HOME"))
 
-(define (state-with-home-expansions state)
-  #~(map (lambda (i)
-           (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
-         '#$state))
-
-(define (ignore-with-home-expansions ignore)
-  #~(map #$path-with-home-expansion '#$ignore))
-
 (define path-with-home-expansion
   #~(lambda (path)
       (cond
@@ -2174,6 +2185,16 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
          (lambda* (#:optional tail #:key xdg-base)
            (string-append (getenv xdg-base) "/" (or tail "")))
          path)))))
+
+(define state-with-home-expansions
+  #~(lambda (state)
+      (map (lambda (i)
+             (acons #:path (#$path-with-home-expansion (assoc-ref i #:path)) i))
+           state)))
+
+(define ignore-with-home-expansions
+  #~(lambda (ignore)
+      (map #$path-with-home-expansion ignore)))
 #+end_src
 ****** Tool
 #+begin_src scheme
@@ -8719,7 +8740,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (he-direnv #:doom? doom?
                 #:shells interactive-shells)
      (he-protonvpn #:stateless? stateless?)
-     (he-ssh)
+     ;; (he-ssh)
      (he-git #:stateless? stateless?
              #:doom? doom?
              #:email email)
@@ -8913,15 +8934,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define-module (phrenetic stateless)
   #:use-module (guix build-system trivial)
   #:use-module (guix gexp)
+  #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
   #:use-module (gnu services)
   #:use-module (phrenetic utils)
   #:export (service-fn
             extend-proc
-            activate-gexp
             tool-package))
 #+end_src
-*** Services
+*** Service
 **** Service extension
 #+begin_src scheme
 (define (service-fn service-type)
@@ -8940,228 +8961,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (acons #:state (assoc-ref exts* #:state))
          (acons #:ignore (assoc-ref exts* #:ignore)))))
 #+end_src
-*** Activate
-#+begin_src scheme
-(define (activate-gexp state
-                       backup-base-dir
-                       persist-dir
-                       machine-dir)
-  (with-imported-modules '((guix build utils))
-    #~(begin
-        (use-modules ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p)))
-
-        (define (run)
-          (for-each process-state-entry #$state))
-
-        (define (process-state-entry i)
-          (let* ((path (assoc-ref i #:path))
-                 (directory-target? (string-suffix? "/" path))
-                 (target (if directory-target?
-                             (string-drop-right path 1) path))
-                 (state-dir (#$(state-dir-lookup persist-dir machine-dir)
-                             (assoc-ref i #:store))))
-            (let ((parent-dir (dirname path))
-                  (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
-              (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
-              (mkdirp-perms parent-dir parent-dir-perms))
-            (let ((state-file (string-append state-dir target)))
-              (cleanup-and-migrate target state-file state-dir)
-              (when directory-target?
-                (mkdirp-perms state-file i))
-              (when (no-follow-file-exists? state-file)
-                (symlink state-file target)))))
-
-        (define (cleanup-and-migrate target state-file state-dir)
-          (let ((migrate-file
-                 (lambda (source dest)
-                   (copy-recursively source dest)
-                   (delete-file-recursively source)))
-                (backup-file
-                 (lambda (file)
-                   (let* ((backup-dir (string-append
-                                       state-dir
-                                       #$backup-base-dir
-                                       "/stateless-backup-" (number->string timestamp)))
-                          (backup-file (string-append
-                                        backup-dir "/"
-                                        (let* ((string-drop-prefix (lambda (s prefix)
-                                                                     (string-drop s (string-length prefix))))
-                                               (without-state-dir (lambda (file)
-                                                                    (string-drop-prefix file state-dir)))
-                                               (without-base-dir (lambda (file)
-                                                                   (string-drop-prefix file #$backup-base-dir))))
-                                          ((compose without-base-dir
-                                                    without-state-dir)
-                                           file)))))
-                     (mkdir-p (dirname backup-file))
-                     (rename-file file backup-file)))))
-            (when (no-follow-file-exists? target)
-              (if (#$(symlink-to-state? (list persist-dir
-                                              machine-dir))
-                   target)
-                  (delete-file target)
-                  (begin
-                    (when (no-follow-file-exists? state-file)
-                      (if (nil? (find-files state-file))
-                          (delete-file-recursively state-file)
-                          (backup-file state-file)))
-                    (migrate-file target state-file))))))
-
-        (define (mkdirp-perms dir perms)
-          (mkdir-p dir)
-          (chown dir
-                 (let ((user (assoc-ref perms #:user)))
-                   (if user
-                       (passwd:uid (getpwnam user)) -1))
-                 (let ((group (assoc-ref perms #:group)))
-                   (if group
-                       (group:gid (getgrnam group)) -1)))
-          (let ((mode (assoc-ref perms #:mode)))
-            (when mode
-              (chmod dir mode))))
-
-        (define (no-follow-file-exists? file)
-          (false-if-exception (lstat file)))
-
-        (define timestamp (current-time))
-
-        (run))))
-#+end_src
 *** Tool
-**** Program
-#+begin_src scheme
-(define* (tool-program state
-                       ignore
-                       base-dir
-                       persist-dir
-                       machine-dir
-                       #:key
-                       additional-known)
-  (program-file
-   "stateless-tool"
-   (with-imported-modules '((guix build utils))
-     #~(begin
-         (use-modules ((guix build utils) #:select (store-file-name? symbolic-link?))
-                      ((ice-9 ftw) #:select (file-system-fold))
-                      ((srfi srfi-1) #:select (any)))
-
-         (define (run)
-           (for-each
-            (lambda (path)
-              (display (string-append path "\n")))
-            (case (run-mode)
-              ((active) (diff-live))
-              ((state) (diff-state)))))
-
-         (define (run-mode)
-           (string->symbol
-            (or
-             (false-if-exception (cadr (command-line)))
-             "active")))
-
-         (define (diff-live)
-           (find-diff
-            #$base-dir
-            (append
-             (make-known (map (lambda (path)
-                                (if (string-suffix? "/" path)
-                                    (string-drop-right path 1) path))
-                              (state->paths #$state))
-                         #$(symlink-to-state? (list persist-dir
-                                                    machine-dir)))
-             (make-known-files+dirs #$ignore)
-             (or #$additional-known '()))))
-
-         (define (diff-state)
-           (let ((finder
-                  (lambda (store state)
-                    (let ((state-dir (#$(state-dir-lookup persist-dir machine-dir)
-                                        store)))
-                      (find-diff
-                       (string-append state-dir #$base-dir)
-                       (make-known-files+dirs
-                        (let ((state-in-store
-                               (filter (lambda (entry)
-                                         (equal? (assoc-ref entry #:store) store))
-                                       #$state)))
-                          (map (lambda (path)
-                                 (string-append state-dir path))
-                               (state->paths state-in-store)))))))))
-             (append
-              (finder #:persist #$state)
-              (finder #:machine #$state))))
-
-         (define* (find-diff directory known)
-           (let* ((check-path
-                   (lambda (path result)
-                     (let ((pred (assoc-ref known path)))
-                       (if (and pred (pred path))
-                           result
-                           (cons path result)))))
-                  (fn
-                   (lambda (f)
-                     (lambda (path _ result)
-                       (let ((asdf (if (string-prefix? "//" path)
-                                       (string-drop path 1)
-                                       path)))
-                         (f asdf _ result)))))
-                  (results
-                   (file-system-fold
-                    (let ((known-paths (map car known)))
-                      (fn (lambda (dir _ _*)
-                            (and (not (member (string-append dir "/") known-paths))
-                                 (any (lambda (known-path)
-                                        (string-prefix? dir known-path))
-                                      known-paths)))))
-                    (fn (lambda (file _ result)
-                          (check-path file result)))
-                    (fn (lambda (_ _* result)
-                          result))
-                    (fn (lambda (_ _* result)
-                          result))
-                    (fn (lambda (dir _ result)
-                          (check-path (string-append dir "/") result)))
-                    (lambda (path _ errno result) ; TODO use `fn' for this.
-                      (format (current-error-port) "~a: ~a~%" path (strerror errno))
-                      result)
-                    '()
-                    directory)))
-             (sort results string<?)))
-
-         (define (make-known files pred)
-           (map (lambda (file)
-                  (cons file pred))
-                files))
-
-         (define (make-known-files+dirs paths)
-           (map (let ((directory?
-                       (lambda (path)
-                         (eq? (stat:type (lstat path)) 'directory))))
-                  (lambda (path)
-                    (cons path
-                          (if (string-suffix? "/" path)
-                              directory?
-                              (negate directory?)))))
-                paths))
-
-         (define (state->paths state)
-           (map (lambda (entry)
-                  (assoc-ref entry #:path))
-                state))
-
-         (define (symlink-to-store? file)
-           (and (symbolic-link? file)
-                (store-file-name? (readlink file))))
-
-         (run)))))
-#+end_src
-**** Package
 #+begin_src scheme
 (define* (tool-package bin-name #:rest opts)
   (package
     (inherit blank-package)
     (name "stateless-tool")
-    (source (apply tool-program opts))
+    (source (tool-program opts))
     (build-system trivial-build-system)
     (arguments
      `(#:builder
@@ -9170,25 +8976,247 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               (mkdir #$output)
               (mkdir bin)
               (symlink #$source (string-append bin "/" #$bin-name))))))))
+
+(define (tool-program opts)
+  (program-file
+   "stateless"
+   (with-imported-modules (source-module-closure
+                           '((phrenetic build stateless))
+                           #:select? (lambda (name)
+                                       (or ((@ (guix modules) guix-module-name?) name)
+                                           (eq? (car name) 'phrenetic))))
+     #~(begin
+         (use-modules ((phrenetic build stateless) #:select (tool)))
+         (apply tool '#$opts)))))
 #+end_src
-*** Shared
+*** Build
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "build/stateless.scm")
+:END:
+#+begin_src scheme
+(define-module (phrenetic build stateless)
+  #:use-module ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p store-file-name? symbolic-link?))
+  #:use-module ((ice-9 ftw) #:select (file-system-fold))
+  #:use-module ((srfi srfi-1) #:select (any))
+  #:export (activate
+            tool))
+#+end_src
+**** Activate
+#+begin_src scheme
+(define (activate state
+                  backup-base-dir
+                  persist-dir
+                  machine-dir)
+  (define (run)
+    (for-each process-state-entry state))
+
+  (define (process-state-entry i)
+    (let* ((path (assoc-ref i #:path))
+           (directory-target? (string-suffix? "/" path))
+           (target (if directory-target?
+                       (string-drop-right path 1) path))
+           (state-dir ((state-dir-lookup persist-dir machine-dir)
+                       (assoc-ref i #:store))))
+      (let ((parent-dir (dirname path))
+            (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
+        (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
+        (mkdirp-perms parent-dir parent-dir-perms))
+      (let ((state-file (string-append state-dir target)))
+        (cleanup-and-migrate target state-file state-dir)
+        (when directory-target?
+          (mkdirp-perms state-file i))
+        (when (no-follow-file-exists? state-file)
+          (symlink state-file target)))))
+
+  (define (cleanup-and-migrate target state-file state-dir)
+    (let ((migrate-file
+           (lambda (source dest)
+             (copy-recursively source dest)
+             (delete-file-recursively source)))
+          (backup-file
+           (lambda (file)
+             (let* ((backup-dir (string-append
+                                 state-dir
+                                 backup-base-dir
+                                 "/stateless-backup-" (number->string timestamp)))
+                    (backup-file (string-append
+                                  backup-dir "/"
+                                  (let* ((string-drop-prefix (lambda (s prefix)
+                                                               (string-drop s (string-length prefix))))
+                                         (without-state-dir (lambda (file)
+                                                              (string-drop-prefix file state-dir)))
+                                         (without-base-dir (lambda (file)
+                                                             (string-drop-prefix file backup-base-dir))))
+                                    ((compose without-base-dir
+                                              without-state-dir)
+                                     file)))))
+               (mkdir-p (dirname backup-file))
+               (rename-file file backup-file)))))
+      (when (no-follow-file-exists? target)
+        (if ((symlink-to-state? (list persist-dir
+                                      machine-dir))
+             target)
+            (delete-file target)
+            (begin
+              (when (no-follow-file-exists? state-file)
+                (if (nil? (find-files state-file))
+                    (delete-file-recursively state-file)
+                    (backup-file state-file)))
+              (migrate-file target state-file))))))
+
+  (define (mkdirp-perms dir perms)
+    (mkdir-p dir)
+    (chown dir
+           (let ((user (assoc-ref perms #:user)))
+             (if user
+                 (passwd:uid (getpwnam user)) -1))
+           (let ((group (assoc-ref perms #:group)))
+             (if group
+                 (group:gid (getgrnam group)) -1)))
+    (let ((mode (assoc-ref perms #:mode)))
+      (when mode
+        (chmod dir mode))))
+
+  (define (no-follow-file-exists? file)
+    (false-if-exception (lstat file)))
+
+  (define timestamp (current-time))
+
+  (run))
+#+end_src
+**** Tool
+#+begin_src scheme
+(define* (tool state
+               ignore
+               base-dir
+               persist-dir
+               machine-dir
+               #:key
+               additional-known)
+  (define (run)
+    (for-each
+     (lambda (path)
+       (display (string-append path "\n")))
+     (case (run-mode)
+       ((active) (diff-live))
+       ((state) (diff-state)))))
+
+  (define (run-mode)
+    (string->symbol
+     (or
+      (false-if-exception (cadr (command-line)))
+      "active")))
+
+  (define (diff-live)
+    (find-diff
+     base-dir
+     (append
+      (make-known (map (lambda (path)
+                         (if (string-suffix? "/" path)
+                             (string-drop-right path 1) path))
+                       (state->paths state))
+                  (symlink-to-state? (list persist-dir
+                                           machine-dir)))
+      (make-known-files+dirs ignore)
+      (or additional-known '()))))
+
+  (define (diff-state)
+    (let ((finder
+           (lambda (store state)
+             (let ((state-dir ((state-dir-lookup persist-dir machine-dir)
+                               store)))
+               (find-diff
+                (string-append state-dir base-dir)
+                (make-known-files+dirs
+                 (let ((state-in-store
+                        (filter (lambda (entry)
+                                  (equal? (assoc-ref entry #:store) store))
+                                state)))
+                   (map (lambda (path)
+                          (string-append state-dir path))
+                        (state->paths state-in-store)))))))))
+      (append
+       (finder #:persist state)
+       (finder #:machine state))))
+
+  (define* (find-diff directory known)
+    (let* ((check-path
+            (lambda (path result)
+              (let ((pred (assoc-ref known path)))
+                (if (and pred (pred path))
+                    result
+                    (cons path result)))))
+           (fn
+            (lambda (f)
+              (lambda (path _ result)
+                (let ((asdf (if (string-prefix? "//" path)
+                                (string-drop path 1)
+                                path)))
+                  (f asdf _ result)))))
+           (results
+            (file-system-fold
+             (let ((known-paths (map car known)))
+               (fn (lambda (dir _ _*)
+                     (and (not (member (string-append dir "/") known-paths))
+                          (any (lambda (known-path)
+                                 (string-prefix? dir known-path))
+                               known-paths)))))
+             (fn (lambda (file _ result)
+                   (check-path file result)))
+             (fn (lambda (_ _* result)
+                   result))
+             (fn (lambda (_ _* result)
+                   result))
+             (fn (lambda (dir _ result)
+                   (check-path (string-append dir "/") result)))
+             (lambda (path _ errno result) ; TODO use `fn' for this.
+               (format (current-error-port) "~a: ~a~%" path (strerror errno))
+               result)
+             '()
+             directory)))
+      (sort results string<?)))
+
+  (define (make-known files pred)
+    (map (lambda (file)
+           (cons file pred))
+         files))
+
+  (define (make-known-files+dirs paths)
+    (map (let ((directory?
+                (lambda (path)
+                  (eq? (stat:type (lstat path)) 'directory))))
+           (lambda (path)
+             (cons path
+                   (if (string-suffix? "/" path)
+                       directory?
+                       (negate directory?)))))
+         paths))
+
+  (define (state->paths state)
+    (map (lambda (entry)
+           (assoc-ref entry #:path))
+         state))
+
+  (define (symlink-to-store? file)
+    (and (symbolic-link? file)
+         (store-file-name? (readlink file))))
+
+  (run))
+#+end_src
+**** Shared
 #+begin_src scheme
 (define (state-dir-lookup persist-dir machine-dir)
-  #~(lambda (k)
-      (case k
-        ((#:persist) #$persist-dir)
-        ((#:machine) #$machine-dir))))
+  (lambda (k)
+    (case k
+      ((#:persist) persist-dir)
+      ((#:machine) machine-dir))))
 
 (define (symlink-to-state? state-dirs)
-  (with-imported-modules '((guix build utils))
-    #~(lambda (file)
-        (use-modules ((guix build utils) #:select (symbolic-link?))
-                     ((srfi srfi-1) #:select (any)))
-
-        (and (symbolic-link? file)
-             (any (lambda (state-dir)
-                    (string-prefix? state-dir (readlink file)))
-                  '#$state-dirs)))))
+  (lambda (file)
+    (and (symbolic-link? file)
+         (any (lambda (state-dir)
+                (string-prefix? state-dir (readlink file)))
+              state-dirs))))
 #+end_src
 * Utils
 :PROPERTIES:
