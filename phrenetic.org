@@ -17,10 +17,8 @@
   - [[#packages][Packages]]
   - [[#stateless][Stateless]]
 - [[#utils][Utils]]
-  - [[#branching][Branching]]
-  - [[#threading][Threading]]
-  - [[#alists][Alists]]
-  - [[#guix][Guix]]
+  - [[#host][Host]]
+  - [[#common-and-build][Common and build]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
 - [[#guix-channel][Guix channel]]
@@ -5856,21 +5854,21 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 **** Shared
 #+begin_src scheme
 (define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils))
+  (with-imported-modules '((guix build utils)
+                           (phrenetic build utils))
     #~(lambda (profiles)
-        (use-modules ((guix build utils) #:select (mkdir-p)))
+        (use-modules ((guix build utils) #:select (mkdir-p))
+                     ((phrenetic build utils) #:select (no-follow-file-exists?)))
 
-        (let ((no-follow-file-exists? (lambda (file)
-                                        (false-if-exception (lstat file)))))
-          (for-each
-           (lambda (i)
-             (let ((link (car i))
-                   (profile (cdr i)))
-               (when (and (no-follow-file-exists? profile)
-                          (not (no-follow-file-exists? link)))
-                 (mkdir-p (dirname link))
-                 (symlink profile link))))
-           profiles)))))
+        (for-each
+         (lambda (i)
+           (let ((link (car i))
+                 (profile (cdr i)))
+             (when (and (no-follow-file-exists? profile)
+                        (not (no-follow-file-exists? link)))
+               (mkdir-p (dirname link))
+               (symlink profile link))))
+         profiles))))
 #+end_src
 *** Console
 **** KMonad
@@ -9213,14 +9211,105 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 * Utils
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "phrenetic/utils.scm")
+:meta-dir+: /phrenetic
+:END:
+** Host
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "utils.scm")
 :END:
 #+begin_src scheme
 (define-module (phrenetic utils)
   #:use-module (guix build-system trivial)
   #:use-module (guix git-download)
   #:use-module (guix packages)
-  #:use-module (gnu services)
+  #:use-module (phrenetic build utils)
+  #:export (simple-package
+            with-git-version
+            with-git-commit
+            with-git-url)
+  #:re-export (when-let
+               if-let
+               when-not
+               if-not
+               ->
+               ->>
+               as->
+               list->alist
+               alist->list
+               merge-with
+               update-keys
+               update-vals))
+
+(define simple-package
+  (package
+    (name #f)
+    (version "0")
+    (source #f)
+    (build-system trivial-build-system)
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
+#+end_src
+**** Git
+#+begin_src scheme
+(define (with-git-url pkg url)
+  (package
+    (inherit pkg)
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (url url)))))))
+
+(define* (with-git-version pkg #:key version commit hash)
+  (with-git pkg
+            #:upstream-version version
+            #:commit commit
+            #:hash hash))
+
+(define* (with-git-commit pkg
+                          #:key
+                          (upstream-version (package-version pkg))
+                          (revision "0")
+                          commit
+                          hash)
+  (with-git pkg
+            #:upstream-version upstream-version
+            #:revision revision
+            #:commit commit
+            #:hash hash))
+
+(define* (with-git pkg
+                   #:key
+                   upstream-version
+                   revision
+                   commit
+                   hash)
+  (package
+    (inherit pkg)
+    (version (if revision
+                 (git-version upstream-version revision commit)
+                 upstream-version))
+    (source
+     (origin
+       (inherit (package-source pkg))
+       (uri (git-reference
+             (inherit (-> pkg package-source origin-uri))
+             (commit commit)))
+       (sha256
+        (base32
+         hash))
+       (file-name (git-file-name (package-name pkg) version))))))
+#+end_src
+** Common and build
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "build/utils.scm")
+:END:
+#+begin_src scheme
+(define-module (phrenetic build utils)
+  ;; Common
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map fold take drop))
   #:export (when-let
@@ -9234,13 +9323,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             alist->list
             merge-with
             update-keys
-            update-vals
-            simple-package
-            with-git-version
-            with-git-commit
-            with-git-url))
+            update-vals)
+  ;; Build
+  #:export (no-follow-file-exists?))
 #+end_src
-** Branching
+*** Common
+**** Branching
 #+begin_src scheme
 (define-syntax when-let
   (syntax-rules ()
@@ -9264,7 +9352,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-** Threading
+**** Threading
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
@@ -9287,7 +9375,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          #'(let ((x exp))
              (as-> form name form* ...)))))))
 #+end_src
-** Alists
+**** Alists
 #+begin_src scheme
 (define* (list->alist #:rest kvs)
   (let loop ((res '())
@@ -9339,68 +9427,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           (cons k (f v))))
        alist))
 #+end_src
-** Guix
+*** Build
 #+begin_src scheme
-(define simple-package
-  (package
-    (name #f)
-    (version "0")
-    (source #f)
-    (build-system trivial-build-system)
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
-
-(define* (with-git-version pkg #:key version commit hash)
-  (with-git pkg
-            #:upstream-version version
-            #:commit commit
-            #:hash hash))
-
-(define* (with-git-commit pkg
-                          #:key
-                          (upstream-version (package-version pkg))
-                          (revision "0")
-                          commit
-                          hash)
-  (with-git pkg
-            #:upstream-version upstream-version
-            #:revision revision
-            #:commit commit
-            #:hash hash))
-
-(define* (with-git pkg
-                   #:key
-                   upstream-version
-                   revision
-                   commit
-                   hash)
-  (package
-    (inherit pkg)
-    (version (if revision
-                 (git-version upstream-version revision commit)
-                 upstream-version))
-    (source
-     (origin
-       (inherit (package-source pkg))
-       (uri (git-reference
-             (inherit (-> pkg package-source origin-uri))
-             (commit commit)))
-       (sha256
-        (base32
-         hash))
-       (file-name (git-file-name (package-name pkg) version))))))
-
-(define (with-git-url pkg url)
-  (package
-    (inherit pkg)
-    (source
-     (origin
-       (inherit (package-source pkg))
-       (uri (git-reference
-             (inherit (-> pkg package-source origin-uri))
-             (url url)))))))
+(define (no-follow-file-exists? f)
+  (false-if-exception (lstat f)))
 #+end_src
 * Configurations
 :PROPERTIES:
