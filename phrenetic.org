@@ -8987,6 +8987,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+begin_src scheme
 (define-module (phrenetic build stateless)
   #:use-module ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p store-file-name? symbolic-link?))
+  #:use-module (phrenetic build utils)
   #:use-module ((ice-9 ftw) #:select (file-system-fold))
   #:use-module ((srfi srfi-1) #:select (any))
   #:export (activate
@@ -9068,9 +9069,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       (when mode
         (chmod dir mode))))
 
-  (define (no-follow-file-exists? file)
-    (false-if-exception (lstat file)))
-
   (define timestamp (current-time))
 
   (run))
@@ -9131,20 +9129,20 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (finder #:machine state))))
 
   (define* (find-diff directory known)
-    (let* ((check-path
-            (lambda (path result)
-              (let ((pred (assoc-ref known path)))
-                (if (and pred (pred path))
-                    result
-                    (cons path result)))))
-           (fn
-            (lambda (f)
-              (lambda (path _ result)
-                (let ((asdf (if (string-prefix? "//" path)
-                                (string-drop path 1)
-                                path)))
-                  (f asdf _ result)))))
-           (results
+    (as-> directory $
+          (let* ((check-path
+                  (lambda (path result)
+                    (let ((pred (assoc-ref known path)))
+                      (if (and pred (pred path))
+                          result
+                          (cons path result)))))
+                 (fn
+                  (lambda (f)
+                    (lambda (path _ result)
+                      (let ((asdf (if (string-prefix? "//" path)
+                                      (string-drop path 1)
+                                      path)))
+                        (f asdf _ result))))))
             (file-system-fold
              (let ((known-paths (map car known)))
                (fn (lambda (dir _ _*)
@@ -9164,8 +9162,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                (format (current-error-port) "~a: ~a~%" path (strerror errno))
                result)
              '()
-             directory)))
-      (sort results string<?)))
+             $))
+          (sort $ string<?)))
 
   (define (make-known files pred)
     (map (lambda (file)
