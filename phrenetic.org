@@ -369,61 +369,16 @@ Run with ~sudo~.
           'base-services
           #:state `(((#:path . ,%random-seed-file)
                      (#:store . #:machine))
-
-
-                    ;;; TODO temporarily putting stuff here
-
-                    ;; Goes in base-services
-                    ((#:path . "/.lastweek")
-                     (#:store . #:machine))
-                    ;; Goes in desktop-base-services
-                    ((#:path . "/var/lib/upower/")
-                     (#:store . #:machine))
-                    ;; Prolly put in base-services but maybe it's a more general Linux thing
                     ((#:path . "/var/db/nscd/")
+                     (#:store . #:machine))
+                    ((#:path . "/.lastweek")
                      (#:store . #:machine)))
-          #:ignore `("/bin/sh"
-                     "/usr/bin/env"
-
-
-                     ;;; TODO temporarily putting stuff here
-
-                     ;; This a "guix thing", donno where it should go
-                     "/etc/static" ; TODO symlink to store
-
-                     ;; Prolly put in base-services but maybe it's a more general Linux thing
-                     "/etc/resolv.conf"
-                     "/etc/resolv.conf.bak"
-
-                     ;; Goes in desktop-base-services
-                     "/var/lib/AccountsService/" ; TODO empty directory
-                     "/var/lib/colord/" ; TODO empty directory
-                     "/var/lib/udisks2/" ; TODO empty directory
-
-
-                     "/etc/group"
-                     "/etc/passwd"
-                     "/etc/shadow"
-                     ,%password-lock-file
-
-                     "/etc/ssl" ; TODO symlink to "/run/current-system/profile/etc/ssl"
-
-                     "/etc/mtab" ; TODO symlink to "/proc/self/mounts"
-
-                     "/boot/"
-                     "/dev/"
-                     "/mnt/" ; TODO empty directory
-                     "/proc/"
-                     "/run/"
-                     "/sys/"
-                     "/tmp/"
-                     "/var/db/sudo/" ; TODO empty directory
-                     "/var/empty/" ; TODO empty directory
-                     "/var/lock/"
-                     "/var/run/"
-                     "/var/tmp/" ; TODO empty directory
-                     )))
-        '()))))
+          #:ignore '(((#:path . "/etc/resolv.conf"))
+                     ((#:path . "/etc/resolv.conf.bak"))
+                     ((#:path . "/bin/sh")
+                      (#:preds . ((#:symlink-to-store))))
+                     ((#:path . "/usr/bin/env")
+                      (#:preds . ((#:symlink-to-store)))))))))))
 #+end_src
 *** Login
 **** Classic
@@ -520,9 +475,10 @@ Run with ~sudo~.
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/root/.cache/guix/")
                      (#:store . #:machine)))
-          #:ignore '(;"/gnu/store/" ; TODO inscrutable error on system build
-                     "/var/guix/"
-                     "/etc/guix/acl")))
+          #:ignore '(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build
+                     ((#:path . "/var/guix/"))
+                     ((#:path . "/etc/guix/acl")
+                      (#:preds . ((#:symlink-to-store)))))))
         '())
     (if nonguix-substitutes?
         (list (nonguix-substitutes-service)) '()))))
@@ -560,9 +516,9 @@ Run with ~sudo~.
           'nix-pm
           #:state '(((#:path . "/root/.cache/nix/")
                      (#:store . #:machine)))
-          #:ignore '("/nix/store/"
-                     "/nix/var/nix/"
-                     "/nix/var/log/nix/")))
+          #:ignore '(((#:path . "/nix/store/"))
+                     ((#:path . "/nix/var/nix/"))
+                     ((#:path . "/nix/var/log/nix/")))))
         '()))))
 #+end_src
 *** Console
@@ -628,8 +584,16 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'desktop-base-services
           #:state `(((#:path . "/etc/machine-id")
-                     (#:store . #:machine)))
-          #:ignore '("/var/cache/fontconfig/"))) ; TODO empty dir
+                     (#:store . #:machine))
+                    ((#:path . "/var/lib/upower/")
+                     (#:store . #:machine))
+                    ;; ((#:path . "/var/lib/AccountsService/")
+                    ;;  (#:store . #:machine))
+                    ;; ((#:path . "/var/lib/colord/")
+                    ;;  (#:store . #:machine))
+                    ;; ((#:path . "/var/lib/udisks2/")
+                    ;;  (#:store . #:machine))
+                    )))
         '()))))
 #+end_src
 **** Multimedia
@@ -947,7 +911,8 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                (list
                 (stateless-service
                  'swapfile
-                 #:ignore (list swapfile)))
+                 #:ignore `(((#:path . ,swapfile)
+                             (#:store . #:machine)))))
                '())))
         '()))))
 
@@ -1013,13 +978,9 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                           (cons "root")
                                           (map (lambda (user)
                                                  `(,user . ,(string-append persist-dir "/.passwords/" user)))))
-                   #:symlink-log? #t)))))
-     (sudoers-file
-      (mixed-text-file
-       "sudoers"
-       (slurp-file-like %sudoers-specification)
-       "Defaults lecture=never" "\n")))
-
+                   #:symlink-log? #t))))))
+    (stateless-guix-system $)
+    (stateless-sudo-lectures $)
     (if nix?
         (stateless-nix $ #:machine-dir machine-dir) $)))
 
@@ -1073,18 +1034,21 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
    (extend (lambda (config exts)
              (stateless:extend-proc
               config
-              (append exts
-                      (list `((#:ignore . ,(map (lambda (store)
-                                                  (string-append store "/"))
-                                                (list
-                                                 ;; TODO
-                                                 ;; (assoc-ref config #:persist-dir)
-                                                 ;; (assoc-ref config #:machine-dir)
-                                                 "/.persist"
-                                                 "/.machine")))))
-                      (if #t ; TODO (assoc-ref config #:symlink-log?)
-                          (list '((#:ignore . ("/var/log"))))
-                          '())))))
+
+              exts
+              ;; (append exts
+              ;;         (list `((#:ignore . ,(map (lambda (store)
+              ;;                                     (string-append store "/"))
+              ;;                                   (list
+              ;;                                    ;; TODO
+              ;;                                    ;; (assoc-ref config #:persist-dir)
+              ;;                                    ;; (assoc-ref config #:machine-dir)
+              ;;                                    "/.persist"
+              ;;                                    "/.machine")))))
+              ;;         (if #t ; TODO (assoc-ref config #:symlink-log?)
+              ;;             (list '((#:ignore . ("/var/log"))))
+              ;;             '()))
+              )))
    (description "Initialize a stateless system.")))
 #+end_src
 ******* Boot
@@ -1317,6 +1281,57 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 (define stateless-service
   (stateless:service-fn stateless-service-type))
 #+end_src
+***** Guix system
+#+begin_src scheme
+(define-system-comp (stateless-guix-system)
+  (services
+   (cons* (stateless-service
+           'guix-system
+           #:ignore `(((#:path . "/boot/"))
+                      ((#:path . "/dev/"))
+                      ((#:path . "/proc/"))
+                      ((#:path . "/run/"))
+                      ((#:path . "/sys/"))
+                      ((#:path . "/tmp/"))
+                      ((#:path . "/var/lock/"))
+                      ((#:path . "/var/run/"))
+                      ;; ((#:path . "/var/tmp/")) ; FHS specifies this should be preserved between reboots. I'm leaving it commented out for now because I want to know if something shows up. I'll decide then if I should be symlinking individual state files/dirs inside this directory or the directory entirely.
+
+                      ((#:path . "/etc/group"))
+                      ((#:path . "/etc/passwd"))
+                      ((#:path . "/etc/shadow"))
+                      ((#:path . ,%password-lock-file))
+
+                      ((#:path . "/etc/mtab")
+                       (#:preds . ((#:symlink-to "/proc/self/mounts"))))
+                      ((#:path . "/etc/ssl")
+                       (#:preds . ((#:symlink-to "/run/current-system/profile/etc/ssl"))))
+                      ((#:path . "/etc/static")
+                       (#:preds . ((#:symlink-to-store))))))
+          (operating-system-user-services os))))
+#+end_src
+***** Sudo lectures
+#+begin_src scheme
+(define-system-comp (stateless-sudo-lectures #:key lectures?)
+  (services
+   (append
+    (operating-system-user-services os)
+    (if lectures?
+        (list
+         (stateless-service
+          'sudo-lectures
+          #:state '(((#:path . "/var/db/sudo/lectured/")
+                     (#:store . #:machine)))))
+        '())))
+  (sudoers-file
+   (let ((default-sudoers %sudoers-specification))
+     (if (not lectures?)
+         (mixed-text-file
+          "sudoers"
+          (slurp-file-like default-sudoers)
+          "Defaults lecture=never" "\n")
+         default-sudoers))))
+#+end_src
 ***** Nix
 - TODO Ideally I'd have this in the "Nix" component but it needs the ~stateless-machine-dir~ which I (maybe?) don't want to pass around to system components.
 #+begin_src scheme
@@ -1341,11 +1356,10 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                         activation-service-type
                         #~(when (not (file-exists? #$nix-machine-dir))
                             (mkdir #$nix-machine-dir)))
-        ;; TODO ignore /.machine/nix/
-        ;; (stateless-service
-        ;;  'nix
-        ;;  #:ignore ...)
-        ))))))
+        (stateless-service
+         'nix
+         #:ignore '(((#:path . "nix/")
+                     (#:store . #:machine))))))))))
 #+end_src
 *** Hardware-specific
 **** Console
@@ -2169,7 +2183,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extend (lambda (config exts)
              (stateless:extend-proc
               config
-              (cons '((#:ignore . (".guix-home")))
+              (cons '((#:ignore . (((#:path . ".guix-home")
+                                    (#:preds . ((#:symlink-to-store)))))))
                     exts))))
    (description "Initialize a stateless home.")))
 
@@ -2212,6 +2227,15 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                          (string-drop file (string-length guix-home-dir))))
                       (find-files guix-home-dir)))))
           (make-known home-files symlink-to-store?)))))
+
+;; (define (make-known files pred)
+;;   (map (lambda (file)
+;;          (cons file pred))
+;;        files))
+
+;; (define (symlink-to-store? file)
+;;   (and (symbolic-link? file)
+;;        (store-file-name? (readlink file))))
 #+end_src
 ***** Extension helper
 #+begin_src scheme
@@ -5601,8 +5625,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            'guix
            #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
                       (#:store . #:machine)))
-           #:ignore `(,guix-profile
-                      (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))
+           #:ignore `(((#:path . ,guix-profile))
+                      ((#:path . (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))))
        '())
 
    (guile-services #:stateless? stateless?
@@ -5780,8 +5804,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            'nix
            #:state '(((#:path . ("nix/" #:xdg-base "XDG_CACHE_HOME"))
                       (#:store . #:machine)))
-           #:ignore (list nix-profile
-                          nix-channels))))
+           #:ignore `(((#:path . ,nix-profile))
+                      ((#:path . ,nix-channels))))))
        '())
 
    (if doom?
@@ -6400,7 +6424,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)
                  (#:mode . #o700)))
-      #:ignore '("/var/lib/gdm/")))))
+      #:ignore '(((#:path . "/var/lib/gdm/")))))))
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
@@ -8199,7 +8223,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     (when stateless?
       (home-stateless-service
        'pavucontrol
-       #:ignore '(("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))))) ; Pavucontrol overwrites the current file (or a symlink) so we can't store this, ignore it instead.
+       #:ignore '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))))))) ; Pavucontrol overwrites the current file (or a symlink) so we can't store this. Let's just ignore it.
 
    (or gtk-services '())))
 #+end_src
@@ -8394,7 +8418,9 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                    (#:mode . #o700)
                    (#:parent-dir-perms . ((#:mode . #o700))))))
        #:ignore (if (chrome? flavors)
-                    '(("mimeapps.list" #:xdg-base "XDG_DATA_HOME")) ; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also it's perpetually empty. Whatever, ignore it.
+                    ;; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also it's perpetually empty. Whatever, ignore it.
+                    '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
+                       (#:preds . ((#:empty-file)))))
                     #f))))
 
    (or gtk-services '())))
@@ -9081,122 +9107,284 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Tool
 #+begin_src scheme
+;;;;;;;;;; TODO TEMPORRARY REMOVE ME
+(define-module (phrenetic build stateless)
+  #:use-module ((guix build utils) #:select (copy-recursively delete-file-recursively find-files mkdir-p store-file-name? symbolic-link?))
+  #:use-module (phrenetic build utils)
+  #:use-module ((ice-9 ftw) #:select (file-system-fold))
+  #:use-module ((srfi srfi-1) #:select (any))
+  #:export (activate
+            tool))
+(define (state-dir-lookup persist-dir machine-dir)
+  (lambda (k)
+    (case k
+      ((#:persist) persist-dir)
+      ((#:machine) machine-dir))))
+;;;;;;;
+
+(use-modules ;; ((guix build utils) #:select (find-files))
+ ((srfi srfi-1) #:select (append-map every partition))
+ ((srfi srfi-11) #:select (let-values))
+ ((ice-9 match) #:select (match match-lambda)))
+
+
 (define* (tool state
                ignore
                base-dir
                persist-dir
-               machine-dir
-               #:key
-               additional-known)
-  (define (run)
+               machine-dir)
+  (let ((state* (normalize-entries state))
+        (all-ignore (normalize-entries state)))
     (for-each
      (lambda (path)
        (display (string-append path "\n")))
      (case (run-mode)
-       ((active) (diff-live))
-       ((state) (diff-state)))))
+       ((active) (diff-live state*
+                            (filter (lambda (entry)
+                                      (not (assoc-ref entry #:store)))
+                                    all-ignore)
+                            base-dir
+                            persist-dir
+                            machine-dir))
+       ((state) (diff-state '(#:persist #:machine)
+                            state*
+                            (filter (lambda (entry)
+                                      (assoc-ref entry #:store))
+                                    all-ignore)
+                            base-dir
+                            persist-dir
+                            machine-dir))))))
 
-  (define (run-mode)
-    (string->symbol
-     (or
-      (false-if-exception (cadr (command-line)))
-      "active")))
+(define (run-mode)
+  (string->symbol
+   (or
+    (false-if-exception (cadr (command-line)))
+    "active"
+    ;; "state" ; TODO temporary for testing
+    )))
 
-  (define (diff-live)
-    (find-diff
-     base-dir
-     (append
-      (make-known (map (lambda (path)
-                         (if (string-suffix? "/" path)
-                             (string-drop-right path 1) path))
-                       (state->paths state))
-                  (symlink-to-state? (list persist-dir
-                                           machine-dir)))
-      (make-known-files+dirs ignore)
-      (or additional-known '()))))
+(define (diff-live state
+                   ignore
+                   base-dir
+                   persist-dir
+                   machine-dir)
+  (let-values (((ignore-files ignore-dirs) (files+dirs ignore)))
+    (diff base-dir
+          (append (state->known-symlinks state persist-dir machine-dir)
+                  (ignore->known ignore-files))
+          (ignore->known ignore-dirs)
+          #:omit-empty-dirs? #t)))
 
-  (define (diff-state)
-    (let ((finder
-           (lambda (store state)
-             (let ((state-dir ((state-dir-lookup persist-dir machine-dir)
-                               store)))
-               (find-diff
-                (string-append state-dir base-dir)
-                (make-known-files+dirs
-                 (let ((state-in-store
-                        (filter (lambda (entry)
-                                  (equal? (assoc-ref entry #:store) store))
-                                state)))
-                   (map (lambda (path)
-                          (string-append state-dir path))
-                        (state->paths state-in-store)))))))))
-      (append
-       (finder #:persist state)
-       (finder #:machine state))))
+(define (normalize-entries entries)
+  (map (lambda (entry)
+         (let ((path (assoc-ref entry #:path)))
+           (if (string-suffix? "/" path)
+               (->> entry
+                    (acons #:directory? #t)
+                    (acons #:path (string-drop-right path 1)))
+               entry)))
+       entries))
 
-  (define* (find-diff directory known)
-    (as-> directory $
-          (let* ((check-path
-                  (lambda (path result)
-                    (let ((pred (assoc-ref known path)))
-                      (if (and pred (pred path))
-                          result
-                          (cons path result)))))
-                 (fn
-                  (lambda (f)
-                    (lambda (path _ result)
-                      (let ((asdf (if (string-prefix? "//" path)
-                                      (string-drop path 1)
-                                      path)))
-                        (f asdf _ result))))))
-            (file-system-fold
-             (let ((known-paths (map car known)))
-               (fn (lambda (dir _ _*)
-                     (and (not (member (string-append dir "/") known-paths))
-                          (any (lambda (known-path)
-                                 (string-prefix? dir known-path))
-                               known-paths)))))
-             (fn (lambda (file _ result)
-                   (check-path file result)))
-             (fn (lambda (_ _* result)
-                   result))
-             (fn (lambda (_ _* result)
-                   result))
-             (fn (lambda (dir _ result)
-                   (check-path (string-append dir "/") result)))
-             (lambda (path _ errno result) ; TODO use `fn' for this.
-               (format (current-error-port) "~a: ~a~%" path (strerror errno))
-               result)
-             '()
-             $))
-          (sort $ string<?)))
+;; TODO probably just do two filter statements instad of this.
+(define (files+dirs entries)
+  (partition (lambda (entry)
+               (not (assoc-ref entry #:directory?)))
+             entries))
 
-  (define (make-known files pred)
-    (map (lambda (file)
-           (cons file pred))
-         files))
+(define (state->known-symlinks state persist-dir machine-dir)
+  (map (lambda (entry)
+         (let ((path (assoc-ref entry #:path)))
+           (cons path `((#:symlink-to ,(string-append
+                                        ((state-dir-lookup persist-dir
+                                                           machine-dir)
+                                         (assoc-ref entry #:store))
+                                        path))))))
+       state))
 
-  (define (make-known-files+dirs paths)
-    (map (let ((directory?
-                (lambda (path)
-                  (eq? (stat:type (lstat path)) 'directory))))
-           (lambda (path)
-             (cons path
-                   (if (string-suffix? "/" path)
-                       directory?
-                       (negate directory?)))))
-         paths))
+(define (ignore->known ignore)
+  (map (lambda (entry)
+         (cons (assoc-ref entry #:path)
+               (or (assoc-ref entry #:preds)
+                   '())))
+       ignore))
 
-  (define (state->paths state)
-    (map (lambda (entry)
-           (assoc-ref entry #:path))
-         state))
 
-  (define (symlink-to-store? file)
-    (and (symbolic-link? file)
-         (store-file-name? (readlink file))))
+;; (define (file-entries entries)
+;;   (filter (lambda (entry)
+;;                (not (assoc-ref entry #:directory?)))
+;;              entries))
 
-  (run))
+(define (store-entries store entries)
+  (filter (lambda (entry)
+            (equal? (assoc-ref entry #:store) store))
+          entries))
+
+(define (entries-with-state-dir state-dir entries)
+  (map (lambda (entry)
+         (acons #:path (string-append state-dir (assoc-ref entry #:path)) entry))
+       entries))
+
+(define (diff-state stores
+                    state
+                    ignore
+                    base-dir
+                    persist-dir
+                    machine-dir)
+  (let ((diff* ; TODO rename this
+         (lambda (store)
+           (let ((state-dir ((state-dir-lookup persist-dir
+                                               machine-dir)
+                             store)))
+             (let-values (((state-files state-dirs) (files+dirs state))
+                          ((ignore-files ignore-dirs) (files+dirs ignore)))
+               (diff (string-append state-dir base-dir)
+                     (append (->> state-files
+                                  (store-entries store)
+                                  (entries-with-state-dir state-dir)
+                                  (map (lambda (entry)
+                                         (cons (assoc-ref entry #:path) '()))))
+                             (->> ignore-files
+                                  (store-entries store)
+                                  (entries-with-state-dir state-dir)
+                                  ignore->known))
+                     (append (->> state-dirs
+                                  (store-entries store)
+                                  (entries-with-state-dir state-dir)
+                                  (map (lambda (entry)
+                                         (cons (assoc-ref entry #:path) '()))))
+                             (->> ignore-dirs
+                                  (store-entries store)
+                                  (entries-with-state-dir state-dir)
+                                  ignore->known))))))))
+    (append-map diff* stores)))
+
+(define* (diff directory known-files known-dirs #:key omit-empty-dirs?)
+  (as-> directory $
+        (let* ((test (lambda (path known)
+                       (let ((cand (assoc path known)))
+                         (and cand
+                              (every (lambda* (pred-name #:rest args)
+                                       (apply (assoc-ref predicates pred-name) (cons path args)))
+                                     (match cand ((_ . preds) preds))))))))
+          (file-system-fold
+           (let ((known-paths (map (match-lambda ((path . _) path))
+                                   (append known-files known-dirs)))
+                 (known-dir-paths (map (match-lambda ((path . _) path))
+                                       known-dirs)))
+             (fn (lambda (dir _ _*)
+                   (and (not (member dir known-dir-paths))
+                        (any (lambda (known-path)
+                               (string-prefix? dir known-path))
+                             known-paths)))))
+           (fn (lambda (file _ res)
+                 (if (test file known-files)
+                     res
+                     (cons file res))))
+           (fn (lambda (_ _* res)
+                 res))
+           (fn (lambda (_ _* res)
+                 res))
+           (fn (lambda (dir _ res)
+                 (if (or (test dir known-dirs)
+                         (and omit-empty-dirs?
+                              ;; (null? (find-files dir)) ; TODO figure out how to test if a directory contains no files, only empty dirs (i.e. recursively). Update: maybe don't bother, if I don't ahve to?
+                              ))
+                     res
+                     (cons (string-append dir "/") res))))
+           (lambda (path _ errno res) ; TODO use `fn' for this.
+             (format (current-error-port) "~a: ~a~%" path (strerror errno))
+             res)
+           '()
+           $))
+        (sort $ string<?)))
+
+(define (fn f)
+  (lambda (path _ res)
+    (let ((asdf (if (string-prefix? "//" path)
+                    (string-drop path 1)
+                    path)))
+      (f asdf _ res))))
+
+(define predicates
+  `((#:symlink-to . ,(lambda (path to)
+                       (and (symbolic-link? path)
+                            (equal? (readlink path) to))))
+    (#:symlink-to-store . ,(lambda (path)
+                             (and (symbolic-link? path)
+                                  (store-file-name? (readlink path)))))
+    (#:empty-file . ,(lambda (path)
+                       (-> path stat stat:size)))))
+
+(apply tool
+		 (quote
+		  ((((#:path . "/etc/NetworkManager/system-connections/")
+			 (#:store . #:machine))
+			((#:path . "/var/lib/NetworkManager/")
+			 (#:store . #:machine)
+			 (#:mode . 448))
+			((#:path . "/etc/machine-id")
+			 (#:store . #:machine))
+			((#:path . "/var/lib/upower/")
+			 (#:store . #:machine))
+			((#:path . "/root/.cache/nix/")
+			 (#:store . #:machine))
+			((#:path . "/etc/guix/signing-key.pub")
+			 (#:store . #:machine)
+			 (#:parent-dir-perms
+			  (#:mode . 73)))
+			((#:path . "/etc/guix/signing-key.sec")
+			 (#:store . #:machine)
+			 (#:parent-dir-perms
+			  (#:mode . 73)))
+			((#:path . "/root/.cache/guix/")
+			 (#:store . #:machine))
+			((#:path . "/var/lib/random-seed")
+			 (#:store . #:machine))
+			((#:path . "/var/db/nscd/")
+			 (#:store . #:machine))
+			((#:path . "/.lastweek")
+			 (#:store . #:machine)))
+		   (((#:path . "nix/")
+			 (#:store . #:machine))
+			((#:path . "/.machine/.swap")
+			 (#:store . #:machine))
+			((#:path . "/nix/store/"))
+			((#:path . "/nix/var/nix/"))
+			((#:path . "/nix/var/log/nix/"))
+			((#:path . "/var/guix/"))
+			((#:path . "/etc/guix/acl")
+			 (#:preds
+			  (#:symlink-to-store)))
+			((#:path . "/etc/resolv.conf"))
+			((#:path . "/etc/resolv.conf.bak"))
+			((#:path . "/bin/sh")
+			 (#:preds
+			  (#:symlink-to-store)))
+			((#:path . "/usr/bin/env")
+			 (#:preds
+			  (#:symlink-to-store)))
+			((#:path . "/boot/"))
+			((#:path . "/dev/"))
+			((#:path . "/proc/"))
+			((#:path . "/run/"))
+			((#:path . "/sys/"))
+			((#:path . "/tmp/"))
+			((#:path . "/var/lock/"))
+			((#:path . "/var/run/"))
+			((#:path . "/etc/group"))
+			((#:path . "/etc/passwd"))
+			((#:path . "/etc/shadow"))
+			((#:path . "/etc/.pwd.lock"))
+			((#:path . "/etc/mtab")
+			 (#:preds
+			  (#:symlink-to "/proc/self/mounts")))
+			((#:path . "/etc/ssl")
+			 (#:preds
+			  (#:symlink-to "/run/current-system/profile/etc/ssl")))
+			((#:path . "/etc/static")
+			 (#:preds
+			  (#:symlink-to-store))))
+		   "/" "/.persist" "/.machine")))
 #+end_src
 **** Shared
 #+begin_src scheme
@@ -9206,6 +9394,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       ((#:persist) persist-dir)
       ((#:machine) machine-dir))))
 
+;; TODO Just used in `activate` now
 (define (symlink-to-state? state-dirs)
   (lambda (file)
     (and (symbolic-link? file)
