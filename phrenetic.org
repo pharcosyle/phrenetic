@@ -1140,13 +1140,14 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
          '#$users))))
 
 (define (activate-gexp state persist-dir machine-dir)
-  (with-imported-modules (source-module-closure
-                          '((phrenetic build stateless))
-                          #:select? (const #t)
-                          ;; #:select? (lambda (name)
-                          ;;             (or ((@ (guix modules) guix-module-name?) name)
-                          ;;                 (eq? (car name) 'phrenetic)))
-                          )
+  (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
+    ;; (source-module-closure
+    ;;  '((phrenetic build stateless))
+    ;;  #:select? (const #t)
+    ;;  ;; #:select? (lambda (name)
+    ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
+    ;;  ;;                 (eq? (car name) 'phrenetic)))
+    ;;  )
     #~(begin
         (use-modules ((phrenetic build stateless) #:select (activate)))
         (activate '#$state
@@ -1918,13 +1919,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extensions
     (list (service-extension home-activation-service-type
                              (lambda (config)
-                               (with-imported-modules (source-module-closure
-                                                       '((phrenetic build stateless))
-                                                       #:select? (const #t)
-                                                       ;; #:select? (lambda (name)
-                                                       ;;             (or ((@ (guix modules) guix-module-name?) name)
-                                                       ;;                 (eq? (car name) 'phrenetic)))
-                                                       )
+                               (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
+                                 ;; (source-module-closure
+                                 ;;  '((phrenetic build stateless))
+                                 ;;  #:select? (const #t)
+                                 ;;  ;; #:select? (lambda (name)
+                                 ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
+                                 ;;  ;;                 (eq? (car name) 'phrenetic)))
+                                 ;;  )
                                  #~(begin
                                      (use-modules ((phrenetic build stateless) #:select (activate)))
                                      (activate (#$state-with-home-expansions '#$(assoc-ref config #:state))
@@ -8765,13 +8767,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (tool-program opts)
   (program-file
    "stateless"
-   (with-imported-modules (source-module-closure
-                           '((phrenetic build stateless))
-                           #:select? (const #t)
-                           ;; #:select? (lambda (name)
-                           ;;             (or ((@ (guix modules) guix-module-name?) name)
-                           ;;                 (eq? (car name) 'phrenetic)))
-                           )
+   (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
+     ;; (source-module-closure
+     ;;  '((phrenetic build stateless))
+     ;;  #:select? (const #t)
+     ;;  ;; #:select? (lambda (name)
+     ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
+     ;;  ;;                 (eq? (car name) 'phrenetic)))
+     ;;  )
      #~(begin
          (use-modules ((phrenetic build stateless) #:select (tool)))
          (apply tool '#$opts)))))
