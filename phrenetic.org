@@ -2054,7 +2054,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
            (let ((shepherd (home-shepherd-configuration-shepherd (home-shepherd-configuration))))
              (mixed-text-file
               "shepherd-stop"
-              (file-append shepherd "/bin/herd" " stop root")))))
+              (file-append shepherd "/bin/herd") " stop root"))))
       (case login-shell
         ((#:shell/bash)
          (simple-service name
