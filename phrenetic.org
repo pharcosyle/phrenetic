@@ -1407,6 +1407,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
          (list
           (local-file "packages/patches/broadcom-sta-linux-5.17.patch")
           (local-file "packages/patches/broadcom-sta-linux-5.18.patch")
+          (local-file "packages/patches/broadcom-sta-linux-6.0.patch")
           (local-file "packages/patches/broadcom-sta-pedantic-fix.patch"))))))))
 #+end_src
 ******* Patches
@@ -1571,9 +1572,41 @@ diff -u -r a/src/shared/linux_osl.c b/src/shared/linux_osl.c
  
  #if defined(BCMDBG_ASSERT)
 #+end_src
+******** Linux 6.0
+#+begin_src diff :tangle (meta-in-dir "broadcom-sta-linux-6.0.patch")
+From dbee29df729e543a89b3f95c1436e982eb0047c1 Mon Sep 17 00:00:00 2001
+From: Joan Bruguera <joanbrugueram@gmail.com>
+Date: Thu, 30 Jun 2022 02:15:35 +0200
+Subject: [PATCH] Tentative patch for broadcom-wl 6.30.223.271 driver for Linux 6.0-rc1
+
+Applies on top of all the patches applied to broadcom-wl-dkms 6.30.223.271-33 on Arch Linux.
+---
+ src/wl/sys/wl_cfg80211_hybrid.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/wl/sys/wl_cfg80211_hybrid.c b/src/wl/sys/wl_cfg80211_hybrid.c
+index d815b33..7faa735 100644
+--- a/src/wl/sys/wl_cfg80211_hybrid.c
++++ b/src/wl/sys/wl_cfg80211_hybrid.c
+@@ -2381,7 +2381,12 @@ wl_bss_roaming_done(struct wl_cfg80211_priv *wl, struct net_device *ndev,
+ 	bss = cfg80211_get_bss(wl_to_wiphy(wl), NULL, (s8 *)&wl->bssid,
+ 	ssid->SSID, ssid->SSID_len, WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
+ 	struct cfg80211_roam_info roam_info = {
++// Rel. commit "cfg80211: Indicate MLO connection info in connect and roam callbacks" (Veerendranath Jakkam, Wed Jun 8)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
+ 		.bss = bss,
++#else
++		.links[0].bss = bss,
++#endif
+ 		.req_ie = conn_info->req_ie,
+ 		.req_ie_len = conn_info->req_ie_len,
+ 		.resp_ie = conn_info->resp_ie,
+-- 
+2.37.0
+#+end_src
 ******** Pedantic fix
 #+begin_src diff :tangle (meta-in-dir "broadcom-sta-pedantic-fix.patch")
-diff --git a/src/shared/linux_osl.c b/shared/linux_osl.c
+diff --git a/src/shared/linux_osl.c b/src/shared/linux_osl.c
 index 711b771..5a2636a 100644
 --- a/src/shared/linux_osl.c
 +++ b/src/shared/linux_osl.c
@@ -1586,8 +1619,8 @@ index 711b771..5a2636a 100644
  	if (rdlen > 0)
  		fp->f_pos += rdlen;
  
-diff --git a/src/wl/sys/wl_cfg80211_hybrid.c b/wl/sys/wl_cfg80211_hybrid.c
-index 41c16d8..d39d9de 100644
+diff --git a/src/wl/sys/wl_cfg80211_hybrid.c b/src/wl/sys/wl_cfg80211_hybrid.c
+index 2b3c290..093dce6 100644
 --- a/src/wl/sys/wl_cfg80211_hybrid.c
 +++ b/src/wl/sys/wl_cfg80211_hybrid.c
 @@ -790,6 +790,7 @@ wl_set_auth_type(struct net_device *dev, struct cfg80211_connect_params *sme)
@@ -1598,7 +1631,7 @@ index 41c16d8..d39d9de 100644
  	default:
  		val = 2;
  		WL_ERR(("invalid auth type (%d)\n", sme->auth_type));
-@@ -2347,21 +2348,20 @@ wl_bss_roaming_done(struct wl_cfg80211_priv *wl, struct net_device *ndev,
+@@ -2347,26 +2348,24 @@ wl_bss_roaming_done(struct wl_cfg80211_priv *wl, struct net_device *ndev,
                      const wl_event_msg_t *e, void *data)
  {
  	struct wl_cfg80211_connect_info *conn_info = wl_to_conn(wl);
@@ -1611,23 +1644,28 @@ index 41c16d8..d39d9de 100644
  	bss = cfg80211_get_bss(wl_to_wiphy(wl), NULL, (s8 *)&wl->bssid,
  	ssid->SSID, ssid->SSID_len, WLAN_CAPABILITY_ESS, WLAN_CAPABILITY_ESS);
 -	struct cfg80211_roam_info roam_info = {
+ // Rel. commit "cfg80211: Indicate MLO connection info in connect and roam callbacks" (Veerendranath Jakkam, Wed Jun 8)
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 -		.bss = bss,
++	roam_info.bss = bss;
+ #else
+-		.links[0].bss = bss,
++	roam_info.links[0].bss = bss;
+ #endif
 -		.req_ie = conn_info->req_ie,
 -		.req_ie_len = conn_info->req_ie_len,
 -		.resp_ie = conn_info->resp_ie,
 -		.resp_ie_len = conn_info->resp_ie_len,
 -	};
-+	roam_info.bss = bss;
 +	roam_info.req_ie = conn_info->req_ie;
 +	roam_info.req_ie_len = conn_info->req_ie_len;
 +	roam_info.resp_ie = conn_info->resp_ie;
-+	roam_info.resp_ie_len = conn_info->resp_ie_len;
  #endif
 -	s32 err = 0;
  
  	wl_get_assoc_ies(wl);
  	memcpy(wl->profile->bssid, &e->addr, ETHER_ADDR_LEN);
-diff --git a/src/wl/sys/wl_iw.h b/wl/sys/wl_iw.h
+diff --git a/src/wl/sys/wl_iw.h b/src/wl/sys/wl_iw.h
 index 3ab084f..471d11f 100644
 --- a/src/wl/sys/wl_iw.h
 +++ b/src/wl/sys/wl_iw.h
@@ -1639,7 +1677,7 @@ index 3ab084f..471d11f 100644
  #define WL_IW_SET_ACTIVE_SCAN	(SIOCIWFIRSTPRIV+1)
  #define WL_IW_GET_RSSI			(SIOCIWFIRSTPRIV+3)
  #define WL_IW_SET_PASSIVE_SCAN	(SIOCIWFIRSTPRIV+5)
-diff --git a/src/wl/sys/wl_linux.c b/wl/sys/wl_linux.c
+diff --git a/src/wl/sys/wl_linux.c b/src/wl/sys/wl_linux.c
 index d13fb98..97ae2a6 100644
 --- a/src/wl/sys/wl_linux.c
 +++ b/src/wl/sys/wl_linux.c
