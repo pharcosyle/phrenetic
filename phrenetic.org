@@ -8850,7 +8850,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (delete-file target)
             (begin
               (when (no-follow-file-exists? state-file)
-                (if (nil? (find-files state-file))
+                (if (nil? (find-files state-file)) ; TODO did I have `nil?` instead of `null?` for some reason or was it just an accident?
                     (delete-file-recursively state-file)
                     (backup-file state-file)))
               (migrate-file target state-file))))))
