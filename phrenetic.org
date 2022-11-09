@@ -1796,7 +1796,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((phrenetic packages emacs) #:select (emacs-fully-loaded))
+  #:use-module ((phrenetic packages emacs) #:select (emacs-pgtk))
   #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-code-pro font-adobe-source-sans))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
@@ -2266,7 +2266,7 @@ SAVEHIST=$HISTSIZE
    (file-append emacs "/bin/emacsclient")
    "--create-frame"))
 
-(define emacs emacs-fully-loaded)
+(define emacs emacs-pgtk)
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -2363,22 +2363,13 @@ SAVEHIST=$HISTSIZE
                       `(,mime-type . ,(symbol-append file '.desktop)))
                     (or default-for '())))))))
 #+end_src
-**** Emacs packages
-:PROPERTIES:
-:meta-dir+: /packages
-:header-args+: :tangle (meta-in-dir "emacs.scm")
-:END:
-#+begin_src scheme
+**** Emacs PGTK :package:version:
+#+begin_src scheme :tangle (meta-in-dir "packages/emacs.scm")
 (define-module (phrenetic packages emacs)
-  #:use-module (guix gexp)
   #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
-  #:use-module (phrenetic utils)
-  #:export (emacs-fully-loaded))
-#+end_src
-***** Emacs PGTK :version:
-#+begin_src scheme
+  #:use-module (phrenetic utils))
+
 (define-public emacs-pgtk
   (as-> emacs-next-pgtk $
     (with-git-url $ "https://github.com/flatwhatson/emacs")
@@ -2396,58 +2387,6 @@ SAVEHIST=$HISTSIZE
          (inherit (package-source $))
          (patches
           (-> emacs package-source origin-patches)))))))
-#+end_src
-***** Findable C source
-#+begin_src scheme
-(define-public (with-findable-C-source emacs)
-  (package
-    (inherit emacs)
-    (arguments
-     (substitute-keyword-arguments (package-arguments emacs)
-       ((#:phases phases '%standard-phases)
-        #~(modify-phases #$phases
-            (add-after 'unpack 'patch-C-source-directory
-              (lambda _
-                (substitute* "lisp/emacs-lisp/find-func.el"
-                  (("\\(expand-file-name \"src\" source-directory\\)")
-                   (string-append "\"" #$(file-append (package-source emacs) "/src") "\"")))))))))))
-#+end_src
-***** Path integration improvements
-#+begin_src scheme
-(define-public (with-path-integration-improvements emacs)
-  (package
-    (inherit emacs)
-    (source
-     (origin
-       (inherit (package-source emacs))
-       (snippet
-        `(begin
-           ,(origin-snippet (package-source emacs))
-           (let ((wrap-in-quotes (lambda (s)
-                                   (string-append "\"" s "\""))))
-             (with-directory-excursion "lisp"
-               (substitute* "net/tramp.el"
-                 (("\\(tramp-default-remote-path" start-of-list)
-                  (string-join
-                   (cons start-of-list
-                         (map wrap-in-quotes
-                              (list "~/.config/guix/current/bin"
-                                    "~/.guix-home/profile/bin"))))))
-               (substitute* "man.el"
-                 (("\"/usr/local/include\"" last-item)
-                  (string-join
-                   (list last-item
-                         (wrap-in-quotes "~/.guix-home/profile/include")))))))))))))
-#+end_src
-***** Emacs fully loaded :package:
-#+begin_src scheme
-(define* (emacs-fully-loaded* #:key pgtk?)
-  (-> (if pgtk?
-          emacs-pgtk emacs)
-      with-findable-C-source
-      with-path-integration-improvements))
-
-(define emacs-fully-loaded (emacs-fully-loaded* #:pgtk? #t))
 #+end_src
 *** Doom
 #+begin_src scheme
