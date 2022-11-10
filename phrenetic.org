@@ -6614,8 +6614,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (simple-service
     'mako-add-packages
     home-profile-service-type
-    (list mako
-          jq)) ; Required to use `makoctl menu'. Ideally this would be part of the Guix package. ; TODO Make a custom Mako package (perhaps just adding `jq` to the propagated inputs initially).
+    (list mako))
 
    (simple-service
     'mako-config
