@@ -2247,7 +2247,7 @@ SAVEHIST=$HISTSIZE
 (define* (he-emacs #:key emacs)
   (list
    (simple-service
-    'emacs-add-package
+    'emacs-add-packages
     home-profile-service-type
     (list emacs))
 
@@ -5557,7 +5557,7 @@ I might need to run apps specially for Wayland, see [[https://github.com/swaywm/
   (append
    (list
     (simple-service
-     'flatpak-add-package
+     'flatpak-add-packages
      home-profile-service-type
      (list flatpak))
 
@@ -5650,7 +5650,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             dbus?)
   (list
    (simple-service
-    'pipewire-add-package
+    'pipewire-add-packages
     home-profile-service-type
     (list pipewire-0.3))
 
@@ -5709,7 +5709,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define* (wireplumber-services #:key stateless?)
   (list
    (simple-service
-    'wireplumber-add-package
+    'wireplumber-add-packages
     home-profile-service-type
     (list wireplumber))
 
@@ -7022,7 +7022,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (he-applet-network-manager)
   (list
    (simple-service
-    'applet-network-manager-add-package
+    'applet-network-manager-add-packages
     home-profile-service-type
     (list network-manager-applet))))
 
@@ -7037,7 +7037,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (list
    ;; The applet can't find its icon unless the package is installed.
    (simple-service
-    'applet-gammastep-add-package
+    'applet-gammastep-add-packages
     home-profile-service-type
     (list gammastep))))
 
@@ -7051,7 +7051,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (he-applet-udiskie)
   (list
    (simple-service
-    'applet-udiskie-add-package
+    'applet-udiskie-add-packages
     home-profile-service-type
     (list udiskie))))
 
@@ -7142,7 +7142,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (he-aws)
   (list
    (simple-service
-    'aws-add-package
+    'aws-add-packages
     home-profile-service-type
     (list awscli-2))))
 #+end_src
@@ -7395,7 +7395,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define (he-datomic)
   (list
    (simple-service
-    'datomic-add-package
+    'datomic-add-packages
     home-profile-service-type
     (list datomic-cli-tools))))
 #+end_src
@@ -7596,7 +7596,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (append
    (list
     (simple-service
-     'direnv-add-package
+     'direnv-add-packages
      home-profile-service-type
      (list direnv))
 
@@ -7689,7 +7689,7 @@ use_guixs() {
   (append
    (list
     (simple-service
-     'node-add-package
+     'node-add-packages
      home-profile-service-type
      (list node))
 
@@ -7708,7 +7708,7 @@ use_guixs() {
 (define* (he-protonvpn #:key stateless?)
   (list
    (simple-service
-    'protonvpn-add-package
+    'protonvpn-add-packages
     home-profile-service-type
     (list protonvpn-cli))
 
@@ -7801,7 +7801,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ;; (define (he-nano)
 ;;   (list
 ;;    (simple-service
-;;     'nano-add-package
+;;     'nano-add-packages
 ;;     home-profile-service-type
 ;;     (list nano))
 
@@ -7921,7 +7921,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
   (append
    (list
     (simple-service
-     'pavucontrol-add-package
+     'pavucontrol-add-packages
      home-profile-service-type
      (list pavucontrol))
 
@@ -7942,7 +7942,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
   (append
    (list
     (simple-service
-     'zoom-add-package
+     'zoom-add-packages
      home-profile-service-type
      (list zoom))
 
@@ -7966,7 +7966,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
   (append
    (list
     (simple-service
-     'gimp-add-package
+     'gimp-add-packages
      home-profile-service-type
      (list gimp))
 
@@ -8188,7 +8188,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
   (append
    (list
     (simple-service
-     'firefox-add-package
+     'firefox-add-packages
      home-profile-service-type
      (list (if wayland?
                firefox/wayland
@@ -8253,7 +8253,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
   (append
    (list
     (simple-service
-     'vlc-add-package
+     'vlc-add-packages
      home-profile-service-type
      (list vlc))
 
