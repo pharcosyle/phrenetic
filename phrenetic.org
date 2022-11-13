@@ -1333,13 +1333,13 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                      (#:store . #:machine)))))
         '())))
   (sudoers-file
-   (let ((default-sudoers %sudoers-specification))
+   (let ((sudoers-spec %sudoers-specification))
      (if (not lectures?)
          (mixed-text-file
           "sudoers"
-          (slurp-file-like default-sudoers)
+          (slurp-file-like sudoers-spec)
           "Defaults lecture=never" "\n")
-         default-sudoers))))
+         sudoers-spec))))
 #+end_src
 ***** Nix
 - TODO Ideally I'd have this in the "Nix" component but it needs the ~stateless-machine-dir~ which I (maybe?) don't want to pass around to system components.
