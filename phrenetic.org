@@ -1896,7 +1896,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-tor-browser
             he-vlc
             he-flatpak
-            he-projects
+            he-work
             services-only-packages
             services-sans-packages
             he-base))
@@ -8365,11 +8365,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # flatpak install --user flathub-beta com.obsproject.Studio
 # ...
 #+end_src
-*** Projects
+*** Work
 #+begin_src scheme
-(define* (he-projects #:key
-                      stateless?
-                      projects)
+(define* (he-work #:key
+                  stateless?
+                  projects)
   (let ((work-dir "work"))
     (append
      (if projects
@@ -8639,8 +8639,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (he-flatpak #:stateless? stateless?
                         #:portal-services portal-services)))
          '())
-     (he-projects #:stateless? stateless?
-                  #:projects projects))))
+     (he-work #:stateless? stateless?
+              #:projects projects))))
 #+end_src
 * Common
 :PROPERTIES:
