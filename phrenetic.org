@@ -982,8 +982,8 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                           (map (lambda (user)
                                                  `(,user . ,(string-append persist-dir "/.passwords/" user)))))
                    #:symlink-log? #t))))))
+
     (stateless-guix-system $)
-    (stateless-sudo-lectures $)
     (if nix?
         (stateless-nix $ #:machine-dir machine-dir) $)))
 
@@ -1287,36 +1287,41 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 #+end_src
 ***** Guix system
 #+begin_src scheme
-(define-system-comp (stateless-guix-system)
-  (services
-   (cons* (stateless-service
-           'guix-system
-           #:ignore `(((#:path . "/boot/"))
-                      ((#:path . "/dev/"))
-                      ((#:path . "/proc/"))
-                      ((#:path . "/run/"))
-                      ((#:path . "/sys/"))
-                      ((#:path . "/tmp/"))
-                      ((#:path . "/var/lock/"))
-                      ((#:path . "/var/run/"))
-                      ;; ((#:path . "/var/tmp/")) ; FHS specifies this should be preserved between reboots. I'm leaving it commented out for now because I want to know if something shows up. I'll decide then if I should be symlinking individual state files/dirs inside this directory or the directory entirely.
+(define* (stateless-guix-system os)
+  (as-> os $
+    (system-comp
+     $
+     (services
+      (cons* (stateless-service
+              'guix-system
+              #:ignore `(;; General Linux stuff.
+                         ((#:path . "/boot/"))
+                         ((#:path . "/dev/"))
+                         ((#:path . "/proc/"))
+                         ((#:path . "/run/"))
+                         ((#:path . "/sys/"))
+                         ((#:path . "/tmp/"))
+                         ((#:path . "/var/lock/"))
+                         ((#:path . "/var/run/"))
+                         ;; ((#:path . "/var/tmp/")) ; FHS specifies this should be preserved between reboots. I'm leaving it commented out for now because I want to know if something shows up. I'll decide then if I should be symlinking individual state files/dirs inside this directory or the directory entirely.
+                         ((#:path . "/etc/group"))
+                         ((#:path . "/etc/passwd"))
+                         ((#:path . "/etc/shadow"))
+                         ((#:path . ,%password-lock-file))
+                         ;; Somewhat more specifc to a Guix system.
+                         ((#:path . "/etc/mtab")
+                          (#:preds . ((#:symlink-to "/proc/self/mounts"))))
+                         ((#:path . "/etc/ssl")
+                          (#:preds . ((#:symlink-to "/run/current-system/profile/etc/ssl"))))
+                         ((#:path . "/etc/static")
+                          (#:preds . ((#:symlink-to-store))))))
+             (operating-system-user-services os))))
 
-                      ((#:path . "/etc/group"))
-                      ((#:path . "/etc/passwd"))
-                      ((#:path . "/etc/shadow"))
-                      ((#:path . ,%password-lock-file))
-
-                      ((#:path . "/etc/mtab")
-                       (#:preds . ((#:symlink-to "/proc/self/mounts"))))
-                      ((#:path . "/etc/ssl")
-                       (#:preds . ((#:symlink-to "/run/current-system/profile/etc/ssl"))))
-                      ((#:path . "/etc/static")
-                       (#:preds . ((#:symlink-to-store))))))
-          (operating-system-user-services os))))
+    (sudo-lectures $)))
 #+end_src
-***** Sudo lectures
+****** Sudo lectures
 #+begin_src scheme
-(define-system-comp (stateless-sudo-lectures #:key lectures?)
+(define-system-comp (sudo-lectures #:key lectures?)
   (services
    (append
     (operating-system-user-services os)
