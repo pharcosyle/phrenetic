@@ -1823,7 +1823,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             doom-web
             he-guix
             he-nix
-            he-flatpak
             he-kmonad
             he-pipewire
             light-colors
@@ -1896,6 +1895,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-nyxt
             he-tor-browser
             he-vlc
+            he-flatpak
             he-projects
             services-only-packages
             services-sans-packages
@@ -5558,42 +5558,6 @@ nix-channel --update
 # nix-env --install google-chrome
 # ...
 #+end_src
-**** Flatpak
-I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
-#+begin_src scheme
-(define* (he-flatpak #:key
-                     stateless?
-                     portal-services)
-  (append
-   (list
-    (simple-service
-     'flatpak-add-packages
-     home-profile-service-type
-     (list flatpak))
-
-    (simple-service
-     'flatpak-exports
-     home-environment-variables-service-type
-     `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
-
-    (when stateless?
-      (home-stateless-service
-       'flatpak
-       #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:store . #:machine)
-                  (#:mode . #o700))))))
-
-   (or portal-services '())))
-#+end_src
-***** Setup instructions
-#+begin_src sh :tangle no
-flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-# flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
-
-# flatpak install --user flathub com.discordapp.Discord
-# flatpak install --user flathub-beta com.obsproject.Studio
-# ...
-#+end_src
 **** Shared
 #+begin_src scheme
 (define stateless-ensure-profiles-gexp
@@ -8365,6 +8329,42 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:store . #:machine)))))))
 #+end_src
+***** Flatpak
+I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
+#+begin_src scheme
+(define* (he-flatpak #:key
+                     stateless?
+                     portal-services)
+  (append
+   (list
+    (simple-service
+     'flatpak-add-packages
+     home-profile-service-type
+     (list flatpak))
+
+    (simple-service
+     'flatpak-exports
+     home-environment-variables-service-type
+     `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
+
+    (when stateless?
+      (home-stateless-service
+       'flatpak
+       #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
+                  (#:store . #:machine)
+                  (#:mode . #o700))))))
+
+   (or portal-services '())))
+#+end_src
+****** Setup instructions
+#+begin_src sh :tangle no
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+# flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+
+# flatpak install --user flathub com.discordapp.Discord
+# flatpak install --user flathub-beta com.obsproject.Studio
+# ...
+#+end_src
 *** Projects
 #+begin_src scheme
 (define* (he-projects #:key
@@ -8536,8 +8536,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (he-pipewire #:stateless? stateless?
                              #:dbus? dbus?)
                 '())
-            (he-flatpak #:stateless? stateless?
-                        #:portal-services portal-services)
             (he-fonts #:stateless? stateless?
                       #:fonts (list font-mono
                                     font-sans
@@ -8637,7 +8635,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                (he-tor-browser #:stateless? stateless?)
                ;; (he-vlc #:stateless? stateless?
                ;;         #:qt-services qt)
-               ))))
+               ))
+            (he-flatpak #:stateless? stateless?
+                        #:portal-services portal-services)))
          '())
      (he-projects #:stateless? stateless?
                   #:projects projects))))
