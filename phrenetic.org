@@ -1606,6 +1606,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   source?
                   source-path
                   users-info
+                  guix?
                   nix?
                   console?
                   kmonad?
@@ -1631,7 +1632,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       (certs $)
       (accounts $ #:users-info users-info)
       (linux-nonfree $)
-      (guix-pm $ #:stateless? stateless?)
+      (if guix?
+          (guix-pm $ #:stateless? stateless?) $)
       (if nix?
           (nix-pm $ #:stateless? stateless?) $)
       (if console?
@@ -8441,6 +8443,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   doom-evil?
                   doom-tree-sitter?
                   console?
+                  guix?
                   guix-channels
                   nix?
                   kmonad?
@@ -8471,9 +8474,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                         #:icons? doom-icons?
                                         #:email email))
          '())
-     (he-guix #:stateless? stateless?
-              #:doom? doom?
-              #:channels guix-channels)
+     (if guix?
+         (he-guix #:stateless? stateless?
+                  #:doom? doom?
+                  #:channels guix-channels)
+         '())
      (if nix?
          (he-nix #:stateless? stateless?
                  #:doom? doom?
@@ -9551,7 +9556,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define nix? #t)
 
 (define (os+he-shared-opts)
-  `(#:nix? ,nix?
+  `(#:guix? #t
+    #:nix? ,nix?
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
