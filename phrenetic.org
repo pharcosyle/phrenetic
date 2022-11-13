@@ -1294,7 +1294,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
      (services
       (cons* (stateless-service
               'guix-system
-              #:ignore `(;; General Linux stuff.
+              #:ignore `(;; General Linux.
                          ((#:path . "/boot/"))
                          ((#:path . "/dev/"))
                          ((#:path . "/proc/"))
@@ -1308,7 +1308,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                          ((#:path . "/etc/passwd"))
                          ((#:path . "/etc/shadow"))
                          ((#:path . ,%password-lock-file))
-                         ;; Somewhat more specifc to a Guix system.
+                         ;; Specifc to a Guix system.
                          ((#:path . "/etc/mtab")
                           (#:preds . ((#:symlink-to "/proc/self/mounts"))))
                          ((#:path . "/etc/ssl")
