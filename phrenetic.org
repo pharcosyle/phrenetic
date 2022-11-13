@@ -6284,7 +6284,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
     (simple-service
      'sway-reload-config-on-change
      home-run-on-change-service-type
-     `(("files/.config/sway/config"
+     `((,(string-append home-files-directory "/" xdg-configuration-files-directory "/sway/config")
         ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
     (when doom?
@@ -6715,11 +6715,12 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (simple-service
      'waybar-reload-config-on-change
      home-run-on-change-service-type
-     (let ((reload-cmd #~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar")))
-       `(("files/.config/waybar/style.css"
-          ,reload-cmd)
-         ("files/.config/waybar/config"
-          ,reload-cmd)))))))
+     (let ((waybar-file (lambda (name)
+                          (string-append home-files-directory "/" xdg-configuration-files-directory "/waybar/" name)))
+           (reload-cmd #~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar")))
+       (map (lambda (f)
+              (list (waybar-file f) reload-cmd))
+            '("config" "style.css")))))))
 
 (define (waybar-status-bar)
   `((#:status-bar/command . ,(list
