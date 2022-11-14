@@ -977,7 +977,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:hes ,hes
                    #:state-users ,state-users
                    #:password-files ,(->> password-users
-                                          (cons "root")
+                                          (cons (user-account-name %root-account))
                                           (map (lambda (user)
                                                  `(,user . ,(string-append persist-dir "/.passwords/" user)))))
                    #:symlink-log? #t))))))
