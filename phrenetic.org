@@ -476,13 +476,12 @@ Run with ~sudo~.
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/etc/guix/signing-key.sec")
                      (#:store . #:machine)
-                     (#:parent-dir-perms . ((#:mode . #o111))))
-                    ((#:path . "/root/.cache/guix/")
-                     (#:store . #:machine)))
-          #:ignore '(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build: "guix system: error: path `/gnu/store/' is not in the store"
+                     (#:parent-dir-perms . ((#:mode . #o111)))))
+          #:ignore `(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build: "guix system: error: path `/gnu/store/' is not in the store"
                      ((#:path . "/var/guix/"))
                      ((#:path . "/etc/guix/acl")
-                      (#:preds . ((#:symlink-to-store)))))))
+                      (#:preds . ((#:symlink-to-store))))
+                     ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/guix/"))))))
         '()))))
 #+end_src
 ***** Nonguix substitutes
@@ -516,11 +515,10 @@ Run with ~sudo~.
         (list
          (stateless-service
           'nix-pm
-          #:state '(((#:path . "/root/.cache/nix/")
-                     (#:store . #:machine)))
-          #:ignore '(((#:path . "/nix/store/"))
+          #:ignore `(((#:path . "/nix/store/"))
                      ((#:path . "/nix/var/nix/"))
-                     ((#:path . "/nix/var/log/nix/")))))
+                     ((#:path . "/nix/var/log/nix/"))
+                     ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/"))))))
         '()))))
 #+end_src
 *** Console
