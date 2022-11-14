@@ -465,6 +465,8 @@ Run with ~sudo~.
     (operating-system-user-services os)
     (list
      (service guix-service-type))
+    (if nonguix-substitutes?
+        (list (nonguix-substitutes-service)) '())
     (if stateless?
         (list
          (stateless-service
@@ -477,13 +479,11 @@ Run with ~sudo~.
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/root/.cache/guix/")
                      (#:store . #:machine)))
-          #:ignore '(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build
+          #:ignore '(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build: "guix system: error: path `/gnu/store/' is not in the store"
                      ((#:path . "/var/guix/"))
                      ((#:path . "/etc/guix/acl")
                       (#:preds . ((#:symlink-to-store)))))))
-        '())
-    (if nonguix-substitutes?
-        (list (nonguix-substitutes-service)) '()))))
+        '()))))
 #+end_src
 ***** Nonguix substitutes
 #+begin_src scheme
@@ -1112,7 +1112,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 
         (let* ((log-dir "/var/log")
                (log-state-dir (string-append #$state-dir log-dir)))
-          (rmdir log-dir) ; At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes.
+          (rmdir log-dir) ; At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes. It might be better to do this directory deletion inside `populate-root-file-system'.`
           (mkdir-p log-state-dir)
           (symlink log-state-dir log-dir)))))
 #+end_src
@@ -1296,7 +1296,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
      (services
       (cons* (stateless-service
               'guix-system
-              #:ignore `(;; General Linux.
+              #:ignore `(;; General Linux system.
                          ((#:path . "/boot/"))
                          ((#:path . "/dev/"))
                          ((#:path . "/proc/"))
@@ -1310,7 +1310,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                          ((#:path . "/etc/passwd"))
                          ((#:path . "/etc/shadow"))
                          ((#:path . ,%password-lock-file))
-                         ;; Specifc to a Guix system.
+                         ;; Specifc to Guix system.
                          ((#:path . "/etc/mtab")
                           (#:preds . ((#:symlink-to "/proc/self/mounts"))))
                          ((#:path . "/etc/ssl")
