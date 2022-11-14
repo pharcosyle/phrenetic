@@ -1063,7 +1063,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
     (list populate-root-gexp
           (populate-passwords-gexp password-files))
     (if symlink-log?
-        (list (symlink-log-gexp machine-dir))))))
+        (list (symlink-log-gexp machine-dir)) '()))))
 
 (define populate-root-gexp
   (with-extensions (list guile-gcrypt)
