@@ -8462,7 +8462,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (let* ((login-shell #:shell/bash)
          (emacs emacs)
          (emacs-handler (emacs-handler emacs))
-         (doom-icons? #:t))
+         (doom-icons? #t))
     (append
      (if stateless?
          (he-stateless #:persist-dir stateless-persist-dir
