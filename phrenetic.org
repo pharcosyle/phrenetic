@@ -1273,6 +1273,34 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
              (cons (string-append (passwd:dir (getpwnam user)) "/")
                    directory?))) ; TODO stat or lstat probably not important
          '#$users))
+
+
+
+
+;; passwd subcommand WIP
+
+;; (use-modules ((guix build utils) #:select (invoke mkdir-p)))
+
+;; (define (enter-pass)
+;;   (let ((pass (getpass "New password: "))
+;;         (retype (getpass "Retype new password: ")))
+;;     (if (equal? pass retype)
+;;         pass
+;;         (begin
+;;           (display "Passwords do not match.")
+;;           #f
+;;           ;; (exit)
+;;           ))))
+
+
+;; (let ((pass (enter-pass)))
+;;   (when pass
+;;     ;; (invoke "/run/setuid-programs/passwd")
+
+;;     (crypt pass (string-append "$" "6" "$" "sosalty"))
+
+;;     (mkdir-p "/.machine/.passwords")
+;;     ))
 #+end_src
 ******* Shared
 #+begin_src scheme
