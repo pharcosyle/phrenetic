@@ -979,7 +979,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                    #:password-files ,(->> password-users
                                           (cons (user-account-name %root-account))
                                           (map (lambda (user)
-                                                 `(,user . ,(string-append persist-dir "/.passwords/" user)))))
+                                                 `(,user . ,(string-append machine-dir "/.passwords/" user)))))
                    #:symlink-log? #t))))))
 
     (stateless-guix-system $)
