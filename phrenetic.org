@@ -7494,20 +7494,20 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 **** Doom org :bindings:
 #+begin_src scheme
 (define* (he-doom-org #:key
+                      (org-dir "org")
                       stateless?
                       evil?)
-  (let ((org-dir "org"))
-    (append
-     (doom-org #:stateless? stateless?
-               #:evil? evil?
-               #:org-dir org-dir)
+  (append
+   (doom-org #:stateless? stateless?
+             #:evil? evil?
+             #:org-dir org-dir)
 
-     (list
-      (when stateless?
-        (home-stateless-service
-         'org
-         #:state `(((#:path . ,(string-append org-dir "/"))
-                    (#:store . #:persist)))))))))
+   (list
+    (when stateless?
+      (home-stateless-service
+       'org
+       #:state `(((#:path . ,(string-append org-dir "/"))
+                  (#:store . #:persist))))))))
 
 (define* (doom-org #:key
                    stateless?
@@ -8399,31 +8399,31 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (he-work #:key
                   stateless?
+                  (work-dir "work")
                   projects)
-  (let ((work-dir "work"))
-    (append
-     (if projects
-         (append-map
-          (match-lambda
-            ((dir . opts)
-             (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
-                    ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
-                    (proj-file (string-append dir* "/project.scm")))
-               (if (file-exists? proj-file)
-                   ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
-                   (apply (load proj-file) (->> opts
-                                                (acons #:dir dir*)
-                                                alist->list))
-                   '()))))
-          projects)
-         '())
+  (append
+   (if projects
+       (append-map
+        (match-lambda
+          ((dir . opts)
+           (let* ((dir* (string-append "/.persist/home/pharcosyle" "/" "work_for_now" "/" dir))
+                  ;; (dir* (string-append (getenv "HOME") "/" work-dir "/" dir))
+                  (proj-file (string-append dir* "/project.scm")))
+             (if (file-exists? proj-file)
+                 ;; TODO figure out the "add declarative" warning. Maybe rewrite to use `add-to-load-path'.
+                 (apply (load proj-file) (->> opts
+                                              (acons #:dir dir*)
+                                              alist->list))
+                 '()))))
+        projects)
+       '())
 
-     (list
-      (when stateless?
-        (home-stateless-service
-         'projects
-         #:state `(((#:path . ,(string-append work-dir "/"))
-                    (#:store . #:persist)))))))))
+   (list
+    (when stateless?
+      (home-stateless-service
+       'projects
+       #:state `(((#:path . ,(string-append work-dir "/"))
+                  (#:store . #:persist))))))))
 #+end_src
 **** Project helpers
 #+begin_src scheme
