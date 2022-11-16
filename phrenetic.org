@@ -1252,19 +1252,19 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
 ;;                (find-files etc-static-dir))))))
 
 
-(define root-skeleton-files
-  (with-imported-modules (source-module-closure
-                          '((guix build utils)
-                            (guix utils)))
-    #~(begin
-        (use-modules ((guix build utils) #:select (find-files))
-                     ((guix utils) #:select (readlink*)))
+;; (define root-skeleton-files
+;;   (with-imported-modules (source-module-closure
+;;                           '((guix build utils)
+;;                             (guix utils)))
+;;     #~(begin
+;;         (use-modules ((guix build utils) #:select (find-files))
+;;                      ((guix utils) #:select (readlink*)))
 
-        (let ((skel-dir (readlink* "/etc/skel")))
-          (map (lambda (file)
-                 (cons (string-append "/root" (string-drop file (string-length skel-dir)))
-                       (const #t))) ; TODO a file with contents equal to the corresponding skeleton file
-               (find-files skel-dir))))))
+;;         (let ((skel-dir (readlink* "/etc/skel")))
+;;           (map (lambda (file)
+;;                  (cons (string-append "/root" (string-drop file (string-length skel-dir)))
+;;                        (const #t))) ; TODO a file with contents equal to the corresponding skeleton file
+;;                (find-files skel-dir))))))
 
 (define (user-homes users)
   #~(map (lambda (user)
