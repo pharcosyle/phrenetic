@@ -5499,7 +5499,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                  doom?
                  doom-tree-sitter?
                  login-shell
-                 (nix-channels (local-file "nix-channels"))
+                 (channels (local-file "nix-channels"))
                  (nixpkgs-config (local-file "nixpkgs-config.nix")))
   (append
    (list
@@ -5524,7 +5524,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      'nix-add-channels
      home-files-service-type
      `((".nix-channels"
-        ,nix-channels)))
+        ,channels)))
 
     (simple-service
      'nix-add-nixpkgs-config
