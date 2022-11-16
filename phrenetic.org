@@ -8154,30 +8154,31 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
    (or gtk-services '())))
 
 (define (chromium-wrapper package wayland? pipewire? theme)
-  (let ((flags (append
-                (if wayland?
-                    '((#:switches . '("--ozone-platform-hint=auto"))) '())
-                (if pipewire?
-                    '((#:features . '("WebRTCPipeWireCapturer"))) '())
-                ;; Currently Chromium doesn't detect the light/dark-ness of the GTK theme for the `prefers-color-scheme' media query: https://bugs.chromium.org/p/chromium/issues/detail?id=998903
-                (if (equal? theme #:theme/dark)
-                    '((#:switches . '("--force-dark-mode"))
-                      (#:features . '("WebUIDarkMode")))
-                    '()))))
-    (as-> flags $
-          (apply merge-with append $)
-          (let ((switches-args
-                 (apply append (assoc-ref $ #:switches)))
-                (features-arg
-                 (let ((features (assoc-ref $ #:features)))
-                   (when features
-                     (string-append "--enable-features="
-                                    (string-join features ","))))))
-            (append switches-args
-                    (or (list features-arg) '())))
-          (string-join $)
-          ;; Not done yet. This is where I'd the command line args to a package wrapper like e.g. `ungoogled-chromium/wayland' does. For now just return the unmodified package.
-          package)))
+  ;; (let ((flags (append
+  ;;               (if wayland?
+  ;;                   '((#:switches . '("--ozone-platform-hint=auto"))) '())
+  ;;               (if pipewire?
+  ;;                   '((#:features . '("WebRTCPipeWireCapturer"))) '())
+  ;;               ;; Currently Chromium doesn't detect the light/dark-ness of the GTK theme for the `prefers-color-scheme' media query: https://bugs.chromium.org/p/chromium/issues/detail?id=998903
+  ;;               (if (equal? theme #:theme/dark)
+  ;;                   '((#:switches . '("--force-dark-mode"))
+  ;;                     (#:features . '("WebUIDarkMode")))
+  ;;                   '()))))
+  ;;   (as-> flags $
+  ;;         (apply merge-with append $)
+  ;;         (let ((switches-args
+  ;;                (apply append (assoc-ref $ #:switches)))
+  ;;               (features-arg
+  ;;                (let ((features (assoc-ref $ #:features)))
+  ;;                  (when features
+  ;;                    (string-append "--enable-features="
+  ;;                                   (string-join features ","))))))
+  ;;           (append switches-args
+  ;;                   (or (list features-arg) '())))
+  ;;         (string-join $)
+  ;;         ;; Not done yet. This is where I'd add the command line args to a package wrapper like e.g. `ungoogled-chromium/wayland' does.
+  ;;         ))
+  package)
 
 (define (chromium? flavors)
   (or (member #:ungoogled-chromium flavors)
