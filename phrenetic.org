@@ -5370,8 +5370,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            home-activation-service-type
            #~(#$stateless-ensure-profiles-gexp
               (let ((user-profiles-dir (string-append "/var/guix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-                `((,(string-append (getenv "HOME") "/" #$guix-profile) . ,(string-append user-profiles-dir "/guix-profile"))
-                  (,(string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current) . ,(string-append user-profiles-dir "/current-guix"))))))
+                (list (cons (string-append (getenv "HOME") "/" #$guix-profile)
+                            (string-append user-profiles-dir "/guix-profile"))
+                      (cons (string-append (getenv "XDG_CONFIG_HOME") "/" #$guix-current)
+                            (string-append user-profiles-dir "/current-guix"))))))
 
           (home-stateless-service
            'guix
@@ -5549,8 +5551,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
            home-activation-service-type
            #~(#$stateless-ensure-profiles-gexp
               (let ((user-profiles-dir (string-append "/nix/var/nix/profiles/per-user/" (passwd:name (getpwuid (getuid))))))
-                `((,(string-append (getenv "HOME") "/" #$nix-profile) . ,(string-append user-profiles-dir "/profile"))
-                  (,(string-append (getenv "HOME") "/" #$nix-channels) . ,(string-append user-profiles-dir "/channels"))))))
+                (list (cons (string-append (getenv "HOME") "/" #$nix-profile)
+                            (string-append user-profiles-dir "/profile"))
+                      (cons (string-append (getenv "HOME") "/" #$nix-channels)
+                            (string-append user-profiles-dir "/channels"))))))
 
           (home-stateless-service
            'nix
