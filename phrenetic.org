@@ -5606,16 +5606,17 @@ nix-channel --update
                            (phrenetic build utils))
     #~(lambda (profiles)
         (use-modules ((guix build utils) #:select (mkdir-p))
-                     ((phrenetic build utils) #:select (no-follow-file-exists?))
-                     ((ice-9 match) #:select (match-lambda)))
+                     ((phrenetic build utils) #:select (no-follow-file-exists?)))
 
         (for-each
-         (match-lambda
-           ((link . profile)
-            (when (and (no-follow-file-exists? profile)
-                       (not (no-follow-file-exists? link)))
-              (mkdir-p (dirname link))
-              (symlink profile link))))
+         (lambda (i)
+           ;; I get an error if I try to use `match-lambda', I have no idea why.
+           (let ((link (car i))
+                 (profile (cdr i)))
+             (when (and (no-follow-file-exists? profile)
+                        (not (no-follow-file-exists? link)))
+               (mkdir-p (dirname link))
+               (symlink profile link))))
          profiles))))
 #+end_src
 *** Console
