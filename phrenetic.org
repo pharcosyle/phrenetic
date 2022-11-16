@@ -1921,7 +1921,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-doom-vterm
             doom-vterm-terminal
             he-chromium
-            chromium-flavors
             he-firefox
             he-nyxt
             he-tor-browser
@@ -8101,7 +8100,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                       pipewire?
                       theme
                       gtk-services
-                      flavors)
+                      (flavors '(#:google-chrome)))
   (append
    (list
     (simple-service
@@ -8186,9 +8185,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 
 (define (chrome? flavors)
   (member #:google-chrome flavors))
-
-(define chromium-flavors '(#:ungoogled-chromium
-                           #:google-chrome))
 #+end_src
 ******* Setup instructions
 It might be possible to configure some of these in a file (perhaps =master-preferences.json=, changing which would require modifying and thus rebuilding the chromium package). Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones, if at all.
@@ -8672,9 +8668,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             #:wayland? wayland?
                             #:pipewire? pipewire?
                             #:theme theme
-                            #:gtk-services gtk
-                            ;; #:flavors chromium-flavors
-                            #:flavors '(#:google-chrome))
+                            #:gtk-services gtk)
                ;; (he-firefox #:stateless? stateless?
                ;;             #:wayland? wayland?
                ;;             #:gtk-services gtk)
