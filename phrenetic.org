@@ -8479,7 +8479,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   doom-tree-sitter?
                   console?
                   guix?
-                  guix-channels
                   nix?
                   kmonad?
                   desktop?
@@ -8511,8 +8510,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          '())
      (if guix?
          (he-guix #:stateless? stateless?
-                  #:doom? doom?
-                  #:channels guix-channels)
+                  #:doom? doom?)
          '())
      (if nix?
          (he-nix #:stateless? stateless?
@@ -9407,7 +9405,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 :END:
 #+begin_src scheme
 (define-module (phrenetic configs frostfire)
-  #:use-module ((guix gexp) #:select (local-file))
   #:use-module ((phrenetic home) #:prefix he:)
   #:use-module (phrenetic install)
   #:use-module ((phrenetic system) #:prefix os:)
@@ -9585,9 +9582,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      #:doom-calendar? doom-calendar?
      #:doom-org? doom-org?
      #:doom-evil? doom-evil?
-     #:doom-tree-sitter? doom-tree-sitter?
-     ;; #:guix-channels (local-file "frostfire-channels-lock") ; TODO Not working (or working sporadically) for some reason. Very, very strange.
-     )))
+     #:doom-tree-sitter? doom-tree-sitter?)))
 #+end_src
 ***** OS+HE shared opts
 #+begin_src scheme
