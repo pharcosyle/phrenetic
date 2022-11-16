@@ -1780,6 +1780,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services desktop)
+  ;; #:use-module (gnu home services guix)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services ssh)
@@ -5343,15 +5344,22 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define* (he-guix #:key
                   stateless?
                   doom?
-                  channels)
+                  ;; channels
+                  ;; channels-file
+                  )
   (append
-   (list
-    (when channels
-      (simple-service
-       'guix-add-channels
-       home-xdg-configuration-files-service-type
-       `(("guix/channels.scm"
-          ,channels)))))
+   ;; (list
+   ;;  (let ((name 'guix-add-channels))
+   ;;    (cond
+   ;;     (channels
+   ;;      (simple-service name
+   ;;                      home-channels-service-type
+   ;;                      channels))
+   ;;     (channels-file
+   ;;      (simple-service name
+   ;;                      home-xdg-configuration-files-service-type
+   ;;                      `(("guix/channels.scm"
+   ;;                         ,channels-file)))))))
 
    (if stateless?
        (let ((guix-profile ".guix-profile")
