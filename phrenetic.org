@@ -6669,7 +6669,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                             "\"Notification action\"")))))
 #+end_src
 ***** Status bars
-- TODO follow up on https://lists.sr.ht/~abcdw/rde-devel/patches/36819. I already added the changes.
 ****** Waybar
 #+begin_src scheme
 (define* (he-waybar #:key
@@ -6732,12 +6731,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
            (background . @bg)))
 
          (#((.modules-right button)
+            (.modules-right label)
             (.modules-right image))
           ((margin . (0.4em 0.2em))
            (padding . (0 0.4em))
+           (color . @fg)
            (background . @bg-alt)
-           (border-radius . 0.2em)
-           (color . @fg)))
+           (border-radius . 0.2em)))
 
          ;; To accommodate the crack in my screen.
          (.modules-left
