@@ -1854,8 +1854,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:export (create-he
             stateless
             shells
-            emacs-asdf
-            %emacs
+            emacs
+            %emacs-package
             emacs-editor
             emacs-new-frame
             doom
@@ -2293,7 +2293,7 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Emacs
 #+begin_src scheme
-(define* (emacs-asdf #:key emacs)
+(define* (emacs #:key emacs)
   (list
    (simple-service
     'emacs-add-packages
@@ -2306,7 +2306,7 @@ SAVEHIST=$HISTSIZE
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
 
-(define %emacs emacs-pgtk)
+(define %emacs-package emacs-pgtk)
 
 (define (emacs-editor emacs)
   (list
@@ -8513,8 +8513,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   sessions
                   projects)
   (let* ((login-shell #:shell/bash)
-         (emacs %emacs)
-         (emacs-handler (emacs-handler emacs))
+         (emacs-package %emacs-package)
+         (emacs-handler (emacs-handler emacs-package))
          (doom-icons? #t))
     (append
      (if stateless?
@@ -8526,7 +8526,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
              #:doom-tree-sitter? doom-tree-sitter?
              #:login-shell login-shell
              #:interactive-shells interactive-shells)
-     (emacs-asdf #:emacs emacs)
+     (emacs #:emacs emacs-package)
      (if doom?
          (doom #:stateless? stateless?
                #:services (doom-main #:stateless? stateless?
@@ -8636,8 +8636,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             #:app-launcher (doom-app-launcher emacs-handler)
                             #:terminal (doom-vterm-terminal emacs-handler)
                             #:backup-terminal (alacritty-terminal)
-                            #:emacs (emacs-editor emacs)
-                            #:emacs-new-frame (emacs-new-frame emacs))
+                            #:emacs (emacs-editor emacs-package)
+                            #:emacs-new-frame (emacs-new-frame emacs-package))
                    (swaylock-wm-piece #:colors colors
                                       #:image wallpaper
                                       #:font font-variable-pitch
