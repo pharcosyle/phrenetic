@@ -768,14 +768,15 @@ Must succeed [[*Accounts][Accounts]] component.
            (list swaylock-service
                  brightnessctl-udev-rules))))
 #+end_src
-***** Screen lockers
-****** Swaylock
+****** Pieces
+******* Screen lockers
+******** Swaylock
 #+begin_src scheme
 (define swaylock-service
   (screen-locker-service swaylock-effects "swaylock"))
 #+end_src
-***** Backlight
-****** Brightnessctl
+******* Backlight
+******** Brightnessctl
 #+begin_src scheme
 (define brightnessctl-udev-rules
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
@@ -6513,8 +6514,9 @@ Maybe this shouldn't be a standalone component but rather added by programs that
               #$(file-append wl-clipboard "/bin/wl-paste")
               #$(file-append swappy "/bin/swappy")))))
 #+end_src
-***** Screen lockers
-****** Swaylock
+****** Pieces
+******* Screen lockers
+******** Swaylock
 #+begin_src scheme
 (define* (swaylock-wm-piece #:key
                             colors
@@ -6588,11 +6590,11 @@ Maybe this shouldn't be a standalone component but rather added by programs that
    (list
     "--grace=0")))
 #+end_src
-******* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
+******** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
 Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
-***** Idle managers
-****** Swayidle
+******* Idle managers
+******** Swayidle
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
                             session
@@ -6628,8 +6630,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (file-append swayidle "/bin/swayidle")
    "-w"))
 #+end_src
-***** Notification daemons
-****** Mako
+******* Notification daemons
+******** Mako
 #+begin_src scheme
 (define* (mako-wm-piece #:key
                         colors
@@ -6676,8 +6678,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                             ,@menu
                             "\"Notification action\"")))))
 #+end_src
-***** Status bars
-****** Waybar
+******* Status bars
+******** Waybar
 #+begin_src scheme
 (define* (waybar-wm-piece #:key
                           colors
@@ -6805,7 +6807,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (waybar-memory)
       (waybar-battery #:show-percentage? #t)))))
 #+end_src
-******* Modules
+******** Modules
 #+begin_src scheme
 (define* (waybar-module name
                         #:optional
@@ -6825,7 +6827,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (style-css (if style
                    style '())))))
 #+end_src
-******** Backlight
+********* Backlight
 #+begin_src scheme
 (define* (waybar-backlight #:key show-percentage?)
   (waybar-module
@@ -6835,7 +6837,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  (if show-percentage? " {percent}" "")))
      (fomat-icons . #(🌕 🌔 🌗 🌒 🌑))))) ; TODO These aren't displaying for some reason.
 #+end_src
-******** Battery
+********* Battery
 #+begin_src scheme
 (define* (waybar-battery #:key show-percentage?)
   (waybar-module
@@ -6865,7 +6867,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (#{#battery.full}#
       ((color . @green))))))
 #+end_src
-******** Clock
+********* Clock
 #+begin_src scheme
 (define* (waybar-clock #:key
                        date-format
@@ -6882,7 +6884,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    '()
    #:placement 'modules-left))
 #+end_src
-******** CPU
+********* CPU
 - TODO histogram
   - I don't understand the histogram output.
   - The histogram is "jumpy", it changes width.
@@ -6901,7 +6903,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        'cpu
        '((format . " {usage}%")))))
 #+end_src
-******** Idle inhibitor
+********* Idle inhibitor
 #+begin_src scheme
 (define (waybar-idle-inhibitor)
   (waybar-module
@@ -6910,14 +6912,14 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (format-icons . ((activated . )
                       (deactivated . ))))))
 #+end_src
-******** Memory
+********* Memory
 #+begin_src scheme
 (define (waybar-memory)
   (waybar-module
    'memory
    '((format . " {}%"))))
 #+end_src
-******** Microphone
+********* Microphone
 #+begin_src scheme
 (define* (waybar-microphone #:key show-percentage?)
   (waybar-module
@@ -6933,7 +6935,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                                 "--tab=4")))
                       (string-append "\"" (string-join cmd) "\""))))))
 #+end_src
-******** Tray
+********* Tray
 #+begin_src scheme
 (define (waybar-tray)
   (waybar-module
@@ -6960,7 +6962,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-******** Volume
+********* Volume
 #+begin_src scheme
 (define* (waybar-volume #:key show-percentage?)
   (waybar-module
@@ -6975,8 +6977,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (tooltip-format . "{desc} is on {volume}%")
        (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
 #+end_src
-******** Sway
-********* Sway window
+********* Sway
+********** Sway window
 #+begin_src scheme
 (define (waybar-sway-window)
   (waybar-module
@@ -6987,7 +6989,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (margin-right . 1em))))
    #:placement 'modules-center))
 #+end_src
-********* Sway workspaces
+********** Sway workspaces
 #+begin_src scheme
 (define* (waybar-sway-workspaces
           #:key
@@ -7031,8 +7033,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       ((color . @red))))
    #:placement 'modules-left))
 #+end_src
-***** Display configuration
-****** Kanshi
+******* Display configuration
+******** Kanshi
 #+begin_src scheme
 (define* (kanshi-wm-piece #:key extra-config)
   (list
@@ -7042,8 +7044,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (config
       `(,@(or extra-config '())))))))
 #+end_src
-***** Applets
-****** Network manager
+******* Applets
+******** Network manager
 #+begin_src scheme
 (define (applet-applet-network-manager)
   (list
@@ -7057,7 +7059,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (file-append network-manager-applet "/bin/nm-applet")
    "--indicator"))
 #+end_src
-****** Gammastep
+******** Gammastep
 #+begin_src scheme
 (define (applet-applet-gammastep)
   (list
@@ -7072,7 +7074,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (file-append gammastep "/bin/gammastep-indicator")
    "-l" "44:-123")) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
 #+end_src
-****** Udiskie
+******** Udiskie
 #+begin_src scheme
 (define (applet-applet-udiskie)
   (list
