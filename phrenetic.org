@@ -1878,7 +1878,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %time-format
             he-xdg
             he-mesa
-            he-doom-themes+fonts
+            he-doom-desktop
             he-dbus
             he-gdm
             he-desktop-tty
@@ -5876,16 +5876,16 @@ nix-channel --update
 
 (define %time-format "%-I:%M %p")
 #+end_src
-**** Doom themes and fonts
+**** Doom desktop
 #+begin_src scheme
-(define* (he-doom-themes+fonts #:key
-                               theme
-                               light-colors
-                               dark-colors
-                               font
-                               font-variable-pitch
-                               font-unicode
-                               font-serif)
+(define* (he-doom-desktop #:key
+                          theme
+                          light-colors
+                          dark-colors
+                          font
+                          font-variable-pitch
+                          font-unicode
+                          font-serif)
   (append
    (doom-themes #:theme theme
                 #:light-colors light-colors
@@ -8595,13 +8595,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                     font-unicode)
                       #:extra-font-packages %useful-font-packages)
             (if doom?
-                (he-doom-themes+fonts #:theme theme
-                                      #:light-colors light-colors
-                                      #:dark-colors dark-colors
-                                      #:font font-mono
-                                      #:font-variable-pitch font-variable-pitch
-                                      #:font-unicode font-unicode
-                                      #:font-serif font-serif)
+                (he-doom-desktop #:theme theme
+                                 #:light-colors light-colors
+                                 #:dark-colors dark-colors
+                                 #:font font-mono
+                                 #:font-variable-pitch font-variable-pitch
+                                 #:font-unicode font-unicode
+                                 #:font-serif font-serif)
                 '())
             (he-xdg #:stateless? stateless?)
             (he-mesa #:stateless? stateless?)
