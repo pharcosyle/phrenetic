@@ -1854,9 +1854,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             stateless
             shells
             emacs-asdf
+            %emacs
             emacs-editor
             emacs-new-frame
-            %emacs
             doom
             doom-service
             doom-web
@@ -2305,6 +2305,8 @@ SAVEHIST=$HISTSIZE
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
 
+(define %emacs emacs-pgtk)
+
 (define (emacs-editor emacs)
   (list
    (file-append emacs "/bin/emacs")))
@@ -2313,8 +2315,6 @@ SAVEHIST=$HISTSIZE
   (list
    (file-append emacs "/bin/emacsclient")
    "--create-frame"))
-
-(define %emacs emacs-pgtk)
 #+end_src
 **** Handler
 #+begin_src scheme
