@@ -1851,24 +1851,24 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((ice-9 match) #:select (match-lambda match-let))
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
   #:export (create-he
-            he-stateless
-            he-shells
-            he-emacs
+            stateless
+            shells
+            emacs-asdf
             emacs-editor
             emacs-new-frame
             %emacs
-            he-doom
+            doom
             doom-service
             doom-web
-            he-guix
-            he-nix
-            he-kmonad
-            he-pipewire
+            guix-pm
+            nix-pm
+            kmonad-tool
+            pipewire-multimedia
             %light-colors
             %dark-colors
             %wallpapers
             %wallpaper
-            he-fonts
+            fonts
             %font-mono
             %font-sans
             %font-serif
@@ -1876,65 +1876,65 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %useful-font-packages
             %date-format
             %time-format
-            he-xdg
-            he-mesa
-            he-doom-desktop
-            he-dbus
-            he-gdm
-            he-desktop-tty
-            he-gnome
+            xdg
+            mesa
+            doom-desktop
+            dbus-ipc
+            gdm
+            desktop-tty
+            gnome-desktop
             gnome-start
-            he-sway
+            sway-wm
             sway-start
-            he-swaylock
+            swaylock-wm-piece
             swaylock-screen-locker
             swaylock-screen-locker-immediate
-            he-swayidle
+            swayidle-wm-piece
             swayidle-idle-manager
-            he-mako
+            mako-wm-piece
             mako-notifier
-            he-waybar
+            waybar-wm-piece
             waybar-status-bar
             waybar-modules
-            he-kanshi
-            he-applet-network-manager
+            kanshi-wm-piece
+            applet-applet-network-manager
             applet-network-manager
-            he-applet-gammastep
+            applet-applet-gammastep
             applet-gammastep
-            he-applet-udiskie
+            applet-applet-udiskie
             applet-udiskie
-            he-aws
-            he-clojure
-            he-datomic
-            he-doom-calendar
-            he-doom-org
-            he-direnv
+            aws-prog
+            clojure-prog
+            datomic-prog
+            doom-calendar-prog
+            doom-org-prog
+            direnv-prog
             direnv-service-type
-            he-node
-            he-protonvpn
-            he-ssh
-            he-doom-dired
-            he-doom-app-launcher
+            node-prog
+            protonvpn-prog
+            ssh-prog
+            doom-dired-prog
+            doom-app-launcher-prog
             doom-menu
             doom-app-launcher
-            ;; he-nano
-            he-doom-trash
-            he-git
+            ;; nano-prog
+            doom-trash-prog
+            git-prog
             he-misc-progs
-            he-pavucontrol
-            he-zoom
-            he-gimp
-            he-alacritty
+            pavucontrol-app
+            zoom-app
+            gimp-app
+            alacritty-app
             alacritty-terminal
-            he-doom-vterm
+            doom-vterm-app
             doom-vterm-terminal
-            he-chromium
-            he-firefox
-            he-nyxt
-            he-tor-browser
-            he-vlc
-            he-flatpak
-            he-work
+            chromium-app
+            firefox-app
+            nyxt-app
+            tor-browser-app
+            vlc-app
+            flatpak-apps
+            work
             services-only-packages
             services-sans-packages
             he-base))
@@ -1949,9 +1949,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 ** Components
 *** Stateless
 #+begin_src scheme
-(define* (he-stateless #:key
-                       persist-dir
-                       machine-dir)
+(define* (stateless #:key
+                    persist-dir
+                    machine-dir)
   (append
    (list
     (service home-stateless-service-type
@@ -2058,14 +2058,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 *** Shells
 #+begin_src scheme
-(define* (he-shells #:key
-                    stateless?
-                    doom?
-                    doom-tree-sitter?
-                    login-shell
-                    interactive-shells
-                    (bashrc (local-file "bashrc"))
-                    (zshrc (local-file "zshrc")))
+(define* (shells #:key
+                 stateless?
+                 doom?
+                 doom-tree-sitter?
+                 login-shell
+                 interactive-shells
+                 (bashrc (local-file "bashrc"))
+                 (zshrc (local-file "zshrc")))
   (append
    (append-map
     (lambda (shell)
@@ -2292,7 +2292,7 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Emacs
 #+begin_src scheme
-(define* (he-emacs #:key emacs)
+(define* (emacs-asdf #:key emacs)
   (list
    (simple-service
     'emacs-add-packages
@@ -2438,9 +2438,9 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Doom
 #+begin_src scheme
-(define* (he-doom #:key
-                  stateless?
-                  services)
+(define* (doom #:key
+               stateless?
+               services)
   (append
    (list
     (service doom-service-type)
@@ -5349,7 +5349,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 *** Package management
 **** Guix
 #+begin_src scheme
-(define* (he-guix #:key
+(define* (guix-pm #:key
                   stateless?
                   doom?
                   ;; channels
@@ -5512,7 +5512,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 **** Nix
 #+begin_src scheme
-(define* (he-nix #:key
+(define* (nix-pm #:key
                  stateless?
                  doom?
                  doom-tree-sitter?
@@ -5630,11 +5630,11 @@ nix-channel --update
 *** Console
 **** KMonad
 #+begin_src scheme
-(define* (he-kmonad #:key
-                    doom?
-                    (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
-                    ;; (kbd (local-file "config.kbd"))
-                    (kbd (local-file "../mine.kbd")))
+(define* (kmonad-tool #:key
+                      doom?
+                      (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
+                      ;; (kbd (local-file "config.kbd"))
+                      (kbd (local-file "../mine.kbd")))
   (list
    (simple-service
     'kmonad
@@ -5661,9 +5661,9 @@ nix-channel --update
 *** Desktop
 **** Pipewire
 #+begin_src scheme
-(define* (he-pipewire #:key
-                      stateless?
-                      dbus?)
+(define* (pipewire-multimedia #:key
+                              stateless?
+                              dbus?)
   (append
    (pipewire-services #:stateless? stateless?
                       #:dbus? dbus?)
@@ -5789,10 +5789,10 @@ nix-channel --update
 #+end_src
 **** Fonts
 #+begin_src scheme
-(define* (he-fonts #:key
-                   stateless?
-                   fonts
-                   extra-font-packages)
+(define* (fonts #:key
+                stateless?
+                fonts
+                extra-font-packages)
   (list
    (simple-service
     'fonts-add-packages
@@ -5878,14 +5878,14 @@ nix-channel --update
 #+end_src
 **** Doom desktop
 #+begin_src scheme
-(define* (he-doom-desktop #:key
-                          theme
-                          light-colors
-                          dark-colors
-                          font
-                          font-variable-pitch
-                          font-unicode
-                          font-serif)
+(define* (doom-desktop #:key
+                       theme
+                       light-colors
+                       dark-colors
+                       font
+                       font-variable-pitch
+                       font-unicode
+                       font-serif)
   (append
    (doom-themes #:theme theme
                 #:light-colors light-colors
@@ -6061,7 +6061,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 **** XDG
 #+begin_src scheme
-(define* (he-xdg
+(define* (xdg
           #:key
           stateless?
           (desktop "$HOME/desktop")
@@ -6127,7 +6127,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 **** Mesa
 Maybe this shouldn't be a standalone component but rather added by programs that use Mesa.
 #+begin_src scheme
-(define* (he-mesa #:key stateless?)
+(define* (mesa #:key stateless?)
   (list
    (when stateless?
      (home-stateless-service
@@ -6137,7 +6137,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 #+end_src
 **** D-Bus
 #+begin_src scheme
-(define (he-dbus)
+(define (dbus-ipc)
   (list
    (service home-dbus-service-type)))
 #+end_src
@@ -6145,7 +6145,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ***** Login managers
 ****** GDM
 #+begin_src scheme
-(define* (he-gdm #:key stateless?)
+(define* (gdm #:key stateless?)
   (list
    (when stateless?
      (home-stateless-service
@@ -6157,7 +6157,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
-(define* (he-desktop-tty #:key start-cmd)
+(define* (desktop-tty #:key start-cmd)
   (list
    (simple-service
     'desktop-tty-default-session-start
@@ -6181,7 +6181,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ***** Desktop environments
 ****** GNOME
 #+begin_src scheme
-(define* (he-gnome #:key stateless?)
+(define* (gnome-desktop #:key stateless?)
   (list
    (simple-service
     'gnome-add-packages
@@ -6210,7 +6210,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-(define* (he-sway #:key
+(define* (sway-wm #:key
                   pipewire?
                   doom?
                   portal-services
@@ -6516,13 +6516,13 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ***** Screen lockers
 ****** Swaylock
 #+begin_src scheme
-(define* (he-swaylock #:key
-                      colors
-                      font
-                      time-format
-                      date-format
-                      image
-                      extra-config)
+(define* (swaylock-wm-piece #:key
+                            colors
+                            font
+                            time-format
+                            date-format
+                            image
+                            extra-config)
   (list
    (service
     home-swaylock-service-type
@@ -6594,11 +6594,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ***** Idle managers
 ****** Swayidle
 #+begin_src scheme
-(define* (he-swayidle #:key
-                      session
-                      screen-locker
-                      (lock-timeout 300)
-                      extra-config)
+(define* (swayidle-wm-piece #:key
+                            session
+                            screen-locker
+                            (lock-timeout 300)
+                            extra-config)
   (list
    (service
     home-swayidle-service-type
@@ -6631,9 +6631,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ***** Notification daemons
 ****** Mako
 #+begin_src scheme
-(define* (he-mako #:key
-                  colors
-                  font)
+(define* (mako-wm-piece #:key
+                        colors
+                        font)
   (list
    (simple-service
     'mako-add-packages
@@ -6679,14 +6679,14 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ***** Status bars
 ****** Waybar
 #+begin_src scheme
-(define* (he-waybar #:key
-                    colors
-                    font
-                    modules
-                    transitions?
-                    height
-                    output
-                    extra-config)
+(define* (waybar-wm-piece #:key
+                          colors
+                          font
+                          modules
+                          transitions?
+                          height
+                          output
+                          extra-config)
   (append
    (list
     (service
@@ -7034,7 +7034,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ***** Display configuration
 ****** Kanshi
 #+begin_src scheme
-(define* (he-kanshi #:key extra-config)
+(define* (kanshi-wm-piece #:key extra-config)
   (list
    (service
     home-kanshi-service-type
@@ -7045,7 +7045,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ***** Applets
 ****** Network manager
 #+begin_src scheme
-(define (he-applet-network-manager)
+(define (applet-applet-network-manager)
   (list
    (simple-service
     'applet-network-manager-add-packages
@@ -7059,7 +7059,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ****** Gammastep
 #+begin_src scheme
-(define (he-applet-gammastep)
+(define (applet-applet-gammastep)
   (list
    ;; The applet can't find its icon unless the package is installed.
    (simple-service
@@ -7074,7 +7074,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ****** Udiskie
 #+begin_src scheme
-(define (he-applet-udiskie)
+(define (applet-applet-udiskie)
   (list
    (simple-service
     'applet-udiskie-add-packages
@@ -7165,7 +7165,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 *** Programs
 **** AWS
 #+begin_src scheme
-(define (he-aws)
+(define (aws-prog)
   (list
    (simple-service
     'aws-add-packages
@@ -7320,10 +7320,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Clojure
 #+begin_src scheme
-(define* (he-clojure #:key
-                     stateless?
-                     doom?
-                     (jdk (list openjdk17 "jdk"))) ; Newest LTS release.
+(define* (clojure-prog #:key
+                       stateless?
+                       doom?
+                       (jdk (list openjdk17 "jdk"))) ; Newest LTS release.
   (append
    (list
     (simple-service
@@ -7418,7 +7418,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Datomic
 #+begin_src scheme
-(define (he-datomic)
+(define (datomic-prog)
   (list
    (simple-service
     'datomic-add-packages
@@ -7466,9 +7466,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Doom calendar
 #+begin_src scheme
-(define* (he-doom-calendar #:key
-                           stateless?
-                           org?)
+(define* (doom-calendar-prog #:key
+                             stateless?
+                             org?)
   (append
    (list
     (doom-service
@@ -7516,10 +7516,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Doom org :bindings:
 #+begin_src scheme
-(define* (he-doom-org #:key
-                      (org-dir "org")
-                      stateless?
-                      evil?)
+(define* (doom-org-prog #:key
+                        (org-dir "org")
+                        stateless?
+                        evil?)
   (append
    (doom-org #:stateless? stateless?
              #:evil? evil?
@@ -7616,9 +7616,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 **** Direnv
 #+begin_src scheme
-(define* (he-direnv #:key
-                    doom?
-                    shells)
+(define* (direnv-prog #:key
+                      doom?
+                      shells)
   (append
    (list
     (simple-service
@@ -7708,10 +7708,10 @@ use_guixs() {
 #+end_src
 **** Node
 #+begin_src scheme
-(define* (he-node #:key
-                  stateless?
-                  doom?
-                  doom-tree-sitter?)
+(define* (node-prog #:key
+                    stateless?
+                    doom?
+                    doom-tree-sitter?)
   (append
    (list
     (simple-service
@@ -7731,7 +7731,7 @@ use_guixs() {
 #+end_src
 **** Proton VPN
 #+begin_src scheme
-(define* (he-protonvpn #:key stateless?)
+(define* (protonvpn-prog #:key stateless?)
   (list
    (simple-service
     'protonvpn-add-packages
@@ -7746,17 +7746,17 @@ use_guixs() {
 #+end_src
 **** SSH
 #+begin_src scheme
-(define (he-ssh)
+(define (ssh-prog)
   (list
    (service home-openssh-service-type)))
 #+end_src
 **** File managers
 ***** Doom dired
 #+begin_src scheme
-(define* (he-doom-dired #:key
-                        stateless?
-                        icons?
-                        emacs-handler)
+(define* (doom-dired-prog #:key
+                          stateless?
+                          icons?
+                          emacs-handler)
   (let ((name 'dired)
         (dirvish? #t))
     (append
@@ -7787,7 +7787,7 @@ use_guixs() {
 **** Menus and launchers
 ***** Doom app launcher
 #+begin_src scheme
-(define (he-doom-app-launcher)
+(define (doom-app-launcher-prog)
   (list
    (doom-service
     'app-launcher
@@ -7824,7 +7824,7 @@ use_guixs() {
 ***** Nano
 The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp.
 #+begin_src scheme
-;; (define (he-nano)
+;; (define (nano-prog)
 ;;   (list
 ;;    (simple-service
 ;;     'nano-add-packages
@@ -7840,7 +7840,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 **** Trash
 ***** Doom trash
 #+begin_src scheme
-(define (he-doom-trash)
+(define (doom-trash-prog)
   (list
    (doom-service
     'trash
@@ -7850,7 +7850,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 **** Version control
 ***** Git
 #+begin_src scheme
-(define* (he-git #:key
+(define* (git-prog #:key
                  stateless?
                  doom?
                  email
@@ -7941,9 +7941,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ***** Audio
 ****** PulseAudio Volume Control
 #+begin_src scheme
-(define* (he-pavucontrol #:key
-                         stateless?
-                         gtk-services)
+(define* (pavucontrol-app #:key
+                          stateless?
+                          gtk-services)
   (append
    (list
     (simple-service
@@ -7962,9 +7962,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ****** Zoom
 Doesn't work for me at the moment. As of this writing the package is brand new so wait a while and see if there any developments/updates/fixes (though I suspect the issue(s) lie with me, I was getting errors, possibly similar ones, when I tried to install Zoom through Nix).
 #+begin_src scheme
-(define* (he-zoom #:key
-                 stateless?
-                 qt-services)
+(define* (zoom-app #:key
+                   stateless?
+                   qt-services)
   (append
    (list
     (simple-service
@@ -7986,9 +7986,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 ***** Image processing
 ****** GIMP
 #+begin_src scheme
-(define* (he-gimp #:key
-                  stateless?
-                  gtk-services)
+(define* (gimp-app #:key
+                   stateless?
+                   gtk-services)
   (append
    (list
     (simple-service
@@ -8009,9 +8009,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 ***** Terminals
 ****** Alacritty
 #+begin_src scheme
-(define* (he-alacritty #:key
-                       colors
-                       font)
+(define* (alacritty-app #:key
+                        colors
+                        font)
   (list
    (service
     home-alacritty-service-type
@@ -8053,7 +8053,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 ****** Doom vterm
 Does this belong in [[*Apps][Apps]]?
 #+begin_src scheme
-(define* (he-doom-vterm #:key setup-zsh?)
+(define* (doom-vterm-app #:key setup-zsh?)
   (list
    (doom-service
     'vterm
@@ -8102,13 +8102,13 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 ***** Web browsers
 ****** Chromium
 #+begin_src scheme
-(define* (he-chromium #:key
-                      stateless?
-                      wayland?
-                      pipewire?
-                      theme
-                      gtk-services
-                      (flavors '(#:google-chrome)))
+(define* (chromium-app #:key
+                       stateless?
+                       wayland?
+                       pipewire?
+                       theme
+                       gtk-services
+                       (flavors '(#:google-chrome)))
   (append
    (list
     (simple-service
@@ -8209,10 +8209,10 @@ chrome://extensions > uBlock Origin > Details > Allow in Incognito
 ****** Firefox
 It might be possible to statically configure Firefox (or one of its relatives), check out the Icecat profiles in =gnu/home-services/web-browsers.scm=.
 #+begin_src scheme
-(define* (he-firefox #:key
-                     stateless?
-                     wayland?
-                     gtk-services)
+(define* (firefox-app #:key
+                      stateless?
+                      wayland?
+                      gtk-services)
   (append
    (list
     (simple-service
@@ -8243,9 +8243,9 @@ It might be possible to statically configure Firefox (or one of its relatives), 
 ****** Nyxt
 - TODO Add ~gtk-services~ param if Nyxt uses gtk settings (font, light/dark theme).
 #+begin_src scheme
-(define* (he-nyxt #:key
-                  stateless?
-                  doom?)
+(define* (nyxt-app #:key
+                   stateless?
+                   doom?)
   (list
    (simple-service
     'nyxt-add-packages
@@ -8276,7 +8276,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
 Not available in Guix, install through Nix.
 - TODO Add ~gtk-services~ param if Tor browser uses gtk settings (font, light/dark theme). Note that (the Nix package) seems to use use a fake Home directory under =~/.local/share/tor-browser=, notably there's a =.config/glib-2.0=, so it might not be possible (or even just advisable?) to use the global gtk settings. Screw it if so.
 #+begin_src scheme
-(define* (he-tor-browser #:key stateless?)
+(define* (tor-browser-app #:key stateless?)
   (list
    (when stateless?
      (home-stateless-service
@@ -8287,9 +8287,9 @@ Not available in Guix, install through Nix.
 ***** Video
 ****** VLC
 #+begin_src scheme
-(define* (he-vlc #:key
-                 stateless?
-                 qt-services)
+(define* (vlc-app #:key
+                  stateless?
+                  qt-services)
   (append
    (list
     (simple-service
@@ -8386,9 +8386,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 ***** Flatpak
 I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
 #+begin_src scheme
-(define* (he-flatpak #:key
-                     stateless?
-                     portal-services)
+(define* (flatpak-apps #:key
+                       stateless?
+                       portal-services)
   (append
    (list
     (simple-service
@@ -8421,10 +8421,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 *** Work
 #+begin_src scheme
-(define* (he-work #:key
-                  stateless?
-                  (work-dir "work")
-                  projects)
+(define* (work #:key
+               stateless?
+               (work-dir "work")
+               projects)
   (append
    (if projects
        (append-map
@@ -8516,59 +8516,59 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (doom-icons? #t))
     (append
      (if stateless?
-         (he-stateless #:persist-dir stateless-persist-dir
-                       #:machine-dir stateless-machine-dir)
+         (stateless #:persist-dir stateless-persist-dir
+                    #:machine-dir stateless-machine-dir)
          '())
-     (he-shells #:stateless? stateless?
-                #:doom? doom?
-                #:doom-tree-sitter? doom-tree-sitter?
-                #:login-shell login-shell
-                #:interactive-shells interactive-shells)
-     (he-emacs #:emacs emacs)
+     (shells #:stateless? stateless?
+             #:doom? doom?
+             #:doom-tree-sitter? doom-tree-sitter?
+             #:login-shell login-shell
+             #:interactive-shells interactive-shells)
+     (emacs-asdf #:emacs emacs)
      (if doom?
-         (he-doom #:stateless? stateless?
-                  #:services (doom-main #:stateless? stateless?
-                                        #:evil? doom-evil?
-                                        #:icons? doom-icons?
-                                        #:email email))
+         (doom #:stateless? stateless?
+               #:services (doom-main #:stateless? stateless?
+                                     #:evil? doom-evil?
+                                     #:icons? doom-icons?
+                                     #:email email))
          '())
      (if guix?
-         (he-guix #:stateless? stateless?
+         (guix-pm #:stateless? stateless?
                   #:doom? doom?)
          '())
      (if nix?
-         (he-nix #:stateless? stateless?
+         (nix-pm #:stateless? stateless?
                  #:doom? doom?
                  #:doom-tree-sitter? doom-tree-sitter?
                  #:login-shell login-shell)
          '())
-     (he-direnv #:doom? doom?
-                #:shells interactive-shells)
-     (he-protonvpn #:stateless? stateless?)
-     ;; (he-ssh)
-     (he-git #:stateless? stateless?
-             #:doom? doom?
-             #:email email)
+     (direnv-prog #:doom? doom?
+                  #:shells interactive-shells)
+     (protonvpn-prog #:stateless? stateless?)
+     ;; (ssh-prog)
+     (git-prog #:stateless? stateless?
+               #:doom? doom?
+               #:email email)
      (if doom?
          (append
           (if doom-calendar?
-              (he-doom-calendar #:stateless? stateless?
-                                #:org? doom-org?)
+              (doom-calendar-prog #:stateless? stateless?
+                                  #:org? doom-org?)
               '())
           (if doom-org?
-              (he-doom-org #:stateless? stateless?
-                           #:evil? doom-evil?)
+              (doom-org-prog #:stateless? stateless?
+                             #:evil? doom-evil?)
               '())
-          (he-doom-dired #:stateless? stateless?
-                         #:icons? doom-icons?
-                         #:emacs-handler emacs-handler)
-          (he-doom-app-launcher)
-          (he-doom-trash))
+          (doom-dired-prog #:stateless? stateless?
+                           #:icons? doom-icons?
+                           #:emacs-handler emacs-handler)
+          (doom-app-launcher-prog)
+          (doom-trash-prog))
          '())
      (he-misc-progs)
      (if console?
          (if kmonad?
-             (he-kmonad #:doom? doom?) '())
+             (kmonad-tool #:doom? doom?) '())
          '())
      (if desktop?
          (let* ((theme #:theme/dark)
@@ -8585,40 +8585,40 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 (portal-services (portal-services #:wayland? wayland?)))
            (append
             (if pipewire?
-                (he-pipewire #:stateless? stateless?
-                             #:dbus? dbus?)
+                (pipewire-multimedia #:stateless? stateless?
+                                     #:dbus? dbus?)
                 '())
-            (he-fonts #:stateless? stateless?
-                      #:fonts (list font-mono
-                                    font-sans
-                                    font-serif
-                                    font-unicode)
-                      #:extra-font-packages %useful-font-packages)
+            (fonts #:stateless? stateless?
+                   #:fonts (list font-mono
+                                 font-sans
+                                 font-serif
+                                 font-unicode)
+                   #:extra-font-packages %useful-font-packages)
             (if doom?
-                (he-doom-desktop #:theme theme
-                                 #:light-colors light-colors
-                                 #:dark-colors dark-colors
-                                 #:font font-mono
-                                 #:font-variable-pitch font-variable-pitch
-                                 #:font-unicode font-unicode
-                                 #:font-serif font-serif)
+                (doom-desktop #:theme theme
+                              #:light-colors light-colors
+                              #:dark-colors dark-colors
+                              #:font font-mono
+                              #:font-variable-pitch font-variable-pitch
+                              #:font-unicode font-unicode
+                              #:font-serif font-serif)
                 '())
-            (he-xdg #:stateless? stateless?)
-            (he-mesa #:stateless? stateless?)
+            (xdg #:stateless? stateless?)
+            (mesa #:stateless? stateless?)
             (if dbus?
-                (he-dbus) '())
+                (dbus-ipc) '())
             (if login-manager
                 (case login-manager
-                  ((#:lm/gdm) (he-gdm #:stateless? stateless?)))
-                (he-desktop-tty #:start-cmd (sway-start pipewire?)))
+                  ((#:lm/gdm) (gdm #:stateless? stateless?)))
+                (desktop-tty #:start-cmd (sway-start pipewire?)))
             (if (member #:session/gnome (or sessions '()))
-                (he-gnome #:stateless? stateless?) '())
+                (gnome-desktop #:stateless? stateless?) '())
             (if (member #:session/sway (or sessions '()))
                 (let ((wallpaper %wallpaper)
                       (date-format %date-format)
                       (time-format %time-format))
                   (append
-                   (he-sway #:pipewire? pipewire?
+                   (sway-wm #:pipewire? pipewire?
                             #:doom? doom?
                             #:portal-services portal-services
                             #:bg-image wallpaper
@@ -8636,24 +8636,24 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             #:backup-terminal (alacritty-terminal)
                             #:emacs (emacs-editor emacs)
                             #:emacs-new-frame (emacs-new-frame emacs))
-                   (he-swaylock #:colors colors
-                                #:image wallpaper
-                                #:font font-variable-pitch
-                                #:date-format date-format
-                                #:time-format time-format)
-                   (he-swayidle #:session #:session/sway
-                                #:screen-locker (swaylock-screen-locker))
-                   (he-mako #:colors colors
-                            #:font font-variable-pitch)
-                   (he-waybar #:colors colors
-                              #:font font-variable-pitch
-                              #:modules (waybar-modules #:sway? #t
-                                                        #:date-format date-format
-                                                        #:time-format time-format))
-                   ;; (he-kanshi)
-                   (he-applet-network-manager)
-                   ;; (he-applet-gammastep)
-                   (he-applet-udiskie)))
+                   (swaylock-wm-piece #:colors colors
+                                      #:image wallpaper
+                                      #:font font-variable-pitch
+                                      #:date-format date-format
+                                      #:time-format time-format)
+                   (swayidle-wm-piece #:session #:session/sway
+                                      #:screen-locker (swaylock-screen-locker))
+                   (mako-wm-piece #:colors colors
+                                  #:font font-variable-pitch)
+                   (waybar-wm-piece #:colors colors
+                                    #:font font-variable-pitch
+                                    #:modules (waybar-modules #:sway? #t
+                                                              #:date-format date-format
+                                                              #:time-format time-format))
+                   ;; (kanshi-wm-piece)
+                   (applet-applet-network-manager)
+                   ;; (applet-applet-gammastep)
+                   (applet-applet-udiskie)))
                 '())
             (let ((gtk (gtk-services #:stateless? stateless?
                                      #:theme theme
@@ -8662,35 +8662,35 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   ;; (qt (qt-services #:stateless? stateless?))
                   )
               (append
-               (he-pavucontrol #:stateless? stateless?
-                               #:gtk-services gtk)
-               ;; (he-zoom #:stateless? stateless?
-               ;;          #:qt-services qt)
-               ;; (he-gimp #:stateless? stateless?
-               ;;          #:gtk-services gtk)
-               (he-alacritty #:colors colors
-                             #:font font-mono)
+               (pavucontrol-app #:stateless? stateless?
+                                #:gtk-services gtk)
+               ;; (zoom-app #:stateless? stateless?
+               ;;           #:qt-services qt)
+               ;; (gimp-app #:stateless? stateless?
+               ;;           #:gtk-services gtk)
+               (alacritty-app #:colors colors
+                              #:font font-mono)
                (if doom?
-                   (he-doom-vterm #:setup-zsh? (member #:shell/zsh interactive-shells)) '())
-               (he-chromium #:stateless? stateless?
-                            #:wayland? wayland?
-                            #:pipewire? pipewire?
-                            #:theme theme
-                            #:gtk-services gtk)
-               ;; (he-firefox #:stateless? stateless?
-               ;;             #:wayland? wayland?
-               ;;             #:gtk-services gtk)
-               (he-nyxt #:stateless? stateless?
-                        #:doom? doom?)
-               (he-tor-browser #:stateless? stateless?)
-               ;; (he-vlc #:stateless? stateless?
-               ;;         #:qt-services qt)
+                   (doom-vterm-app #:setup-zsh? (member #:shell/zsh interactive-shells)) '())
+               (chromium-app #:stateless? stateless?
+                             #:wayland? wayland?
+                             #:pipewire? pipewire?
+                             #:theme theme
+                             #:gtk-services gtk)
+               ;; (firefox-app #:stateless? stateless?
+               ;;              #:wayland? wayland?
+               ;;              #:gtk-services gtk)
+               (nyxt-app #:stateless? stateless?
+                         #:doom? doom?)
+               (tor-browser-app #:stateless? stateless?)
+               ;; (vlc-app #:stateless? stateless?
+               ;;          #:qt-services qt)
                ))
-            (he-flatpak #:stateless? stateless?
-                        #:portal-services portal-services)))
+            (flatpak-apps #:stateless? stateless?
+                          #:portal-services portal-services)))
          '())
-     (he-work #:stateless? stateless?
-              #:projects projects))))
+     (work #:stateless? stateless?
+           #:projects projects))))
 #+end_src
 * Common
 :PROPERTIES:
