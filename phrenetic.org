@@ -282,25 +282,25 @@ Run with ~sudo~.
             gnome-desktop
             sway-wm
             host-info
-            boot-label
+            %boot-label
             grub-efi
-            efi-boot-target
-            root-label
+            %efi-boot-target
+            %root-label
             ;; ext4
             btrfs
-            btrfs-mount-flags
-            btrfs-mount-options
+            %btrfs-mount-flags
+            %btrfs-mount-options
             disk-encryption
-            luks-label
+            %luks-label
             swap
-            swapfile
+            %swapfile
             stateless
-            stateless-persist-dir
-            stateless-machine-dir
-            stateless-mountables
+            %stateless-persist-dir
+            %stateless-machine-dir
+            %stateless-mountables
             console-keyboard-layouts
             macbook
-            macbook-kb-layout
+            %macbook-kb-layout
             os-base
             with-host-info
             with-bootloader
@@ -793,7 +793,7 @@ Must succeed [[*Accounts][Accounts]] component.
 #+end_src
 **** Bootloader
 #+begin_src scheme
-(define boot-label "genesis")
+(define %boot-label "genesis")
 #+end_src
 ***** Grub
 #+begin_src scheme
@@ -815,11 +815,11 @@ Must succeed [[*Accounts][Accounts]] component.
             (type "vfat"))
           (operating-system-file-systems os))))
 
-(define efi-boot-target "/boot/efi")
+(define %efi-boot-target "/boot/efi")
 #+end_src
 **** File systems
 #+begin_src scheme
-(define root-label "firmament")
+(define %root-label "firmament")
 #+end_src
 ***** Ext4
 #+begin_src scheme
@@ -855,8 +855,8 @@ Must succeed [[*Accounts][Accounts]] component.
          subvols)
     (operating-system-file-systems os))))
 
-(define btrfs-mount-flags '(no-atime))
-(define btrfs-mount-options '("compress=zstd" "autodefrag"))
+(define %btrfs-mount-flags '(no-atime))
+(define %btrfs-mount-options '("compress=zstd" "autodefrag"))
 #+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
@@ -886,7 +886,7 @@ Must succeed [[*File systems][File systems]] component.
                  fs))
            (operating-system-file-systems os))))))
 
-(define luks-label "ciphered")
+(define %luks-label "ciphered")
 #+end_src
 **** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
@@ -931,7 +931,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (chmod #$swapfile #o600)
           (invoke #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile)))))
 
-(define swapfile "/.swap")
+(define %swapfile "/.swap")
 #+end_src
 ***** TODO [#E] Don't hardcode swapfile size
 Determine it dynamically or make it an argument.
@@ -986,10 +986,10 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
     (if nix?
         (stateless-nix $ #:machine-dir machine-dir) $)))
 
-(define stateless-persist-dir "/.persist")
-(define stateless-machine-dir "/.machine")
+(define %stateless-persist-dir "/.persist")
+(define %stateless-machine-dir "/.machine")
 
-(define* (stateless-mountables #:key persist-dir machine-dir)
+(define* (%stateless-mountables #:key persist-dir machine-dir)
   `(("boot" . "/boot")
     ("guix-store" . "/gnu/store")
     ("guix-var" . "/var/guix")
@@ -1416,6 +1416,9 @@ Must succeed [[*Bootloader][Bootloader]] component.
       (macbook-wireless #:bluetooth? bluetooth?)
       macbook-camera
       macbook-power-key))
+
+(define %macbook-kb-layout
+  (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
@@ -1606,11 +1609,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
        (inherit config)
        (handle-power-key 'suspend))))))
 #+end_src
-***** Keyboard layout
-#+begin_src scheme
-(define macbook-kb-layout
-  (keyboard-layout "us" #:model "macbook78"))
-#+end_src
 ***** Shared
 #+begin_src scheme
 (define (with-blacklist kernel-args new-kernel-args)
@@ -1749,8 +1747,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                                 mountables))))
         $)
     (swap $ #:target (if stateless?
-                         (string-append stateless-machine-dir swapfile)
-                         swapfile)
+                         (string-append stateless-machine-dir %swapfile)
+                         %swapfile)
           #:no-cow? (equal? filesystem #:filesystem/btrfs)
           #:stateless? stateless?)
     (if stateless?
@@ -1764,7 +1762,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 
 (define* (with-macbook-hardware os #:key bluetooth?)
   (as-> os $
-    (console-keyboard-layouts $ #:kb-layout macbook-kb-layout)
+    (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
     (macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
@@ -1849,6 +1847,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-emacs
             emacs-editor
             emacs-new-frame
+            %emacs
             he-doom
             doom-service
             doom-web
@@ -1856,18 +1855,18 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-nix
             he-kmonad
             he-pipewire
-            light-colors
-            dark-colors
-            wallpapers
-            wallpaper
+            %light-colors
+            %dark-colors
+            %wallpapers
+            %wallpaper
             he-fonts
-            font-mono
-            font-sans
-            font-serif
-            font-unicode
-            useful-font-packages
-            date-format
-            time-format
+            %font-mono
+            %font-sans
+            %font-serif
+            %font-unicode
+            %useful-font-packages
+            %date-format
+            %time-format
             he-xdg
             he-mesa
             he-doom-themes+fonts
@@ -2306,7 +2305,7 @@ SAVEHIST=$HISTSIZE
    (file-append emacs "/bin/emacsclient")
    "--create-frame"))
 
-(define emacs emacs-pgtk)
+(define %emacs emacs-pgtk)
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -5754,10 +5753,10 @@ nix-channel --update
 **** Colors
 #+begin_src scheme
 ;; Nothing here yet.
-(define light-colors
+(define %light-colors
   '())
 
-(define dark-colors
+(define %dark-colors
   '((#:color/fg . "#dee2f8")
     (#:color/bg . "#31343f")
     (#:color/base0 . "#1e1f27")
@@ -5774,10 +5773,10 @@ nix-channel --update
 #+end_src
 **** Wallpapers
 #+begin_src scheme
-(define wallpapers
+(define %wallpapers
   `((#:wallpaper/alucard . ,(local-file "wallpapers/alucard.png"))))
 
-(define wallpaper (assoc-ref wallpapers #:wallpaper/alucard))
+(define %wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
 #+end_src
 **** Fonts
 #+begin_src scheme
@@ -5803,26 +5802,26 @@ nix-channel --update
 
 (define font-size 10)
 
-(define font-mono
+(define %font-mono
   `((#:font/name . "Source Code Pro")
     (#:font/size . ,font-size)
     (#:font/weight . ,'medium)
     (#:font/package . ,font-adobe-source-code-pro)))
 
-(define font-sans
+(define %font-sans
   `((#:font/name . "Source Sans 3")
     (#:font/size . ,font-size)
     (#:font/package . ,font-adobe-source-sans)))
 
-(define font-serif
+(define %font-serif
   `((#:font/name . "Iosevka Etoile")
     (#:font/package . ,font-iosevka-etoile)))
 
-(define font-unicode
+(define %font-unicode
   `((#:font/name . "Noto Sans")
     (#:font/package . ,font-google-noto)))
 
-(define useful-font-packages
+(define %useful-font-packages
   (list font-noto-color-emoji
         font-liberation))
 #+end_src
@@ -5864,9 +5863,9 @@ nix-channel --update
 #+end_src
 **** Date/time formats
 #+begin_src scheme
-(define date-format "%a %b %-d")
+(define %date-format "%a %b %-d")
 
-(define time-format "%-I:%M %p")
+(define %time-format "%-I:%M %p")
 #+end_src
 **** Doom themes and fonts
 #+begin_src scheme
@@ -8503,7 +8502,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   sessions
                   projects)
   (let* ((login-shell #:shell/bash)
-         (emacs emacs)
+         (emacs %emacs)
          (emacs-handler (emacs-handler emacs))
          (doom-icons? #t))
     (append
@@ -8564,14 +8563,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          '())
      (if desktop?
          (let* ((theme #:theme/dark)
-                (light-colors light-colors)
-                (dark-colors dark-colors)
+                (light-colors %light-colors)
+                (dark-colors %dark-colors)
                 (colors dark-colors)
-                (font-mono font-mono)
-                (font-sans font-sans)
-                (font-serif font-serif)
-                (font-unicode font-unicode)
-                (font-variable-pitch font-sans)
+                (font-mono %font-mono)
+                (font-sans %font-sans)
+                (font-serif %font-serif)
+                (font-unicode %font-unicode)
+                (font-variable-pitch %font-sans)
                 (dbus? (not login-manager))
                 (wayland? #t)
                 (portal-services (portal-services #:wayland? wayland?)))
@@ -8585,7 +8584,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                     font-sans
                                     font-serif
                                     font-unicode)
-                      #:extra-font-packages useful-font-packages)
+                      #:extra-font-packages %useful-font-packages)
             (if doom?
                 (he-doom-themes+fonts #:theme theme
                                       #:light-colors light-colors
@@ -8606,9 +8605,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (if (member #:session/gnome (or sessions '()))
                 (he-gnome #:stateless? stateless?) '())
             (if (member #:session/sway (or sessions '()))
-                (let ((wallpaper wallpaper)
-                      (date-format date-format)
-                      (time-format time-format))
+                (let ((wallpaper %wallpaper)
+                      (date-format %date-format)
+                      (time-format %time-format))
                   (append
                    (he-sway #:pipewire? pipewire?
                             #:doom? doom?
@@ -9432,8 +9431,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             guest-he))
 
 (define stateless? #t)
-(define stateless-persist-dir os:stateless-persist-dir)
-(define stateless-machine-dir os:stateless-machine-dir)
+(define stateless-persist-dir os:%stateless-persist-dir)
+(define stateless-machine-dir os:%stateless-machine-dir)
 #+end_src
 **** System
 #+begin_src scheme
@@ -9630,20 +9629,20 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 **** System+installer shared opts
 #+begin_src scheme
 (define efi? #t)
-(define boot-label os:boot-label)
-(define boot-target os:efi-boot-target)
+(define boot-label os:%boot-label)
+(define boot-target os:%efi-boot-target)
 (define filesystem #:filesystem/btrfs)
-(define root-label os:root-label)
+(define root-label os:%root-label)
 (define mountables (if stateless?
-                       (os:stateless-mountables
+                       (os:%stateless-mountables
                         #:persist-dir stateless-persist-dir
                         #:machine-dir stateless-machine-dir)
                        ;; ...
                        ))
-(define btrfs-mount-flags os:btrfs-mount-flags)
-(define btrfs-mount-options os:btrfs-mount-options)
+(define btrfs-mount-flags os:%btrfs-mount-flags)
+(define btrfs-mount-options os:%btrfs-mount-options)
 (define disk-encryption? #t)
-(define luks-label os:luks-label)
+(define luks-label os:%luks-label)
 #+end_src
 **** Module
 ***** Exports
