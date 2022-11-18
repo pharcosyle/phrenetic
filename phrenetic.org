@@ -1921,7 +1921,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             ;; nano-prog
             doom-trash-prog
             git-prog
-            he-misc-progs
+            misc-progs
             pavucontrol-app
             zoom-app
             gimp-app
@@ -7930,7 +7930,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 #+end_src
 **** Miscellaneous programs
 #+begin_src scheme
-(define (he-misc-progs)
+(define (misc-progs)
   (list
    (simple-service
     'misc-progs-add-packages
@@ -8567,7 +8567,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (doom-app-launcher-prog)
           (doom-trash-prog))
          '())
-     (he-misc-progs)
+     (misc-progs)
      (if console?
          (if kmonad?
              (kmonad-tool #:doom? doom?) '())
