@@ -2456,26 +2456,26 @@ SAVEHIST=$HISTSIZE
    (or services '())
 
    (if stateless?
-     (list
-      (home-stateless-service
-       'doom
-       #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine))
-                 ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine))
-                 ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine))
-                 ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
-                  (#:store . #:machine))))
-      (doom-stateless-service
-       'doom
-       #:state '(((#:path . ("eln/" #:doom-base #:cache))
-                  (#:store . #:machine))
-                 ((#:path . ("profiles.@.el" #:doom-base #:cache))
-                  (#:store . #:machine))
-                 ((#:path . ("@/" #:doom-base #:data))
-                  (#:store . #:machine)))))
-     '())))
+       (list
+        (home-stateless-service
+         'doom
+         #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
+                    (#:store . #:machine))
+                   ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
+                    (#:store . #:machine))
+                   ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
+                    (#:store . #:machine))
+                   ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
+                    (#:store . #:machine))))
+        (doom-stateless-service
+         'doom
+         #:state '(((#:path . ("eln/" #:doom-base #:cache))
+                    (#:store . #:machine))
+                   ((#:path . ("profiles.@.el" #:doom-base #:cache))
+                    (#:store . #:machine))
+                   ((#:path . ("@/" #:doom-base #:data))
+                    (#:store . #:machine)))))
+       '())))
 #+end_src
 **** Service
 ***** Service type
@@ -7113,17 +7113,17 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 
 ;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
 (define (wayland-env-vars pipewire?)
- ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
- (append
-  '(("SDL_VIDEODRIVER" . "wayland")
-    ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
-    ("CLUTTER_BACKEND" . "wayland")
-    ("ELM_ENGINE" . "wayland_egl")
-    ("ECORE_EVAS_ENGINE" . "wayland-egl")
-    ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
-    ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
-  (if pipewire?
-      '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
+  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
+  (append
+   '(("SDL_VIDEODRIVER" . "wayland")
+     ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
+     ("CLUTTER_BACKEND" . "wayland")
+     ("ELM_ENGINE" . "wayland_egl")
+     ("ECORE_EVAS_ENGINE" . "wayland-egl")
+     ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
+     ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
+   (if pipewire?
+       '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
 #+end_src
 **** Portals
 #+begin_src scheme
@@ -7853,13 +7853,13 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ***** Git
 #+begin_src scheme
 (define* (git-prog #:key
-                 stateless?
-                 doom?
-                 email
-                 sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
-                 gpg-sign-key
-                 ;; git-send-email?
-                 extra-config)
+                   stateless?
+                   doom?
+                   email
+                   sign-commits? ; TODO make this (sign-commits? #t) once I have my gpg stuff set up and I'm passing a gpg-sign-key.
+                   gpg-sign-key
+                   ;; git-send-email?
+                   extra-config)
   (append
    (list
     ;; (when git-send-email?
