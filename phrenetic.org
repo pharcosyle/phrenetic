@@ -1898,12 +1898,12 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             waybar-status-bar
             waybar-modules
             kanshi-wm-piece
-            applet-applet-network-manager
-            applet-network-manager
-            applet-applet-gammastep
-            applet-gammastep
-            applet-applet-udiskie
-            applet-udiskie
+            network-manager-wm-applet
+            network-manager-applet
+            gammastep-wm-applet
+            gammastep-applet
+            udiskie-wm-applet
+            udiskie-applet
             aws-prog
             clojure-prog
             datomic-prog
@@ -7047,21 +7047,21 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ******* Applets
 ******** Network manager
 #+begin_src scheme
-(define (applet-applet-network-manager)
+(define (network-manager-wm-applet)
   (list
    (simple-service
     'applet-network-manager-add-packages
     home-profile-service-type
     (list network-manager-applet))))
 
-(define (applet-network-manager)
+(define (network-manager-applet)
   (list
    (file-append network-manager-applet "/bin/nm-applet")
    "--indicator"))
 #+end_src
 ******** Gammastep
 #+begin_src scheme
-(define (applet-applet-gammastep)
+(define (gammastep-wm-applet)
   (list
    ;; The applet can't find its icon unless the package is installed.
    (simple-service
@@ -7069,21 +7069,21 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     home-profile-service-type
     (list gammastep))))
 
-(define (applet-gammastep)
+(define (gammastep-applet)
   (list
    (file-append gammastep "/bin/gammastep-indicator")
    "-l" "44:-123")) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
 #+end_src
 ******** Udiskie
 #+begin_src scheme
-(define (applet-applet-udiskie)
+(define (udiskie-wm-applet)
   (list
    (simple-service
     'applet-udiskie-add-packages
     home-profile-service-type
     (list udiskie))))
 
-(define (applet-udiskie)
+(define (udiskie-applet)
   (list
    (file-append udiskie "/bin/udiskie")
    "--tray"))
@@ -8630,9 +8630,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             #:notifier (mako-notifier (doom-menu emacs-handler))
                             #:status-bar (waybar-status-bar)
                             #:applets (list
-                                       (applet-network-manager)
-                                       ;; (applet-gammastep)
-                                       (applet-udiskie))
+                                       (network-manager-applet)
+                                       ;; (gammastep-applet)
+                                       (udiskie-applet))
                             #:app-launcher (doom-app-launcher emacs-handler)
                             #:terminal (doom-vterm-terminal emacs-handler)
                             #:backup-terminal (alacritty-terminal)
@@ -8653,9 +8653,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                               #:date-format date-format
                                                               #:time-format time-format))
                    ;; (kanshi-wm-piece)
-                   (applet-applet-network-manager)
-                   ;; (applet-applet-gammastep)
-                   (applet-applet-udiskie)))
+                   (network-manager-wm-applet)
+                   ;; (gammastep-wm-applet)
+                   (udiskie-wm-applet)))
                 '())
             (let ((gtk (gtk-services #:stateless? stateless?
                                      #:theme theme
