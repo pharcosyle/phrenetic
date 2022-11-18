@@ -1804,7 +1804,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme network-manager-applet))
+  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
@@ -7052,11 +7052,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (simple-service
     'applet-network-manager-add-packages
     home-profile-service-type
-    (list network-manager-applet))))
+    (list gnome:network-manager-applet))))
 
 (define (network-manager-applet)
   (list
-   (file-append network-manager-applet "/bin/nm-applet")
+   (file-append gnome:network-manager-applet "/bin/nm-applet")
    "--indicator"))
 #+end_src
 ******** Gammastep
