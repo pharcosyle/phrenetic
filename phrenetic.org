@@ -672,7 +672,8 @@ Must succeed [[*Accounts][Accounts]] component.
 (define-system-comp (gdm #:key
                          (wayland? #t)
                          auto-login?
-                         auto-login-user)
+                         auto-login-user
+                         stateless?)
   (services
    (append
     (operating-system-user-services os)
@@ -682,7 +683,13 @@ Must succeed [[*Accounts][Accounts]] component.
                (auto-login? auto-login?)
                (default-user auto-login-user)
                (wayland? wayland?)))
-     gdm-file-system-service))))
+     gdm-file-system-service)
+    (if stateless?
+        (list
+         (stateless-service
+          'gdm
+          #:ignore `(((#:path . ,(string-append (file-system-mount-point %gdm-file-system) "/"))))))
+        '()))))
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
@@ -1689,7 +1696,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (if login-manager
                 (case login-manager
                   ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
-                                   #:auto-login-user auto-login-user)))
+                                   #:auto-login-user auto-login-user
+                                   #:stateless? stateless?)))
                 (desktop-tty $ #:greetd? greetd?
                              #:auto-login? auto-login?
                              #:auto-login-user auto-login-user))
@@ -1799,7 +1807,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip zstd))
   #:use-module ((gnu packages curl) #:select (curl))
-  #:use-module ((gnu packages emacs) #:select (emacs))
   #:use-module ((gnu packages fonts) #:select (font-google-noto font-iosevka-etoile font-liberation font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -1868,13 +1875,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %light-colors
             %dark-colors
             %wallpapers
-            %wallpaper
-            fonts
-            %font-mono
-            %font-sans
-            %font-serif
-            %font-unicode
-            %useful-font-packages
+            font-library
+            %fonts
+            %font-packages-useful
             %date-format
             %time-format
             xdg
@@ -1938,6 +1941,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             work
             services-only-packages
             services-sans-packages
+            os-features
+            sway-environment
+            programs
+            applications
             he-base))
 #+end_src
 ** Create
@@ -2306,20 +2313,19 @@ SAVEHIST=$HISTSIZE
     `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
 
-(define %emacs-package emacs-pgtk)
-
 (define (emacs-editor emacs)
-  (list
-   (file-append emacs "/bin/emacs")))
+  `((#:emacs/program . ,(list
+                         (file-append emacs "/bin/emacs")))
+    (#:emacs/new-frame . ,(list
+                           (file-append emacs "/bin/emacsclient")
+                           "--create-frame"))
+    (#:emacs/handler . ,(emacs-handler emacs))))
 
-(define (emacs-new-frame emacs)
-  (list
-   (file-append emacs "/bin/emacsclient")
-   "--create-frame"))
+(define %emacs-package emacs-pgtk)
 #+end_src
 **** Handler
 #+begin_src scheme
-(define* (emacs-handler emacs #:rest more)
+(define* (emacs-handler emacs)
   (lambda* (#:rest args)
     (apply emacs-handler* emacs args)))
 
@@ -5785,24 +5791,17 @@ nix-channel --update
 #+begin_src scheme
 (define %wallpapers
   `((#:wallpaper/alucard . ,(local-file "wallpapers/alucard.png"))))
-
-(define %wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
 #+end_src
-**** Fonts
+**** Font library
 #+begin_src scheme
-(define* (fonts #:key
-                stateless?
-                fonts
-                extra-font-packages)
+(define* (font-library #:key
+                       stateless?
+                       packages)
   (list
    (simple-service
     'fonts-add-packages
     home-profile-service-type
-    (append
-     (map (lambda (font)
-            (assoc-ref font #:font/package))
-          fonts)
-     extra-font-packages))
+    packages)
 
    (when stateless?
      (home-stateless-service
@@ -5810,28 +5809,20 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)))))))
 
-(define font-size 10)
-
-(define %font-mono
-  `((#:font/name . "Source Code Pro")
-    (#:font/size . ,font-size)
-    (#:font/weight . ,'medium)
-    (#:font/package . ,font-adobe-source-code-pro)))
-
-(define %font-sans
-  `((#:font/name . "Source Sans 3")
-    (#:font/size . ,font-size)
-    (#:font/package . ,font-adobe-source-sans)))
-
-(define %font-serif
-  `((#:font/name . "Iosevka Etoile")
-    (#:font/package . ,font-iosevka-etoile)))
-
-(define %font-unicode
-  `((#:font/name . "Noto Sans")
-    (#:font/package . ,font-google-noto)))
-
-(define %useful-font-packages
+(define %fonts
+  (let ((font-size 10))
+    `((#:fonts/mono . ((#:font/name . "Source Code Pro")
+                       (#:font/size . ,font-size)
+                       (#:font/weight . ,'medium)
+                       (#:font/package . ,font-adobe-source-code-pro)))
+      (#:fonts/sans . ((#:font/name . "Source Sans 3")
+                       (#:font/size . ,font-size)
+                       (#:font/package . ,font-adobe-source-sans)))
+      (#:fonts/serif . ((#:font/name . "Iosevka Etoile")
+                        (#:font/package . ,font-iosevka-etoile)))
+      (#:fonts/unicode . ((#:font/name . "Noto Sans")
+                          (#:font/package . ,font-google-noto))))))
+(define %font-packages-useful
   (list font-noto-color-emoji
         font-liberation))
 #+end_src
@@ -6062,17 +6053,16 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+end_src
 **** XDG
 #+begin_src scheme
-(define* (xdg
-          #:key
-          stateless?
-          (desktop "$HOME/desktop")
-          (documents "$HOME/docs")
-          (download "$HOME/dl")
-          (music "$HOME/music")
-          (pictures "$HOME/pics")
-          (publicshare "$HOME/public")
-          (templates "$HOME/templates")
-          (videos "$HOME/vids"))
+(define* (xdg #:key
+              stateless?
+              (desktop "$HOME/desktop")
+              (documents "$HOME/docs")
+              (download "$HOME/dl")
+              (music "$HOME/music")
+              (pictures "$HOME/pics")
+              (publicshare "$HOME/public")
+              (templates "$HOME/templates")
+              (videos "$HOME/vids"))
   (list
    (simple-service
     'xdg-add-packages
@@ -6153,8 +6143,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
       'gdm
       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:store . #:machine)
-                 (#:mode . #o700)))
-      #:ignore `(((#:path . ,(string-append (file-system-mount-point %gdm-file-system) "/"))))))))
+                 (#:mode . #o700)))))))
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
@@ -6229,8 +6218,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   app-launcher
                   terminal
                   backup-terminal
-                  emacs
-                  emacs-new-frame
+                  emacs-editor
                   extra-config)
   (append
    (list
@@ -6327,8 +6315,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                                 #:app-launcher app-launcher
                                 #:terminal terminal
                                 #:backup-terminal backup-terminal
-                                #:emacs emacs
-                                #:emacs-new-frame emacs-new-frame)
+                                #:emacs-editor emacs-editor)
 
         (or extra-config '())))))
 
@@ -6398,8 +6385,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                                  app-launcher
                                  terminal
                                  backup-terminal
-                                 emacs
-                                 emacs-new-frame)
+                                 emacs-editor)
   (let ((executions
          (append
           `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
@@ -6419,8 +6405,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                                                      (list
                                                       (file-append elogind "/bin/loginctl")
                                                       "lock-session")))
-            (bindsym $mod+Shift+y exec ,@emacs)
-            (bindsym $mod+y exec ,@emacs-new-frame))
+            (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-editor #:emacs/program))
+            (bindsym $mod+y exec ,@(assoc-ref emacs-editor #:emacs/new-frame)))
 
           (sway-notifications notifier)
           (sway-status-bar status-bar)
@@ -6784,18 +6770,19 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                              "-SIGUSR1" "waybar"))))
 
 (define* (waybar-modules #:key
-                         sway?
+                         session
                          date-format
                          time-format)
   (append
    (list
     (waybar-clock #:date-format date-format
                   #:time-format time-format))
-   (if sway?
-       (list
-        (waybar-sway-workspaces)
-        (waybar-sway-window))
-       '())
+   (case session
+     ((#:session/sway)
+      (list
+       (waybar-sway-workspaces)
+       (waybar-sway-window)))
+     (else '()))
    (let ((show-percentage? #f))
      (list
       (waybar-tray)
@@ -7758,6 +7745,7 @@ use_guixs() {
 (define* (doom-dired-prog #:key
                           stateless?
                           icons?
+                          desktop?
                           emacs-handler)
   (let ((name 'dired)
         (dirvish? #t))
@@ -7778,13 +7766,15 @@ use_guixs() {
      (if dirvish?
          (doom-transient) '())
 
-     (list
-      (emacs-xdg-service name
-                         "file"
-                         (emacs-handler
-                          "dired"
-                          '((dired (car args))))
-                         #:default-for '(inode/directory))))))
+     (if desktop?
+         (list
+          (emacs-xdg-service name
+                             "file"
+                             (emacs-handler
+                              "dired"
+                              '((dired (car args))))
+                             #:default-for '(inode/directory)))
+         '()))))
 #+end_src
 **** Menus and launchers
 ***** Doom app launcher
@@ -8491,205 +8481,302 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define very-big-history 1000000)
 #+end_src
 ** Templates
+*** OS features
+#+begin_src scheme
+(define* (os-features #:key
+                      stateless?
+                      stateless-persist-dir
+                      stateless-machine-dir
+                      login-shell
+                      doom?
+                      doom-flags
+                      guix?
+                      nix?
+                      console?
+                      kmonad?
+                      desktop?
+                      pipewire?
+                      login-manager
+                      desktop-tty-start-cmd
+                      sessions
+                      sway-environment)
+  (append
+   (if stateless?
+       (stateless #:persist-dir stateless-persist-dir
+                  #:machine-dir stateless-machine-dir)
+       '())
+   (if guix?
+       (guix-pm #:stateless? stateless?
+                #:doom? doom?)
+       '())
+   (if nix?
+       (nix-pm #:stateless? stateless?
+               #:doom? doom?
+               #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
+               #:login-shell login-shell)
+       '())
+   (if console?
+       (if kmonad?
+           (kmonad-tool #:doom? doom?) '())
+       '())
+   (if desktop?
+       (let ((dbus? (not login-manager)))
+         (append
+          (if pipewire?
+              (pipewire-multimedia #:stateless? stateless?
+                                   #:dbus? dbus?)
+              '())
+          (if dbus?
+              (dbus-ipc) '())
+          (if login-manager
+              (case login-manager
+                ((#:lm/gdm) (gdm #:stateless? stateless?)))
+              (desktop-tty #:start-cmd desktop-tty-start-cmd))
+          (if (member #:session/gnome (or sessions '()))
+              (gnome-desktop #:stateless? stateless?) '())
+          (if (member #:session/sway (or sessions '()))
+              sway-environment '())))
+       '())))
+#+end_src
+*** Sway environment
+#+begin_src scheme
+(define* (sway-environment #:key
+                           pipewire?
+                           doom?
+                           portal-services
+                           colors
+                           (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
+                           fonts
+                           font-variable-pitch
+                           (date-format %date-format)
+                           (time-format %time-format)
+                           emacs-editor)
+  (let ((session #:session/sway))
+    (append
+     (sway-wm #:pipewire? pipewire?
+              #:doom? doom?
+              #:portal-services portal-services
+              #:bg-image wallpaper
+              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
+              #:idle-manager (swayidle-idle-manager)
+              #:screen-locker (swaylock-screen-locker-immediate)
+              #:notifier (mako-notifier (doom-menu (assoc-ref emacs-editor #:emacs/handler)))
+              #:status-bar (waybar-status-bar)
+              #:applets (list
+                         (network-manager-applet)
+                         ;; (gammastep-applet)
+                         (udiskie-applet))
+              #:app-launcher (doom-app-launcher (assoc-ref emacs-editor #:emacs/handler))
+              #:terminal (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
+              #:backup-terminal (alacritty-terminal)
+              #:emacs-editor emacs-editor)
+     (swaylock-wm-piece #:colors colors
+                        #:image wallpaper
+                        #:font (assoc-ref fonts font-variable-pitch)
+                        #:date-format date-format
+                        #:time-format time-format)
+     (swayidle-wm-piece #:session session
+                        #:screen-locker (swaylock-screen-locker))
+     (mako-wm-piece #:colors colors
+                    #:font (assoc-ref fonts font-variable-pitch))
+     (waybar-wm-piece #:colors colors
+                      #:font (assoc-ref fonts font-variable-pitch)
+                      #:modules (waybar-modules #:session session
+                                                #:date-format date-format
+                                                #:time-format time-format))
+     ;; (kanshi-wm-piece)
+     (network-manager-wm-applet)
+     ;; (gammastep-wm-applet)
+     (udiskie-wm-applet))))
+#+end_src
+*** Programs
+#+begin_src scheme
+(define* (programs #:key
+                   stateless?
+                   interactive-shells
+                   doom?
+                   doom-flags
+                   email
+                   desktop?
+                   emacs-editor)
+  (append
+   (direnv-prog #:doom? doom?
+                #:shells interactive-shells)
+   (protonvpn-prog #:stateless? stateless?)
+   ;; (ssh-prog)
+   (git-prog #:stateless? stateless?
+             #:doom? doom?
+             #:email email)
+   (if doom?
+       (append
+        (if (assoc-ref doom-flags #:doom/calendar?)
+            (doom-calendar-prog #:stateless? stateless?
+                                #:org? (assoc-ref doom-flags #:doom/org?))
+            '())
+        (if (assoc-ref doom-flags #:doom/org?)
+            (doom-org-prog #:stateless? stateless?
+                           #:evil? (assoc-ref doom-flags #:doom/evil?))
+            '())
+        (doom-dired-prog #:stateless? stateless?
+                         #:icons? (assoc-ref doom-flags #:doom/icons?)
+                         #:desktop? desktop?
+                         #:emacs-handler (assoc-ref emacs-editor #:emacs/handler))
+        (doom-app-launcher-prog)
+        (doom-trash-prog))
+       '())
+   (misc-progs)))
+#+end_src
+*** Applications
+#+begin_src scheme
+(define* (applications #:key
+                       stateless?
+                       pipewire?
+                       doom?
+                       theme
+                       colors
+                       fonts
+                       font-variable-pitch
+                       wayland?)
+  (let ((gtk (gtk-services #:stateless? stateless?
+                           #:theme theme
+                           #:font (assoc-ref fonts font-variable-pitch)
+                           #:font-monospace (assoc-ref fonts #:fonts/mono)))
+        ;; (qt (qt-services #:stateless? stateless?))
+        )
+    (append
+     (pavucontrol-app #:stateless? stateless?
+                      #:gtk-services gtk)
+     ;; (zoom-app #:stateless? stateless?
+     ;;           #:qt-services qt)
+     ;; (gimp-app #:stateless? stateless?
+     ;;           #:gtk-services gtk)
+     (alacritty-app #:colors colors
+                    #:font (assoc-ref fonts #:fonts/mono))
+     (if doom?
+         (doom-vterm-app #:setup-zsh? #t
+                         ;; TODO
+                         ;; #:setup-zsh? (member #:shell/zsh interactive-shells)
+                         )
+         '())
+     (chromium-app #:stateless? stateless?
+                   #:wayland? wayland?
+                   #:pipewire? pipewire?
+                   #:theme theme
+                   #:gtk-services gtk)
+     ;; (firefox-app #:stateless? stateless?
+     ;;              #:wayland? wayland?
+     ;;              #:gtk-services gtk)
+     (nyxt-app #:stateless? stateless?
+               #:doom? doom?)
+     (tor-browser-app #:stateless? stateless?)
+     ;; (vlc-app #:stateless? stateless?
+     ;;          #:qt-services qt)
+     )))
+#+end_src
+*** Base
 #+begin_src scheme
 (define* (he-base #:key
                   stateless?
                   stateless-persist-dir
                   stateless-machine-dir
-                  email
                   (interactive-shells '(#:shell/zsh))
                   doom?
-                  doom-calendar?
-                  doom-org?
-                  doom-evil?
-                  doom-tree-sitter?
-                  console?
+                  doom-flags
                   guix?
                   nix?
+                  console?
                   kmonad?
                   desktop?
                   pipewire?
                   login-manager
                   sessions
+                  email
                   projects)
   (let* ((login-shell #:shell/bash)
          (emacs-package %emacs-package)
-         (emacs-handler (emacs-handler emacs-package))
-         (doom-icons? #t))
+         (emacs-editor (emacs-editor emacs-package))
+         (doom-flags (acons #:doom/icons? #t doom-flags))
+         (theme #:theme/dark)
+         (light-colors %light-colors)
+         (dark-colors %dark-colors)
+         (colors dark-colors)
+         (fonts %fonts)
+         (font-variable-pitch #:fonts/sans)
+         (wayland? #t)
+         (portal-services (portal-services #:wayland? wayland?)))
     (append
-     (if stateless?
-         (stateless #:persist-dir stateless-persist-dir
-                    #:machine-dir stateless-machine-dir)
-         '())
+     (os-features #:stateless? stateless?
+                  #:stateless-persist-dir stateless-persist-dir
+                  #:stateless-machine-dir stateless-machine-dir
+                  #:login-shell login-shell
+                  #:doom? doom?
+                  #:doom-flags doom-flags
+                  #:guix? guix?
+                  #:nix? nix?
+                  #:console? console?
+                  #:kmonad? kmonad?
+                  #:desktop? desktop?
+                  #:pipewire? pipewire?
+                  #:login-manager login-manager
+                  #:desktop-tty-start-cmd (sway-start pipewire?)
+                  #:sessions sessions
+                  #:sway-environment (sway-environment #:pipewire? pipewire?
+                                                       #:doom? doom?
+                                                       #:portal-services portal-services
+                                                       #:colors colors
+                                                       #:fonts fonts
+                                                       #:font-variable-pitch font-variable-pitch
+                                                       #:emacs-editor emacs-editor))
      (shells #:stateless? stateless?
              #:doom? doom?
-             #:doom-tree-sitter? doom-tree-sitter?
+             #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
              #:login-shell login-shell
              #:interactive-shells interactive-shells)
      (emacs #:emacs emacs-package)
      (if doom?
-         (doom #:stateless? stateless?
-               #:services (doom-main #:stateless? stateless?
-                                     #:evil? doom-evil?
-                                     #:icons? doom-icons?
-                                     #:email email))
-         '())
-     (if guix?
-         (guix-pm #:stateless? stateless?
-                  #:doom? doom?)
-         '())
-     (if nix?
-         (nix-pm #:stateless? stateless?
-                 #:doom? doom?
-                 #:doom-tree-sitter? doom-tree-sitter?
-                 #:login-shell login-shell)
-         '())
-     (direnv-prog #:doom? doom?
-                  #:shells interactive-shells)
-     (protonvpn-prog #:stateless? stateless?)
-     ;; (ssh-prog)
-     (git-prog #:stateless? stateless?
-               #:doom? doom?
-               #:email email)
-     (if doom?
          (append
-          (if doom-calendar?
-              (doom-calendar-prog #:stateless? stateless?
-                                  #:org? doom-org?)
-              '())
-          (if doom-org?
-              (doom-org-prog #:stateless? stateless?
-                             #:evil? doom-evil?)
-              '())
-          (doom-dired-prog #:stateless? stateless?
-                           #:icons? doom-icons?
-                           #:emacs-handler emacs-handler)
-          (doom-app-launcher-prog)
-          (doom-trash-prog))
+          (doom #:stateless? stateless?
+                #:services (doom-main #:stateless? stateless?
+                                      #:evil? (assoc-ref doom-flags #:doom/evil?)
+                                      #:icons? (assoc-ref doom-flags #:doom/icons?)
+                                      #:email email))
+          (if desktop?
+              (doom-desktop #:theme theme
+                            #:light-colors light-colors
+                            #:dark-colors dark-colors
+                            #:font (assoc-ref fonts #:fonts/mono)
+                            #:font-variable-pitch (assoc-ref fonts font-variable-pitch)
+                            #:font-unicode (assoc-ref fonts #:fonts/unicode)
+                            #:font-serif (assoc-ref fonts #:fonts/serif))
+              '()))
          '())
-     (misc-progs)
-     (if console?
-         (if kmonad?
-             (kmonad-tool #:doom? doom?) '())
-         '())
+     (programs #:stateless? stateless?
+               #:interactive-shells interactive-shells
+               #:doom? doom?
+               #:doom-flags doom-flags
+               #:email email
+               #:desktop? desktop?
+               #:emacs-editor emacs-editor)
      (if desktop?
-         (let* ((theme #:theme/dark)
-                (light-colors %light-colors)
-                (dark-colors %dark-colors)
-                (colors dark-colors)
-                (font-mono %font-mono)
-                (font-sans %font-sans)
-                (font-serif %font-serif)
-                (font-unicode %font-unicode)
-                (font-variable-pitch %font-sans)
-                (dbus? (not login-manager))
-                (wayland? #t)
-                (portal-services (portal-services #:wayland? wayland?)))
-           (append
-            (if pipewire?
-                (pipewire-multimedia #:stateless? stateless?
-                                     #:dbus? dbus?)
-                '())
-            (fonts #:stateless? stateless?
-                   #:fonts (list font-mono
-                                 font-sans
-                                 font-serif
-                                 font-unicode)
-                   #:extra-font-packages %useful-font-packages)
-            (if doom?
-                (doom-desktop #:theme theme
-                              #:light-colors light-colors
-                              #:dark-colors dark-colors
-                              #:font font-mono
-                              #:font-variable-pitch font-variable-pitch
-                              #:font-unicode font-unicode
-                              #:font-serif font-serif)
-                '())
-            (xdg #:stateless? stateless?)
-            (mesa #:stateless? stateless?)
-            (if dbus?
-                (dbus-ipc) '())
-            (if login-manager
-                (case login-manager
-                  ((#:lm/gdm) (gdm #:stateless? stateless?)))
-                (desktop-tty #:start-cmd (sway-start pipewire?)))
-            (if (member #:session/gnome (or sessions '()))
-                (gnome-desktop #:stateless? stateless?) '())
-            (if (member #:session/sway (or sessions '()))
-                (let ((wallpaper %wallpaper)
-                      (date-format %date-format)
-                      (time-format %time-format))
-                  (append
-                   (sway-wm #:pipewire? pipewire?
-                            #:doom? doom?
-                            #:portal-services portal-services
-                            #:bg-image wallpaper
-                            #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
-                            #:idle-manager (swayidle-idle-manager)
-                            #:screen-locker (swaylock-screen-locker-immediate)
-                            #:notifier (mako-notifier (doom-menu emacs-handler))
-                            #:status-bar (waybar-status-bar)
-                            #:applets (list
-                                       (network-manager-applet)
-                                       ;; (gammastep-applet)
-                                       (udiskie-applet))
-                            #:app-launcher (doom-app-launcher emacs-handler)
-                            #:terminal (doom-vterm-terminal emacs-handler)
-                            #:backup-terminal (alacritty-terminal)
-                            #:emacs (emacs-editor emacs-package)
-                            #:emacs-new-frame (emacs-new-frame emacs-package))
-                   (swaylock-wm-piece #:colors colors
-                                      #:image wallpaper
-                                      #:font font-variable-pitch
-                                      #:date-format date-format
-                                      #:time-format time-format)
-                   (swayidle-wm-piece #:session #:session/sway
-                                      #:screen-locker (swaylock-screen-locker))
-                   (mako-wm-piece #:colors colors
-                                  #:font font-variable-pitch)
-                   (waybar-wm-piece #:colors colors
-                                    #:font font-variable-pitch
-                                    #:modules (waybar-modules #:sway? #t
-                                                              #:date-format date-format
-                                                              #:time-format time-format))
-                   ;; (kanshi-wm-piece)
-                   (network-manager-wm-applet)
-                   ;; (gammastep-wm-applet)
-                   (udiskie-wm-applet)))
-                '())
-            (let ((gtk (gtk-services #:stateless? stateless?
-                                     #:theme theme
-                                     #:font font-variable-pitch
-                                     #:font-monospace font-mono))
-                  ;; (qt (qt-services #:stateless? stateless?))
-                  )
-              (append
-               (pavucontrol-app #:stateless? stateless?
-                                #:gtk-services gtk)
-               ;; (zoom-app #:stateless? stateless?
-               ;;           #:qt-services qt)
-               ;; (gimp-app #:stateless? stateless?
-               ;;           #:gtk-services gtk)
-               (alacritty-app #:colors colors
-                              #:font font-mono)
-               (if doom?
-                   (doom-vterm-app #:setup-zsh? (member #:shell/zsh interactive-shells)) '())
-               (chromium-app #:stateless? stateless?
-                             #:wayland? wayland?
-                             #:pipewire? pipewire?
-                             #:theme theme
-                             #:gtk-services gtk)
-               ;; (firefox-app #:stateless? stateless?
-               ;;              #:wayland? wayland?
-               ;;              #:gtk-services gtk)
-               (nyxt-app #:stateless? stateless?
-                         #:doom? doom?)
-               (tor-browser-app #:stateless? stateless?)
-               ;; (vlc-app #:stateless? stateless?
-               ;;          #:qt-services qt)
-               ))
-            (flatpak-apps #:stateless? stateless?
-                          #:portal-services portal-services)))
+         (append
+          (font-library #:stateless? stateless?
+                        #:packages (append
+                                    (map (lambda (font)
+                                           (assoc-ref font #:font/package))
+                                         fonts)
+                                    %font-packages-useful))
+          (xdg #:stateless? stateless?)
+          (mesa #:stateless? stateless?)
+          (applications #:stateless? stateless?
+                        #:pipewire? pipewire?
+                        #:doom? doom?
+                        #:theme theme
+                        #:colors colors
+                        #:fonts fonts
+                        #:font-variable-pitch font-variable-pitch
+                        #:wayland? wayland?)
+          (flatpak-apps #:stateless? stateless?
+                        #:portal-services portal-services))
          '())
      (work #:stateless? stateless?
            #:projects projects))))
@@ -9549,8 +9636,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                  ("Krush/hyperdrive" . ((#:stateless? . ,primary-he-stateless?)
                                         (#:doom? . ,doom?)
-                                        (#:doom-org? . ,doom-org?)
-                                        (#:doom-tree-sitter? doom-tree-sitter?))))
+                                        (#:doom-org? . ,(assoc-ref doom-flags #:doom/org?))
+                                        (#:doom-tree-sitter? . ,(assoc-ref doom-flags #:doom/tree-sitter?)))))
     (he-shared-opts))))
 
 (define primary-he-stateless? stateless?)
@@ -9592,21 +9679,18 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ****** HE shared opts
 #+begin_src scheme
 (define doom? #t)
-(define doom-calendar? doom?)
-(define doom-org? doom?)
-(define doom-evil? doom?)
-(define doom-tree-sitter? doom?)
+(define doom-flags '((#:doom/calendar? . #t)
+                     (#:doom/org? . #t)
+                     (#:doom/evil? . #t)
+                     (#:doom/tree-sitter? . #t)))
 
 (define (he-shared-opts)
   (append
    (os+he-shared-opts)
    `(#:stateless-persist-dir ,stateless-persist-dir
      #:stateless-machine-dir ,stateless-machine-dir
-     #:doom? doom?
-     #:doom-calendar? doom-calendar?
-     #:doom-org? doom-org?
-     #:doom-evil? doom-evil?
-     #:doom-tree-sitter? doom-tree-sitter?)))
+     #:doom? ,doom?
+     #:doom-flags ,doom-flags)))
 #+end_src
 ***** OS+HE shared opts
 #+begin_src scheme
