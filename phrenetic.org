@@ -5353,6 +5353,189 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
                    (#:store . #:persist))))))))
 #+end_src
+**** Desktop
+#+begin_src scheme
+(define* (doom-desktop #:key
+                       theme
+                       light-colors
+                       dark-colors
+                       font
+                       font-variable-pitch
+                       font-unicode
+                       font-serif)
+  (append
+   (doom-themes #:theme theme
+                #:light-colors light-colors
+                #:dark-colors dark-colors)
+   (doom-fonts #:font font
+               #:font-variable-pitch font-variable-pitch
+               #:font-unicode font-unicode
+               #:font-serif font-serif)))
+#+end_src
+***** Themes
+#+begin_src scheme
+(define* (doom-themes #:key
+                      theme
+                      light-colors
+                      dark-colors)
+  (let ((light-theme-name 'doom-one-light)
+        (dark-theme-name 'doom-nuclear))
+    (list
+     (doom-service
+      'themes
+      #:config
+      `((setq doom-theme ',(case theme
+                             ((#:theme/light) light-theme-name)
+                             ((#:theme/dark) dark-theme-name))))
+      #:themes
+      (append
+       (doom-light-theme #:name light-theme-name
+                         #:colors light-colors)
+       (doom-dark-theme #:name dark-theme-name
+                        #:colors dark-colors))))))
+#+end_src
+****** Light
+#+begin_src scheme
+;; Nothing here yet.
+(define* (doom-light-theme #:key name colors)
+  `())
+#+end_src
+****** Dark
+Some colors from the original Atom theme on which I based mine that might be useful:
+- ~#363b4e~
+  Dark with a bluish tint. Was previously used as the line highlight color.
+- ~#666d7a~
+#+begin_src scheme
+(define* (doom-dark-theme #:key name colors)
+  (let ((clr (lambda (color)
+               (assoc-ref colors color))))
+    `((,name
+       ((fg        '(,(clr #:color/fg)      "#bfbfbf" "brightwhite"))
+        (bg        '(,(clr #:color/bg)      "black"   "black"))
+
+        (fg-alt    '("#63677f"              "#2d2d2d" "white"))
+        (bg-alt    '("#262831"              "black"   "black"))
+
+        (base0     '(,(clr #:color/base0)   "black"   "black"))
+        (base1     '("#202229"              "#1e1e1e" "brightblack")) ; (doom-darken "#262831" 0.15)
+        (base2     '("#22242c"              "#2e2e2e" "brightblack")) ; (doom-darken "#262831" 0.10)
+        (base3     '("#24262e"              "#262626" "brightblack")) ; (doom-darken "#262831" 0.05)
+        (base4     '("#484b5b"              "#3f3f3f" "brightblack"))
+        (base5     `(,(car fg-alt)          "#525252" "brightblack"))
+        (base6     '("#7c82a0"              "#6b6b6b" "brightblack")) ; (doom-darken "#939abd" 0.15)
+        (base7     '("#939abd"              "#979797" "brightblack"))
+        (base8     '(,(clr #:color/base8)   "#dfdfdf" "white"))
+
+        (grey      base4)
+        (red       '(,(clr #:color/red)     "#ff6655" "red"))
+        (orange    '(,(clr #:color/orange)  "#dd8844" "brightred"))
+        (green     '(,(clr #:color/green)   "#99bb66" "green"))
+        (teal      '("#fec0cb"              "#44b9b1" "brightgreen"))
+        (yellow    '(,(clr #:color/yellow)  "#ECBE7B" "yellow"))
+        (blue      '(,(clr #:color/blue)    "#51afef" "brightblue" ))
+        (dark-blue '("#5f68de"              "#2257A0" "blue"))
+        (magenta   '(,(clr #:color/magenta) "#c678dd" "brightmagenta"))
+        (violet    '(,(clr #:color/violet)  "#a9a1e1" "magenta"))
+        (cyan      '(,(clr #:color/cyan)    "#46D9FF" "brightcyan"))
+        (dark-cyan '("#cf8191"              "#5699AF" "cyan"))
+
+        (highlight      ,(clr #:color/accent))
+        (vertical-bar   base0)
+        (selection      dark-blue)
+        (builtin        blue)
+        (comments       base5)
+        (doc-comments   base7)
+        (constants      yellow)
+        (functions      blue)
+        (keywords       magenta)
+        (methods        teal)
+        (operators      cyan)
+        (type           orange)
+        (strings        green)
+        (variables      red)
+        (numbers        dark-cyan)
+        (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
+        (error          red)
+        (warning        yellow)
+        (success        green)
+        (vc-modified    orange)
+        (vc-added       green)
+        (vc-deleted     red))
+
+       ;; Doom base theme overrides.
+       ((cursor :background "#fdd94a")
+        ((font-lock-comment-delimiter-face &override) :foreground base7)
+        ((font-lock-doc-face &override) :foreground violet)
+        ((line-number-current-line &override) :foreground violet)
+        (mode-line :background base1 :foreground fg)
+        (mode-line-inactive :background base3 :foreground base6)
+        (org-block :background (doom-lighten bg-alt 0.02))
+        (rainbow-delimiters-depth-1-face :foreground fg)
+        (rainbow-delimiters-depth-2-face :foreground magenta)
+        (rainbow-delimiters-depth-3-face :foreground blue)
+        (rainbow-delimiters-depth-4-face :foreground cyan)
+        (rainbow-delimiters-depth-5-face :foreground green)
+        (rainbow-delimiters-depth-6-face :foreground yellow)
+        (rainbow-delimiters-depth-7-face :foreground orange)
+        (rainbow-delimiters-depth-8-face :foreground red)
+        (rainbow-delimiters-depth-9-face :foreground teal)
+
+        ;; Custom faces.
+        (clojure-character-face :foreground teal :weight 'bold)
+        (doom-modeline-bar :background highlight)
+        (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
+        (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
+        (doom-modeline-buffer-project-root :foreground green :weight 'bold)
+        (solaire-mode-line-face :inherit 'mode-line :background base0)
+        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background base2)
+
+        ;; These are present in the `doom-one' theme on which mine is based but I'm not sure if I need or want them. I'm keeping them around for now.
+        (css-proprietary-property :foreground orange)
+        (css-property :foreground green)
+        (css-selector :foreground blue)
+        (font-latex-math-face :foreground green)
+        (markdown-markup-face :foreground base5)
+        (markdown-header-face :inherit 'bold :foreground red)
+        ((markdown-code-face &override) :background (doom-lighten base3 0.05))
+        (rjsx-tag :foreground red)
+        (rjsx-attr :foreground orange))))))
+#+end_src
+***** Fonts
+#+begin_src scheme
+(define* (doom-fonts #:key
+                     font
+                     font-variable-pitch
+                     font-unicode
+                     font-serif)
+  (append
+   (list
+    (doom-service
+     'fonts
+     #:config
+     `((defun biome--set-font-safe (sym font)
+         (when (find-font font)
+           (set sym font)))
+
+       (biome--set-font-safe
+        'doom-font
+        (font-spec ;; :family ,(assoc-ref font #:font/name)
+                   ;; Work around what I suspect is a PGTK issue. It's doesn't happen in Emacs 29, remove this when its released.
+                   :family ,(if (equal? (assoc-ref font #:font/weight) 'medium)
+                                (string-append (assoc-ref font #:font/name) " Medium")
+                                (assoc-ref font #:font/name))
+                   :size ,(+ (assoc-ref font #:font/size) 2)
+                   :weight ',(or (assoc-ref font #:font/weight) 'normal)))
+
+       (-each '((doom-variable-pitch-font ,(assoc-ref font-variable-pitch #:font/name))
+                (doom-unicode-font ,(assoc-ref font-unicode #:font/name))
+                (doom-serif-font ,(assoc-ref font-serif #:font/name)))
+              (-lambda ((font-sym family))
+                       (biome--set-font-safe
+                        font-sym
+                        (font-spec :family family)))))))
+
+   (doom-dash)))
+#+end_src
 *** Package management
 **** Guix
 #+begin_src scheme
@@ -5867,189 +6050,6 @@ nix-channel --update
 (define %date-format "%a %b %-d")
 
 (define %time-format "%-I:%M %p")
-#+end_src
-**** Doom desktop
-#+begin_src scheme
-(define* (doom-desktop #:key
-                       theme
-                       light-colors
-                       dark-colors
-                       font
-                       font-variable-pitch
-                       font-unicode
-                       font-serif)
-  (append
-   (doom-themes #:theme theme
-                #:light-colors light-colors
-                #:dark-colors dark-colors)
-   (doom-fonts #:font font
-               #:font-variable-pitch font-variable-pitch
-               #:font-unicode font-unicode
-               #:font-serif font-serif)))
-#+end_src
-***** Themes
-#+begin_src scheme
-(define* (doom-themes #:key
-                      theme
-                      light-colors
-                      dark-colors)
-  (let ((light-theme-name 'doom-one-light)
-        (dark-theme-name 'doom-nuclear))
-    (list
-     (doom-service
-      'themes
-      #:config
-      `((setq doom-theme ',(case theme
-                             ((#:theme/light) light-theme-name)
-                             ((#:theme/dark) dark-theme-name))))
-      #:themes
-      (append
-       (doom-light-theme #:name light-theme-name
-                         #:colors light-colors)
-       (doom-dark-theme #:name dark-theme-name
-                        #:colors dark-colors))))))
-#+end_src
-****** Light
-#+begin_src scheme
-;; Nothing here yet.
-(define* (doom-light-theme #:key name colors)
-  `())
-#+end_src
-****** Dark
-Some colors from the original Atom theme on which I based mine that might be useful:
-- ~#363b4e~
-  Dark with a bluish tint. Was previously used as the line highlight color.
-- ~#666d7a~
-#+begin_src scheme
-(define* (doom-dark-theme #:key name colors)
-  (let ((clr (lambda (color)
-               (assoc-ref colors color))))
-    `((,name
-       ((fg        '(,(clr #:color/fg)      "#bfbfbf" "brightwhite"))
-        (bg        '(,(clr #:color/bg)      "black"   "black"))
-
-        (fg-alt    '("#63677f"              "#2d2d2d" "white"))
-        (bg-alt    '("#262831"              "black"   "black"))
-
-        (base0     '(,(clr #:color/base0)   "black"   "black"))
-        (base1     '("#202229"              "#1e1e1e" "brightblack")) ; (doom-darken "#262831" 0.15)
-        (base2     '("#22242c"              "#2e2e2e" "brightblack")) ; (doom-darken "#262831" 0.10)
-        (base3     '("#24262e"              "#262626" "brightblack")) ; (doom-darken "#262831" 0.05)
-        (base4     '("#484b5b"              "#3f3f3f" "brightblack"))
-        (base5     `(,(car fg-alt)          "#525252" "brightblack"))
-        (base6     '("#7c82a0"              "#6b6b6b" "brightblack")) ; (doom-darken "#939abd" 0.15)
-        (base7     '("#939abd"              "#979797" "brightblack"))
-        (base8     '(,(clr #:color/base8)   "#dfdfdf" "white"))
-
-        (grey      base4)
-        (red       '(,(clr #:color/red)     "#ff6655" "red"))
-        (orange    '(,(clr #:color/orange)  "#dd8844" "brightred"))
-        (green     '(,(clr #:color/green)   "#99bb66" "green"))
-        (teal      '("#fec0cb"              "#44b9b1" "brightgreen"))
-        (yellow    '(,(clr #:color/yellow)  "#ECBE7B" "yellow"))
-        (blue      '(,(clr #:color/blue)    "#51afef" "brightblue" ))
-        (dark-blue '("#5f68de"              "#2257A0" "blue"))
-        (magenta   '(,(clr #:color/magenta) "#c678dd" "brightmagenta"))
-        (violet    '(,(clr #:color/violet)  "#a9a1e1" "magenta"))
-        (cyan      '(,(clr #:color/cyan)    "#46D9FF" "brightcyan"))
-        (dark-cyan '("#cf8191"              "#5699AF" "cyan"))
-
-        (highlight      ,(clr #:color/accent))
-        (vertical-bar   base0)
-        (selection      dark-blue)
-        (builtin        blue)
-        (comments       base5)
-        (doc-comments   base7)
-        (constants      yellow)
-        (functions      blue)
-        (keywords       magenta)
-        (methods        teal)
-        (operators      cyan)
-        (type           orange)
-        (strings        green)
-        (variables      red)
-        (numbers        dark-cyan)
-        (region         `(,(doom-lighten (car bg-alt) 0.15) ,@(doom-lighten (cdr base1) 0.35)))
-        (error          red)
-        (warning        yellow)
-        (success        green)
-        (vc-modified    orange)
-        (vc-added       green)
-        (vc-deleted     red))
-
-       ;; Doom base theme overrides.
-       ((cursor :background "#fdd94a")
-        ((font-lock-comment-delimiter-face &override) :foreground base7)
-        ((font-lock-doc-face &override) :foreground violet)
-        ((line-number-current-line &override) :foreground violet)
-        (mode-line :background base1 :foreground fg)
-        (mode-line-inactive :background base3 :foreground base6)
-        (org-block :background (doom-lighten bg-alt 0.02))
-        (rainbow-delimiters-depth-1-face :foreground fg)
-        (rainbow-delimiters-depth-2-face :foreground magenta)
-        (rainbow-delimiters-depth-3-face :foreground blue)
-        (rainbow-delimiters-depth-4-face :foreground cyan)
-        (rainbow-delimiters-depth-5-face :foreground green)
-        (rainbow-delimiters-depth-6-face :foreground yellow)
-        (rainbow-delimiters-depth-7-face :foreground orange)
-        (rainbow-delimiters-depth-8-face :foreground red)
-        (rainbow-delimiters-depth-9-face :foreground teal)
-
-        ;; Custom faces.
-        (clojure-character-face :foreground teal :weight 'bold)
-        (doom-modeline-bar :background highlight)
-        (doom-modeline-buffer-file :inherit 'mode-line-buffer-id :weight 'bold)
-        (doom-modeline-buffer-path :inherit 'mode-line-emphasis :weight 'bold)
-        (doom-modeline-buffer-project-root :foreground green :weight 'bold)
-        (solaire-mode-line-face :inherit 'mode-line :background base0)
-        (solaire-mode-line-inactive-face :inherit 'mode-line-inactive :background base2)
-
-        ;; These are present in the `doom-one' theme on which mine is based but I'm not sure if I need or want them. I'm keeping them around for now.
-        (css-proprietary-property :foreground orange)
-        (css-property :foreground green)
-        (css-selector :foreground blue)
-        (font-latex-math-face :foreground green)
-        (markdown-markup-face :foreground base5)
-        (markdown-header-face :inherit 'bold :foreground red)
-        ((markdown-code-face &override) :background (doom-lighten base3 0.05))
-        (rjsx-tag :foreground red)
-        (rjsx-attr :foreground orange))))))
-#+end_src
-***** Fonts
-#+begin_src scheme
-(define* (doom-fonts #:key
-                     font
-                     font-variable-pitch
-                     font-unicode
-                     font-serif)
-  (append
-   (list
-    (doom-service
-     'fonts
-     #:config
-     `((defun biome--set-font-safe (sym font)
-         (when (find-font font)
-           (set sym font)))
-
-       (biome--set-font-safe
-        'doom-font
-        (font-spec ;; :family ,(assoc-ref font #:font/name)
-                   ;; Work around what I suspect is a PGTK issue. It's doesn't happen in Emacs 29, remove this when its released.
-                   :family ,(if (equal? (assoc-ref font #:font/weight) 'medium)
-                                (string-append (assoc-ref font #:font/name) " Medium")
-                                (assoc-ref font #:font/name))
-                   :size ,(+ (assoc-ref font #:font/size) 2)
-                   :weight ',(or (assoc-ref font #:font/weight) 'normal)))
-
-       (-each '((doom-variable-pitch-font ,(assoc-ref font-variable-pitch #:font/name))
-                (doom-unicode-font ,(assoc-ref font-unicode #:font/name))
-                (doom-serif-font ,(assoc-ref font-serif #:font/name)))
-              (-lambda ((font-sym family))
-                       (biome--set-font-safe
-                        font-sym
-                        (font-spec :family family)))))))
-
-   (doom-dash)))
 #+end_src
 **** XDG
 #+begin_src scheme
