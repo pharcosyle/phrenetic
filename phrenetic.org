@@ -6526,7 +6526,9 @@ Maybe this shouldn't be a standalone component but rather added by programs that
         `((daemonize)
 
           (font . ,(assoc-ref font #:font/name))
-          ,#~(string-append "image=" #$image) ; HACK `serialize-swaylock-config` doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
+          ,@(if image
+                (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
+                '())
 
           (indicator)
           (indicator-idle-visible)
