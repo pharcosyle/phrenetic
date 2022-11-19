@@ -1892,7 +1892,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             sway-start
             swaylock-wm-piece
             swaylock-screen-locker
-            swaylock-screen-locker-immediate
             swayidle-wm-piece
             swayidle-idle-manager
             mako-wm-piece
@@ -6569,14 +6568,11 @@ Maybe this shouldn't be a standalone component but rather added by programs that
           ,@(or extra-config '()))))))))
 
 (define (swaylock-screen-locker)
-  (list
-   "/run/setuid-programs/swaylock"))
-
-(define (swaylock-screen-locker-immediate)
-  (append
-   (swaylock-screen-locker)
-   (list
-    "--grace=0")))
+  (let ((swaylock "/run/setuid-programs/swaylock"))
+    `((#:screen-locker/lock . ,(list swaylock))
+      (#:screen-locker/lock-immediately . ,(list
+                                            swaylock
+                                            "--grace=0")))))
 #+end_src
 ******** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
@@ -8553,7 +8549,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (date-format %date-format)
                            (time-format %time-format)
                            emacs-editor)
-  (let ((session #:session/sway))
+  (let ((session #:session/sway)
+        (screen-locker (swaylock-screen-locker)))
     (append
      (sway-wm #:pipewire? pipewire?
               #:doom? doom?
@@ -8561,7 +8558,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:bg-image wallpaper
               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
               #:idle-manager (swayidle-idle-manager)
-              #:screen-locker (swaylock-screen-locker-immediate)
+              #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
               #:notifier (mako-notifier (doom-menu (assoc-ref emacs-editor #:emacs/handler)))
               #:status-bar (waybar-status-bar)
               #:applets (list
@@ -8578,7 +8575,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         #:date-format date-format
                         #:time-format time-format)
      (swayidle-wm-piece #:session session
-                        #:screen-locker (swaylock-screen-locker))
+                        #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
      (mako-wm-piece #:colors colors
                     #:font (assoc-ref fonts font-variable-pitch))
      (waybar-wm-piece #:colors colors
