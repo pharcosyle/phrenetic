@@ -1917,14 +1917,13 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             protonvpn-prog
             ssh-prog
             doom-dired-prog
-            doom-app-launcher-prog
-            doom-menu
-            doom-app-launcher
             ;; nano-prog
             doom-trash-prog
             git-prog
             misc-progs
             pavucontrol-app
+            doom-menu-app
+            doom-menu
             zoom-app
             gimp-app
             alacritty-app
@@ -7775,42 +7774,6 @@ use_guixs() {
                              #:default-for '(inode/directory)))
          '()))))
 #+end_src
-**** Menus and launchers
-***** Doom app launcher
-#+begin_src scheme
-(define (doom-app-launcher-prog)
-  (list
-   (doom-service
-    'app-launcher
-    #:packages
-    '((package! app-launcher
-                :recipe (:host github
-                         :repo "SebastienWae/app-launcher")
-                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
-
-(define (doom-menu emacs-handler)
-  (list
-   (emacs-handler
-    "menu"
-    '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
-    #:assistant? #t
-    #:assistant-title "Menu"
-    #:minibuffer? #t
-    #:input? #t)))
-
-(define (doom-app-launcher emacs-handler)
-  (list
-   (emacs-handler
-    "app-launcher"
-    '((app-launcher-run-app))
-    #:assistant? #t
-    #:assistant-title "App Launcher"
-    #:minibuffer? #t)))
-#+end_src
-***** Rofi
-#+begin_src scheme
-;; ...
-#+end_src
 **** Text editors
 ***** Nano
 The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp.
@@ -7948,6 +7911,41 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
        #:ignore '(((#:path . ("pavucontrol.ini" #:xdg-base "XDG_CONFIG_HOME"))))))) ; Pavucontrol overwrites the current file (or a symlink) so we can't store this. Let's just ignore it.
 
    (or gtk-services '())))
+#+end_src
+***** Menus
+****** Doom menu
+#+begin_src scheme
+;; Emacs already "has a menu" in the form of `completing-read', all we need is something to serve the role of application launcher.
+(define (doom-menu-app)
+  (list
+   (doom-service
+    'menu
+    #:packages
+    '((package! app-launcher
+                :recipe (:host github
+                         :repo "SebastienWae/app-launcher")
+                :pin "d5015e394b0a666a8c7c4d4bdf786266e773b145")))))
+
+(define (doom-menu emacs-handler)
+  `((#:menu/menu . ,(list
+                     (emacs-handler
+                      "menu"
+                      '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
+                      #:assistant? #t
+                      #:assistant-title "Menu"
+                      #:minibuffer? #t
+                      #:input? #t)))
+    (#:menu/app-launcher . ,(list
+                             (emacs-handler
+                              "app-launcher"
+                              '((app-launcher-run-app))
+                              #:assistant? #t
+                              #:assistant-title "App Launcher"
+                              #:minibuffer? #t)))))
+#+end_src
+****** Rofi
+#+begin_src scheme
+;; ...
 #+end_src
 ***** Messaging
 ****** Zoom
@@ -8551,7 +8549,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (time-format %time-format)
                            emacs-editor)
   (let ((session #:session/sway)
-        (screen-locker (swaylock-screen-locker)))
+        (screen-locker (swaylock-screen-locker))
+        (menu (doom-menu (assoc-ref emacs-editor #:emacs/handler))))
     (append
      (sway-wm #:pipewire? pipewire?
               #:doom? doom?
@@ -8560,13 +8559,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
               #:idle-manager (swayidle-idle-manager)
               #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
-              #:notifier (mako-notifier (doom-menu (assoc-ref emacs-editor #:emacs/handler)))
+              #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
               #:status-bar (waybar-status-bar)
               #:applets (list
                          (network-manager-applet)
                          ;; (gammastep-applet)
                          (udiskie-applet))
-              #:app-launcher (doom-app-launcher (assoc-ref emacs-editor #:emacs/handler))
+              #:app-launcher (assoc-ref menu #:menu/app-launcher)
               #:terminal (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
               #:backup-terminal (alacritty-terminal)
               #:emacs-editor emacs-editor)
@@ -8621,7 +8620,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                          #:icons? (assoc-ref doom-flags #:doom/icons?)
                          #:desktop? desktop?
                          #:emacs-handler (assoc-ref emacs-editor #:emacs/handler))
-        (doom-app-launcher-prog)
         (doom-trash-prog))
        '())
    (misc-progs)))
@@ -8646,6 +8644,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (append
      (pavucontrol-app #:stateless? stateless?
                       #:gtk-services gtk)
+     (doom-menu-app)
      ;; (zoom-app #:stateless? stateless?
      ;;           #:qt-services qt)
      ;; (gimp-app #:stateless? stateless?
