@@ -6147,12 +6147,16 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 #+end_src
 ***** Desktop TTY
 #+begin_src scheme
-(define* (desktop-tty #:key start-cmd)
+(define* (desktop-tty #:key
+                      sessions
+                      start-cmds)
   (list
    (simple-service
     'desktop-tty-default-session-start
     home-profile-service-type
-    (list (default-session-start start-cmd)))))
+    (list (default-session-start
+            (match-let (((default-session _ ...) sessions))
+              (assoc-ref start-cmds default-session)))))))
 
 (define (default-session-start cmd)
   (package
@@ -8552,7 +8556,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       desktop?
                       pipewire?
                       login-manager
-                      desktop-tty-start-cmd
+                      desktop-tty-start-cmds
                       sessions
                       sway-environment)
   (append
@@ -8586,7 +8590,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (if login-manager
               (case login-manager
                 ((#:lm/gdm) (gdm #:stateless? stateless?)))
-              (desktop-tty #:start-cmd desktop-tty-start-cmd))
+              (desktop-tty #:sessions sessions
+                           #:start-cmds desktop-tty-start-cmds))
           (if (member #:session/gnome (or sessions '()))
               (gnome-desktop #:stateless? stateless?) '())
           (if (member #:session/sway (or sessions '()))
@@ -8757,7 +8762,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   pipewire?
                   login-manager
                   sessions
-                  (default-session #:session/sway)
                   email
                   projects)
   (let* ((login-shell #:shell/bash)
@@ -8786,9 +8790,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   #:desktop? desktop?
                   #:pipewire? pipewire?
                   #:login-manager login-manager
-                  #:desktop-tty-start-cmd (case default-session
-                                            ((#:session/sway) (sway-start pipewire?))
-                                            ((#:session/gnome) (gnome-start)))
+                  #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                             (#:session/sway . ,(sway-start pipewire?)))
                   #:sessions sessions
                   #:sway-environment (sway-environment #:pipewire? pipewire?
                                                        #:doom? doom?
