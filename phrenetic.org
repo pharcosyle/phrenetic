@@ -8689,6 +8689,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   pipewire?
                   login-manager
                   sessions
+                  (default-session #:session/sway)
                   email
                   projects)
   (let* ((login-shell #:shell/bash)
@@ -8717,7 +8718,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   #:desktop? desktop?
                   #:pipewire? pipewire?
                   #:login-manager login-manager
-                  #:desktop-tty-start-cmd (sway-start pipewire?)
+                  #:desktop-tty-start-cmd (case default-session
+                                            ((#:session/sway) (sway-start pipewire?))
+                                            ((#:session/gnome) (gnome-start)))
                   #:sessions sessions
                   #:sway-environment (sway-environment #:pipewire? pipewire?
                                                        #:doom? doom?
