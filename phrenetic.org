@@ -8547,10 +8547,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            font-variable-pitch
                            (date-format %date-format)
                            (time-format %time-format)
-                           emacs-editor)
-  (let ((session #:session/sway)
-        (screen-locker (swaylock-screen-locker))
-        (menu (doom-menu (assoc-ref emacs-editor #:emacs/handler))))
+                           emacs-editor
+                           (screen-locker (swaylock-screen-locker))
+                           (menu (doom-menu (assoc-ref emacs-editor #:emacs/handler))))
+  (let ((session #:session/sway))
     (append
      (sway-wm #:pipewire? pipewire?
               #:doom? doom?
