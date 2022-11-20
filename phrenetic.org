@@ -4737,9 +4737,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 ;; (write-current-commits)
 #+end_src
 **** Doom services
-***** Main
+***** Core
 #+begin_src scheme
-(define* (doom-main #:key
+(define* (doom-core #:key
                     stateless?
                     evil?
                     icons?
@@ -8809,7 +8809,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (if doom?
          (append
           (doom #:stateless? stateless?
-                #:services (doom-main #:stateless? stateless?
+                #:services (doom-core #:stateless? stateless?
                                       #:evil? (assoc-ref doom-flags #:doom/evil?)
                                       #:icons? (assoc-ref doom-flags #:doom/icons?)
                                       #:email email))
