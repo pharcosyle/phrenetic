@@ -2335,7 +2335,7 @@ SAVEHIST=$HISTSIZE
                          assistant?
                          assistant-title
                          minibuffer?
-                         stdin?)
+                         input?)
   (program-file
    (string-append "emacs-handler-" name)
    #~(begin
@@ -2343,7 +2343,7 @@ SAVEHIST=$HISTSIZE
                     ((ice-9 textual-ports) #:select (get-string-all put-string)))
 
        (let* ((args (cdr (command-line)))
-              (input (if #$stdin?
+              (input (if #$input?
                          (string-drop-right (get-string-all (current-input-port)) 1)
                          #f))
               (pipe (let ((cmd (list
@@ -7795,7 +7795,7 @@ use_guixs() {
     #:assistant? #t
     #:assistant-title "Menu"
     #:minibuffer? #t
-    #:stdin? #t)))
+    #:input? #t)))
 
 (define (doom-app-launcher emacs-handler)
   (list
