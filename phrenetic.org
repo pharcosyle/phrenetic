@@ -4765,8 +4765,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      (doom-service
       name
       #:modules
-      (let ((childframe? #t)
-            (icons? #t))
+      (let ((childframe? #t))
         `((#:completion
            (company ,@(if childframe? '(+childframe) '()))
            (vertico ,@(if icons? '(+icons) '())))
