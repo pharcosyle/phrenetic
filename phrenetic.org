@@ -8608,7 +8608,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (time-format %time-format)
                            emacs-editor
                            (screen-locker (swaylock-screen-locker))
-                           (menu (doom-menu (assoc-ref emacs-editor #:emacs/handler))))
+                           (menu (if doom?
+                                     (doom-menu (assoc-ref emacs-editor #:emacs/handler))
+                                     (rofi-menu #:wayland? #t))))
   (let ((session #:session/sway))
     (append
      (sway-wm #:pipewire? pipewire?
@@ -8625,8 +8627,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                          ;; (gammastep-applet)
                          (udiskie-applet))
               #:app-launcher (assoc-ref menu #:menu/app-launcher)
-              #:terminal (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
-              #:backup-terminal (alacritty-terminal)
+              #:terminal (if doom?
+                             (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
+                             (alacritty-terminal))
+              #:backup-terminal (if doom?
+                                    (alacritty-terminal) #f)
               #:emacs-editor emacs-editor)
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
@@ -8703,7 +8708,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (append
      (pavucontrol-app #:stateless? stateless?
                       #:gtk-services gtk)
-     (doom-menu-app)
+     (if doom?
+         (doom-menu-app)
+         (rofi-app #:stateless? stateless?
+                   #:wayland? wayland?
+                   #:colors colors
+                   #:font (assoc-ref fonts font-variable-pitch)))
      ;; (zoom-app #:stateless? stateless?
      ;;           #:qt-services qt)
      ;; (gimp-app #:stateless? stateless?
