@@ -1877,7 +1877,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %wallpapers
             font-library
             %fonts
-            %font-packages-useful
+            %font-packages-misc
             %date-format
             %time-format
             xdg
@@ -6006,7 +6006,7 @@ nix-channel --update
                         (#:font/package . ,font-iosevka-etoile)))
       (#:fonts/unicode . ((#:font/name . "Noto Sans")
                           (#:font/package . ,font-google-noto))))))
-(define %font-packages-useful
+(define %font-packages-misc
   (list font-noto-color-emoji
         font-liberation))
 #+end_src
@@ -8835,7 +8835,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                     (map (lambda (font)
                                            (assoc-ref font #:font/package))
                                          fonts)
-                                    %font-packages-useful))
+                                    %font-packages-misc))
           (xdg #:stateless? stateless?)
           (mesa #:stateless? stateless?)
           (applications #:stateless? stateless?
