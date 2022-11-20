@@ -6400,7 +6400,9 @@ Maybe this shouldn't be a standalone component but rather added by programs that
         (bindings
          (append
           `((bindsym $mod+Return exec ,@terminal)
-            (bindsym $mod+Control+Shift+Return exec ,@(or backup-terminal terminal))
+            ,@(if backup-terminal
+                  `((bindsym $mod+Control+Shift+Return exec ,@backup-terminal))
+                  '())
             (bindsym $mod+Shift+d exec ,@app-launcher)
             (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
                                                      (list
