@@ -1831,7 +1831,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
   #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar waybar-cpu-histogram))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep wl-clipboard))
+  #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
@@ -1924,6 +1924,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             pavucontrol-app
             doom-menu-app
             doom-menu
+            rofi-app
+            rofi-menu
             zoom-app
             gimp-app
             alacritty-app
@@ -7945,7 +7947,62 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 #+end_src
 ****** Rofi
 #+begin_src scheme
-;; ...
+(define* (rofi-app #:key
+                   stateless?
+                   wayland?
+                   colors
+                   font)
+  (list
+   (service
+    home-rofi-service-type
+    (home-rofi-configuration
+     (rofi (get-rofi-package wayland?))
+     (config-rasi
+      ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
+      `((configuration
+         ((modi . "run,ssh,drun")
+          (drun-show-actions . #t)
+          (show-icons . #t)
+          (font . ,(font-specification font))
+
+          (kb-row-tab . "")
+          (kb-row-select . "Tab")
+          (kb-secondary-paste . "Control+y")
+          (kb-remove-word-forward . "Alt+d")
+          (kb-remove-word-back . "Control+w,Control+BackSpace")
+          (kb-clear-line . "Control+slash")
+          (kb-page-next . "Control+v")
+          (kb-page-prev . "Alt+v")))
+
+        ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
+        ;; ,#~"@theme \"paper-float\""
+        ;; ,@(let ((clr (lambda* (color #:optional alpha)
+        ;;                (as-> color $
+        ;;                      (assoc-ref colors $)
+        ;;                      (string-append $ (or alpha ""))))))
+        ;;     `((*
+        ;;        (;; (white . ,(clr #:color/fg))
+        ;;         ;; (black . ,(clr #:color/bg))
+        ;;         ;; (grey . ,(clr #:color/...))
+        ;;         ;; (blue . ,(clr #:color/blue))
+        ;;         (background . "#000000BF")))))
+        ;; (window
+        ;;  ((transparency . "real")))
+        ))))
+
+   (when stateless?
+     (home-stateless-service
+      'rofi
+      #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:store . #:machine)))))))
+
+(define (rofi-menu wayland?)
+  (let ((rofi (file-append (get-rofi-package wayland?) "/bin/rofi")))
+    `((#:menu/menu . ,(list rofi "-dmenu" "-p"))
+      (#:menu/app-launcher . ,(list rofi "-show" "drun")))))
+
+(define (get-rofi-package wayland?)
+  (if wayland? rofi-wayland rofi))
 #+end_src
 ***** Messaging
 ****** Zoom
