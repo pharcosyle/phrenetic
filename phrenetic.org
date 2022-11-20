@@ -5593,6 +5593,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                          doom?)
   (append
    (list
+    ;; Typically we would add the package to the home profile to not depend on packages being installed at the system level, however in Guile's case it will (I think?) always be installed system-level and users probably want the same version of Guile as the one on the system anyway.
     ;; (simple-service
     ;;  'guile-add-packages
     ;;  home-profile-service-type
@@ -6090,7 +6091,7 @@ nix-channel --update
        '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
           (#:store . #:machine)
           (#:mode . #o700))
-         ;; `XDG_LOG_HOME' isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
+         ;; Handle `XDG_LOG_HOME' here even though it isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
          ((#:path . (#:xdg-base "XDG_LOG_HOME"))
           (#:store . #:machine)))
        (let ((normalize
@@ -6115,7 +6116,7 @@ nix-channel --update
             (#:store . #:machine)))))))))
 #+end_src
 **** Mesa
-Maybe this shouldn't be a standalone component but rather added by programs that use Mesa.
+Maybe this shouldn't be a standalone component but rather added by programs that "use Mesa", if that's even the right way of thinking about it.
 #+begin_src scheme
 (define* (mesa #:key stateless?)
   (list
