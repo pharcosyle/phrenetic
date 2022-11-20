@@ -4759,64 +4759,64 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 (define* (doom-general #:key
                        stateless?
                        evil?
-                       icons?)
+                       icons?
+                       (childframe? #t))
   (let ((name 'general))
     (cons
      (doom-service
       name
       #:modules
-      (let ((childframe? #t))
-        `((#:completion
-           (company ,@(if childframe? '(+childframe) '()))
-           (vertico ,@(if icons? '(+icons) '())))
+      `((#:completion
+         (company ,@(if childframe? '(+childframe) '()))
+         (vertico ,@(if icons? '(+icons) '())))
 
-          (#:ui
-           doom
-           doom-dashboard
-           (emoji +unicode)
-           hl-todo
-           hydra
-           indent-guides
-           ;; (ligatures +extra)
-           modeline
-           nav-flash
-           ophints
-           (popup +defaults +all)
-           treemacs
-           vi-tilde-fringe
-           window-select
-           workspaces
-           zen)
+        (#:ui
+         doom
+         doom-dashboard
+         (emoji +unicode)
+         hl-todo
+         hydra
+         indent-guides
+         ;; (ligatures +extra)
+         modeline
+         nav-flash
+         ophints
+         (popup +defaults +all)
+         treemacs
+         vi-tilde-fringe
+         window-select
+         workspaces
+         zen)
 
-          (#:editor
-           ,@(if evil? '((evil +everywhere)) '())
-           file-templates
-           fold
-           format
-           lispy
-           multiple-cursors
-           rotate-text
-           snippets
-           word-wrap)
+        (#:editor
+         ,@(if evil? '((evil +everywhere)) '())
+         file-templates
+         fold
+         format
+         lispy
+         multiple-cursors
+         rotate-text
+         snippets
+         word-wrap)
 
-          (#:emacs
-           electric
-           (ibuffer ,@(if icons? '(+icons) '())))
+        (#:emacs
+         electric
+         (ibuffer ,@(if icons? '(+icons) '())))
 
-          (#:checkers
-           (syntax ,@(if childframe? '(+childframe) '())))
+        (#:checkers
+         (syntax ,@(if childframe? '(+childframe) '())))
 
-          (#:tools
-           (eval +overlay)
-           lookup
-           (pass +auth)
-           pdf
-           prodigy
-           rgb
-           taskrunner)
+        (#:tools
+         (eval +overlay)
+         lookup
+         (pass +auth)
+         pdf
+         prodigy
+         rgb
+         taskrunner)
 
-          (#:config
-           (default +bindings +smartparens))))
+        (#:config
+         (default +bindings +smartparens)))
 
       #:packages
       '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
