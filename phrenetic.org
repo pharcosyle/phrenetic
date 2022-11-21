@@ -2833,8 +2833,9 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
               (lambda* (#:key inputs #:allow-other-keys)
                 (emacs-substitute-variables "tldr.el"
                   ("tldr-directory-path" (search-input-directory inputs "share/tldr-pages")))))))))
-    (inputs (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
-              (prepend tldr-pages)))))
+    (inputs
+     (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
+       (prepend tldr-pages)))))
 #+end_src
 ******* tldr pages
 #+begin_src scheme
@@ -8887,8 +8888,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                      (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
        (inputs
         (modify-inputs (package-inputs haskell-apps:kmonad)
-                       (prepend ghc-hspec
-                                hspec-discover))))
+          (prepend ghc-hspec
+                   hspec-discover))))
      #:commit commit
      #:hash "1kgnf0yv7h8scfacwdj3l1lrmjibjri5ybbnyw5m8wn6sjxbpaab")))
 #+end_src
