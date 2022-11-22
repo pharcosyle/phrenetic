@@ -232,7 +232,6 @@ Run with ~sudo~.
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  #:use-module ((gnu packages gnupg) #:select (guile-gcrypt))
   #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux+udev))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
@@ -1049,9 +1048,9 @@ Must succeed [[*File systems][File systems]] component. Including this component
     (list (service-extension boot-service-type
                              (lambda (config)
                                (boot-gexp
-                                (assoc-ref config #:password-files)
                                 (assoc-ref config #:symlink-log?)
-                                (assoc-ref config #:machine-dir))))
+                                (assoc-ref config #:machine-dir)
+                                (assoc-ref config #:password-files))))
           (service-extension activation-service-type
                              (lambda (config)
                                (activation-gexp
@@ -1098,33 +1097,44 @@ Must succeed [[*File systems][File systems]] component. Including this component
 #+end_src
 ******* Boot
 #+begin_src scheme
-(define (boot-gexp password-files symlink-log? machine-dir)
+(define (boot-gexp symlink-log? log-state-dir password-files)
   (gexps->gexp
-   (append
-    (list populate-root-gexp
-          (populate-passwords-gexp password-files))
-    (if symlink-log?
-        (list (symlink-log-gexp machine-dir)) '()))))
+   (list (populate-root-gexp symlink-log? log-state-dir)
+         (populate-passwords-gexp password-files))))
 
-(define populate-root-gexp
-  (with-extensions (list guile-gcrypt)
-    (with-imported-modules (source-module-closure
-                            '((gnu build install)))
-      #~(begin
-          (use-modules ((gnu build install) #:select (populate-root-file-system)))
+(define (populate-root-gexp symlink-log? log-state-dir)
+  (with-imported-modules '((guix build utils))
+    #~(begin
+        (use-modules ((guix build utils) #:select (mkdir-p))
+                     ((ice-9 match) #:select (match-lambda)))
 
-          ;; HACK Use `populate-root-file-system' (noramlly run during system install) to set up the empty root but we don't want ALL of the changes it makes so undo those.
-          (let* ((system-path "/var/guix/profiles/system")
-                 (system-1-path "/var/guix/profiles/system-1-link")
-                 (system-1-exists? (file-exists? system-1-path))
-                 (system-link (readlink system-path))
-                 (system-1-link (if system-1-exists?
-                                    (readlink system-1-path)
-                                    system-link)))
-            (populate-root-file-system system-1-link ""
-                                       #:extras `((,system-path -> ,system-link)))
-            (unless system-1-exists?
-              (delete-file system-1-path)))))))
+        (for-each
+         (match-lambda
+           (dir
+            (mkdir-p dir))
+           ((dir . mode)
+            (mkdir-p dir)
+            (chmod dir mode)))
+         ;; Taken from `populate-root-file-system'. Some of these might not be necessary (for example, "/tmp" and "/var/run" are deleted and recreated in `cleanup-service-type') but it's safest to do them here anyway just incase some early-running code assumes their presence.
+         '("/bin"
+           "/etc"
+           ("/gnu/store" . #o1775)
+           "/home"
+           "/mnt"
+           "/run"
+           ("/tmp" . #o1777)
+           "/var/db"
+           "/var/empty"
+           ("/var/lock" . #o1777)
+           "/var/run"
+           ("/var/tmp" . #o1777)))
+
+        (let ((log "/var/log"))
+          (if #$symlink-log?
+              (let ((log-state (string-append #$log-state-dir log)))
+                (mkdir-p log-state)
+                (symlink log-state log))
+              (mkdir-p log))))))
 
 ;; HACK Guix assumes /etc/shadow is persistent between reboots and doesn't allow specifying a password file (like Nix's `passwordFile') so imitate this functionality by writing a shadow file on every boot populated with our users and their password hashes. The file doesn't have to be complete: Guix will add the missing entries (for system accounts, etc).
 (define (populate-passwords-gexp password-files)
@@ -1145,17 +1155,6 @@ Must succeed [[*File systems][File systems]] component. Including this component
                                 ""))
                   (last-change #f))))
               '#$password-files)))))
-
-(define (symlink-log-gexp state-dir)
-  (with-imported-modules '((guix build utils))
-    #~(begin
-        (use-modules ((guix build utils) #:select (mkdir-p)))
-
-        (let* ((log-dir "/var/log")
-               (log-state-dir (string-append #$state-dir log-dir)))
-          (rmdir log-dir) ; At the time of this writing, we know an empty log dir already exists because we run `populate-root-file-system' earlier but this code will break if that changes. It might be better to do this directory deletion inside `populate-root-file-system'.`
-          (mkdir-p log-state-dir)
-          (symlink log-state-dir log-dir)))))
 #+end_src
 ******* Activation
 #+begin_src scheme
