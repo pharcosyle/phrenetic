@@ -984,7 +984,7 @@ Determine it dynamically or make it an argument.
 - At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
 - Make it 1.5x memory size if disk size allows.
 **** Stateless
-Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] components. Including this component after /all/ others is safest: to be useful, the stateless service's activation must come before that of other services that create state (also to this end the ~stateless-service-type~ is appended, not prepended, to operating system services).
+Must succeed [[*File systems][File systems]] component. Including this component after /all/ others is safest: to be useful, the stateless service's activation must come before that of other services that create state (also to this end the ~stateless-service-type~ is appended, not prepended, to operating system services).
 #+begin_src scheme
 (define* (stateless os
                     #:key
