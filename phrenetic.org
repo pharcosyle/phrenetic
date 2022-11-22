@@ -929,9 +929,10 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 (define (create-swapfile-gexp swapfile no-cow?)
   (with-imported-modules '((guix build utils))
     #~(begin
-        (use-modules ((guix build utils) #:select (invoke)))
+        (use-modules ((guix build utils) #:select (invoke mkdir-p)))
 
         (when (not (file-exists? #$swapfile))
+          (mkdir-p (dirname #$swapfile))
           (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
           (when #$no-cow?
             (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
