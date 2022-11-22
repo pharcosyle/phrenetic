@@ -467,6 +467,7 @@ Run with ~sudo~.
      (service guix-service-type))
     (if nonguix-substitutes?
         (list (nonguix-substitutes-service)) '())
+    ;; TODO Should these (at least e.g. "/var/guix") be in Stateless > Guix System?
     (if stateless?
         (list
          (stateless-service
