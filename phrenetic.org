@@ -505,21 +505,50 @@ Run with ~sudo~.
 #+end_src
 **** Nix
 #+begin_src scheme
-(define-system-comp (nix-pm #:key stateless?)
-  (services
-   (append
-    (operating-system-user-services os)
-    (list
-     (service nix-service-type))
+(define* (nix-pm os
+                 #:key
+                 stateless?
+                 stateless-machine-dir)
+  (as-> os $
+    (system-comp
+     $
+     (services
+      (append
+       (operating-system-user-services os)
+       (list
+        (service nix-service-type)))))
     (if stateless?
-        (list
-         (stateless-service
-          'nix-pm
-          #:ignore `(((#:path . "/nix/store/"))
-                     ((#:path . "/nix/var/nix/"))
-                     ((#:path . "/nix/var/log/nix/"))
-                     ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/"))))))
-        '()))))
+        (stateless-nix $ #:machine-dir stateless-machine-dir) $)))
+
+(define* (stateless-nix os #:key machine-dir)
+  (let ((nix-machine-dir (string-append machine-dir "/nix"))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file system (at "/").
+    (system-comp
+     os
+     (file-systems
+      (cons* (file-system
+               (device nix-machine-dir)
+               (mount-point "/nix")
+               (type "none")
+               (flags '(bind-mount))
+               (check? #f))
+             (operating-system-file-systems os)))
+     (services
+      (append
+       (operating-system-user-services os)
+       (list
+        (simple-service 'create-nix-dir
+                        activation-service-type
+                        #~(when (not (file-exists? #$nix-machine-dir))
+                            (mkdir #$nix-machine-dir)))
+        (stateless-service
+         'nix-pm
+         #:ignore '(((#:path . "/nix/store/"))
+                    ((#:path . "/nix/var/nix/"))
+                    ((#:path . "/nix/var/log/nix/"))
+                    ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/")))
+                    ;; TODO maybe do each sub-path ("/nix/store", "/nix/var/nix", and "/nix/var/log/nix") here like I do above.
+                    ((#:path . "nix/")
+                     (#:store . #:machine))))))))))
 #+end_src
 *** Console
 **** Fonts
@@ -962,8 +991,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                     machine-dir
                     hes
                     state-users
-                    password-users
-                    nix?)
+                    password-users)
   (as-> os $
     (system-comp
      $
@@ -998,9 +1026,7 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
                                                  `(,user . ,(string-append machine-dir "/.passwords/" user)))))
                    #:symlink-log? #t))))))
 
-    (stateless-guix-system $)
-    (if nix?
-        (stateless-nix $ #:machine-dir machine-dir) $)))
+    (stateless-guix-system $)))
 
 (define %stateless-persist-dir "/.persist")
 (define %stateless-machine-dir "/.machine")
@@ -1385,35 +1411,6 @@ Must succeed [[*File systems][File systems]] and [[*Accounts][Accounts]] compone
           "Defaults lecture=never" "\n")
          sudoers-spec))))
 #+end_src
-***** Nix
-- TODO Ideally I'd have this in the "Nix" component but it needs the ~stateless-machine-dir~ which I (maybe?) don't want to pass around to system components.
-#+begin_src scheme
-(define* (stateless-nix os #:key machine-dir)
-  (let* ((nix-prefix "/nix")
-         (nix-machine-dir (string-append machine-dir nix-prefix))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file sysmte (at "/").
-    (system-comp
-     os
-     (file-systems
-      (cons* (file-system
-               (device nix-machine-dir)
-               (mount-point nix-prefix)
-               (type "none")
-               (flags '(bind-mount))
-               (check? #f))
-             (operating-system-file-systems os)))
-     (services
-      (append
-       (operating-system-user-services os)
-       (list
-        (simple-service 'create-nix-dir
-                        activation-service-type
-                        #~(when (not (file-exists? #$nix-machine-dir))
-                            (mkdir #$nix-machine-dir)))
-        (stateless-service
-         'nix
-         #:ignore '(((#:path . "nix/")
-                     (#:store . #:machine))))))))))
-#+end_src
 *** Hardware-specific
 **** Console
 ***** Console keyboard layouts
@@ -1667,7 +1664,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   auto-login?
                   auto-login-user
                   sessions
-                  stateless?)
+                  stateless?
+                  stateless-machine-dir)
   (let ((number-of-ttys 6)
         (greetd? #t))
     (as-> os $
@@ -1683,7 +1681,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       (if guix?
           (guix-pm $ #:stateless? stateless?) $)
       (if nix?
-          (nix-pm $ #:stateless? stateless?) $)
+          (nix-pm $ #:stateless? stateless?
+                  #:stateless-machine-dir stateless-machine-dir)
+          $)
       (if console?
           (as-> $ $
             (console-fonts $ #:number-of-ttys number-of-ttys)
@@ -1750,8 +1750,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            stateless-machine-dir
                            stateless-hes
                            stateless-state-users
-                           stateless-password-users
-                           stateless-nix?)
+                           stateless-password-users)
   (as-> os $
     (case filesystem
       ;; ((#:filesystem/ext4)
@@ -1778,8 +1777,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                    #:machine-dir stateless-machine-dir
                    #:hes stateless-hes
                    #:state-users stateless-state-users
-                   #:password-users stateless-password-users
-                   #:nix? stateless-nix?)
+                   #:password-users stateless-password-users)
         $)))
 #+end_src
 *** Macbook hardware
@@ -9665,8 +9663,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                       (,aux-name . ,aux-he-stateless?)
                                                                       (,guest-name . ,guest-he-stateless?)))
                              #:stateless-password-users (list primary-name
-                                                              aux-name)
-                             #:stateless-nix? nix?)
+                                                              aux-name))
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
@@ -9768,22 +9765,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (append
    (os+he-shared-opts)
    `(#:stateless-persist-dir ,stateless-persist-dir
-     #:stateless-machine-dir ,stateless-machine-dir
      #:doom? ,doom?
      #:doom-flags ,doom-flags)))
 #+end_src
 ***** OS+HE shared opts
 #+begin_src scheme
-(define nix? #t)
-
 (define (os+he-shared-opts)
   `(#:guix? #t
-    #:nix? ,nix?
+    #:nix? #t
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
     ;; #:login-manager #:lm/gdm
-    ))
+    #:stateless-machine-dir ,stateless-machine-dir))
 #+end_src
 **** Installer
 #+begin_src scheme
