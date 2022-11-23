@@ -982,7 +982,7 @@ Determine it dynamically or make it an argument.
 - At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
 - Make it 1.5x memory size if disk size allows.
 **** Stateless
-Must succeed [[*File systems][File systems]] component. Including this component after /all/ others is safest: to be useful, the stateless service's activation must come before that of other services that create state (also to this end the ~stateless-service-type~ is appended, not prepended, to operating system services).
+Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
 #+begin_src scheme
 (define* (stateless os
                     #:key
@@ -1010,6 +1010,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
                         (needed-for-boot? #t))
                       fs)))))
      (services
+      ;; Important: put the stateless-service *after* the rest of the operating system services.
       (append
        (operating-system-user-services os)
        (list
