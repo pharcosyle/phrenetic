@@ -294,8 +294,7 @@ Run with ~sudo~.
             swap
             %swapfile
             stateless
-            %stateless-persist-dir
-            %stateless-machine-dir
+            %stateless-storage-paths
             %stateless-mountables
             console-keyboard-layouts
             macbook
@@ -369,11 +368,11 @@ Run with ~sudo~.
          (stateless-service
           'base-services
           #:state `(((#:path . ,%random-seed-file)
-                     (#:store . #:machine))
+                     (#:storage . #:machine))
                     ((#:path . "/var/db/nscd/")
-                     (#:store . #:machine))
+                     (#:storage . #:machine))
                     ((#:path . "/.lastweek")
-                     (#:store . #:machine)))
+                     (#:storage . #:machine)))
           #:ignore '(((#:path . "/etc/resolv.conf"))
                      ((#:path . "/etc/resolv.conf.bak"))
                      ((#:path . "/bin/sh")
@@ -472,10 +471,10 @@ Run with ~sudo~.
          (stateless-service
           'guix-pm
           #:state '(((#:path . "/etc/guix/signing-key.pub")
-                     (#:store . #:machine)
+                     (#:storage . #:machine)
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/etc/guix/signing-key.sec")
-                     (#:store . #:machine)
+                     (#:storage . #:machine)
                      (#:parent-dir-perms . ((#:mode . #o111)))))
           #:ignore `(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build: "guix system: error: path `/gnu/store/' is not in the store"
                      ((#:path . "/var/guix/"))
@@ -548,7 +547,7 @@ Run with ~sudo~.
                     ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/")))
                     ;; TODO maybe do each sub-path ("/nix/store", "/nix/var/nix", and "/nix/var/log/nix") here like I do above.
                     ((#:path . "nix/")
-                     (#:store . #:machine))))))))))
+                     (#:storage . #:machine))))))))))
 #+end_src
 *** Console
 **** Fonts
@@ -613,15 +612,15 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'desktop-base-services
           #:state '(((#:path . "/etc/machine-id")
-                     (#:store . #:machine))
+                     (#:storage . #:machine))
                     ((#:path . "/var/lib/upower/")
-                     (#:store . #:machine))
+                     (#:storage . #:machine))
                     ;; ((#:path . "/var/lib/AccountsService/")
-                    ;;  (#:store . #:machine))
+                    ;;  (#:storage . #:machine))
                     ;; ((#:path . "/var/lib/colord/")
-                    ;;  (#:store . #:machine))
+                    ;;  (#:storage . #:machine))
                     ;; ((#:path . "/var/lib/udisks2/")
-                    ;;  (#:store . #:machine))
+                    ;;  (#:storage . #:machine))
                     )
           #:ignore `(((#:path . ,(string-append (file-system-mount-point %fontconfig-file-system) "/"))
                       (#:preds . ((#:empty-dir)))))))
@@ -660,9 +659,9 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'network-manager
           #:state '(((#:path . "/etc/NetworkManager/system-connections/")
-                     (#:store . #:machine))
+                     (#:storage . #:machine))
                     ((#:path . "/var/lib/NetworkManager/")
-                     (#:store . #:machine)
+                     (#:storage . #:machine)
                      (#:mode . #o700)))))
         '()))))
 #+end_src
@@ -690,7 +689,7 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'bluetooth
           #:state '(((#:path . "/var/lib/bluetooth/")
-                     (#:store . #:machine)
+                     (#:storage . #:machine)
                      (#:mode . #o700)))))
         '()))))
 #+end_src
@@ -958,7 +957,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                  (stateless-service
                   'swapfile
                   #:ignore `(((#:path . ,target)
-                              (#:store . #:machine)))))
+                              (#:storage . #:machine)))))
                 '()))
            '()))))))
 
@@ -987,8 +986,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
 #+begin_src scheme
 (define* (stateless os
                     #:key
-                    persist-dir
-                    machine-dir
+                    storage-paths
                     hes
                     state-users
                     password-users)
@@ -1004,9 +1002,9 @@ Must succeed [[*File systems][File systems]] component. Including this component
                     (check? #f)))
            (map (lambda (fs)
                   (if (member (file-system-mount-point fs)
-                              (list "/var/guix"
-                                    persist-dir
-                                    machine-dir))
+                              (cons "/var/guix"
+                                    (map (match-lambda ((_ . dir) dir))
+                                         storage-paths)))
                       (file-system
                         (inherit fs)
                         (needed-for-boot? #t))
@@ -1016,27 +1014,37 @@ Must succeed [[*File systems][File systems]] component. Including this component
        (operating-system-user-services os)
        (list
         (service stateless-service-type
-                 `(#:persist-dir ,persist-dir
-                   #:machine-dir ,machine-dir
-                   #:hes ,hes
-                   #:state-users ,state-users
-                   #:password-files ,(->> password-users
-                                          (cons (user-account-name %root-account))
-                                          (map (lambda (user)
-                                                 `(,user . ,(string-append machine-dir "/.passwords/" user)))))
-                   #:symlink-log? #t))))))
+                 (let ((machine-dir (assoc-ref storage-paths #:machine)))
+                   `(#:storage-paths ,storage-paths
+                     #:hes ,hes
+                     #:state-users ,state-users
+                     #:password-files ,(->> password-users
+                                            (cons (user-account-name %root-account))
+                                            (map (lambda (user)
+                                                   `(,user . ,(string-append machine-dir
+                                                                             "/.passwords/"
+                                                                             user)))))
+                     #:symlink-log? #t
+                     #:log-storage-dir machine-dir)))))))
 
     (stateless-guix-system $)))
 
-(define %stateless-persist-dir "/.persist")
-(define %stateless-machine-dir "/.machine")
+(define %stateless-storage-paths
+  `((#:machine . "/.machine")
+    (#:persist . "/.persist")))
 
-(define* (%stateless-mountables #:key persist-dir machine-dir)
-  `(("boot" . "/boot")
-    ("guix-store" . "/gnu/store")
-    ("guix-var" . "/var/guix")
-    ("persist" . ,persist-dir)
-    ("machine" . ,machine-dir)))
+(define %stateless-mountables
+  (append
+   `(("boot" . "/boot")
+     ("guix-store" . "/gnu/store")
+     ("guix-var" . "/var/guix"))
+   (map (match-lambda
+          ((storage . dir)
+           (cons (case storage
+                   ((#:machine) "machine")
+                   ((#:persist) "persist"))
+                 dir)))
+        %stateless-storage-paths)))
 #+end_src
 ***** Service
 ****** Service type
@@ -1049,15 +1057,14 @@ Must succeed [[*File systems][File systems]] component. Including this component
                              (lambda (config)
                                (boot-gexp
                                 (assoc-ref config #:symlink-log?)
-                                (assoc-ref config #:machine-dir)
+                                (assoc-ref config #:log-storage-dir)
                                 (assoc-ref config #:password-files))))
           (service-extension activation-service-type
                              (lambda (config)
                                (activation-gexp
                                 (assoc-ref config #:state-users)
                                 (assoc-ref config #:state)
-                                (assoc-ref config #:persist-dir)
-                                (assoc-ref config #:machine-dir))))
+                                (assoc-ref config #:storage-paths))))
           (service-extension shepherd-root-service-type
                              (lambda (config)
                                (activate-he-shepherd-services
@@ -1069,8 +1076,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
                                       (assoc-ref config #:state)
                                       (assoc-ref config #:ignore)
                                       "/"
-                                      (assoc-ref config #:persist-dir)
-                                      (assoc-ref config #:machine-dir)
+                                      (assoc-ref config #:storage-paths)
                                       ;; #:additional-known
                                       ;; (system-additional-known (map car (assoc-ref config #:hes)))
                                       ))))))
@@ -1083,12 +1089,10 @@ Must succeed [[*File systems][File systems]] component. Including this component
               ;; (append exts
               ;;         (list `((#:ignore . ,(map (lambda (store)
               ;;                                     (string-append store "/"))
-              ;;                                   (list
-              ;;                                    ;; TODO
-              ;;                                    ;; (assoc-ref config #:persist-dir)
-              ;;                                    ;; (assoc-ref config #:machine-dir)
-              ;;                                    "/.persist"
-              ;;                                    "/.machine")))))
+              ;;                                   ;; (map (match-lambda ((_ . dir) dir)) (assoc-ref config #:storage-paths))
+              ;;                                   '(list
+              ;;                                     "/.persist"
+              ;;                                     "/.machine")))))
               ;;         (if #t ; TODO (assoc-ref config #:symlink-log?)
               ;;             (list '((#:ignore . ("/var/log"))))
               ;;             '()))
@@ -1097,12 +1101,12 @@ Must succeed [[*File systems][File systems]] component. Including this component
 #+end_src
 ******* Boot
 #+begin_src scheme
-(define (boot-gexp symlink-log? log-state-dir password-files)
+(define (boot-gexp symlink-log? log-storage-dir password-files)
   (gexps->gexp
-   (list (populate-root-gexp symlink-log? log-state-dir)
+   (list (populate-root-gexp symlink-log? log-storage-dir)
          (populate-passwords-gexp password-files))))
 
-(define (populate-root-gexp symlink-log? log-state-dir)
+(define (populate-root-gexp symlink-log? log-storage-dir)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p))
@@ -1131,7 +1135,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
 
         (let ((log "/var/log"))
           (if #$symlink-log?
-              (let ((log-state (string-append #$log-state-dir log)))
+              (let ((log-state (string-append #$log-storage-dir log)))
                 (mkdir-p log-state)
                 (symlink log-state log))
               (mkdir-p log))))))
@@ -1158,14 +1162,14 @@ Must succeed [[*File systems][File systems]] component. Including this component
 #+end_src
 ******* Activation
 #+begin_src scheme
-(define (activation-gexp state-users state persist-dir machine-dir)
+(define (activation-gexp state-users state storage-paths)
   (gexps->gexp
    (list (create-state-homes-gexp state-users
-                                  (list persist-dir
-                                        machine-dir))
-         (activate-gexp state persist-dir machine-dir))))
+                                  (map (match-lambda ((_ . dir) dir))
+                                       storage-paths))
+         (activate-gexp state storage-paths))))
 
-(define (create-state-homes-gexp users state-dirs)
+(define (create-state-homes-gexp users storage-dirs)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p)))
@@ -1174,15 +1178,15 @@ Must succeed [[*File systems][File systems]] component. Including this component
          (lambda (user)
            (let* ((pw (getpwnam user))
                   (home (passwd:dir pw)))
-             (for-each (lambda (state-dir)
-                         (let ((state-home (string-append state-dir home)))
+             (for-each (lambda (storage-dir)
+                         (let ((state-home (string-append storage-dir home)))
                            (mkdir-p state-home)
                            (chmod state-home #o700)
                            (chown state-home (passwd:uid pw) (passwd:gid pw))))
-                       '#$state-dirs)))
+                       '#$storage-dirs)))
          '#$users))))
 
-(define (activate-gexp state persist-dir machine-dir)
+(define (activate-gexp state storage-paths)
   (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
     ;; (source-module-closure
     ;;  '((phrenetic build stateless))
@@ -1195,8 +1199,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
         (use-modules ((phrenetic build stateless) #:select (activate)))
         (activate '#$state
                   ""
-                  #$persist-dir
-                  #$machine-dir))))
+                  '#$storage-paths))))
 #+end_src
 ******* Shepherd
 #+begin_src scheme
@@ -1400,7 +1403,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
          (stateless-service
           'sudo-lectures
           #:state '(((#:path . "/var/db/sudo/lectured/")
-                     (#:store . #:machine)))))
+                     (#:storage . #:machine)))))
         '())))
   (sudoers-file
    (let ((sudoers-spec %sudoers-specification))
@@ -1746,7 +1749,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                            disk-encryption?
                            luks-label
                            stateless?
-                           stateless-persist-dir
+                           stateless-storage-paths
                            stateless-machine-dir
                            stateless-hes
                            stateless-state-users
@@ -1773,8 +1776,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           #:stateless? stateless?
           #:stateless-machine-dir stateless-machine-dir)
     (if stateless?
-        (stateless $ #:persist-dir stateless-persist-dir
-                   #:machine-dir stateless-machine-dir
+        (stateless $ #:storage-paths stateless-storage-paths
                    #:hes stateless-hes
                    #:state-users stateless-state-users
                    #:password-users stateless-password-users)
@@ -1846,6 +1848,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
+  #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
@@ -1961,14 +1964,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 ** Components
 *** Stateless
 #+begin_src scheme
-(define* (stateless #:key
-                    persist-dir
-                    machine-dir)
+(define* (stateless #:key storage-paths)
   (append
    (list
     (service home-stateless-service-type
-             `(#:persist-dir ,persist-dir
-               #:machine-dir ,machine-dir)))))
+             `(#:storage-paths ,storage-paths)))))
 #+end_src
 **** Service
 ***** Service type
@@ -1991,8 +1991,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                      (use-modules ((phrenetic build stateless) #:select (activate)))
                                      (activate (#$state-with-home-expansions '#$(assoc-ref config #:state))
                                                #$homedir-gexp
-                                               #$(assoc-ref config #:persist-dir)
-                                               #$(assoc-ref config #:machine-dir))))))
+                                               '#$(assoc-ref config #:storage-paths))))))
           ;; (service-extension home-profile-service-type
           ;;                    (lambda (config)
           ;;                      (list (stateless:tool-package
@@ -2000,8 +1999,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           ;;                             (state-with-home-expansions (assoc-ref config #:state))
           ;;                             (ignore-with-home-expansions (assoc-ref config #:ignore))
           ;;                             homedir-gexp
-          ;;                             (assoc-ref config #:persist-dir)
-          ;;                             (assoc-ref config #:machine-dir)
+          ;;                             (assoc-ref config #:storage-paths)
           ;;                             #:additional-known
           ;;                             guix-home-files))))
           ))
@@ -2092,7 +2090,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (home-stateless-service
              'bash
              #:state '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:store . #:persist)))))))
+                        (#:storage . #:persist)))))))
         ((#:shell/zsh)
          (list
           (service home-zsh-service-type
@@ -2103,9 +2101,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (home-stateless-service
              'zsh
              #:state '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:store . #:persist))
+                        (#:storage . #:persist))
                        ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
-                        (#:store . #:machine)))))))))
+                        (#:storage . #:machine)))))))))
     (cons login-shell interactive-shells))
 
    (list
@@ -2296,11 +2294,11 @@ SAVEHIST=$HISTSIZE
        (doom-stateless-service
         name
         #:state '(((#:path . ("eshell/history" #:doom-base #:data))
-                   (#:store . #:persist))
+                   (#:storage . #:persist))
                   ((#:path . ("eshell/lastdir" #:doom-base #:data))
-                   (#:store . #:persist))
+                   (#:storage . #:persist))
                   ((#:path . ("eshell/z" #:doom-base #:data))
-                   (#:store . #:persist))))))))
+                   (#:storage . #:persist))))))))
 #+end_src
 *** Emacs
 #+begin_src scheme
@@ -2470,21 +2468,21 @@ SAVEHIST=$HISTSIZE
         (home-stateless-service
          'doom
          #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
-                    (#:store . #:machine))))
+                    (#:storage . #:machine))))
         (doom-stateless-service
          'doom
          #:state '(((#:path . ("eln/" #:doom-base #:cache))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("profiles.@.el" #:doom-base #:cache))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("@/" #:doom-base #:data))
-                    (#:store . #:machine)))))
+                    (#:storage . #:machine)))))
        '())))
 #+end_src
 **** Service
@@ -4980,30 +4978,30 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
           (doom-stateless-service
            name
            #:state '(((#:path . ("autosave/" #:doom-base #:cache))
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . ("bookmarks/" #:doom-base #:data))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
                      ((#:path . ("recentf" #:doom-base #:cache))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
                      ((#:path . ("savehist" #:doom-base #:cache))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
                      ((#:path . ("saveplace" #:doom-base #:cache))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
                      ((#:path . ("tramp" #:doom-base #:cache))
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . ("tramp-autosave/" #:doom-base #:cache))
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
 
                      ((#:path . ("scratch/" #:doom-base #:data))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
 
                      ((#:path . ("projectile.projects" #:doom-base #:cache))
-                      (#:store . #:persist))
+                      (#:storage . #:persist))
                      ((#:path . ("projectile.cache" #:doom-base #:cache))
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
 
                      ((#:path . ("workspaces/" #:doom-base #:data))
-                      (#:store . #:machine)))))
+                      (#:storage . #:machine)))))
          '()))))
 
 
@@ -5249,7 +5247,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-stateless-service
         name
         #:state '(((#:path . ("undo-fu-session/" #:doom-base #:cache))
-                   (#:store . #:machine)))))
+                   (#:storage . #:machine)))))
 
      (simple-service
       (symbol-append 'doom- name '-add-zstd)
@@ -5355,7 +5353,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-stateless-service
         name
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
-                   (#:store . #:persist))))))))
+                   (#:storage . #:persist))))))))
 #+end_src
 **** Desktop
 #+begin_src scheme
@@ -5580,7 +5578,7 @@ Some colors from the original Atom theme on which I based mine that might be use
           (home-stateless-service
            'guix
            #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:store . #:machine)))
+                      (#:storage . #:machine)))
            #:ignore `(((#:path . ,guix-profile))
                       ((#:path . (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))))
        '())
@@ -5616,9 +5614,9 @@ Some colors from the original Atom theme on which I based mine that might be use
       (home-stateless-service
        'guile
        #:state '(((#:path . ".guile_history")
-                  (#:store . #:persist))
+                  (#:storage . #:persist))
                  ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:store . #:machine))))))
+                  (#:storage . #:machine))))))
 
    (if doom?
        (doom-guile #:stateless? stateless?) '())))
@@ -5649,7 +5647,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (doom-stateless-service
          name
          #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
+                    (#:storage . #:persist)))))))
 
    (doom-transient #:stateless? stateless?)))
 #+end_src
@@ -5701,7 +5699,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (doom-stateless-service
          name
          #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
-                    (#:store . #:machine)))))))
+                    (#:storage . #:machine)))))))
 
    (doom-guile #:stateless? stateless?)))
 #+end_src
@@ -5762,7 +5760,7 @@ Some colors from the original Atom theme on which I based mine that might be use
           (home-stateless-service
            'nix
            #:state '(((#:path . ("nix/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:store . #:machine)))
+                      (#:storage . #:machine)))
            #:ignore `(((#:path . ,nix-profile))
                       ((#:path . ,nix-channels))))))
        '())
@@ -5920,7 +5918,7 @@ nix-channel --update
      (home-stateless-service
       'pipewire
       #:state '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)
+                 (#:storage . #:machine)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 ***** Wireplumber
@@ -5951,7 +5949,7 @@ nix-channel --update
      (home-stateless-service
       'wireplumber
       #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
-                 (#:store . #:machine)
+                 (#:storage . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
 **** Colors
@@ -5995,7 +5993,7 @@ nix-channel --update
      (home-stateless-service
       'fonts
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 
 (define %fonts
   (let ((font-size 10))
@@ -6094,11 +6092,11 @@ nix-channel --update
       #:state
       (append
        '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-          (#:store . #:machine)
+          (#:storage . #:machine)
           (#:mode . #o700))
          ;; Handle `XDG_LOG_HOME' here even though it isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
          ((#:path . (#:xdg-base "XDG_LOG_HOME"))
-          (#:store . #:machine)))
+          (#:storage . #:machine)))
        (let ((normalize
               (lambda (dir)
                 (as-> dir $
@@ -6109,7 +6107,7 @@ nix-channel --update
                       (string-append $ "/")))))
          `(,@(map (lambda (dir)
                     `((#:path . ,(normalize dir))
-                      (#:store . #:persist)))
+                      (#:storage . #:persist)))
                   (list desktop
                         documents
                         music
@@ -6118,7 +6116,7 @@ nix-channel --update
                         templates
                         videos))
            ((#:path . ,(normalize download))
-            (#:store . #:machine)))))))))
+            (#:storage . #:machine)))))))))
 #+end_src
 **** Mesa
 Maybe this shouldn't be a standalone component but rather added by programs that "use Mesa", if that's even the right way of thinking about it.
@@ -6129,7 +6127,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
      (home-stateless-service
       'mesa
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 #+end_src
 **** D-Bus
 #+begin_src scheme
@@ -6147,7 +6145,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
      (home-stateless-service
       'gdm
       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)
+                 (#:storage . #:machine)
                  (#:mode . #o700)))))))
 #+end_src
 ***** Desktop TTY
@@ -7336,7 +7334,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (home-stateless-service
        'clojure
        #:state '(((#:path . ".m2/")
-                  (#:store . #:machine))))))
+                  (#:storage . #:machine))))))
 
    (if doom?
        (doom-clojure #:stateless? stateless?) '())))
@@ -7410,7 +7408,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                    (#:store . #:persist)))))))
+                    (#:storage . #:persist)))))))
 
    (doom-xml+csv)
    (doom-dash)))
@@ -7496,9 +7494,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
-                    (#:store . #:machine))
+                    (#:storage . #:machine))
                    ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
-                    (#:store . #:machine)))))))
+                    (#:storage . #:machine)))))))
 
    (doom-dash)))
 
@@ -7529,7 +7527,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (home-stateless-service
        'org
        #:state `(((#:path . ,(string-append org-dir "/"))
-                  (#:store . #:persist))))))))
+                  (#:storage . #:persist))))))))
 
 (define* (doom-org #:key
                    stateless?
@@ -7607,9 +7605,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("org-clock-save.el" #:doom-base #:data))
-                    (#:store . #:persist))
+                    (#:storage . #:persist))
                    ((#:path . ("org/persist/" #:doom-base #:cache))
-                    (#:store . #:machine)))))))
+                    (#:storage . #:machine)))))))
 
    (doom-dash)))
 #+end_src
@@ -7722,7 +7720,7 @@ use_guixs() {
     ;;   (home-stateless-service
     ;;    'node
     ;;    #:state '(((#:path . ".npm/")
-    ;;               (#:store . #:machine)))))
+    ;;               (#:storage . #:machine)))))
     )
 
    (if doom?
@@ -7741,7 +7739,7 @@ use_guixs() {
      (home-stateless-service
       'protonvpn
       #:state '(((#:path . ".pvpn-cli/")
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 #+end_src
 **** SSH
 #+begin_src scheme
@@ -7771,7 +7769,7 @@ use_guixs() {
         (doom-stateless-service
          name
          #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
-                    (#:store . #:machine))))))
+                    (#:storage . #:machine))))))
 
      (if dirvish?
          (doom-transient) '())
@@ -8004,9 +8002,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
      (home-stateless-service
       'rofi
       #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 
-(define (rofi-menu wayland?)
+(define* (rofi-menu #:key wayland?)
   (let ((rofi (file-append (get-rofi-package wayland?) "/bin/rofi")))
     `((#:menu/menu . ,(list rofi "-dmenu" "-p"))
       (#:menu/app-launcher . ,(list rofi "-show" "drun")))))
@@ -8032,9 +8030,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     ;;   (home-stateless-service
     ;;    'zoom
     ;;    #:state '(((#:path . ("zoom/" #:xdg-base "XDG_CONFIG_HOME"))
-    ;;               (#:store . #:machine))
+    ;;               (#:storage . #:machine))
     ;;              ((#:path . ("zoom/" #:xdg-base "XDG_DATA_HOME"))
-    ;;               (#:store . #:machine)))))
+    ;;               (#:storage . #:machine)))))
     )
 
    (or qt-services '())))
@@ -8056,9 +8054,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
       (home-stateless-service
        'gimp
        #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:store . #:machine))
+                  (#:storage . #:machine))
                  ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:store . #:machine))))))
+                  (#:storage . #:machine))))))
 
    (or gtk-services '())))
 #+end_src
@@ -8190,22 +8188,22 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
        #:state (append
                 (if (chromium? flavors)
                     '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:store . #:machine)
+                       (#:storage . #:machine)
                        (#:mode . #o700))
                       ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:store . #:machine)
+                       (#:storage . #:machine)
                        (#:mode . #o700)))
                     '())
                 (if (chrome? flavors)
                     '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:store . #:machine)
+                       (#:storage . #:machine)
                        (#:mode . #o700))
                       ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:store . #:machine)
+                       (#:storage . #:machine)
                        (#:mode . #o700)))
                     '())
                 '(((#:path . ".pki/nssdb/")
-                   (#:store . #:machine)
+                   (#:storage . #:machine)
                    (#:mode . #o700)
                    (#:parent-dir-perms . ((#:mode . #o700))))))
        #:ignore (if (chrome? flavors)
@@ -8282,15 +8280,15 @@ It might be possible to statically configure Firefox (or one of its relatives), 
       (home-stateless-service
        'firefox
        #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:store . #:machine)
+                  (#:storage . #:machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
                  ((#:path . ".mozilla/firefox")
-                  (#:store . #:machine)
+                  (#:storage . #:machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
                  ((#:path . ".mozilla/extensions")
-                  (#:store . #:machine)
+                  (#:storage . #:machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))))))
 
@@ -8318,9 +8316,9 @@ It might be possible to statically configure Firefox (or one of its relatives), 
    ;;   (home-stateless-service
    ;;    'nyxt
    ;;    #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
-   ;;               (#:store . #:machine))
+   ;;               (#:storage . #:machine))
    ;;              ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
-   ;;               (#:store . #:machine)))))
+   ;;               (#:storage . #:machine)))))
 
    (when doom?
      (doom-service
@@ -8338,7 +8336,7 @@ Not available in Guix, install through Nix.
      (home-stateless-service
       'tor-browser
       #:state '(((#:path . ("tor-browser/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 #+end_src
 ***** Video
 ****** VLC
@@ -8357,9 +8355,9 @@ Not available in Guix, install through Nix.
       (home-stateless-service
        'vlc
        #:state '(((#:path . ("vlc/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:store . #:machine))
+                  (#:storage . #:machine))
                  ((#:path . ("vlc/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:store . #:machine))))))
+                  (#:storage . #:machine))))))
 
    (or qt-services '())))
 #+end_src
@@ -8407,7 +8405,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (home-stateless-service
       'gtk
       #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 
 (define (dconf-db name settings)
   (computed-file
@@ -8437,7 +8435,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (home-stateless-service
       'qt
       #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:store . #:machine)))))))
+                 (#:storage . #:machine)))))))
 #+end_src
 ***** Flatpak
 I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
@@ -8461,7 +8459,7 @@ I might need to run apps specially for Wayland, see [[https://github.com/swaywm/
       (home-stateless-service
        'flatpak
        #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:store . #:machine)
+                  (#:storage . #:machine)
                   (#:mode . #o700))))))
 
    (or portal-services '())))
@@ -8503,7 +8501,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (home-stateless-service
        'projects
        #:state `(((#:path . ,(string-append work-dir "/"))
-                  (#:store . #:persist))))))))
+                  (#:storage . #:persist))))))))
 #+end_src
 **** Project helpers
 #+begin_src scheme
@@ -8549,8 +8547,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (os-features #:key
                       stateless?
-                      stateless-persist-dir
-                      stateless-machine-dir
+                      stateless-storage-paths
                       login-shell
                       doom?
                       doom-flags
@@ -8566,9 +8563,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       sway-environment)
   (append
    (if stateless?
-       (stateless #:persist-dir stateless-persist-dir
-                  #:machine-dir stateless-machine-dir)
-       '())
+       (stateless #:storage-paths stateless-storage-paths) '())
    (if guix?
        (guix-pm #:stateless? stateless?
                 #:doom? doom?)
@@ -8754,8 +8749,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (he-base #:key
                   stateless?
-                  stateless-persist-dir
-                  stateless-machine-dir
+                  stateless-storage-paths
                   (interactive-shells '(#:shell/zsh))
                   doom?
                   doom-flags
@@ -8783,8 +8777,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (portal-services (portal-services #:wayland? wayland?)))
     (append
      (os-features #:stateless? stateless?
-                  #:stateless-persist-dir stateless-persist-dir
-                  #:stateless-machine-dir stateless-machine-dir
+                  #:stateless-storage-paths stateless-storage-paths
                   #:login-shell login-shell
                   #:doom? doom?
                   #:doom-flags doom-flags
@@ -8971,6 +8964,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (phrenetic build utils)
   #:use-module ((ice-9 ftw) #:select (file-system-fold))
   #:use-module ((srfi srfi-1) #:select (any))
+  #:use-module ((ice-9 match) #:select (match-lambda))
   #:export (activate
             tool))
 #+end_src
@@ -8978,8 +8972,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define (activate state
                   backup-base-dir
-                  persist-dir
-                  machine-dir)
+                  storage-paths)
   (define (run)
     (for-each process-state-entry state))
 
@@ -8988,20 +8981,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            (directory-target? (string-suffix? "/" path))
            (target (if directory-target?
                        (string-drop-right path 1) path))
-           (state-dir ((state-dir-lookup persist-dir machine-dir)
-                       (assoc-ref i #:store))))
+           (storage-dir (assoc-ref storage-paths (assoc-ref i #:storage))))
       (let ((parent-dir (dirname path))
             (parent-dir-perms (assoc-ref i #:parent-dir-perms)))
-        (mkdirp-perms (string-append state-dir parent-dir) parent-dir-perms)
+        (mkdirp-perms (string-append storage-dir parent-dir) parent-dir-perms)
         (mkdirp-perms parent-dir parent-dir-perms))
-      (let ((state-file (string-append state-dir target)))
-        (cleanup-and-migrate target state-file state-dir)
+      (let ((state-file (string-append storage-dir target)))
+        (cleanup-and-migrate target state-file storage-dir)
         (when directory-target?
           (mkdirp-perms state-file i))
         (when (no-follow-file-exists? state-file)
           (symlink state-file target)))))
 
-  (define (cleanup-and-migrate target state-file state-dir)
+  (define (cleanup-and-migrate target state-file storage-dir)
     (let ((migrate-file
            (lambda (source dest)
              (copy-recursively source dest)
@@ -9009,25 +9001,25 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (backup-file
            (lambda (file)
              (let* ((backup-dir (string-append
-                                 state-dir
+                                 storage-dir
                                  backup-base-dir
                                  "/stateless-backup-" (number->string timestamp)))
                     (backup-file (string-append
                                   backup-dir "/"
                                   (let* ((string-drop-prefix (lambda (s prefix)
                                                                (string-drop s (string-length prefix))))
-                                         (without-state-dir (lambda (file)
-                                                              (string-drop-prefix file state-dir)))
+                                         (without-storage-dir (lambda (file)
+                                                                (string-drop-prefix file storage-dir)))
                                          (without-base-dir (lambda (file)
                                                              (string-drop-prefix file backup-base-dir))))
                                     ((compose without-base-dir
-                                              without-state-dir)
+                                              without-storage-dir)
                                      file)))))
                (mkdir-p (dirname backup-file))
                (rename-file file backup-file)))))
       (when (no-follow-file-exists? target)
-        (if ((symlink-to-state? (list persist-dir
-                                      machine-dir))
+        (if ((symlink-to-storage? (map (match-lambda ((_ . dir) dir))
+                                       storage-paths))
              target)
             (delete-file target)
             (begin
@@ -9064,11 +9056,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;   #:use-module ((srfi srfi-1) #:select (any))
 ;;   #:export (activate
 ;;             tool))
-;; (define (state-dir-lookup persist-dir machine-dir)
-;;   (lambda (k)
-;;     (case k
-;;       ((#:persist) persist-dir)
-;;       ((#:machine) machine-dir))))
 ;;;;;;;
 
 (use-modules ;; ((guix build utils) #:select (find-files))
@@ -9081,8 +9068,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define* (tool state
                ignore
                base-dir
-               persist-dir
-               machine-dir)
+               storage-paths)
   (let ((state* (normalize-entries state))
         (all-ignore (normalize-entries ignore)))
     (for-each
@@ -9091,36 +9077,34 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (case (run-mode)
        ((active) (diff-live state*
                             (filter (lambda (entry)
-                                      (not (assoc-ref entry #:store)))
+                                      (not (assoc-ref entry #:storage)))
                                     all-ignore)
                             base-dir
-                            persist-dir
-                            machine-dir))
-       ((state) (diff-state '(#:persist #:machine)
-                            state*
-                            (filter (lambda (entry)
-                                      (assoc-ref entry #:store))
-                                    all-ignore)
-                            base-dir
-                            persist-dir
-                            machine-dir))))))
+                            storage-paths))
+       ((storage) (diff-storage (map (match-lambda ((_ . dir) dir))
+                                     storage-paths)
+                                state*
+                                (filter (lambda (entry)
+                                          (assoc-ref entry #:storage))
+                                        all-ignore)
+                                base-dir
+                                storage-paths))))))
 
 (define (run-mode)
   (string->symbol
    (or
     (false-if-exception (cadr (command-line)))
     ;; "active"
-    "state" ; TODO temporary for testing
+    "storage" ; TODO temporary for testing
     )))
 
 (define (diff-live state
                    ignore
                    base-dir
-                   persist-dir
-                   machine-dir)
+                   storage-paths)
   (let-values (((ignore-files ignore-dirs) (files+dirs ignore)))
     (diff base-dir
-          (append (state->known-symlinks state persist-dir machine-dir)
+          (append (state->known-symlinks state storage-paths)
                   (ignore->known ignore-files))
           (ignore->known ignore-dirs)
           #:omit-empty-dirs? #t)))
@@ -9141,13 +9125,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                (not (assoc-ref entry #:directory?)))
              entries))
 
-(define (state->known-symlinks state persist-dir machine-dir)
+(define (state->known-symlinks state storage-paths)
   (map (lambda (entry)
          (let ((path (assoc-ref entry #:path)))
            (cons path `((#:symlink-to ,(string-append
-                                        ((state-dir-lookup persist-dir
-                                                           machine-dir)
-                                         (assoc-ref entry #:store))
+                                        (assoc-ref storage-paths (assoc-ref entry #:storage))
                                         path))))))
        state))
 
@@ -9164,49 +9146,46 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;                (not (assoc-ref entry #:directory?)))
 ;;              entries))
 
-(define (store-entries store entries)
+(define (storage-entries storage entries)
   (filter (lambda (entry)
-            (equal? (assoc-ref entry #:store) store))
+            (equal? (assoc-ref entry #:storage) storage))
           entries))
 
-(define (entries-with-state-dir state-dir entries)
+(define (entries-with-storage-dir storage-dir entries)
   (map (lambda (entry)
-         (acons #:path (string-append state-dir (assoc-ref entry #:path)) entry))
+         (acons #:path (string-append storage-dir (assoc-ref entry #:path)) entry))
        entries))
 
-(define (diff-state stores
-                    state
-                    ignore
-                    base-dir
-                    persist-dir
-                    machine-dir)
+(define (diff-storage storages
+                      state
+                      ignore
+                      base-dir
+                      storage-paths)
   (let ((diff* ; TODO rename this
-         (lambda (store)
-           (let ((state-dir ((state-dir-lookup persist-dir
-                                               machine-dir)
-                             store)))
+         (lambda (storage)
+           (let ((storage-dir (assoc-ref storage-paths storage)))
              (let-values (((state-files state-dirs) (files+dirs state))
                           ((ignore-files ignore-dirs) (files+dirs ignore)))
-               (diff (string-append state-dir base-dir)
+               (diff (string-append storage-dir base-dir)
                      (append (->> state-files
-                                  (store-entries store)
-                                  (entries-with-state-dir state-dir)
+                                  (storage-entries storage)
+                                  (entries-with-storage-dir storage-dir)
                                   (map (lambda (entry)
                                          (cons (assoc-ref entry #:path) '()))))
                              (->> ignore-files
-                                  (store-entries store)
-                                  (entries-with-state-dir state-dir)
+                                  (storage-entries storage)
+                                  (entries-with-storage-dir storage-dir)
                                   ignore->known))
                      (append (->> state-dirs
-                                  (store-entries store)
-                                  (entries-with-state-dir state-dir)
+                                  (storage-entries storage)
+                                  (entries-with-storage-dir storage-dir)
                                   (map (lambda (entry)
                                          (cons (assoc-ref entry #:path) '()))))
                              (->> ignore-dirs
-                                  (store-entries store)
-                                  (entries-with-state-dir state-dir)
+                                  (storage-entries storage)
+                                  (entries-with-storage-dir storage-dir)
                                   ignore->known))))))))
-    (append-map diff* stores)))
+    (append-map diff* storages)))
 
 (define* (diff directory known-files known-dirs #:key omit-empty-dirs?)
   (as-> directory $
@@ -9274,36 +9253,36 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       (null? (scandir-no-implied path))))))
 
 (define test-state '(((#:path . "/etc/NetworkManager/system-connections/")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/var/lib/NetworkManager/")
-                      (#:store . #:machine)
+                      (#:storage . #:machine)
                       (#:mode . 448))
                      ((#:path . "/etc/machine-id")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/var/lib/upower/")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/root/.cache/nix/")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/etc/guix/signing-key.pub")
-                      (#:store . #:machine)
+                      (#:storage . #:machine)
                       (#:parent-dir-perms
                        (#:mode . 73)))
                      ((#:path . "/etc/guix/signing-key.sec")
-                      (#:store . #:machine)
+                      (#:storage . #:machine)
                       (#:parent-dir-perms
                        (#:mode . 73)))
                      ((#:path . "/root/.cache/guix/")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/var/lib/random-seed")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/var/db/nscd/")
-                      (#:store . #:machine))
+                      (#:storage . #:machine))
                      ((#:path . "/.lastweek")
-                      (#:store . #:machine))))
+                      (#:storage . #:machine))))
 (define test-ignore '(((#:path . "nix/")
-                       (#:store . #:machine))
+                       (#:storage . #:machine))
                       ((#:path . "/.machine/.swap")
-                       (#:store . #:machine))
+                       (#:storage . #:machine))
                       ((#:path . "/nix/store/"))
                       ((#:path . "/nix/var/nix/"))
                       ((#:path . "/nix/var/log/nix/"))
@@ -9341,24 +9320,22 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        (#:preds
                         (#:symlink-to-store)))))
 (define (test)
-  (tool test-state test-ignore "/" "/.persist" "/.machine"))
+  (tool test-state
+        test-ignore
+        "/"
+        `((#:machine . "/.machine")
+          (#:persist . "/.persist"))))
 ;; (test)
 #+end_src
 **** Shared
 #+begin_src scheme
-(define (state-dir-lookup persist-dir machine-dir)
-  (lambda (k)
-    (case k
-      ((#:persist) persist-dir)
-      ((#:machine) machine-dir))))
-
 ;; TODO Just used in `activate` now
-(define (symlink-to-state? state-dirs)
+(define (symlink-to-storage? storage-dirs)
   (lambda (file)
     (and (symbolic-link? file)
-         (any (lambda (state-dir)
-                (string-prefix? state-dir (readlink file)))
-              state-dirs))))
+         (any (lambda (storage-dir)
+                (string-prefix? storage-dir (readlink file)))
+              storage-dirs))))
 #+end_src
 * Utils
 :PROPERTIES:
@@ -9607,8 +9584,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             guest-he))
 
 (define stateless? #t)
-(define stateless-persist-dir os:%stateless-persist-dir)
-(define stateless-machine-dir os:%stateless-machine-dir)
+(define stateless-storage-paths os:%stateless-storage-paths)
 #+end_src
 **** System
 #+begin_src scheme
@@ -9616,7 +9592,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "mellon")
-        (bluetooth? #t))
+        (bluetooth? #t)
+        (stateless-machine-dir (assoc-ref stateless-storage-paths #:machine)))
     (-> (os-base #:users-info `(((#:name . ,primary-name)
                                  (#:comment . "Krzysztof Baranowski")
                                  (#:admin? . #t))
@@ -9640,7 +9617,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                        guest-he-sessions)
                                  (apply append)
                                  delete-duplicates)
-                 #:stateless? stateless?)
+                 #:stateless? stateless?
+                 #:stateless-machine-dir stateless-machine-dir)
         (os:with-host-info #:host-name "frostfire"
                            #:timezone "America/Los_Angeles")
         (os:with-bootloader #:efi? efi?
@@ -9654,7 +9632,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:disk-encryption? disk-encryption?
                              #:luks-label luks-label
                              #:stateless? stateless?
-                             #:stateless-persist-dir stateless-persist-dir
+                             #:stateless-storage-paths stateless-storage-paths
                              #:stateless-machine-dir stateless-machine-dir
                              #:stateless-hes `((,primary-name . ,(primary-he))
                                                (,aux-name . ,(aux-he))
@@ -9682,7 +9660,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   auto-login?
                   auto-login-user
                   sessions
-                  stateless?)
+                  stateless?
+                  stateless-machine-dir)
   (apply
    os:os-base
    os:blank-os
@@ -9697,6 +9676,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    #:auto-login-user auto-login-user
    #:sessions sessions
    #:stateless? stateless?
+   #:stateless-machine-dir stateless-machine-dir
    (os+he-shared-opts)))
 #+end_src
 ***** HEs
@@ -9764,7 +9744,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (he-shared-opts)
   (append
    (os+he-shared-opts)
-   `(#:stateless-persist-dir ,stateless-persist-dir
+   `(#:stateless-storage-paths ,stateless-storage-paths
      #:doom? ,doom?
      #:doom-flags ,doom-flags)))
 #+end_src
@@ -9777,7 +9757,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     #:desktop? #t
     #:pipewire? #t
     ;; #:login-manager #:lm/gdm
-    #:stateless-machine-dir ,stateless-machine-dir))
+    ))
 #+end_src
 **** Installer
 #+begin_src scheme
@@ -9803,9 +9783,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define filesystem #:filesystem/btrfs)
 (define root-label os:%root-label)
 (define mountables (if stateless?
-                       (os:%stateless-mountables
-                        #:persist-dir stateless-persist-dir
-                        #:machine-dir stateless-machine-dir)
+                       os:%stateless-mountables
                        ;; ...
                        ))
 (define btrfs-mount-flags os:%btrfs-mount-flags)
