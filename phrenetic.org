@@ -1025,7 +1025,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
                                                                              "/.passwords/"
                                                                              user)))))
                      #:symlink-log-dir? #t
-                     #:log-storage-dir machine-dir)))))))
+                     #:log-storage-dir ,machine-dir)))))))
 
     (stateless-guix-system $)))
 
@@ -1114,11 +1114,11 @@ Must succeed [[*File systems][File systems]] component. Including this component
 
         (for-each
          (match-lambda
-           (dir
-            (mkdir-p dir))
            ((dir . mode)
             (mkdir-p dir)
-            (chmod dir mode)))
+            (chmod dir mode))
+           (dir
+            (mkdir-p dir)))
          ;; Taken from `populate-root-file-system'. Some of these might not be necessary (for example, "/tmp" and "/var/run" are deleted and recreated in `cleanup-service-type') but it's safest to do them here anyway just incase some early-running code assumes their presence.
          '("/bin"
            "/etc"
