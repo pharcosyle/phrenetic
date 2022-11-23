@@ -39,7 +39,7 @@ Run with ~sudo~.
   #:use-module (guix packages)
   #:use-module ((gnu packages cryptsetup) #:select (cryptsetup))
   #:use-module ((gnu packages disk) #:select (dosfstools parted))
-  #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux+udev))
+  #:use-module ((gnu packages linux) #:select (btrfs-progs util-linux))
   #:use-module ((gnu packages package-management) #:select (guix))
   #:use-module (phrenetic utils)
   #:export (installer-package))
@@ -102,7 +102,7 @@ Run with ~sudo~.
          (define (display-block-devices)
            (display "Block devices:")
            (newline)
-           (invoke #$(file-append util-linux+udev "/bin/lsblk"))
+           (invoke #$(file-append util-linux "/bin/lsblk"))
            (newline))
 
          (display-block-devices)
@@ -232,7 +232,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux+udev))
+  #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services base)
@@ -971,9 +971,9 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
           (when #$no-cow?
             (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
-          (invoke #$(file-append util-linux+udev "/bin/fallocate") "--length" "8G" #$swapfile)
+          (invoke #$(file-append util-linux "/bin/fallocate") "--length" "8G" #$swapfile)
           (chmod #$swapfile #o600)
-          (invoke #$(file-append util-linux+udev "/sbin/mkswap") #$swapfile)))))
+          (invoke #$(file-append util-linux "/sbin/mkswap") #$swapfile)))))
 
 (define %swapfile "/.swap")
 #+end_src
