@@ -1024,7 +1024,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
                                                    `(,user . ,(string-append machine-dir
                                                                              "/.passwords/"
                                                                              user)))))
-                     #:symlink-log? #t
+                     #:symlink-log-dir? #t
                      #:log-storage-dir machine-dir)))))))
 
     (stateless-guix-system $)))
@@ -1056,7 +1056,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
     (list (service-extension boot-service-type
                              (lambda (config)
                                (boot-gexp
-                                (assoc-ref config #:symlink-log?)
+                                (assoc-ref config #:symlink-log-dir?)
                                 (assoc-ref config #:log-storage-dir)
                                 (assoc-ref config #:password-files))))
           (service-extension activation-service-type
@@ -1093,7 +1093,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
               ;;                                   '(list
               ;;                                     "/.persist"
               ;;                                     "/.machine")))))
-              ;;         (if #t ; TODO (assoc-ref config #:symlink-log?)
+              ;;         (if #t ; TODO (assoc-ref config #:symlink-log-dir?)
               ;;             (list '((#:ignore . ("/var/log"))))
               ;;             '()))
               )))
@@ -1101,12 +1101,12 @@ Must succeed [[*File systems][File systems]] component. Including this component
 #+end_src
 ******* Boot
 #+begin_src scheme
-(define (boot-gexp symlink-log? log-storage-dir password-files)
+(define (boot-gexp symlink-log-dir? log-storage-dir password-files)
   (gexps->gexp
-   (list (populate-root-gexp symlink-log? log-storage-dir)
+   (list (populate-root-gexp symlink-log-dir? log-storage-dir)
          (populate-passwords-gexp password-files))))
 
-(define (populate-root-gexp symlink-log? log-storage-dir)
+(define (populate-root-gexp symlink-log-dir? log-storage-dir)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p))
@@ -1134,7 +1134,7 @@ Must succeed [[*File systems][File systems]] component. Including this component
            ("/var/tmp" . #o1777)))
 
         (let ((log-dir "/var/log"))
-          (if #$symlink-log?
+          (if #$symlink-log-dir?
               (let ((log-state-dir (string-append #$log-storage-dir log-dir)))
                 (mkdir-p log-state-dir)
                 (symlink log-state-dir log-dir))
