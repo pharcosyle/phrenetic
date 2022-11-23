@@ -1133,12 +1133,12 @@ Must succeed [[*File systems][File systems]] component. Including this component
            "/var/run"
            ("/var/tmp" . #o1777)))
 
-        (let ((log "/var/log"))
+        (let ((log-dir "/var/log"))
           (if #$symlink-log?
-              (let ((log-state (string-append #$log-storage-dir log)))
-                (mkdir-p log-state)
-                (symlink log-state log))
-              (mkdir-p log))))))
+              (let ((log-state-dir (string-append #$log-storage-dir log-dir)))
+                (mkdir-p log-state-dir)
+                (symlink log-state-dir log-dir))
+              (mkdir-p log-dir))))))
 
 ;; HACK Guix assumes /etc/shadow is persistent between reboots and doesn't allow specifying a password file (like Nix's `passwordFile') so imitate this functionality by writing a shadow file on every boot populated with our users and their password hashes. The file doesn't have to be complete: Guix will add the missing entries (for system accounts, etc).
 (define (populate-passwords-gexp password-files)
