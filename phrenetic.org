@@ -1017,9 +1017,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
         (service stateless-service-type
                  (let ((machine-dir (assoc-ref storage-paths #:machine)))
                    `(#:storage-paths ,storage-paths
-                     #:hes ,hes
-                     #:state-users ,state-users
-                     #:password-files ,(->> password-users
+                     #:hes ,(or hes '())
+                     #:state-users ,(or state-users '())
+                     #:password-files ,(->> (or password-users '())
                                             (cons (user-account-name %root-account))
                                             (map (lambda (user)
                                                    `(,user . ,(string-append machine-dir
