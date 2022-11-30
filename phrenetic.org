@@ -6616,9 +6616,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                             #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
              (idle-timeout (+ lock-timeout 30)))
         (simple-service
-         'swayidle-add-sway-dpms
+         'swayidle-add-sway-power
          home-swayidle-service-type
-         `((timeout ,idle-timeout ,(swaymsg-cmd "output * dpms off") resume ,(swaymsg-cmd "output * dpms on")))))))))
+         `((timeout ,idle-timeout ,(swaymsg-cmd "output * power off") resume ,(swaymsg-cmd "output * power on")))))))))
 
 (define (swayidle-idle-manager)
   (list
