@@ -6411,10 +6411,10 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   `((bindsym $mod+Control+Shift+Return exec ,@backup-terminal))
                   '())
             (bindsym $mod+Shift+d exec ,@app-launcher)
-            (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
-                                                     (list
-                                                      (file-append elogind "/bin/loginctl")
-                                                      "lock-session")))
+            ;; (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
+            ;;                                          (list
+            ;;                                           (file-append elogind "/bin/loginctl")
+            ;;                                           "lock-session")))
             (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-editor #:emacs/program))
             (bindsym $mod+y exec ,@(assoc-ref emacs-editor #:emacs/new-frame)))
 
@@ -8634,15 +8634,18 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
                              (alacritty-terminal))
               #:backup-terminal (if doom?
-                                    (alacritty-terminal) #f)
+                                    (list
+                                     (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
+                                    ;; (alacritty-terminal)
+                                    #f)
               #:emacs-editor emacs-editor)
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
                         #:font (assoc-ref fonts font-variable-pitch)
                         #:date-format date-format
                         #:time-format time-format)
-     (swayidle-wm-piece #:session session
-                        #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
+     ;; (swayidle-wm-piece #:session session
+     ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
      (mako-wm-piece #:colors colors
                     #:font (assoc-ref fonts font-variable-pitch))
      (waybar-wm-piece #:colors colors
