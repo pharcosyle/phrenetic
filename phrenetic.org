@@ -238,7 +238,7 @@ Run with ~sudo~.
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
-  #:use-module ((gnu services networking) #:select (network-manager-service-type wpa-supplicant-service-type))
+  #:use-module (gnu services networking)
   #:use-module ((gnu services nix) #:select (nix-service-type))
   #:use-module (gnu services shepherd)
   #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
@@ -251,6 +251,7 @@ Run with ~sudo~.
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde gexp) #:select (slurp-file-like))
+  #:use-module (rde system services networking)
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
@@ -647,13 +648,19 @@ Must succeed [[*Accounts][Accounts]] component.
 **** Network
 ***** Network manager
 #+begin_src scheme
-(define-system-comp (network-manager #:key stateless?)
+(define-system-comp (network-manager #:key
+                                     (iwd? #t)
+                                     stateless?)
   (services
    (append
     (operating-system-user-services os)
     (list
-     (service network-manager-service-type)
-     (service wpa-supplicant-service-type))
+     (service network-manager-service-type
+              (network-manager-configuration
+               (iwd? iwd?)))
+     (if iwd?
+         (service iwd-service-type)
+         (service wpa-supplicant-service-type)))
     (if stateless?
         (list
          (stateless-service
