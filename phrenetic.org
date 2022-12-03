@@ -1672,6 +1672,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                   kmonad-users
                   desktop?
                   pipewire?
+                  connection-manager
                   bluetooth?
                   bluetooth-users
                   login-manager
@@ -1710,7 +1711,8 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
             (if pipewire?
                 (pipewire-multimedia $)
                 (classic-sound $))
-            (network-manager $ #:stateless? stateless?)
+            (case connection-manager
+              ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
             (if bluetooth?
                 (bluetooth $ #:who bluetooth-users
                            #:stateless? stateless?)
@@ -8611,6 +8613,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (sway-environment #:key
                            pipewire?
+                           connection-manager
                            doom?
                            portal-services
                            colors
@@ -8636,7 +8639,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
               #:status-bar (waybar-status-bar)
               #:applets (list
-                         (network-manager-applet)
+                         (case connection-manager
+                           ((#:cm/network-manager) (network-manager-applet)))
                          ;; (gammastep-applet)
                          (udiskie-applet))
               #:app-launcher (assoc-ref menu #:menu/app-launcher)
@@ -8664,7 +8668,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                 #:date-format date-format
                                                 #:time-format time-format))
      ;; (kanshi-wm-piece)
-     (network-manager-wm-applet)
+     (case connection-manager
+       ((#:cm/network-manager) (network-manager-wm-applet)))
      ;; (gammastep-wm-applet)
      (udiskie-wm-applet))))
 #+end_src
@@ -8771,6 +8776,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   kmonad?
                   desktop?
                   pipewire?
+                  connection-manager
                   login-manager
                   sessions
                   email
@@ -8804,6 +8810,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                              (#:session/sway . ,(sway-start pipewire?)))
                   #:sessions sessions
                   #:sway-environment (sway-environment #:pipewire? pipewire?
+                                                       #:connection-manager connection-manager
                                                        #:doom? doom?
                                                        #:portal-services portal-services
                                                        #:colors colors
@@ -9768,6 +9775,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
+    #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
     ))
 #+end_src
