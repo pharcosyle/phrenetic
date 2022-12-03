@@ -659,7 +659,10 @@ Must succeed [[*Accounts][Accounts]] component.
               (network-manager-configuration
                (iwd? iwd?)))
      (if iwd?
-         (service iwd-service-type)
+         (service iwd-service-type
+                  (iwd-configuration
+                   (main-conf
+                    '((Settings ((AutoConnect . #t)))))))
          (service wpa-supplicant-service-type)))
     (if stateless?
         (list
