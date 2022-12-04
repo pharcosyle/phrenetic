@@ -270,6 +270,7 @@ Run with ~sudo~.
             accounts
             guix-pm
             nix-pm
+            virtualization
             console-fonts
             kmonad-tool
             desktop-base-services
@@ -549,6 +550,20 @@ Run with ~sudo~.
                     ;; TODO maybe do each sub-path ("/nix/store", "/nix/var/nix", and "/nix/var/log/nix") here like I do above.
                     ((#:path . "nix/")
                      (#:storage . #:machine))))))))))
+#+end_src
+*** Virtualization
+Must succeed [[*Accounts][Accounts]] component.
+#+begin_src scheme
+(define-system-comp (virtualization #:key who)
+  (users
+   (map (lambda (account)
+          (if (member (user-account-name account) who)
+              (user-account
+               (inherit account)
+               (supplementary-groups (append (user-account-supplementary-groups account)
+                                             '("kvm"))))
+              account))
+        (operating-system-users os))))
 #+end_src
 *** Console
 **** Fonts
@@ -1667,6 +1682,8 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                   users-info
                   guix?
                   nix?
+                  virtualization?
+                  virtualization-users
                   console?
                   kmonad?
                   kmonad-users
@@ -1699,6 +1716,8 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
           (nix-pm $ #:stateless? stateless?
                   #:stateless-machine-dir stateless-machine-dir)
           $)
+      (if virtualization?
+          (virtualization $ #:who virtualization-users) $)
       (if console?
           (as-> $ $
             (console-fonts $ #:number-of-ttys number-of-ttys)
@@ -1846,6 +1865,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
   #:use-module ((gnu packages terminals) #:select (alacritty))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((gnu packages video) #:select (vlc))
+  #:use-module ((gnu packages virtualization) #:select (qemu))
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
@@ -1890,6 +1910,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
             doom-web
             guix-pm
             nix-pm
+            virtualization
             kmonad-tool
             pipewire-multimedia
             %light-colors
@@ -5833,6 +5854,16 @@ nix-channel --update
                (symlink profile link))))
          profiles))))
 #+end_src
+*** Virtualization
+#+begin_src scheme
+(define (virtualization)
+  (list
+   (simple-service
+    'virtualization-add-packages
+    home-profile-service-type
+    (list ;; qemu ; QEMU is kind of a fatty, maybe don't keep it installed all the time.
+          ))))
+#+end_src
 *** Console
 **** KMonad
 #+begin_src scheme
@@ -8564,6 +8595,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       doom-flags
                       guix?
                       nix?
+                      virtualization?
                       console?
                       kmonad?
                       desktop?
@@ -8585,6 +8617,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                #:login-shell login-shell)
        '())
+   (if virtualization?
+       (virtualization) '())
    (if console?
        (if kmonad?
            (kmonad-tool #:doom? doom?) '())
@@ -8772,6 +8806,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   doom-flags
                   guix?
                   nix?
+                  virtualization?
                   console?
                   kmonad?
                   desktop?
@@ -8801,6 +8836,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   #:doom-flags doom-flags
                   #:guix? guix?
                   #:nix? nix?
+                  #:virtualization? virtualization?
                   #:console? console?
                   #:kmonad? kmonad?
                   #:desktop? desktop?
@@ -9621,6 +9657,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                  (#:admin? . #t))
                                 ((#:name . ,guest-name)
                                  (#:comment . "Mellon")))
+                 #:virtualization? #t
+                 #:virtualization-users (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                         (,aux-name . ,aux-he-virtualization?)
+                                                         (,guest-name . ,guest-he-virtualization?)))
                  #:kmonad? #t
                  #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                  (,aux-name . ,aux-he-kmonad?)
@@ -9672,6 +9712,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (os-base #:key
                   users-info
+                  virtualization?
+                  virtualization-users
                   kmonad?
                   kmonad-users
                   bluetooth?
@@ -9687,6 +9729,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    #:source? #t
    #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
    #:users-info users-info
+   #:virtualization? virtualization?
+   #:virtualization-users virtualization-users
    #:kmonad? kmonad?
    #:kmonad-users kmonad-users
    #:bluetooth? bluetooth?
@@ -9707,6 +9751,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     he:he-base
     #:stateless? primary-he-stateless?
     #:email "pharcosyle@gmail.com"
+    #:virtualization? primary-he-virtualization?
     #:kmonad? primary-he-kmonad?
     #:sessions primary-he-sessions
     #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
@@ -9718,6 +9763,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define primary-he-stateless? stateless?)
 (define primary-he-kmonad? #t)
+(define primary-he-virtualization? #t)
 (define primary-he-sessions '(#:session/sway))
 #+end_src
 ****** Aux
@@ -9728,12 +9774,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     he:he-base
     #:stateless? aux-he-stateless?
     #:email "pharcosyle@gmail.com"
+    #:virtualization? aux-he-virtualization?
     #:kmonad? aux-he-kmonad?
     #:sessions aux-he-sessions
     (he-shared-opts))))
 
 (define aux-he-stateless? #f)
 (define aux-he-kmonad? #f)
+(define aux-he-virtualization? primary-he-virtualization?)
 (define aux-he-sessions primary-he-sessions)
 #+end_src
 ****** Guest
@@ -9743,12 +9791,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (apply
     he:he-base
     #:stateless? guest-he-stateless?
+    #:virtualization? guest-he-virtualization?
     #:kmonad? guest-he-kmonad?
     #:sessions guest-he-sessions
     (he-shared-opts))))
 
 (define guest-he-stateless? #f)
 (define guest-he-kmonad? #f)
+(define guest-he-virtualization? #f)
 (define guest-he-sessions '(;; #:session/gnome
                             #:session/sway))
 #+end_src
