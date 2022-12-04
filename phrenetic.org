@@ -1145,7 +1145,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             (chmod dir mode))
            (dir
             (mkdir-p dir)))
-         ;; Taken from `populate-root-file-system'. Some of these might not be necessary (for example, "/tmp" and "/var/run" are deleted and recreated in `cleanup-service-type') but it's safest to do them here anyway just incase some early-running code assumes their presence.
+         ;; Taken from `populate-root-file-system'. Some of these might not be necessary (for example, "/tmp" and "/var/run" are deleted and recreated in `cleanup-service-type') but it's safest to do them here anyway just in case some early-running code assumes their presence.
          '("/bin"
            "/etc"
            ("/gnu/store" . #o1775)
@@ -2786,6 +2786,7 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
   #:use-module (phrenetic utils))
 #+end_src
 ****** guix-contributing
+- TODO maybe don't create a special "subpackage" for Guix development files and do something like this instead: [[https://github.com/abcdw/rde/commit/bcc4650768517e6264709f2164fa857b264d9190][rde: examples: abcdw: Source templates from guix package sources. · abcdw/rde...]]
 #+begin_src scheme
 (define-public emacs-guix-contributing
   (package
@@ -7082,7 +7083,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       `(,@(or extra-config '())))))))
 #+end_src
 ******* Applets
-******** Network manager
+******** Network
+********* Network manager
 #+begin_src scheme
 (define (network-manager-wm-applet)
   (list
