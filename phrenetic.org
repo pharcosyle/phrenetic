@@ -6396,7 +6396,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
     (cons* (xdg-current-desktop-env-var "sway")
            xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars pipewire?)))
-   "exec " (file-append sway "/bin/sway")))
+   "exec " (file-append sway "/bin/sway") " > ${XDG_LOG_HOME}/sway.log 2>&1"))
 #+end_src
 ******* Input
 #+begin_src scheme
