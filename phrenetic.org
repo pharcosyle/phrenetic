@@ -243,6 +243,7 @@ Run with ~sudo~.
   #:use-module (gnu services shepherd)
   #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
   #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service screen-locker-service-type))
+  #:use-module (gnu services virtualization)
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
@@ -1442,7 +1443,8 @@ Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (virtualization #:key
                                     kvm-support?
-                                    kvm-users)
+                                    kvm-users
+                                    binfmt-platforms)
   (users
    (if kvm-support?
        (map (lambda (account)
@@ -1453,7 +1455,14 @@ Must succeed [[*Accounts][Accounts]] component.
                                                  '("kvm"))))
                   account))
             (operating-system-users os))
-       (operating-system-users os))))
+       (operating-system-users os)))
+  (services
+   (if binfmt-platforms
+       (cons* (service qemu-binfmt-service-type
+                       (qemu-binfmt-configuration
+                        (platforms (apply lookup-qemu-platforms binfmt-platforms))))
+              (operating-system-user-services os))
+       (operating-system-user-services os))))
 #+end_src
 **** Macbook
 #+begin_src scheme
@@ -9707,7 +9716,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (os:with-virtualization #:kvm-support? #t
                                 #:kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
                                                              (,aux-name . ,aux-he-virtualization?)
-                                                             (,guest-name . ,guest-he-virtualization?))))
+                                                             (,guest-name . ,guest-he-virtualization?)))
+                                ;; #:binfmt-platforms '("aarch64")
+                                )
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
