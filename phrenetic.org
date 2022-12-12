@@ -270,7 +270,6 @@ Run with ~sudo~.
             accounts
             guix-pm
             nix-pm
-            virtualization
             console-fonts
             kmonad-tool
             desktop-base-services
@@ -299,12 +298,14 @@ Run with ~sudo~.
             %stateless-storage-paths
             %stateless-mountables
             console-keyboard-layouts
+            virtualization
             macbook
             %macbook-kb-layout
             os-base
             with-host-info
             with-bootloader
             with-filesystems
+            with-virtualization
             with-macbook-hardware))
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
@@ -550,20 +551,6 @@ Run with ~sudo~.
                     ;; TODO maybe do each sub-path ("/nix/store", "/nix/var/nix", and "/nix/var/log/nix") here like I do above.
                     ((#:path . "nix/")
                      (#:storage . #:machine))))))))))
-#+end_src
-*** Virtualization
-Must succeed [[*Accounts][Accounts]] component.
-#+begin_src scheme
-(define-system-comp (virtualization #:key who)
-  (users
-   (map (lambda (account)
-          (if (member (user-account-name account) who)
-              (user-account
-               (inherit account)
-               (supplementary-groups (append (user-account-supplementary-groups account)
-                                             '("kvm"))))
-              account))
-        (operating-system-users os))))
 #+end_src
 *** Console
 **** Fonts
@@ -1451,6 +1438,24 @@ Must succeed [[*Bootloader][Bootloader]] component.
                (inherit (operating-system-bootloader os))
                (keyboard-layout kb-layout))))
 #+end_src
+**** Virtualization
+Must succeed [[*Accounts][Accounts]] component.
+#+begin_src scheme
+(define-system-comp (virtualization #:key
+                                    (kvm-support? #t)
+                                    who)
+  (users
+   (if kvm-support?
+       (map (lambda (account)
+              (if (member (user-account-name account) who)
+                  (user-account
+                   (inherit account)
+                   (supplementary-groups (append (user-account-supplementary-groups account)
+                                                 '("kvm"))))
+                  account))
+            (operating-system-users os))
+       (operating-system-users os))))
+#+end_src
 **** Macbook
 #+begin_src scheme
 (define* (macbook os #:key bluetooth?)
@@ -1682,8 +1687,6 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                   users-info
                   guix?
                   nix?
-                  virtualization?
-                  virtualization-users
                   console?
                   kmonad?
                   kmonad-users
@@ -1716,8 +1719,6 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
           (nix-pm $ #:stateless? stateless?
                   #:stateless-machine-dir stateless-machine-dir)
           $)
-      (if virtualization?
-          (virtualization $ #:who virtualization-users) $)
       (if console?
           (as-> $ $
             (console-fonts $ #:number-of-ttys number-of-ttys)
@@ -1813,6 +1814,10 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                    #:state-users stateless-state-users
                    #:password-users stateless-password-users)
         $)))
+#+end_src
+*** Virtualization
+#+begin_src scheme
+(define* with-virtualization virtualization)
 #+end_src
 *** Macbook hardware
 #+begin_src scheme
@@ -5855,16 +5860,6 @@ nix-channel --update
                (symlink profile link))))
          profiles))))
 #+end_src
-*** Virtualization
-#+begin_src scheme
-(define (virtualization)
-  (list
-   (simple-service
-    'virtualization-add-packages
-    home-profile-service-type
-    (list ;; qemu ; QEMU is kind of a fatty, maybe don't keep it installed all the time.
-          ))))
-#+end_src
 *** Console
 **** KMonad
 #+begin_src scheme
@@ -7202,6 +7197,16 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (assoc-ref font #:font/name)
     (number->string
      (assoc-ref font #:font/size)))))
+#+end_src
+*** Virtualization
+#+begin_src scheme
+(define (virtualization)
+  (list
+   (simple-service
+    'virtualization-add-packages
+    home-profile-service-type
+    (list ;; qemu ; QEMU is kind of a fatty, maybe don't keep it installed all the time.
+          ))))
 #+end_src
 *** Programs
 **** AWS
@@ -8597,7 +8602,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       doom-flags
                       guix?
                       nix?
-                      virtualization?
                       console?
                       kmonad?
                       desktop?
@@ -8605,7 +8609,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       login-manager
                       desktop-tty-start-cmds
                       sessions
-                      sway-environment)
+                      sway-environment
+                      virtualization?)
   (append
    (if stateless?
        (stateless #:storage-paths stateless-storage-paths) '())
@@ -8619,8 +8624,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                #:login-shell login-shell)
        '())
-   (if virtualization?
-       (virtualization) '())
    (if console?
        (if kmonad?
            (kmonad-tool #:doom? doom?) '())
@@ -8643,7 +8646,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               (gnome-desktop #:stateless? stateless?) '())
           (if (member #:session/sway (or sessions '()))
               sway-environment '())))
-       '())))
+       '())
+   (if virtualization?
+       (virtualization) '())))
 #+end_src
 *** Sway environment
 #+begin_src scheme
@@ -8808,7 +8813,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   doom-flags
                   guix?
                   nix?
-                  virtualization?
                   console?
                   kmonad?
                   desktop?
@@ -8816,6 +8820,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   connection-manager
                   login-manager
                   sessions
+                  virtualization?
                   email
                   projects)
   (let* ((login-shell #:shell/bash)
@@ -8838,7 +8843,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   #:doom-flags doom-flags
                   #:guix? guix?
                   #:nix? nix?
-                  #:virtualization? virtualization?
                   #:console? console?
                   #:kmonad? kmonad?
                   #:desktop? desktop?
@@ -8854,7 +8858,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                        #:colors colors
                                                        #:fonts fonts
                                                        #:font-variable-pitch font-variable-pitch
-                                                       #:emacs-editor emacs-editor))
+                                                       #:emacs-editor emacs-editor)
+                  #:virtualization? virtualization?)
      (shells #:stateless? stateless?
              #:doom? doom?
              #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
@@ -9659,10 +9664,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                  (#:admin? . #t))
                                 ((#:name . ,guest-name)
                                  (#:comment . "Mellon")))
-                 #:virtualization? #t
-                 #:virtualization-users (feature-users `((,primary-name . ,primary-he-virtualization?)
-                                                         (,aux-name . ,aux-he-virtualization?)
-                                                         (,guest-name . ,guest-he-virtualization?)))
                  #:kmonad? #t
                  #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                  (,aux-name . ,aux-he-kmonad?)
@@ -9703,6 +9704,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                       (,guest-name . ,guest-he-stateless?)))
                              #:stateless-password-users (list primary-name
                                                               aux-name))
+        (os:with-virtualization #:who (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                       (,aux-name . ,aux-he-virtualization?)
+                                                       (,guest-name . ,guest-he-virtualization?))))
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
@@ -9714,8 +9718,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+begin_src scheme
 (define* (os-base #:key
                   users-info
-                  virtualization?
-                  virtualization-users
                   kmonad?
                   kmonad-users
                   bluetooth?
@@ -9731,8 +9733,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    ;; #:source? #t
    ;; #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
    #:users-info users-info
-   #:virtualization? virtualization?
-   #:virtualization-users virtualization-users
    #:kmonad? kmonad?
    #:kmonad-users kmonad-users
    #:bluetooth? bluetooth?
@@ -9753,9 +9753,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     he:he-base
     #:stateless? primary-he-stateless?
     #:email "pharcosyle@gmail.com"
-    #:virtualization? primary-he-virtualization?
     #:kmonad? primary-he-kmonad?
     #:sessions primary-he-sessions
+    #:virtualization? primary-he-virtualization?
     #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
                  ("Krush/hyperdrive" . ((#:stateless? . ,primary-he-stateless?)
                                         (#:doom? . ,doom?)
@@ -9765,8 +9765,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define primary-he-stateless? stateless?)
 (define primary-he-kmonad? #t)
-(define primary-he-virtualization? #t)
 (define primary-he-sessions '(#:session/sway))
+(define primary-he-virtualization? #t)
 #+end_src
 ****** Aux
 #+begin_src scheme
@@ -9776,15 +9776,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     he:he-base
     #:stateless? aux-he-stateless?
     #:email "pharcosyle@gmail.com"
-    #:virtualization? aux-he-virtualization?
     #:kmonad? aux-he-kmonad?
     #:sessions aux-he-sessions
+    #:virtualization? aux-he-virtualization?
     (he-shared-opts))))
 
 (define aux-he-stateless? #f)
 (define aux-he-kmonad? #f)
-(define aux-he-virtualization? primary-he-virtualization?)
 (define aux-he-sessions primary-he-sessions)
+(define aux-he-virtualization? primary-he-virtualization?)
 #+end_src
 ****** Guest
 #+begin_src scheme
@@ -9793,16 +9793,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (apply
     he:he-base
     #:stateless? guest-he-stateless?
-    #:virtualization? guest-he-virtualization?
     #:kmonad? guest-he-kmonad?
     #:sessions guest-he-sessions
+    #:virtualization? guest-he-virtualization?
     (he-shared-opts))))
 
 (define guest-he-stateless? #f)
 (define guest-he-kmonad? #f)
-(define guest-he-virtualization? #f)
 (define guest-he-sessions '(;; #:session/gnome
                             #:session/sway))
+(define guest-he-virtualization? #f)
 #+end_src
 ****** HE shared opts
 #+begin_src scheme
