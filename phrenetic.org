@@ -1419,13 +1419,12 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                      (#:storage . #:machine)))))
         '())))
   (sudoers-file
-   (let ((sudoers-spec %sudoers-specification))
-     (if (not lectures?)
-         (mixed-text-file
-          "sudoers"
-          (slurp-file-like sudoers-spec)
-          "Defaults lecture=never" "\n")
-         sudoers-spec))))
+   (if (not lectures?)
+       (mixed-text-file
+        "sudoers"
+        (slurp-file-like %sudoers-specification)
+        "Defaults lecture=never" "\n")
+       %sudoers-specification)))
 #+end_src
 *** Hardware-specific
 **** Console
@@ -1442,12 +1441,12 @@ Must succeed [[*Bootloader][Bootloader]] component.
 Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (virtualization #:key
-                                    (kvm-support? #t)
-                                    who)
+                                    kvm-support?
+                                    kvm-users)
   (users
    (if kvm-support?
        (map (lambda (account)
-              (if (member (user-account-name account) who)
+              (if (member (user-account-name account) kvm-users)
                   (user-account
                    (inherit account)
                    (supplementary-groups (append (user-account-supplementary-groups account)
@@ -2002,6 +2001,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
 #+end_src
 ** Components
 *** Stateless
+- TODO probably move this to above "Virtualization" (to keep things in the same order in Home as in System)
 #+begin_src scheme
 (define* (stateless #:key storage-paths)
   (append
@@ -9704,9 +9704,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                       (,guest-name . ,guest-he-stateless?)))
                              #:stateless-password-users (list primary-name
                                                               aux-name))
-        (os:with-virtualization #:who (feature-users `((,primary-name . ,primary-he-virtualization?)
-                                                       (,aux-name . ,aux-he-virtualization?)
-                                                       (,guest-name . ,guest-he-virtualization?))))
+        (os:with-virtualization #:kvm-support? #t
+                                #:kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                             (,aux-name . ,aux-he-virtualization?)
+                                                             (,guest-name . ,guest-he-virtualization?))))
         (os:with-macbook-hardware #:bluetooth? bluetooth?))))
 
 (define (feature-users flags)
