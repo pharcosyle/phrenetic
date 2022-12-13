@@ -260,7 +260,7 @@ Run with ~sudo~.
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (any remove iota))
+  #:use-module ((srfi srfi-1) #:select (any delete-duplicates remove iota))
   #:export (blank-os
             source
             base-services
@@ -577,14 +577,7 @@ Must succeed [[*Accounts][Accounts]] component.
    (cons* kmonad
           (operating-system-packages os)))
   (users
-   (map (lambda (account)
-          (if (member (user-account-name account) who)
-              (user-account
-               (inherit account)
-               (supplementary-groups (append (user-account-supplementary-groups account)
-                                             '("input"))))
-              account))
-        (operating-system-users os)))
+   (add-groups-to-accounts (operating-system-users os) who '("input")))
   (services
    (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
           (operating-system-user-services os))))
@@ -685,14 +678,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                who
                                stateless?)
   (users
-   (map (lambda (account)
-          (if (member (user-account-name account) who)
-              (user-account
-               (inherit account)
-               (supplementary-groups (append (user-account-supplementary-groups account)
-                                             '("lp"))))
-              account))
-        (operating-system-users os)))
+   (add-groups-to-accounts (operating-system-users os) who '("lp")))
   (services
    (append
     (operating-system-user-services os)
@@ -1448,14 +1434,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                     binfmt-platforms)
   (users
    (if kvm-support?
-       (map (lambda (account)
-              (if (member (user-account-name account) kvm-users)
-                  (user-account
-                   (inherit account)
-                   (supplementary-groups (append (user-account-supplementary-groups account)
-                                                 '("kvm"))))
-                  account))
-            (operating-system-users os))
+       (add-groups-to-accounts (operating-system-users os) kvm-users '("kvm"))
        (operating-system-users os)))
   (services
    (if binfmt-platforms
@@ -1685,6 +1664,17 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
+
+(define (add-groups-to-accounts accounts users groups)
+  (map (lambda (account)
+         (if (member (user-account-name account) users)
+             (user-account
+              (inherit account)
+              (supplementary-groups (-> (user-account-supplementary-groups account)
+                                        (append groups)
+                                        delete-duplicates)))
+             account))
+       accounts))
 #+end_src
 ** Templates
 *** Base
