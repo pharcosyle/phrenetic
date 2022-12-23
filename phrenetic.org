@@ -1991,6 +1991,12 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
             programs
             applications
             he-base))
+
+(use-modules (guix transformations))
+(define transform-sway
+  (options->transformation
+   '((with-commit . "sway=1.8-rc4"))))
+(define sway (transform-sway (@ (rde packages) sway-latest)))
 #+end_src
 ** Create
 #+begin_src scheme
