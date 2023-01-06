@@ -830,7 +830,7 @@ Must succeed [[*Accounts][Accounts]] component.
   (timezone (or timezone "Etc/UTC"))
   (locale (or locale "en_US.utf8")))
 #+end_src
-**** Bootloader
+**** Bootloaders
 #+begin_src scheme
 (define %boot-label "genesis")
 #+end_src
@@ -2369,7 +2369,7 @@ SAVEHIST=$HISTSIZE
        "/gnu/store/3kc6nazjb4dvqlx6ynagl9kk8bl37ajf-emacs-next-pgtk-28.1.91-0.031a3a8/bin/emacsclient")
       ("EDITOR" . "$VISUAL")))))
 
-(define (emacs-editor emacs)
+(define* (emacs-editor #:key emacs)
   `((#:emacs/program . ,(list
                          (file-append emacs "/bin/emacs")))
     (#:emacs/new-frame . ,(list
@@ -8840,7 +8840,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   projects)
   (let* ((login-shell #:shell/bash)
          (emacs-package %emacs-package)
-         (emacs-editor (emacs-editor emacs-package))
+         (emacs-editor (emacs-editor #:emacs emacs-package))
          (doom-flags (acons #:doom/icons? #t doom-flags))
          (theme #:theme/dark)
          (light-colors %light-colors)
