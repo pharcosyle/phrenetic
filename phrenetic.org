@@ -1992,10 +1992,11 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
             applications
             he-base))
 
+;; TODO Remove once this is the default in RDE.
 (use-modules (guix transformations))
 (define transform-sway
   (options->transformation
-   '((with-commit . "sway=1.8-rc4"))))
+   '((with-commit . "sway=1.8"))))
 (define sway (transform-sway (@ (rde packages) sway-latest)))
 #+end_src
 ** Create
