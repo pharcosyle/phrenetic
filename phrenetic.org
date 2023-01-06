@@ -313,6 +313,9 @@ Run with ~sudo~.
 ;; Not exported. Probably an oversight that'll get fixed at some point.
 (define greetd-terminals (@@ (gnu services base) greetd-terminals))
 (define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
+
+;; TODO Remove once this is the default in Nonguix.
+(define linux (@ (nongnu packages linux) linux-6.1))
 #+end_src
 ** Create
 #+begin_src scheme
