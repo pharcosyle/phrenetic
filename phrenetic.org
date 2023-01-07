@@ -846,8 +846,7 @@ Must succeed [[*Accounts][Accounts]] component.
                               stateless?)
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
-               (targets (list target))
-               (timeout 1)))
+               (targets (list target))))
   (file-systems
    (cons* (file-system
             (device (file-system-label label))
