@@ -886,6 +886,9 @@ Must succeed [[*Accounts][Accounts]] component.
                           base-name
                           ".efi")))))
 
+(define (repeat n x)
+  (map (lambda _ x) (iota n)))
+
 (define grubenv
   (let* ((package "grub")
          (message (string-append "# GRUB Environment Block" "\n"
@@ -893,10 +896,7 @@ Must succeed [[*Accounts][Accounts]] component.
          (envblk-size 1024)
          (padding-size (- envblk-size (string-length message))))
     (string-append message
-                   (apply string-append (repeat "#" padding-size)))))
-
-(define (repeat n x)
-  (map (lambda _ x) (iota n)))
+                   (apply string-append (repeat padding-size "#")))))
 
 (define %efi-boot-target "/boot/efi")
 #+end_src
