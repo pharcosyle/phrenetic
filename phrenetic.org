@@ -8485,7 +8485,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     home-profile-service-type
     (list arc-theme
           ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
-          hicolor-icon-theme
+          hicolor-icon-theme ; Andrew Tropin indicates (in abcdw/rde@3a8ea85f) that this is needed for network manager applet icons.
           adwaita-icon-theme
           ;; papirus-icon-theme ; TODO Remove for now, it massively increases guix build time. Why?
           gnome-themes-extra))
