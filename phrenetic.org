@@ -232,7 +232,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
-  #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire-0.3 util-linux))
+  #:use-module ((gnu packages linux) #:select (brightnessctl e2fsprogs kbd pipewire util-linux))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services base)
@@ -641,7 +641,7 @@ Must succeed [[*Accounts][Accounts]] component.
 (define-system-comp (pipewire-multimedia)
   (services
    (cons* (udev-rules-service 'pipewire-add-udev-rules
-                              pipewire-0.3)
+                              pipewire)
           (operating-system-user-services os))))
 #+end_src
 **** Network
@@ -1906,7 +1906,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
-  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire-0.3 wireplumber))
+  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select ((node-lts . node)))
   #:use-module ((gnu packages package-management) #:select (flatpak))
@@ -5969,7 +5969,7 @@ nix-channel --update
    (simple-service
     'pipewire-add-packages
     home-profile-service-type
-    (list pipewire-0.3))
+    (list pipewire))
 
    (simple-service
     'pipewire-add-shepherd-daemons
@@ -5980,7 +5980,7 @@ nix-channel --update
       (requirement (if dbus?
                        '(dbus) '()))
       (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire-0.3 "/bin/pipewire"))
+                (list #$(file-append pipewire "/bin/pipewire"))
                 #:log-file #$(home-shepherd-service-log-file "pipewire.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
@@ -5990,7 +5990,7 @@ nix-channel --update
       (provision '(pipewire-pulse pulseaudio))
       (requirement '(pipewire pipewire-media-session))
       (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire-0.3 "/bin/pipewire-pulse"))
+                (list #$(file-append pipewire "/bin/pipewire-pulse"))
                 #:log-file #$(home-shepherd-service-log-file "pipewire-pulse.log")
                 #:environment-variables
                 (append (list "DISABLE_RTKIT=1")
@@ -6003,15 +6003,15 @@ nix-channel --update
     `(("alsa/asoundrc"
        ,(mixed-text-file
          "asoundrc"
-         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-         "<" (file-append pipewire-0.3 "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
+         "<" (file-append pipewire "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
+         "<" (file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
          "\n"
          "pcm_type.pipewire {" "\n"
-         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
+         "  lib " (file-append pipewire "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
          "}" "\n"
          "\n"
          "ctl_type.pipewire {" "\n"
-         "  lib " (file-append pipewire-0.3 "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
+         "  lib " (file-append pipewire "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
          "}" "\n"))))
 
    (when stateless?
