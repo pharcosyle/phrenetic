@@ -2230,9 +2230,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                  home-environment-variables-service-type
                  `(("SHELL" . ,(case default-interactive-shell
                                  ;; ((#:shell/bash) (file-append bash "/bin/bash"))
-                                 ((#:shell/zsh)
-                                  ;; (file-append zsh "/bin/zsh") ; TODO Workaround for 73684dc9
-                                  "/gnu/store/viwf9ar2cgly6im3yk9wf2c1dq8l1z3g-zsh-5.8.1/bin/zsh"))))))))
+                                 ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))
 
    (if doom?
        (doom-shells #:stateless? stateless?
@@ -2409,9 +2407,7 @@ SAVEHIST=$HISTSIZE
    (simple-service
     'emacs-set-editor-env-vars
     home-environment-variables-service-type
-    `(("VISUAL" .
-       ;; ,(file-append emacs "/bin/emacsclient") ; TODO Workaround for 73684dc9
-       "/gnu/store/3kc6nazjb4dvqlx6ynagl9kk8bl37ajf-emacs-next-pgtk-28.1.91-0.031a3a8/bin/emacsclient")
+    `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
       ("EDITOR" . "$VISUAL")))))
 
 (define* (emacs-editor #:key emacs)
