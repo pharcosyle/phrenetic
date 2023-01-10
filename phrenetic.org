@@ -9904,18 +9904,20 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 **** Installer
 #+begin_src scheme
 (define (installer)
-  (installer-package
-   #:os-name "frostfire"
-   #:boot-target boot-target
-   #:efi? efi?
-   #:efi-label efi-label
-   #:root-label root-label
-   #:disk-encryption? disk-encryption?
-   #:luks-label luks-label
-   #:filesystem filesystem
-   #:mountables mountables
-   #:btrfs-mount-flags btrfs-mount-flags
-   #:btrfs-mount-options btrfs-mount-options))
+  #f
+  ;; (installer-package
+  ;;  #:os-name "frostfire"
+  ;;  #:boot-target boot-target
+  ;;  #:efi? efi?
+  ;;  #:efi-label efi-label
+  ;;  #:root-label root-label
+  ;;  #:disk-encryption? disk-encryption?
+  ;;  #:luks-label luks-label
+  ;;  #:filesystem filesystem
+  ;;  #:mountables mountables
+  ;;  #:btrfs-mount-flags btrfs-mount-flags
+  ;;  #:btrfs-mount-options btrfs-mount-options)
+  )
 #+end_src
 **** System+installer shared opts
 #+begin_src scheme
