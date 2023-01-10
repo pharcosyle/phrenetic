@@ -1483,24 +1483,12 @@ Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
-      apple-macbook-power-key
       (apple-broadcom-wireless #:bluetooth? bluetooth?)
-      apple-facetime-camera))
+      apple-facetime-camera
+      apple-macbook-power-key))
 
 (define %macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
-#+end_src
-***** Macbook power key
-Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
-#+begin_src scheme
-(define-system-comp (apple-macbook-power-key)
-  (services
-   (modify-services (operating-system-user-services os)
-     (elogind-service-type
-      config =>
-      (elogind-configuration
-       (inherit config)
-       (handle-power-key 'suspend))))))
 #+end_src
 ***** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
@@ -1679,6 +1667,18 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
     (home-page "https://github.com/patjak/facetimehd-firmware")
     (license (license:nonfree "https://www.apple.com/legal"))
     (supported-systems '("i686-linux" "x86_64-linux"))))
+#+end_src
+***** Macbook power key
+Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
+#+begin_src scheme
+(define-system-comp (apple-macbook-power-key)
+  (services
+   (modify-services (operating-system-user-services os)
+     (elogind-service-type
+      config =>
+      (elogind-configuration
+       (inherit config)
+       (handle-power-key 'suspend))))))
 #+end_src
 ***** Shared
 #+begin_src scheme
