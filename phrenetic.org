@@ -973,7 +973,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 (define* (swap os
                #:key
                (target %swapfile)
-               no-cow?
+               file-no-cow?
                stateless?
                stateless-machine-dir)
   (let* ((file-target? (string? target))
@@ -994,7 +994,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
             (list
              (simple-service 'create-swapfile
                              activation-service-type
-                             (create-swapfile-gexp target* no-cow?)))
+                             (create-swapfile-gexp target* file-no-cow?)))
             (if stateless?
                 (list
                  (stateless-service
@@ -1848,7 +1848,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                                            (map (match-lambda ((_ . mount-point) mount-point))
                                                 mountables))))
         $)
-    (swap $ #:no-cow? (equal? filesystem #:filesystem/btrfs)
+    (swap $ #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
           #:stateless? stateless?
           #:stateless-machine-dir stateless-machine-dir)
     (if stateless?
