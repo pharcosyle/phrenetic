@@ -8,11 +8,11 @@
 - [[#system][System]]
   - [[#create][Create]]
   - [[#components][Components]]
-  - [[#templates][Templates]]
+  - [[#composite-components][Composite components]]
 - [[#home][Home]]
   - [[#create-1][Create]]
   - [[#components-1][Components]]
-  - [[#templates-1][Templates]]
+  - [[#composite-components-1][Composite components]]
 - [[#common][Common]]
   - [[#packages][Packages]]
   - [[#stateless][Stateless]]
@@ -1712,7 +1712,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
              account))
        accounts))
 #+end_src
-** Templates
+** Composite components
 *** Base
 #+begin_src scheme
 (define* (os-base os
@@ -8574,7 +8574,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define very-big-history 1000000)
 #+end_src
-** Templates
+** Composite components
 *** OS features
 #+begin_src scheme
 (define* (os-features #:key
