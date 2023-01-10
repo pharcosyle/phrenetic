@@ -283,8 +283,8 @@ Run with ~sudo~.
             gnome-desktop
             sway-wm
             host-info
-            %boot-label
             grub-efi
+            %efi-label
             %efi-boot-target
             %root-label
             ;; ext4
@@ -829,9 +829,6 @@ Must succeed [[*Accounts][Accounts]] component.
   (locale (or locale "en_US.utf8")))
 #+end_src
 **** Bootloaders
-#+begin_src scheme
-(define %boot-label "genesis")
-#+end_src
 ***** Grub
 #+begin_src scheme
 ;; ...
@@ -896,6 +893,7 @@ Must succeed [[*Accounts][Accounts]] component.
     (string-append message
                    (apply string-append (repeat padding-size "#")))))
 
+(define %efi-label "genesis")
 (define %efi-boot-target "/boot/efi")
 #+end_src
 **** File systems
@@ -1803,18 +1801,17 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
 #+begin_src scheme
 (define* (with-bootloader os
                           #:key
-                          efi?
-                          boot-label
                           boot-target
+                          efi?
+                          efi-label
                           stateless?)
-  ((if efi?
-       grub-efi
-       ;; grub
-       )
-   os
-   #:label boot-label
-   #:target boot-target
-   #:stateless? stateless?))
+  (if efi?
+      (grub-efi os
+                #:label efi-label
+                #:target boot-target
+                #:stateless? stateless?)
+      (grub os
+            #:target boot-target)))
 #+end_src
 *** File systems
 #+begin_src scheme
@@ -9743,9 +9740,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                  #:stateless-machine-dir stateless-machine-dir)
         (os:with-host-info #:host-name "frostfire"
                            #:timezone "America/Los_Angeles")
-        (os:with-bootloader #:efi? efi?
-                            #:boot-label boot-label
-                            #:boot-target boot-target
+        (os:with-bootloader #:boot-target boot-target
+                            #:efi? efi?
+                            #:efi-label efi-label
                             #:stateless? stateless?)
         (os:with-filesystems #:filesystem filesystem
                              #:root-label root-label
@@ -9900,9 +9897,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (installer)
   (installer-package
    #:os-name "frostfire"
-   #:efi? efi?
-   #:boot-label boot-label
    #:boot-target boot-target
+   #:efi? efi?
+   #:efi-label efi-label
    #:root-label root-label
    #:disk-encryption? disk-encryption?
    #:luks-label luks-label
@@ -9913,9 +9910,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 **** System+installer shared opts
 #+begin_src scheme
-(define efi? #t)
-(define boot-label os:%boot-label)
 (define boot-target os:%efi-boot-target)
+(define efi? #t)
+(define efi-label os:%efi-label)
 (define filesystem #:filesystem/btrfs)
 (define root-label os:%root-label)
 (define mountables (if stateless?
