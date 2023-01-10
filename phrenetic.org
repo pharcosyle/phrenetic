@@ -972,6 +972,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 (define* (swap os
                #:key
                (target "/.swap")
+               file-size
                file-no-cow?
                stateless?
                stateless-machine-dir)
@@ -993,7 +994,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
             (list
              (simple-service 'create-swapfile
                              activation-service-type
-                             (create-swapfile-gexp target* file-no-cow?)))
+                             (create-swapfile-gexp target* file-size file-no-cow?)))
             (if stateless?
                 (list
                  (stateless-service
@@ -1003,7 +1004,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                 '()))
            '()))))))
 
-(define (create-swapfile-gexp swapfile no-cow?)
+(define (create-swapfile-gexp swapfile size no-cow?)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (invoke mkdir-p)))
@@ -1013,14 +1014,10 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swapfile)
           (when #$no-cow?
             (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$swapfile))
-          (invoke #$(file-append util-linux "/bin/fallocate") "--length" "8G" #$swapfile)
+          (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) #$swapfile)
           (chmod #$swapfile #o600)
           (invoke #$(file-append util-linux "/sbin/mkswap") #$swapfile)))))
 #+end_src
-***** TODO [#E] Don't hardcode swapfile size
-Determine it dynamically or make it an argument.
-- At the very least I'll need it to be bigger if I want to try to get hibernation working again but not so big that I can't install to a USB stick.
-- Make it 1.5x memory size if disk size allows.
 **** Stateless
 Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
 #+begin_src scheme
@@ -1821,6 +1818,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                            btrfs-mount-options
                            disk-encryption?
                            luks-label
+                           swap-file-size
                            stateless?
                            stateless-storage-paths
                            stateless-machine-dir
@@ -1845,7 +1843,8 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                                            (map (match-lambda ((_ . mount-point) mount-point))
                                                 mountables))))
         $)
-    (swap $ #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
+    (swap $ #:file-size swap-file-size
+          #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
           #:stateless? stateless?
           #:stateless-machine-dir stateless-machine-dir)
     (if stateless?
@@ -9757,6 +9756,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:btrfs-mount-options btrfs-mount-options
                              #:disk-encryption? disk-encryption?
                              #:luks-label luks-label
+                             #:swap-file-size (* 32 GiB)
                              #:stateless? stateless?
                              #:stateless-storage-paths stateless-storage-paths
                              #:stateless-machine-dir stateless-machine-dir
