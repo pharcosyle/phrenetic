@@ -294,7 +294,6 @@ Run with ~sudo~.
             disk-encryption
             %luks-label
             swap
-            %swapfile
             stateless
             %stateless-storage-paths
             %stateless-mountables
@@ -972,7 +971,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 #+begin_src scheme
 (define* (swap os
                #:key
-               (target %swapfile)
+               (target "/.swap")
                file-no-cow?
                stateless?
                stateless-machine-dir)
@@ -1017,8 +1016,6 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (invoke #$(file-append util-linux "/bin/fallocate") "--length" "8G" #$swapfile)
           (chmod #$swapfile #o600)
           (invoke #$(file-append util-linux "/sbin/mkswap") #$swapfile)))))
-
-(define %swapfile "/.swap")
 #+end_src
 ***** TODO [#E] Don't hardcode swapfile size
 Determine it dynamically or make it an argument.
