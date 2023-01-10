@@ -302,7 +302,6 @@ Run with ~sudo~.
             macbook
             %macbook-kb-layout
             os-base
-            with-filesystems
             with-macbook-hardware))
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
@@ -1785,53 +1784,6 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
             (if (member #:session/sway (or sessions '()))
                 (sway-wm $) $))
           $))))
-#+end_src
-*** File systems
-#+begin_src scheme
-(define* (with-filesystems os
-                           #:key
-                           filesystem
-                           root-label
-                           mountables
-                           btrfs-mount-flags
-                           btrfs-mount-options
-                           disk-encryption?
-                           luks-uuid
-                           swap-file-size
-                           stateless?
-                           stateless-storage-paths
-                           stateless-machine-dir
-                           stateless-hes
-                           stateless-state-users
-                           stateless-password-users)
-  (as-> os $
-    (case filesystem
-      ;; ((#:filesystem/ext4)
-      ;;  (ext4 $ #:label root-label))
-      ((#:filesystem/btrfs)
-       (btrfs $ #:label root-label
-              #:subvols mountables
-              #:flags btrfs-mount-flags
-              #:options btrfs-mount-options)))
-    (if disk-encryption?
-        (disk-encryption $ #:device-uuid luks-uuid
-                         #:mount-points (case filesystem
-                                          ;; ((#:filesystem/ext4)
-                                          ;;  ...)
-                                          ((#:filesystem/btrfs)
-                                           (map (match-lambda ((_ . mount-point) mount-point))
-                                                mountables))))
-        $)
-    (swap $ #:file-size swap-file-size
-          #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
-          #:stateless? stateless?
-          #:stateless-machine-dir stateless-machine-dir)
-    (if stateless?
-        (stateless $ #:storage-paths stateless-storage-paths
-                   #:hes stateless-hes
-                   #:state-users stateless-state-users
-                   #:password-users stateless-password-users)
-        $)))
 #+end_src
 *** Macbook hardware
 #+begin_src scheme
@@ -9705,62 +9657,75 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (guest-name "mellon")
         (bluetooth? #t)
         (stateless-machine-dir (assoc-ref stateless-storage-paths #:machine)))
-    (-> (os-base #:users-info `(((#:name . ,primary-name)
-                                 (#:comment . "Krzysztof Baranowski")
-                                 (#:admin? . #t))
-                                ((#:name . ,aux-name)
-                                 (#:comment . "Phil Coulson")
-                                 (#:admin? . #t))
-                                ((#:name . ,guest-name)
-                                 (#:comment . "Mellon")))
-                 #:kmonad? #t
-                 #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
-                                                 (,aux-name . ,aux-he-kmonad?)
-                                                 (,guest-name . ,guest-he-kmonad?)))
-                 ;; #:bluetooth? bluetooth?
-                 ;; #:bluetooth-users (list primary-name
-                 ;;                         aux-name
-                 ;;                         guest-name)
-                 ;; #:auto-login? disk-encryption?
-                 ;; #:auto-login-user primary-name
-                 #:sessions (->> (list primary-he-sessions
-                                       aux-he-sessions
-                                       guest-he-sessions)
-                                 (apply append)
-                                 delete-duplicates)
-                 #:stateless? stateless?
-                 #:stateless-machine-dir stateless-machine-dir)
-        (os:host-info #:host-name "frostfire"
-                      #:timezone "America/Los_Angeles")
-        (os:with-filesystems #:filesystem filesystem
-                             #:root-label root-label
-                             #:mountables mountables
-                             #:btrfs-mount-flags btrfs-mount-flags
-                             #:btrfs-mount-options btrfs-mount-options
-                             #:disk-encryption? disk-encryption?
-                             #:luks-uuid luks-uuid
-                             #:swap-file-size (* 32 GiB)
-                             #:stateless? stateless?
-                             #:stateless-storage-paths stateless-storage-paths
-                             #:stateless-machine-dir stateless-machine-dir
-                             #:stateless-hes `((,primary-name . ,(primary-he))
-                                               (,aux-name . ,(aux-he))
-                                               (,guest-name . ,(guest-he)))
-                             #:stateless-state-users (feature-users `((,primary-name . ,primary-he-stateless?)
-                                                                      (,aux-name . ,aux-he-stateless?)
-                                                                      (,guest-name . ,guest-he-stateless?)))
-                             #:stateless-password-users (list primary-name
-                                                              aux-name))
-        (os:virtualization #:kvm-support? #t
-                           #:kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
-                                                        (,aux-name . ,aux-he-virtualization?)
-                                                        (,guest-name . ,guest-he-virtualization?)))
-                           ;; #:binfmt-platforms '("aarch64")
-                           )
-        (os:with-macbook-hardware #:boot-target boot-target
-                                  #:efi-label efi-label
-                                  #:bluetooth? bluetooth?
-                                  #:stateless? stateless?))))
+    (as-> (os-base #:users-info `(((#:name . ,primary-name)
+                                   (#:comment . "Krzysztof Baranowski")
+                                   (#:admin? . #t))
+                                  ((#:name . ,aux-name)
+                                   (#:comment . "Phil Coulson")
+                                   (#:admin? . #t))
+                                  ((#:name . ,guest-name)
+                                   (#:comment . "Mellon")))
+                   #:kmonad? #t
+                   #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
+                                                   (,aux-name . ,aux-he-kmonad?)
+                                                   (,guest-name . ,guest-he-kmonad?)))
+                   ;; #:bluetooth? bluetooth?
+                   ;; #:bluetooth-users (list primary-name
+                   ;;                         aux-name
+                   ;;                         guest-name)
+                   ;; #:auto-login? disk-encryption?
+                   ;; #:auto-login-user primary-name
+                   #:sessions (->> (list primary-he-sessions
+                                         aux-he-sessions
+                                         guest-he-sessions)
+                                   (apply append)
+                                   delete-duplicates)
+                   #:stateless? stateless?
+                   #:stateless-machine-dir stateless-machine-dir) $
+      (os:host-info $ #:host-name "frostfire"
+                    #:timezone "America/Los_Angeles")
+      (case filesystem
+        ;; ((#:filesystem/ext4)
+        ;;  (os:ext4 $ #:label root-label))
+        ((#:filesystem/btrfs)
+         (os:btrfs $ #:label root-label
+                   #:subvols mountables
+                   #:flags btrfs-mount-flags
+                   #:options btrfs-mount-options)))
+      (if disk-encryption?
+          (os:disk-encryption $ #:device-uuid luks-uuid
+                              #:mount-points (case filesystem
+                                               ;; ((#:filesystem/ext4)
+                                               ;;  ...)
+                                               ((#:filesystem/btrfs)
+                                                (map (match-lambda ((_ . mount-point) mount-point))
+                                                     mountables))))
+          $)
+      (os:swap $ #:file-size (* 32 GiB)
+               #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
+               #:stateless? stateless?
+               #:stateless-machine-dir stateless-machine-dir)
+      (if stateless?
+          (os:stateless $ #:storage-paths stateless-storage-paths
+                        #:hes `((,primary-name . ,(primary-he))
+                                (,aux-name . ,(aux-he))
+                                (,guest-name . ,(guest-he)))
+                        #:state-users (feature-users `((,primary-name . ,primary-he-stateless?)
+                                                       (,aux-name . ,aux-he-stateless?)
+                                                       (,guest-name . ,guest-he-stateless?)))
+                        #:password-users (list primary-name
+                                               aux-name))
+          $)
+      (os:virtualization $ #:kvm-support? #t
+                         #:kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                      (,aux-name . ,aux-he-virtualization?)
+                                                      (,guest-name . ,guest-he-virtualization?)))
+                         ;; #:binfmt-platforms '("aarch64")
+                         )
+      (os:with-macbook-hardware $ #:boot-target boot-target
+                                #:efi-label efi-label
+                                #:bluetooth? bluetooth?
+                                #:stateless? stateless?))))
 
 (define (feature-users flags)
   (->> flags
