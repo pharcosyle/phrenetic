@@ -292,7 +292,7 @@ Run with ~sudo~.
             %btrfs-mount-flags
             %btrfs-mount-options
             disk-encryption
-            %luks-label
+            %luks-uuid
             swap
             stateless
             %stateless-storage-paths
@@ -941,12 +941,11 @@ Must succeed [[*File systems][File systems]] component.
 #+begin_src scheme
 (define* (disk-encryption os
                           #:key
-                          label
+                          device-uuid
                           (target "deciphered")
                           mount-points)
   (let ((encrypted-device (mapped-device
-                           ;; (source label)
-                           (source (uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5"))
+                           (source (uuid device-uuid))
                            (targets (list target))
                            (type luks-device-mapping))))
     (system-comp
@@ -964,7 +963,7 @@ Must succeed [[*File systems][File systems]] component.
                  fs))
            (operating-system-file-systems os))))))
 
-(define %luks-label "ciphered")
+(define %luks-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5")
 #+end_src
 **** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
@@ -1817,7 +1816,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
                            btrfs-mount-flags
                            btrfs-mount-options
                            disk-encryption?
-                           luks-label
+                           luks-uuid
                            swap-file-size
                            stateless?
                            stateless-storage-paths
@@ -1835,7 +1834,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
               #:flags btrfs-mount-flags
               #:options btrfs-mount-options)))
     (if disk-encryption?
-        (disk-encryption $ #:label luks-label
+        (disk-encryption $ #:device-uuid luks-uuid
                          #:mount-points (case filesystem
                                           ;; ((#:filesystem/ext4)
                                           ;;  ...)
@@ -9758,7 +9757,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:btrfs-mount-flags btrfs-mount-flags
                              #:btrfs-mount-options btrfs-mount-options
                              #:disk-encryption? disk-encryption?
-                             #:luks-label luks-label
+                             #:luks-uuid luks-uuid
                              #:swap-file-size (* 32 GiB)
                              #:stateless? stateless?
                              #:stateless-storage-paths stateless-storage-paths
@@ -9912,7 +9911,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   ;;  #:efi-label efi-label
   ;;  #:root-label root-label
   ;;  #:disk-encryption? disk-encryption?
-  ;;  #:luks-label luks-label
+  ;;  #:luks-uuid luks-uuid
   ;;  #:filesystem filesystem
   ;;  #:mountables mountables
   ;;  #:btrfs-mount-flags btrfs-mount-flags
@@ -9933,7 +9932,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define btrfs-mount-flags os:%btrfs-mount-flags)
 (define btrfs-mount-options os:%btrfs-mount-options)
 (define disk-encryption? #t)
-(define luks-label os:%luks-label)
+(define luks-uuid os:%luks-uuid)
 #+end_src
 **** Module
 ***** Exports
