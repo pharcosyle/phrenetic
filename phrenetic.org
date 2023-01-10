@@ -9567,7 +9567,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             alist->list
             merge-with
             update-keys
-            update-vals)
+            update-vals
+            KiB
+            MiB
+            GiB)
   ;; Build
   #:export (no-follow-file-exists?))
 #+end_src
@@ -9670,6 +9673,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          ((k . v)
           (cons k (f v))))
        alist))
+#+end_src
+**** Byte suffixes
+#+begin_src scheme
+(define KiB (expt 2 10))
+(define MiB (expt 2 20))
+(define GiB (expt 2 30))
 #+end_src
 *** Build
 #+begin_src scheme
