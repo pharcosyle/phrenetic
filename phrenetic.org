@@ -565,7 +565,7 @@ Must succeed [[*Accounts][Accounts]] component.
    (cons* kmonad
           (operating-system-packages os)))
   (users
-   (add-groups-to-accounts (operating-system-users os) who '("input")))
+   (accounts-with-groups (operating-system-users os) who '("input")))
   (services
    (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
           (operating-system-user-services os))))
@@ -666,7 +666,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                who
                                stateless?)
   (users
-   (add-groups-to-accounts (operating-system-users os) who '("lp")))
+   (accounts-with-groups (operating-system-users os) who '("lp")))
   (services
    (append
     (operating-system-user-services os)
@@ -1503,7 +1503,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                     binfmt-platforms)
   (users
    (if kvm-support?
-       (add-groups-to-accounts (operating-system-users os) kvm-users '("kvm"))
+       (accounts-with-groups (operating-system-users os) kvm-users '("kvm"))
        (operating-system-users os)))
   (services
    (if binfmt-platforms
@@ -1735,7 +1735,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (member (service-kind s) kinds))
           services))
 
-(define (add-groups-to-accounts accounts users groups)
+(define (accounts-with-groups accounts users groups)
   (map (lambda (account)
          (if (member (user-account-name account) users)
              (user-account
