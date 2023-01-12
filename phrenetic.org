@@ -1448,32 +1448,28 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+end_src
 **** Linux
 #+begin_src scheme
-(define* (linux-kernel os
-                       #:key
-                       (nonfree? #t)
-                       customization-params)
-  (let ((sys (or (%current-target-system)
-                 (%current-system))))
-    (system-comp
-     os
-     (kernel (let ((kernel (get-linux sys nonfree?)))
-               (if customization-params
-                   (apply customize-linux
-                          #:linux kernel
-                          customization-params)
-                   kernel)))
-     (initrd (if (and nonfree?
-                      (member sys '("x86_64-linux" "i686-linux")))
-                 microcode-initrd
-                 base-initrd))
-     (firmware
-      (append
-       (if nonfree?
-           (list linux-firmware) '())
-       (operating-system-firmware os))))))
+(define-system-comp (linux-kernel #:key
+                                  system
+                                  nonfree?
+                                  linux-customization-params)
+  (kernel (let ((kernel (get-linux system nonfree?)))
+            (if linux-customization-params
+                (apply customize-linux
+                       #:linux kernel
+                       linux-customization-params)
+                kernel)))
+  (initrd (if (and nonfree?
+                   (member system '("x86_64-linux" "i686-linux")))
+              microcode-initrd
+              base-initrd))
+  (firmware
+   (append
+    (if nonfree?
+        (list linux-firmware) '())
+    (operating-system-firmware os))))
 
-(define (get-linux sys nonfree?)
-  (as-> sys $
+(define (get-linux system nonfree?)
+  (as-> system $
         (or (assoc-ref `(;; ("aarch64-linux" . (,linux-libre-arm64-generic . ,linux-arm64-generic))
                          ;; ...
                          )
@@ -1831,7 +1827,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (grub-efi $ #:label efi-label
               #:target boot-target
               #:stateless? stateless?)
-    (linux-kernel $)
+    (linux-kernel $ #:system "x86_64-linux"
+                  #:nonfree? #t)
     (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
