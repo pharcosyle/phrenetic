@@ -9079,7 +9079,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (cleanup-and-migrate target state-file storage-dir)
         (when directory-target?
           (mkdirp-perms state-file i))
-        (when (no-follow-file-exists? state-file)
+        (when (or (no-follow-file-exists? state-file)
+                  (assoc-ref i #:preemptively?))
           (symlink state-file target)))))
 
   (define (cleanup-and-migrate target state-file storage-dir)
