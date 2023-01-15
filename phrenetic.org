@@ -533,7 +533,7 @@ Run with ~sudo~.
                             (mkdir #$nix-machine-dir)))
         (stateless-service
          'nix-pm
-         #:ignore '(((#:path . "/nix/store/"))
+         #:ignore `(((#:path . "/nix/store/"))
                     ((#:path . "/nix/var/nix/"))
                     ((#:path . "/nix/var/log/nix/"))
                     ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/")))
