@@ -925,19 +925,19 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                   '())))
            '()))))))
 
-(define (create-swap-file-gexp swap-file size no-cow?)
+(define (create-swap-file-gexp file size no-cow?)
   (with-imported-modules '((guix build utils))
     #~(begin
         (use-modules ((guix build utils) #:select (invoke mkdir-p)))
 
-        (when (not (file-exists? #$swap-file))
-          (mkdir-p (dirname #$swap-file))
-          (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$swap-file)
+        (when (not (file-exists? #$file))
+          (mkdir-p (dirname #$file))
+          (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$file)
           (when #$no-cow?
-            (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$swap-file))
-          (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) #$swap-file)
-          (chmod #$swap-file #o600)
-          (invoke #$(file-append util-linux "/sbin/mkswap") #$swap-file)))))
+            (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$file))
+          (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) #$file)
+          (chmod #$file #o600)
+          (invoke #$(file-append util-linux "/sbin/mkswap") #$file)))))
 #+end_src
 **** Stateless
 Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
