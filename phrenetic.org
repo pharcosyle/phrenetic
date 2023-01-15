@@ -1496,18 +1496,22 @@ Must succeed [[*Accounts][Accounts]] component.
 (define-system-comp (virtualization #:key
                                     kvm-support?
                                     kvm-users
+                                    native-platform
                                     binfmt-platforms)
   (users
-   (if kvm-support?
+   (if (and kvm-support? kvm-users)
        (accounts-with-groups (operating-system-users os) kvm-users '("kvm"))
        (operating-system-users os)))
   (services
-   (if binfmt-platforms
-       (cons* (service qemu-binfmt-service-type
-                       (qemu-binfmt-configuration
-                        (platforms (apply lookup-qemu-platforms binfmt-platforms))))
-              (operating-system-user-services os))
-       (operating-system-user-services os))))
+   (let ((platforms (remove (lambda (p)
+                              (equal? p native-platform))
+                            (or binfmt-platforms '()))))
+     (if (not (null? platforms))
+         (cons* (service qemu-binfmt-service-type
+                         (qemu-binfmt-configuration
+                          (platforms (apply lookup-qemu-platforms platforms))))
+                (operating-system-user-services os))
+         (operating-system-user-services os)))))
 #+end_src
 **** Apple
 #+begin_src scheme
@@ -1822,6 +1826,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 boot-target
                                 efi-label
                                 bluetooth?
+                                virtualization-kvm-users
+                                virtualization-binfmt-platforms
                                 stateless?)
   (as-> os $
     (grub-efi $ #:label efi-label
@@ -1830,6 +1836,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (linux-kernel $ #:system "x86_64-linux"
                   #:nonfree? #t)
     (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
+    (virtualization $ #:kvm-support? #t
+                    #:kvm-users virtualization-kvm-users
+                    #:native-platform "x86_64"
+                    #:binfmt-platforms virtualization-binfmt-platforms)
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
@@ -8607,6 +8617,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 ** Composite components
 *** OS features
+- TODO rename this "System features"?
 #+begin_src scheme
 (define* (os-features #:key
                       stateless?
@@ -9749,14 +9760,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         #:root-size (let ((virtual-memory (+ physical-memory swap-size)))
                                       (/ virtual-memory 2)))
           $)
-      (os:virtualization $ #:kvm-support? #t
-                         #:kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
-                                                      (,aux-name . ,aux-he-virtualization?)
-                                                      (,guest-name . ,guest-he-virtualization?)))
-                         ;; #:binfmt-platforms '("aarch64")
-                         )
       (os:with-macbook-hardware $ #:boot-target boot-target
                                 #:efi-label efi-label
+                                #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                                            (,aux-name . ,aux-he-virtualization?)
+                                                                            (,guest-name . ,guest-he-virtualization?)))
+                                ;; #:virtualization-binfmt-platforms '("aarch64")
                                 #:bluetooth? bluetooth?
                                 #:stateless? stateless?))))
 
