@@ -9765,8 +9765,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                        (,guest-name . ,guest-he-stateless?)))
                         #:password-users (list primary-name
                                                aux-name)
-                        #:root-size (let ((virtual-memory (+ physical-memory swap-size)))
-                                      (/ virtual-memory 2)))
+                        ;; TODO trying without at the moment
+                        ;; #:root-size (let ((virtual-memory (+ physical-memory swap-size)))
+                        ;;               (/ virtual-memory 2))
+                        )
           $)
       (os:with-macbook-hardware $ #:boot-target boot-target
                                 #:efi-label efi-label
@@ -9778,7 +9780,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                 #:stateless? stateless?))))
 
 (define physical-memory (* 16 GiB))
-(define swap-size (* 32 GiB))
+;; TODO trying without at the moment
+;; (define swap-size (* 32 GiB))
+(define swap-size (* 8 GiB))
 
 (define (feature-users flags)
   (->> flags
