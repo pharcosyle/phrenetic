@@ -368,11 +368,11 @@ Run with ~sudo~.
          (stateless-service
           'base-services
           #:state `(((#:path . ,%random-seed-file)
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/var/db/nscd/")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/.lastweek")
-                     (#:storage . #:machine)))
+                     (#:storage . #:storage/machine)))
           #:ignore '(((#:path . "/etc/resolv.conf"))
                      ((#:path . "/etc/resolv.conf.bak"))
                      ((#:path . "/bin/sh")
@@ -463,10 +463,10 @@ Run with ~sudo~.
          (stateless-service
           'guix-pm
           #:state '(((#:path . "/etc/guix/signing-key.pub")
-                     (#:storage . #:machine)
+                     (#:storage . #:storage/machine)
                      (#:parent-dir-perms . ((#:mode . #o111))))
                     ((#:path . "/etc/guix/signing-key.sec")
-                     (#:storage . #:machine)
+                     (#:storage . #:storage/machine)
                      (#:parent-dir-perms . ((#:mode . #o111)))))
           #:ignore `(;((#:path . "/gnu/store/")) ; TODO inscrutable error on system build: "guix system: error: path `/gnu/store/' is not in the store"
                      ((#:path . "/var/guix/"))
@@ -511,11 +511,11 @@ Run with ~sudo~.
          (stateless-service
           'nix-pm
           #:state '(((#:path . "/nix/store/")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/nix/var/nix/")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/nix/var/log/nix/")
-                     (#:storage . #:machine)))
+                     (#:storage . #:storage/machine)))
           #:ignore `(((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/"))))))
         '()))))
 #+end_src
@@ -575,15 +575,15 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'desktop-base-services
           #:state '(((#:path . "/etc/machine-id")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/var/lib/upower/")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ;; ((#:path . "/var/lib/AccountsService/")
-                    ;;  (#:storage . #:machine))
+                    ;;  (#:storage . #:storage/machine))
                     ;; ((#:path . "/var/lib/colord/")
-                    ;;  (#:storage . #:machine))
+                    ;;  (#:storage . #:storage/machine))
                     ;; ((#:path . "/var/lib/udisks2/")
-                    ;;  (#:storage . #:machine))
+                    ;;  (#:storage . #:storage/machine))
                     )
           #:ignore `(((#:path . ,(string-append (file-system-mount-point %fontconfig-file-system) "/"))
                       (#:preds . ((#:empty-dir)))))))
@@ -631,9 +631,9 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'network-manager
           #:state '(((#:path . "/etc/NetworkManager/system-connections/")
-                     (#:storage . #:machine))
+                     (#:storage . #:storage/machine))
                     ((#:path . "/var/lib/NetworkManager/")
-                     (#:storage . #:machine)
+                     (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
 #+end_src
@@ -655,7 +655,7 @@ Must succeed [[*Accounts][Accounts]] component.
          (stateless-service
           'bluetooth
           #:state '(((#:path . "/var/lib/bluetooth/")
-                     (#:storage . #:machine)
+                     (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
 #+end_src
@@ -890,7 +890,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                       (stateless-service
                        (name 'swap-file)
                        #:state `(((#:path . ,target)
-                                  (#:storage . #:machine)
+                                  (#:storage . #:storage/machine)
                                   (#:preemptively? . #t)))))
                      '()))
           (list
@@ -966,7 +966,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
        (operating-system-user-services os)
        (list
         (service stateless-service-type
-                 (let ((machine-dir (assoc-ref storage-paths #:machine)))
+                 (let ((machine-dir (assoc-ref storage-paths #:storage/machine)))
                    `(#:storage-paths ,storage-paths
                      #:hes ,(or hes '())
                      #:state-users ,(or state-users '())
@@ -982,8 +982,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
     (stateless-guix-system $)))
 
 (define %stateless-storage-paths
-  `((#:machine . "/.machine")
-    (#:persist . "/.persist")))
+  `((#:storage/machine . "/.machine")
+    (#:storage/persist . "/.persist")))
 
 (define %stateless-mountables
   (append
@@ -993,8 +993,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
    (map (match-lambda
           ((storage . dir)
            (cons (case storage
-                   ((#:machine) "machine")
-                   ((#:persist) "persist"))
+                   ((#:storage/machine) "machine")
+                   ((#:storage/persist) "persist"))
                  dir)))
         %stateless-storage-paths)))
 #+end_src
@@ -1354,7 +1354,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
          (stateless-service
           'sudo-lectures
           #:state '(((#:path . "/var/db/sudo/lectured/")
-                     (#:storage . #:machine)))))
+                     (#:storage . #:storage/machine)))))
         '())))
   (sudoers-file
    (if (not lectures?)
@@ -2141,7 +2141,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (home-stateless-service
              'bash
              #:state '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:storage . #:persist)))))))
+                        (#:storage . #:storage/persist)))))))
         ((#:shell/zsh)
          (list
           (service home-zsh-service-type
@@ -2152,9 +2152,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             (home-stateless-service
              'zsh
              #:state '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:storage . #:persist))
+                        (#:storage . #:storage/persist))
                        ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
-                        (#:storage . #:machine)))))))))
+                        (#:storage . #:storage/machine)))))))))
     (cons login-shell interactive-shells))
 
    (list
@@ -2345,11 +2345,11 @@ SAVEHIST=$HISTSIZE
        (doom-stateless-service
         name
         #:state '(((#:path . ("eshell/history" #:doom-base #:data))
-                   (#:storage . #:persist))
+                   (#:storage . #:storage/persist))
                   ((#:path . ("eshell/lastdir" #:doom-base #:data))
-                   (#:storage . #:persist))
+                   (#:storage . #:storage/persist))
                   ((#:path . ("eshell/z" #:doom-base #:data))
-                   (#:storage . #:persist))))))))
+                   (#:storage . #:storage/persist))))))))
 #+end_src
 *** Emacs
 #+begin_src scheme
@@ -2519,21 +2519,21 @@ SAVEHIST=$HISTSIZE
         (home-stateless-service
          'doom
          #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:machine))))
+                    (#:storage . #:storage/machine))))
         (doom-stateless-service
          'doom
          #:state '(((#:path . ("eln/" #:doom-base #:cache))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("profiles.@.el" #:doom-base #:cache))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("@/" #:doom-base #:data))
-                    (#:storage . #:machine)))))
+                    (#:storage . #:storage/machine)))))
        '())))
 #+end_src
 **** Service
@@ -5030,30 +5030,30 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
           (doom-stateless-service
            name
            #:state '(((#:path . ("autosave/" #:doom-base #:cache))
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . ("bookmarks/" #:doom-base #:data))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("recentf" #:doom-base #:cache))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("savehist" #:doom-base #:cache))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("saveplace" #:doom-base #:cache))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("tramp" #:doom-base #:cache))
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . ("tramp-autosave/" #:doom-base #:cache))
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
 
                      ((#:path . ("scratch/" #:doom-base #:data))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
 
                      ((#:path . ("projectile.projects" #:doom-base #:cache))
-                      (#:storage . #:persist))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("projectile.cache" #:doom-base #:cache))
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
 
                      ((#:path . ("workspaces/" #:doom-base #:data))
-                      (#:storage . #:machine)))))
+                      (#:storage . #:storage/machine)))))
          '()))))
 
 
@@ -5299,7 +5299,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-stateless-service
         name
         #:state '(((#:path . ("undo-fu-session/" #:doom-base #:cache))
-                   (#:storage . #:machine)))))
+                   (#:storage . #:storage/machine)))))
 
      (simple-service
       (symbol-append 'doom- name '-add-zstd)
@@ -5405,7 +5405,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-stateless-service
         name
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
-                   (#:storage . #:persist))))))))
+                   (#:storage . #:storage/persist))))))))
 #+end_src
 **** Desktop
 #+begin_src scheme
@@ -5630,7 +5630,7 @@ Some colors from the original Atom theme on which I based mine that might be use
           (home-stateless-service
            'guix
            #:state '(((#:path . ("guix/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:storage . #:machine)))
+                      (#:storage . #:storage/machine)))
            #:ignore `(((#:path . ,guix-profile))
                       ((#:path . (,guix-current #:xdg-base "XDG_CONFIG_HOME")))))))
        '())
@@ -5666,9 +5666,9 @@ Some colors from the original Atom theme on which I based mine that might be use
       (home-stateless-service
        'guile
        #:state '(((#:path . ".guile_history")
-                  (#:storage . #:persist))
+                  (#:storage . #:storage/persist))
                  ((#:path . ("guile/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:machine))))))
+                  (#:storage . #:storage/machine))))))
 
    (if doom?
        (doom-guile #:stateless? stateless?) '())))
@@ -5699,7 +5699,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (doom-stateless-service
          name
          #:state '(((#:path . ("geiser-history.guile" #:doom-base #:cache))
-                    (#:storage . #:persist)))))))
+                    (#:storage . #:storage/persist)))))))
 
    (doom-transient #:stateless? stateless?)))
 #+end_src
@@ -5751,7 +5751,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (doom-stateless-service
          name
          #:state '(((#:path . ("guix-packaging/" #:doom-base #:cache))
-                    (#:storage . #:machine)))))))
+                    (#:storage . #:storage/machine)))))))
 
    (doom-guile #:stateless? stateless?)))
 #+end_src
@@ -5812,7 +5812,7 @@ Some colors from the original Atom theme on which I based mine that might be use
           (home-stateless-service
            'nix
            #:state '(((#:path . ("nix/" #:xdg-base "XDG_CACHE_HOME"))
-                      (#:storage . #:machine)))
+                      (#:storage . #:storage/machine)))
            #:ignore `(((#:path . ,nix-profile))
                       ((#:path . ,nix-channels))))))
        '())
@@ -5970,7 +5970,7 @@ nix-channel --update
      (home-stateless-service
       'pipewire
       #:state '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:storage . #:machine)
+                 (#:storage . #:storage/machine)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
 #+end_src
 ***** Wireplumber
@@ -6001,7 +6001,7 @@ nix-channel --update
      (home-stateless-service
       'wireplumber
       #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
-                 (#:storage . #:machine)
+                 (#:storage . #:storage/machine)
                  (#:mode . #o700)))))))
 #+end_src
 **** Colors
@@ -6045,7 +6045,7 @@ nix-channel --update
      (home-stateless-service
       'fonts
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 
 (define %fonts
   (let ((font-size 10))
@@ -6144,11 +6144,11 @@ nix-channel --update
       #:state
       (append
        '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-          (#:storage . #:machine)
+          (#:storage . #:storage/machine)
           (#:mode . #o700))
          ;; Handle `XDG_LOG_HOME' here even though it isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
          ((#:path . (#:xdg-base "XDG_LOG_HOME"))
-          (#:storage . #:machine)))
+          (#:storage . #:storage/machine)))
        (let ((normalize
               (lambda (dir)
                 (as-> dir $
@@ -6159,7 +6159,7 @@ nix-channel --update
                       (string-append $ "/")))))
          `(,@(map (lambda (dir)
                     `((#:path . ,(normalize dir))
-                      (#:storage . #:persist)))
+                      (#:storage . #:storage/persist)))
                   (list desktop
                         documents
                         music
@@ -6168,7 +6168,7 @@ nix-channel --update
                         templates
                         videos))
            ((#:path . ,(normalize download))
-            (#:storage . #:machine)))))))))
+            (#:storage . #:storage/machine)))))))))
 #+end_src
 **** Mesa
 Maybe this shouldn't be a standalone component but rather added by programs that "use Mesa", if that's even the right way of thinking about it.
@@ -6179,7 +6179,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
      (home-stateless-service
       'mesa
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 #+end_src
 **** D-Bus
 #+begin_src scheme
@@ -6197,7 +6197,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
      (home-stateless-service
       'gdm
       #:state '(((#:path . ("gdm/" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:storage . #:machine)
+                 (#:storage . #:storage/machine)
                  (#:mode . #o700)))))))
 #+end_src
 ***** Desktop TTY
@@ -7395,7 +7395,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (home-stateless-service
        'clojure
        #:state '(((#:path . ".m2/")
-                  (#:storage . #:machine))))))
+                  (#:storage . #:storage/machine))))))
 
    (if doom?
        (doom-clojure #:stateless? stateless?) '())))
@@ -7469,7 +7469,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                    (#:storage . #:persist)))))))
+                    (#:storage . #:storage/persist)))))))
 
    (doom-xml+csv)
    (doom-dash)))
@@ -7555,9 +7555,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
-                    (#:storage . #:machine))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
-                    (#:storage . #:machine)))))))
+                    (#:storage . #:storage/machine)))))))
 
    (doom-dash)))
 
@@ -7588,7 +7588,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (home-stateless-service
        'org
        #:state `(((#:path . ,(string-append org-dir "/"))
-                  (#:storage . #:persist))))))))
+                  (#:storage . #:storage/persist))))))))
 
 (define* (doom-org #:key
                    stateless?
@@ -7666,9 +7666,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
         (doom-stateless-service
          name
          #:state '(((#:path . ("org-clock-save.el" #:doom-base #:data))
-                    (#:storage . #:persist))
+                    (#:storage . #:storage/persist))
                    ((#:path . ("org/persist/" #:doom-base #:cache))
-                    (#:storage . #:machine)))))))
+                    (#:storage . #:storage/machine)))))))
 
    (doom-dash)))
 #+end_src
@@ -7781,7 +7781,7 @@ use_guixs() {
     ;;   (home-stateless-service
     ;;    'node
     ;;    #:state '(((#:path . ".npm/")
-    ;;               (#:storage . #:machine)))))
+    ;;               (#:storage . #:storage/machine)))))
     )
 
    (if doom?
@@ -7800,7 +7800,7 @@ use_guixs() {
      (home-stateless-service
       'protonvpn
       #:state '(((#:path . ".pvpn-cli/")
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 #+end_src
 **** SSH
 #+begin_src scheme
@@ -7830,7 +7830,7 @@ use_guixs() {
         (doom-stateless-service
          name
          #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
-                    (#:storage . #:machine))))))
+                    (#:storage . #:storage/machine))))))
 
      (if dirvish?
          (doom-transient) '())
@@ -8063,7 +8063,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
      (home-stateless-service
       'rofi
       #:state '(((#:path . ("rofi3.druncache" #:xdg-base "XDG_CACHE_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 
 (define* (rofi-menu #:key wayland?)
   (let ((rofi (file-append (get-rofi-package wayland?) "/bin/rofi")))
@@ -8091,9 +8091,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     ;;   (home-stateless-service
     ;;    'zoom
     ;;    #:state '(((#:path . ("zoom/" #:xdg-base "XDG_CONFIG_HOME"))
-    ;;               (#:storage . #:machine))
+    ;;               (#:storage . #:storage/machine))
     ;;              ((#:path . ("zoom/" #:xdg-base "XDG_DATA_HOME"))
-    ;;               (#:storage . #:machine)))))
+    ;;               (#:storage . #:storage/machine)))))
     )
 
    (or qt-services '())))
@@ -8115,9 +8115,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
       (home-stateless-service
        'gimp
        #:state '(((#:path . ("gimp/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:machine))
+                  (#:storage . #:storage/machine))
                  ((#:path . ("GIMP/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:storage . #:machine))))))
+                  (#:storage . #:storage/machine))))))
 
    (or gtk-services '())))
 #+end_src
@@ -8249,22 +8249,22 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
        #:state (append
                 (if (chromium? flavors)
                     '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:storage . #:machine)
+                       (#:storage . #:storage/machine)
                        (#:mode . #o700))
                       ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:storage . #:machine)
+                       (#:storage . #:storage/machine)
                        (#:mode . #o700)))
                     '())
                 (if (chrome? flavors)
                     '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:storage . #:machine)
+                       (#:storage . #:storage/machine)
                        (#:mode . #o700))
                       ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:storage . #:machine)
+                       (#:storage . #:storage/machine)
                        (#:mode . #o700)))
                     '())
                 '(((#:path . ".pki/nssdb/")
-                   (#:storage . #:machine)
+                   (#:storage . #:storage/machine)
                    (#:mode . #o700)
                    (#:parent-dir-perms . ((#:mode . #o700))))))
        #:ignore (if (chrome? flavors)
@@ -8341,15 +8341,15 @@ It might be possible to statically configure Firefox (or one of its relatives), 
       (home-stateless-service
        'firefox
        #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:machine)
+                  (#:storage . #:storage/machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
                  ((#:path . ".mozilla/firefox")
-                  (#:storage . #:machine)
+                  (#:storage . #:storage/machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
                  ((#:path . ".mozilla/extensions")
-                  (#:storage . #:machine)
+                  (#:storage . #:storage/machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))))))
 
@@ -8377,9 +8377,9 @@ It might be possible to statically configure Firefox (or one of its relatives), 
    ;;   (home-stateless-service
    ;;    'nyxt
    ;;    #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
-   ;;               (#:storage . #:machine))
+   ;;               (#:storage . #:storage/machine))
    ;;              ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
-   ;;               (#:storage . #:machine)))))
+   ;;               (#:storage . #:storage/machine)))))
 
    (when doom?
      (doom-service
@@ -8397,7 +8397,7 @@ Not available in Guix, install through Nix.
      (home-stateless-service
       'tor-browser
       #:state '(((#:path . ("tor-browser/" #:xdg-base "XDG_DATA_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 #+end_src
 ***** Video
 ****** VLC
@@ -8416,9 +8416,9 @@ Not available in Guix, install through Nix.
       (home-stateless-service
        'vlc
        #:state '(((#:path . ("vlc/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:storage . #:machine))
+                  (#:storage . #:storage/machine))
                  ((#:path . ("vlc/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:storage . #:machine))))))
+                  (#:storage . #:storage/machine))))))
 
    (or qt-services '())))
 #+end_src
@@ -8466,7 +8466,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (home-stateless-service
       'gtk
       #:state '(((#:path . ("recently-used.xbel" #:xdg-base "XDG_DATA_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 
 (define (dconf-db name settings)
   (computed-file
@@ -8496,7 +8496,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (home-stateless-service
       'qt
       #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
-                 (#:storage . #:machine)))))))
+                 (#:storage . #:storage/machine)))))))
 #+end_src
 ***** Flatpak
 I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
@@ -8520,7 +8520,7 @@ I might need to run apps specially for Wayland, see [[https://github.com/swaywm/
       (home-stateless-service
        'flatpak
        #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:storage . #:machine)
+                  (#:storage . #:storage/machine)
                   (#:mode . #o700))))))
 
    (or portal-services '())))
@@ -8562,7 +8562,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
       (home-stateless-service
        'projects
        #:state `(((#:path . ,(string-append work-dir "/"))
-                  (#:storage . #:persist))))))))
+                  (#:storage . #:storage/persist))))))))
 #+end_src
 **** Project helpers
 #+begin_src scheme
@@ -9336,36 +9336,36 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                 (equal? cont content)))))))
 
 (define test-state '(((#:path . "/etc/NetworkManager/system-connections/")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/var/lib/NetworkManager/")
-                      (#:storage . #:machine)
+                      (#:storage . #:storage/machine)
                       (#:mode . 448))
                      ((#:path . "/etc/machine-id")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/var/lib/upower/")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/root/.cache/nix/")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/etc/guix/signing-key.pub")
-                      (#:storage . #:machine)
+                      (#:storage . #:storage/machine)
                       (#:parent-dir-perms
                        (#:mode . 73)))
                      ((#:path . "/etc/guix/signing-key.sec")
-                      (#:storage . #:machine)
+                      (#:storage . #:storage/machine)
                       (#:parent-dir-perms
                        (#:mode . 73)))
                      ((#:path . "/root/.cache/guix/")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/var/lib/random-seed")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/var/db/nscd/")
-                      (#:storage . #:machine))
+                      (#:storage . #:storage/machine))
                      ((#:path . "/.lastweek")
-                      (#:storage . #:machine))))
+                      (#:storage . #:storage/machine))))
 (define test-ignore '(((#:path . "nix/")
-                       (#:storage . #:machine))
+                       (#:storage . #:storage/machine))
                       ((#:path . "/.machine/.swap")
-                       (#:storage . #:machine))
+                       (#:storage . #:storage/machine))
                       ((#:path . "/nix/store/"))
                       ((#:path . "/nix/var/nix/"))
                       ((#:path . "/nix/var/log/nix/"))
@@ -9405,8 +9405,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (tool test-state
         test-ignore
         "/"
-        `((#:machine . "/.machine")
-          (#:persist . "/.persist"))))
+        `((#:storage/machine . "/.machine")
+          (#:storage/persist . "/.persist"))))
 ;; (test)
 #+end_src
 **** Shared
@@ -9687,7 +9687,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (aux-name "pcoulson")
         (guest-name "mellon")
         (bluetooth? #t)
-        (stateless-machine-dir (assoc-ref stateless-storage-paths #:machine)))
+        (stateless-machine-dir (assoc-ref stateless-storage-paths #:storage/machine)))
     (as-> (os-base #:users-info `(((#:name . ,primary-name)
                                    (#:comment . "Krzysztof Baranowski")
                                    (#:admin? . #t))
