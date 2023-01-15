@@ -910,7 +910,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
        (operating-system-user-services os)
        (if file-target?
            (let ((name (lambda (base)
-                         (symbol-append base (string->symbol target*)))))
+                         (symbol-append base '- (string->symbol target*)))))
              (append
               (list
                (simple-service (name 'create-swap-file)
