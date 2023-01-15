@@ -260,7 +260,7 @@ Run with ~sudo~.
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda))
-  #:use-module ((srfi srfi-1) #:select (any delete-duplicates first remove iota))
+  #:use-module ((srfi srfi-1) #:select (any append-map delete-duplicates first remove iota))
   #:export (blank-os
             source
             base-services
@@ -504,7 +504,8 @@ Run with ~sudo~.
      (service nix-service-type
               (nix-configuration
                (extra-config (if stateless?
-                                 (list (string-append "allow-symlinked-store = true" "\n"))
+                                 (list
+                                  (nix-conf-serialize '((allow-symlinked-store . #t))))
                                  '())))))
     (if stateless?
         (list
@@ -518,6 +519,20 @@ Run with ~sudo~.
                      (#:storage . #:storage/machine)))
           #:ignore `(((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/"))))))
         '()))))
+
+(define (nix-conf-serialize config)
+  (apply string-append
+         (append-map (match-lambda
+                       ((n . v)
+                        (list (symbol->string n)
+                              " = "
+                              (match v
+                                (#t "true")
+                                (#f "false")
+                                ;; ((lst ...) (string-join lst))
+                                (v v))
+                              "\n")))
+                     config)))
 #+end_src
 *** Console
 **** Fonts
@@ -1905,7 +1920,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
-  #:use-module ((ice-9 match) #:select (match-lambda match-let))
+  #:use-module ((ice-9 match) #:select (match match-lambda match-let))
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
   #:export (create-he
             stateless
@@ -5762,8 +5777,9 @@ Some colors from the original Atom theme on which I based mine that might be use
                  doom?
                  doom-tree-sitter?
                  login-shell
-                 (channels (local-file "nix-channels"))
-                 (nixpkgs-config (local-file "nixpkgs-config.nix")))
+                 (channels '(("https://nixos.org/channels/nixpkgs-unstable" "nixpkgs")))
+                 allow-unfree?
+                 extra-nixpkgs-config)
   (append
    (list
     (let ((name 'nix-source-profile)
@@ -5787,13 +5803,15 @@ Some colors from the original Atom theme on which I based mine that might be use
      'nix-add-channels
      home-files-service-type
      `((".nix-channels"
-        ,channels)))
+        ,(nix-channels-file "nix-channels" channels))))
 
     (simple-service
      'nix-add-nixpkgs-config
      home-xdg-configuration-files-service-type
      `(("nixpkgs/config.nix"
-        ,nixpkgs-config))))
+        ,(nixpkgs-config-file "nixpkgs-config.nix"
+                              `((allowUnfree . ,allow-unfree?))
+                              extra-nixpkgs-config)))))
 
    (if stateless?
        (let ((nix-profile ".nix-profile")
@@ -5821,20 +5839,39 @@ Some colors from the original Atom theme on which I based mine that might be use
        (doom-nix #:stateless? stateless?
                  #:tree-sitter? doom-tree-sitter?)
        '())))
+
+(define (nix-channels-file name entries)
+  (apply mixed-text-file name (nix-channels-serialize entries)))
+
+(define (nix-channels-serialize entries)
+  (append-map (match-lambda
+                ((channel name)
+                 (list channel " " name "\n")))
+              entries))
+
+(define (nixpkgs-config-file name settings more)
+  (apply mixed-text-file name
+         (append
+          (list "{" "\n")
+          (append-map (match-lambda
+                        ((n . v)
+                         (list (symbol->string n)
+                               " = "
+                               (match v
+                                 (#t "true")
+                                 (#f "false")
+                                 (v v))
+                               ";" "\n")))
+                      settings)
+          (if more
+              (list more) '())
+          (list "}" "\n"))))
 #+end_src
 ***** Source Nix profile
 #+begin_src sh :tangle (meta-in-dir "source-nix-profile")
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
 fi
-#+end_src
-***** Nix channels
-#+begin_src conf :tangle (meta-in-dir "nix-channels")
-https://nixos.org/channels/nixpkgs-unstable nixpkgs
-#+end_src
-***** Nixpkgs config
-#+begin_src nix :tangle (meta-in-dir "nixpkgs-config.nix")
-{ allowUnfree = true; }
 #+end_src
 ***** Doom Nix
 #+begin_src scheme
@@ -5953,18 +5990,11 @@ nix-channel --update
     'pipewire-add-alsa-config
     home-xdg-configuration-files-service-type
     `(("alsa/asoundrc"
-       ,(mixed-text-file
-         "asoundrc"
-         "<" (file-append pipewire "/share/alsa/alsa.conf.d/50-pipewire.conf") ">" "\n"
-         "<" (file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf") ">" "\n"
-         "\n"
-         "pcm_type.pipewire {" "\n"
-         "  lib " (file-append pipewire "/lib/alsa-lib/libasound_module_pcm_pipewire.so") "\n"
-         "}" "\n"
-         "\n"
-         "ctl_type.pipewire {" "\n"
-         "  lib " (file-append pipewire "/lib/alsa-lib/libasound_module_ctl_pipewire.so") "\n"
-         "}" "\n"))))
+       ,(asoundrc-file "asoundrc"
+                       `((includes (,(file-append pipewire "/share/alsa/alsa.conf.d/50-pipewire.conf")
+                                    ,(file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf")))
+                         (pcm_type.pipewire ((lib ,(file-append pipewire "/lib/alsa-lib/libasound_module_pcm_pipewire.so"))))
+                         (ctl_type.pipewire ((lib ,(file-append pipewire "/lib/alsa-lib/libasound_module_ctl_pipewire.so")))))))))
 
    (when stateless?
      (home-stateless-service
@@ -5972,6 +6002,36 @@ nix-channel --update
       #:state '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:storage . #:storage/machine)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
+
+
+(define (asoundrc-file name config)
+  (apply mixed-text-file name (asoundrc-serialize config)))
+
+(define (asoundrc-serialize config)
+  (append-map
+   (match-lambda
+     ((section entries)
+      (append
+       (match section
+         ('includes (append-map (lambda (file)
+                                  (list "<" file ">" "\n"))
+                                entries))
+         (section (let ((format-component
+                         (lambda (component)
+                           (match component
+                             ((? symbol? c) (symbol->string c))
+                             (c c)))))
+                    (append
+                     (list (format-component section) " {" "\n")
+                     (append-map (lambda (entry)
+                                   (append
+                                    (list "  ")
+                                    (interpose (map format-component entry) " ")
+                                    (list "\n")))
+                                 entries)
+                     (list "}" "\n")))))
+       (list "\n"))))
+   config))
 #+end_src
 ***** Wireplumber
 #+begin_src scheme
@@ -8635,7 +8695,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        (nix-pm #:stateless? stateless?
                #:doom? doom?
                #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
-               #:login-shell login-shell)
+               #:login-shell login-shell
+               #:allow-unfree? #t)
        '())
    (if console?
        (if kmonad?
