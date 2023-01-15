@@ -239,7 +239,7 @@ Run with ~sudo~.
   #:use-module (gnu services desktop)
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module (gnu services networking)
-  #:use-module ((gnu services nix) #:select (nix-service-type))
+  #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
   #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
   #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service screen-locker-service-type))
@@ -496,50 +496,28 @@ Run with ~sudo~.
 #+end_src
 **** Nix
 #+begin_src scheme
-(define* (nix-pm os
-                 #:key
-                 stateless?
-                 stateless-machine-dir)
-  (as-> os $
-    (system-comp
-     $
-     (services
-      (append
-       (operating-system-user-services os)
-       (list
-        (service nix-service-type)))))
+(define-system-comp (nix-pm #:key stateless?)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (service nix-service-type
+              (nix-configuration
+               (extra-config (if stateless?
+                                 (list (string-append "allow-symlinked-store = true" "\n"))
+                                 '())))))
     (if stateless?
-        (stateless-nix $ #:machine-dir stateless-machine-dir) $)))
-
-(define* (stateless-nix os #:key machine-dir)
-  (let ((nix-machine-dir (string-append machine-dir "/nix"))) ; TODO Maybe rename this folder ".nix" to be consistent with ".swap". Update: or maybe not, the path on machine-dir does correspond to the path in the live file system (at "/").
-    (system-comp
-     os
-     (file-systems
-      (cons* (file-system
-               (device nix-machine-dir)
-               (mount-point "/nix")
-               (type "none")
-               (flags '(bind-mount))
-               (check? #f))
-             (operating-system-file-systems os)))
-     (services
-      (append
-       (operating-system-user-services os)
-       (list
-        (simple-service 'create-nix-dir
-                        activation-service-type
-                        #~(when (not (file-exists? #$nix-machine-dir))
-                            (mkdir #$nix-machine-dir)))
-        (stateless-service
-         'nix-pm
-         #:ignore `(((#:path . "/nix/store/"))
-                    ((#:path . "/nix/var/nix/"))
-                    ((#:path . "/nix/var/log/nix/"))
-                    ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/")))
-                    ;; TODO maybe do each sub-path ("/nix/store", "/nix/var/nix", and "/nix/var/log/nix") here like I do above.
-                    ((#:path . "nix/")
-                     (#:storage . #:machine))))))))))
+        (list
+         (stateless-service
+          'nix-pm
+          #:state '(((#:path . "/nix/store/")
+                     (#:storage . #:machine))
+                    ((#:path . "/nix/var/nix/")
+                     (#:storage . #:machine))
+                    ((#:path . "/nix/var/log/nix/")
+                     (#:storage . #:machine)))
+          #:ignore `(((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/nix/"))))))
+        '()))))
 #+end_src
 *** Console
 **** Fonts
@@ -1781,8 +1759,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   auto-login?
                   auto-login-user
                   sessions
-                  stateless?
-                  stateless-machine-dir)
+                  stateless?)
   (let ((number-of-ttys 6)
         (greetd? #t))
     (as-> os $
@@ -1797,9 +1774,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       (if guix?
           (guix-pm $ #:stateless? stateless?) $)
       (if nix?
-          (nix-pm $ #:stateless? stateless?
-                  #:stateless-machine-dir stateless-machine-dir)
-          $)
+          (nix-pm $ #:stateless? stateless?) $)
       (if console?
           (as-> $ $
             (console-fonts $ #:number-of-ttys number-of-ttys)
@@ -9736,8 +9711,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                          guest-he-sessions)
                                    (apply append)
                                    delete-duplicates)
-                   #:stateless? stateless?
-                   #:stateless-machine-dir stateless-machine-dir) $
+                   #:stateless? stateless?) $
       (os:host-info $ #:host-name "frostfire"
                     #:timezone "America/Los_Angeles")
       (case filesystem
@@ -9806,8 +9780,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   auto-login?
                   auto-login-user
                   sessions
-                  stateless?
-                  stateless-machine-dir)
+                  stateless?)
   (apply
    os:os-base
    os:blank-os
@@ -9822,7 +9795,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    #:auto-login-user auto-login-user
    #:sessions sessions
    #:stateless? stateless?
-   #:stateless-machine-dir stateless-machine-dir
    (os+he-shared-opts)))
 #+end_src
 ***** HEs
