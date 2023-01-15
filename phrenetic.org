@@ -925,10 +925,16 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p invoke symbolic-link?)))
 
+        ;; Check if the swap file is a symblic link and create its target if so. I do this to make stateless setups work but don't gate it because hey having this functionality available can't hurt.
         (let ((file* (if (and (file-exists? #$file)
                               (symbolic-link? #$file))
                          (readlink #$file)
                          #$file)))
+          (when (and (file-exists? file*)
+                     (not (= (stat:size (stat file*))
+                             #$size)))
+            ;; Swap file size was changed in config, delete the existing one.
+            (delete-file file*))
           (when (not (file-exists? file*))
             (mkdir-p (dirname file*))
             (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" file*)
