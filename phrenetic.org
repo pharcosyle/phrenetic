@@ -909,18 +909,20 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
       (append
        (operating-system-user-services os)
        (if file-target?
-           (append
-            (list
-             (simple-service 'create-swap-file
-                             activation-service-type
-                             (create-swap-file-gexp target* file-size file-no-cow?)))
-            (if stateless?
-                (list
-                 (stateless-service
-                  'swap-file
-                  #:ignore `(((#:path . ,target)
-                              (#:storage . #:machine)))))
-                '()))
+           (let ((name (lambda (base)
+                         (symbol-append base (string->symbol target*)))))
+             (append
+              (list
+               (simple-service (name 'create-swap-file)
+                               activation-service-type
+                               (create-swap-file-gexp target* file-size file-no-cow?)))
+              (if stateless?
+                  (list
+                   (stateless-service
+                    (name 'swap-file)
+                    #:ignore `(((#:path . ,target)
+                                (#:storage . #:machine)))))
+                  '())))
            '()))))))
 
 (define (create-swap-file-gexp swap-file size no-cow?)
