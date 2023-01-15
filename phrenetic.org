@@ -888,56 +888,61 @@ Must succeed [[*File systems][File systems]] component.
 **** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
-(define* (swap os
-               #:key
-               (target "/.swap")
-               file-size
-               file-no-cow?
-               stateless?
-               stateless-machine-dir)
-  (let* ((file-target? (string? target))
-         (target* (if (and file-target? stateless?)
-                     (string-append stateless-machine-dir target)
-                     target)))
-    (system-comp
-     os
-     (swap-devices
-      (list
-       (swap-space
-        (target target*))))
-     (services
-      (append
-       (operating-system-user-services os)
-       (if file-target?
-           (let ((name (lambda (base)
-                         (symbol-append base '- (string->symbol target*)))))
-             (append
-              (list
-               (simple-service (name 'create-swap-file)
-                               activation-service-type
-                               (create-swap-file-gexp target* file-size file-no-cow?)))
-              (if stateless?
-                  (list
-                   (stateless-service
-                    (name 'swap-file)
-                    #:ignore `(((#:path . ,target)
-                                (#:storage . #:machine)))))
-                  '())))
-           '()))))))
+(define-system-comp (swap #:key
+                          (target "/.swap")
+                          file?
+                          file-size
+                          file-no-cow?
+                          stateless?)
+  (swap-devices
+   (list
+    (swap-space
+     (target target))))
+  (services
+   (append
+    (operating-system-user-services os)
+    (let ((name (lambda (base)
+                  (symbol-append base '- (string->symbol target)))))
+      (if file?
+          (cons* (simple-service (name 'create-swap-file)
+                                 activation-service-type
+                                 (create-swap-file-gexp target file-size file-no-cow?))
+                 (if stateless?
+                     (list
+                      (stateless-service
+                       (name 'swap-file)
+                       #:state `(((#:path . ,target)
+                                  (#:storage . #:machine)
+                                  (#:preemptively? . #t)))))
+                     '()))
+          (list
+           (simple-service (name 'create-swap-device)
+                           activation-service-type
+                           (create-swap-device-gexp target))))))))
 
 (define (create-swap-file-gexp file size no-cow?)
   (with-imported-modules '((guix build utils))
     #~(begin
-        (use-modules ((guix build utils) #:select (invoke mkdir-p)))
+        (use-modules ((guix build utils) #:select (mkdir-p invoke symbolic-link?)))
 
-        (when (not (file-exists? #$file))
-          (mkdir-p (dirname #$file))
-          (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" #$file)
-          (when #$no-cow?
-            (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" #$file))
-          (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) #$file)
-          (chmod #$file #o600)
-          (invoke #$(file-append util-linux "/sbin/mkswap") #$file)))))
+        (let ((file* (if (and (file-exists? #$file)
+                              (symbolic-link? #$file))
+                         (readlink #$file)
+                         #$file)))
+          (when (not (file-exists? file*))
+            (mkdir-p (dirname file*))
+            (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" file*)
+            (when #$no-cow?
+              (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" file*))
+            (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) file*)
+            (chmod file* #o600)
+            (invoke #$(file-append util-linux "/sbin/mkswap") file*))))))
+
+(define (create-swap-device-gexp target)
+  #~(begin
+      ;; ...
+      ;; Find the swap device using the same logic as `swap-service-type' and run `mkswap' on it (if that hasn't been done already, donno how I'd check).
+      ))
 #+end_src
 **** Stateless
 Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
@@ -9746,10 +9751,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                 (map (match-lambda ((_ . mount-point) mount-point))
                                                      mountables))))
           $)
-      (os:swap $ #:file-size swap-size
+      (os:swap $ #:file? #t
+               #:file-size swap-size
                #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
-               #:stateless? stateless?
-               #:stateless-machine-dir stateless-machine-dir)
+               #:stateless? stateless?)
       (if stateless?
           (os:stateless $ #:storage-paths stateless-storage-paths
                         #:hes `((,primary-name . ,(primary-he))
