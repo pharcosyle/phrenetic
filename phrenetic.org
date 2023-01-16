@@ -357,7 +357,7 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services
+    (remove-services-by-type
      %base-services
      (list login-service-type
            agetty-service-type
@@ -571,7 +571,7 @@ Must succeed [[*Accounts][Accounts]] component.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services
+    (remove-services-by-type
      %desktop-services
      (append
       (map service-kind %base-services)
@@ -1736,7 +1736,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 *** Shared
 #+begin_src scheme
-(define (remove-services services kinds)
+(define (remove-services-by-type services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
