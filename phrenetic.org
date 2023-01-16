@@ -927,12 +927,11 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
           (when (and (file-exists? file*)
                      (not (= (stat:size (stat file*))
                              #$size)))
-            ;; Swap file size was changed in config, delete the existing one.
             (delete-file file*))
           (when (not (file-exists? file*))
             (mkdir-p (dirname file*))
-            (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" file*)
             (when #$no-cow?
+              (invoke #$(file-append coreutils "/bin/truncate") "--size" "0" file*)
               (invoke #$(file-append e2fsprogs "/bin/chattr") "+C" file*))
             (invoke #$(file-append util-linux "/bin/fallocate") "--length" (number->string #$size) file*)
             (chmod file* #o600)
