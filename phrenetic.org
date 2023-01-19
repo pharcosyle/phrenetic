@@ -9511,24 +9511,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module (phrenetic common utils)
-  #:export (simple-package
-            with-git-version
+  #:export (with-git-version
             with-git-commit
-            with-git-url))
+            with-git-url
+            simple-package))
 
 (re-export-public-interface (phrenetic common utils))
-
-
-(define simple-package
-  (package
-    (name #f)
-    (version "0")
-    (source #f)
-    (build-system trivial-build-system)
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
 #+end_src
 **** Git
 #+begin_src scheme
@@ -9581,6 +9569,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
+#+end_src
+**** Misc
+#+begin_src scheme
+(define simple-package
+  (package
+    (name #f)
+    (version "0")
+    (source #f)
+    (build-system trivial-build-system)
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
 #+end_src
 ** Build
 :PROPERTIES:
@@ -9752,7 +9753,7 @@ delete it when leaving the dynamic extent of this call."
           (cons k (f v))))
        alist))
 #+end_src
-*** Byte suffixes
+*** Misc
 #+begin_src scheme
 (define KiB (expt 2 10))
 (define MiB (expt 2 20))
