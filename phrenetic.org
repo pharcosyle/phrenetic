@@ -16,6 +16,7 @@
 - [[#common][Common]]
   - [[#packages][Packages]]
   - [[#stateless][Stateless]]
+- [[#modules][Modules]]
 - [[#utils][Utils]]
   - [[#host][Host]]
   - [[#common-and-build][Common and build]]
@@ -254,6 +255,7 @@ Run with ~sudo~.
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde gexp) #:select (slurp-file-like))
   #:use-module (rde system services networking)
+  #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
@@ -1154,14 +1156,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
          '#$users))))
 
 (define (activate-gexp state storage-paths)
-  (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
-    ;; (source-module-closure
-    ;;  '((phrenetic build stateless))
-    ;;  #:select? (const #t)
-    ;;  ;; #:select? (lambda (name)
-    ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
-    ;;  ;;                 (eq? (car name) 'phrenetic)))
-    ;;  )
+  (with-imported-modules (source-module-closure
+                          '((phrenetic build stateless))
+                          #:select? phrenetic-module-name?)
     #~(begin
         (use-modules ((phrenetic build stateless) #:select (activate)))
         (activate '#$state
@@ -1911,6 +1908,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module ((chromium chromium) #:select (chromium+drm))
+  #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages aws) #:select (awscli-2))
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
@@ -2045,14 +2043,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
    (extensions
     (list (service-extension home-activation-service-type
                              (lambda (config)
-                               (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
-                                 ;; (source-module-closure
-                                 ;;  '((phrenetic build stateless))
-                                 ;;  #:select? (const #t)
-                                 ;;  ;; #:select? (lambda (name)
-                                 ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
-                                 ;;  ;;                 (eq? (car name) 'phrenetic)))
-                                 ;;  )
+                               (with-imported-modules (source-module-closure
+                                                       '((phrenetic build stateless))
+                                                       #:select? phrenetic-module-name?)
                                  #~(begin
                                      (use-modules ((phrenetic build stateless) #:select (activate)))
                                      (activate (#$state-with-home-expansions '#$(assoc-ref config #:state))
@@ -5892,8 +5885,10 @@ nix-channel --update
 **** Shared
 #+begin_src scheme
 (define stateless-ensure-profiles-gexp
-  (with-imported-modules '((guix build utils)
-                           (phrenetic build utils))
+  (with-imported-modules (source-module-closure
+                          '((guix build utils)
+                            (phrenetic build stateless))
+                          #:select? phrenetic-module-name?)
     #~(lambda (profiles)
         (use-modules ((guix build utils) #:select (mkdir-p))
                      ((phrenetic build utils) #:select (no-follow-file-exists?)))
@@ -9045,6 +9040,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
   #:use-module (gnu services)
+  #:use-module (phrenetic modules)
   #:use-module (phrenetic utils)
   #:export (service-fn
             extend-proc
@@ -9087,14 +9083,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define (tool-program opts)
   (program-file
    "stateless"
-   (with-imported-modules '((guix build utils) (phrenetic build utils) (phrenetic build stateless))
-     ;; (source-module-closure
-     ;;  '((phrenetic build stateless))
-     ;;  #:select? (const #t)
-     ;;  ;; #:select? (lambda (name)
-     ;;  ;;             (or ((@ (guix modules) guix-module-name?) name)
-     ;;  ;;                 (eq? (car name) 'phrenetic)))
-     ;;  )
+   (with-imported-modules (source-module-closure
+                           '((phrenetic build stateless))
+                           #:select? phrenetic-module-name?)
      #~(begin
          (use-modules ((phrenetic build stateless) #:select (tool)))
          (apply tool '#$opts)))))
@@ -9488,6 +9479,22 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (any (lambda (storage-dir)
                 (string-prefix? storage-dir (readlink file)))
               storage-dirs))))
+#+end_src
+* Modules
+:PROPERTIES:
+:meta-dir+: /phrenetic
+:END:
+#+begin_src scheme :tangle (meta-in-dir "modules.scm")
+(define-module (phrenetic modules)
+  #:use-module ((guix modules) #:select (guix-module-name?))
+  #:use-module (ice-9 match)
+  #:export (phrenetic-module-name?))
+
+(define (phrenetic-module-name? name)
+  (or (guix-module-name? name)
+      (match name
+        (('phrenetic _ ...) #t)
+        (_ #f))))
 #+end_src
 * Utils
 :PROPERTIES:
