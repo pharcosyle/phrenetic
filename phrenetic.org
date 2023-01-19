@@ -19,7 +19,8 @@
 - [[#modules][Modules]]
 - [[#utils][Utils]]
   - [[#host][Host]]
-  - [[#common-and-build][Common and build]]
+  - [[#build][Build]]
+  - [[#common-1][Common]]
 - [[#configurations][Configurations]]
   - [[#frostfire][Frostfire]]
 - [[#guix-channel][Guix channel]]
@@ -9509,7 +9510,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (guix build-system trivial)
   #:use-module (guix git-download)
   #:use-module (guix packages)
-  #:use-module (phrenetic build utils)
+  #:use-module (phrenetic common utils)
   #:export (simple-package
             with-git-version
             with-git-commit
@@ -9593,13 +9594,56 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
 #+end_src
-** Common and build
+** Build
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "build/utils.scm")
 :END:
 #+begin_src scheme
 (define-module (phrenetic build utils)
-  ;; Common
+  #:use-module ((guix build syscalls) #:select (mkdtemp!))
+  #:use-module ((guix build utils) #:select (delete-file-recursively))
+  #:use-module (phrenetic common utils)
+  #:export (no-follow-file-exists?
+            call-with-temporary-directory)
+  #:re-export (when-let
+               if-let
+               when-not
+               if-not
+               ->
+               ->>
+               as->
+               list->alist
+               alist->list
+               merge-with
+               update-keys
+               update-vals
+               KiB
+               MiB
+               GiB))
+
+(define (no-follow-file-exists? f)
+  (false-if-exception (lstat f)))
+
+;; Copied from (guix utils). Notably (gnu build linux-container) copies this function in like this too.
+(define (call-with-temporary-directory proc)
+  "Call PROC with a name of a temporary directory; close the directory and
+delete it when leaving the dynamic extent of this call."
+  (let* ((directory (or (getenv "TMPDIR") "/tmp"))
+         (template  (string-append directory "/guix-directory.XXXXXX"))
+         (tmp-dir   (mkdtemp! template)))
+    (dynamic-wind
+      (const #t)
+      (lambda ()
+        (proc tmp-dir))
+      (lambda ()
+        (false-if-exception (delete-file-recursively tmp-dir))))))
+#+end_src
+** Common
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "common/utils.scm")
+:END:
+#+begin_src scheme
+(define-module (phrenetic common utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map fold take drop))
   #:export (when-let
@@ -9616,15 +9660,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             update-vals
             KiB
             MiB
-            GiB)
-  ;; Build
-  #:use-module ((guix build syscalls) #:select (mkdtemp!))
-  #:use-module ((guix build utils) #:select (delete-file-recursively))
-  #:export (no-follow-file-exists?
-            call-with-temporary-directory))
+            GiB))
 #+end_src
-*** Common
-**** Branching
+*** Branching
 #+begin_src scheme
 (define-syntax when-let
   (syntax-rules ()
@@ -9648,7 +9686,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-**** Threading
+*** Threading
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
@@ -9671,7 +9709,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          #'(let ((x exp))
              (as-> form name form* ...)))))))
 #+end_src
-**** Alists
+*** Alists
 #+begin_src scheme
 (define* (list->alist #:rest kvs)
   (let loop ((res '())
@@ -9723,30 +9761,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           (cons k (f v))))
        alist))
 #+end_src
-**** Byte suffixes
+*** Byte suffixes
 #+begin_src scheme
 (define KiB (expt 2 10))
 (define MiB (expt 2 20))
 (define GiB (expt 2 30))
-#+end_src
-*** Build
-#+begin_src scheme
-(define (no-follow-file-exists? f)
-  (false-if-exception (lstat f)))
-
-;; Copied from (guix utils). Notably (gnu build linux-container) copies this function in like this too.
-(define (call-with-temporary-directory proc)
-  "Call PROC with a name of a temporary directory; close the directory and
-delete it when leaving the dynamic extent of this call."
-  (let* ((directory (or (getenv "TMPDIR") "/tmp"))
-         (template  (string-append directory "/guix-directory.XXXXXX"))
-         (tmp-dir   (mkdtemp! template)))
-    (dynamic-wind
-      (const #t)
-      (lambda ()
-        (proc tmp-dir))
-      (lambda ()
-        (false-if-exception (delete-file-recursively tmp-dir))))))
 #+end_src
 * Configurations
 :PROPERTIES:
