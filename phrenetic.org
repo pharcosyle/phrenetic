@@ -9514,22 +9514,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:export (simple-package
             with-git-version
             with-git-commit
-            with-git-url)
-  #:re-export (when-let
-               if-let
-               when-not
-               if-not
-               ->
-               ->>
-               as->
-               list->alist
-               alist->list
-               merge-with
-               update-keys
-               update-vals
-               KiB
-               MiB
-               GiB))
+            with-git-url))
+
+(re-export-public-interface (phrenetic common utils))
+
 
 (define simple-package
   (package
@@ -9604,22 +9592,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module ((guix build utils) #:select (delete-file-recursively))
   #:use-module (phrenetic common utils)
   #:export (no-follow-file-exists?
-            call-with-temporary-directory)
-  #:re-export (when-let
-               if-let
-               when-not
-               if-not
-               ->
-               ->>
-               as->
-               list->alist
-               alist->list
-               merge-with
-               update-keys
-               update-vals
-               KiB
-               MiB
-               GiB))
+            call-with-temporary-directory))
+
+(re-export-public-interface (phrenetic common utils))
+
 
 (define (no-follow-file-exists? f)
   (false-if-exception (lstat f)))
@@ -9646,7 +9622,8 @@ delete it when leaving the dynamic extent of this call."
 (define-module (phrenetic common utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (append-map fold take drop))
-  #:export (when-let
+  #:export (re-export-public-interface
+            when-let
             if-let
             when-not
             if-not
@@ -9661,6 +9638,20 @@ delete it when leaving the dynamic extent of this call."
             KiB
             MiB
             GiB))
+
+;; Copied this from the "Guile CV" project. The gnu.scm file has something like this too.
+(define-macro (re-export-public-interface . args)
+  "Re-export the public interface of a module or modules. Invoked as
+@code{(re-export-public-interface (mod1) (mod2)...)}."
+  (if (null? args)
+      '(if #f #f)
+      `(begin
+         ,@(map (lambda (mod)
+                  (or (list? mod)
+                      (error "Invalid module specification" mod))
+                  `(module-use! (module-public-interface (current-module))
+                    (resolve-interface ',mod)))
+                args))))
 #+end_src
 *** Branching
 #+begin_src scheme
