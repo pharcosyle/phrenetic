@@ -10817,18 +10817,5 @@ Public License instead of this License.  But first, please read
 #+end_src
 * Dev
 ** Git ignore
-#+begin_src gitignore :tangle (meta-in-dir ".gitignore") :noweb yes
-<<tangled-files()>>
-#+end_src
-
-#+name: tangled-files
-#+begin_src emacs-lisp
-;; Using `org-babel-tangle-collect-blocks' to implement this function slows down tangling a small but noticeable amount. I couldn't find an easier/faster way of doing this.
-(defun get-tangled-files ()
-  (mapcar #'car
-          ;; HACK Dynamically rebind a function, otherwise this to hang indefinitely when invoked during tangling (I don't know why). We don't need it anyway.
-          (cl-letf (((symbol-function #'org-babel-expand-noweb-references) #'ignore))
-            (org-babel-tangle-collect-blocks))))
-
-(string-join (get-tangled-files) "\n")
+#+begin_src gitignore :tangle (meta-in-dir ".gitignore") :prologue (meta-tangled-files->gitignore)
 #+end_src
