@@ -1,9 +1,12 @@
-(setq meta--base-dir ".")
+(setq meta--dir-property "meta-dir")
 
 (defun meta-get-dir ()
-  (concat meta--base-dir
-          (when-let ((dirs (org-entry-get (point) "meta-dir" 'inherit)))
-            (thread-first dirs (split-string " /") (string-join "/")))))
+  (when-let ((entries (org-entry-get-with-inheritance meta--dir-property)))
+    (thread-first entries
+                  (split-string (org--property-get-separator meta--dir-property))
+                  (string-join "/"))))
 
 (defun meta-in-dir (sub-path)
-  (concat (meta-get-dir) "/" sub-path))
+  (concat (when-let ((dir (meta-get-dir)))
+            (concat dir "/"))
+          sub-path))
