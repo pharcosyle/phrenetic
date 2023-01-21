@@ -794,7 +794,7 @@ Must succeed [[*Accounts][Accounts]] component.
 ;;             (mount-point mount-point)
 ;;             (type "ext4")
 ;;             (flags (or flags '()))
-;;             (options options))
+;;             (options (alist->file-system-options (or options '()))))
 ;;           (operating-system-file-systems os))))
 #+end_src
 ***** Btrfs
