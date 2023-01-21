@@ -815,16 +815,14 @@ Must succeed [[*Accounts][Accounts]] component.
               (mount-point mount-point)
               (type "btrfs")
               (flags (or flags '()))
-              (options (string-append
-                        "subvol=" subvol
-                        (if options
-                            (string-append "," (string-join options ","))
-                            ""))))))
+              (options (alist->file-system-options
+                        (acons "subvol" subvol (or options '())))))))
          subvols)
     (operating-system-file-systems os))))
 
 (define %btrfs-mount-flags '(no-atime))
-(define %btrfs-mount-options '("compress=zstd" "autodefrag"))
+(define %btrfs-mount-options '(("compress" . "zstd")
+                               "autodefrag"))
 #+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
