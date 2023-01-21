@@ -257,9 +257,9 @@ Run with ~sudo~.
             gnome-desktop
             sway-wm
             host-info
-            %root-label
             btrfs
             disk-encryption
+            %root-label
             %luks-uuid
             swap
             stateless
@@ -782,9 +782,6 @@ Must succeed [[*Accounts][Accounts]] component.
   (locale (or locale "en_US.utf8")))
 #+end_src
 **** File systems
-#+begin_src scheme
-(define %root-label "firmament")
-#+end_src
 ***** Ext4
 #+begin_src scheme
 ;; (define-system-comp (ext4 #:key
@@ -831,6 +828,10 @@ Must succeed [[*Accounts][Accounts]] component.
                    (if subvol
                        (acons "subvol" subvol $) $)
                    (alist->file-system-options $)))))
+#+end_src
+***** Shared
+#+begin_src scheme
+(define %root-label "firmament")
 #+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
