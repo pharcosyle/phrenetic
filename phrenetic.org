@@ -280,10 +280,6 @@ Run with ~sudo~.
             with-macbook-hardware))
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
-
-;; Not exported. Probably an oversight that'll get fixed at some point.
-(define greetd-terminals (@@ (gnu services base) greetd-terminals))
-(define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
 #+end_src
 ** Create
 #+begin_src scheme
@@ -715,11 +711,12 @@ Must succeed [[*Accounts][Accounts]] component.
            (map (lambda (terminal-config)
                   (if (equal? (greetd-terminal-vt terminal-config)
                               (number->string tty-number))
-                      ;; It'd be better to set user/command for initial-session rather than default-session (auto-login would only occur on the first start) but the Guix configuration doesn't have that option (yet?).
                       (greetd-terminal-configuration
                        (inherit terminal-config)
-                       (default-session-user user)
-                       (default-session-command "default-session-start"))
+                       ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or submit a patch myself.
+                       ;; (initial-session-user user)
+                       ;; (initial-session-command "default-session-start")
+                       )
                       terminal-config))
                 (greetd-terminals config))))))
       (modify-services services
@@ -9783,8 +9780,8 @@ delete it when leaving the dynamic extent of this call."
                    ;; #:bluetooth-users (list primary-name
                    ;;                         aux-name
                    ;;                         guest-name)
-                   ;; #:auto-login? disk-encryption?
-                   ;; #:auto-login-user primary-name
+                   #:auto-login? disk-encryption?
+                   #:auto-login-user primary-name
                    #:sessions (->> (list primary-he-sessions
                                          aux-he-sessions
                                          guest-he-sessions)
