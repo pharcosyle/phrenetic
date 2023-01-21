@@ -259,8 +259,6 @@ Run with ~sudo~.
             host-info
             %root-label
             btrfs
-            %btrfs-mount-flags
-            %btrfs-mount-options
             disk-encryption
             %luks-uuid
             swap
@@ -804,8 +802,9 @@ Must succeed [[*Accounts][Accounts]] component.
 (define-system-comp (btrfs #:key
                            label
                            subvols
-                           flags
-                           options)
+                           (flags '(no-atime))
+                           (options '(("compress" . "zstd")
+                                      "autodefrag")))
   (file-systems
    (append
     (map (match-lambda
@@ -819,10 +818,6 @@ Must succeed [[*Accounts][Accounts]] component.
                         (acons "subvol" subvol (or options '())))))))
          subvols)
     (operating-system-file-systems os))))
-
-(define %btrfs-mount-flags '(no-atime))
-(define %btrfs-mount-options '(("compress" . "zstd")
-                               "autodefrag"))
 #+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
@@ -9801,9 +9796,7 @@ delete it when leaving the dynamic extent of this call."
         ;;           #:mount-point "/"))
         ((#:filesystem/btrfs)
          (os:btrfs $ #:label root-label
-                   #:subvols mountables
-                   #:flags btrfs-mount-flags
-                   #:options btrfs-mount-options)))
+                   #:subvols mountables)))
       (if disk-encryption?
           (os:disk-encryption $ #:device-uuid luks-uuid
                               #:mount-points (case filesystem
@@ -9993,8 +9986,6 @@ delete it when leaving the dynamic extent of this call."
                        os:%stateless-mountables
                        ;; ...
                        ))
-(define btrfs-mount-flags os:%btrfs-mount-flags)
-(define btrfs-mount-options os:%btrfs-mount-options)
 (define disk-encryption? #t)
 (define luks-uuid os:%luks-uuid)
 #+end_src
