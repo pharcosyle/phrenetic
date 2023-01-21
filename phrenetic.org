@@ -6458,8 +6458,10 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                         `((xkb_options ,(string-join
                                          (keyboard-layout-options kb-layout) ","))))))
                  '())
-             `((repeat_delay ,(or kb-repeat-delay 200)))
-             `((repeat_rate ,(or kb-repeat-rate 40)))))
+             (if repeat-delay
+                 `((repeat_delay ,kb-repeat-delay)) '())
+             (if (repeat-rate)
+                 `((repeat_rate ,kb-repeat-rate)) '())))
 
     (input type:touchpad
            ((natural_scroll enabled)
@@ -8730,6 +8732,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:portal-services portal-services
               #:bg-image wallpaper
               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
+              #:kb-repeat-delay 200
+              #:kb-repeat-rate 40
               #:idle-manager (swayidle-idle-manager)
               #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
               #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
