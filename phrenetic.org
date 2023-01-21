@@ -248,7 +248,7 @@ Run with ~sudo~.
             nix-pm
             kmonad-tool
             desktop-base-services
-            classic-sound
+            classic-multimedia
             pipewire-multimedia
             network-manager
             bluetooth
@@ -567,9 +567,9 @@ Must succeed [[*Accounts][Accounts]] component.
         '()))))
 #+end_src
 **** Multimedia
-***** Classic sound
+***** Classic
 #+begin_src scheme
-(define-system-comp (classic-sound)
+(define-system-comp (classic-multimedia)
   (services
    (append
     (operating-system-user-services os)
@@ -1781,7 +1781,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (desktop-base-services $ #:stateless? stateless?)
           (if pipewire?
               (pipewire-multimedia $)
-              (classic-sound $))
+              (classic-multimedia $))
           (case connection-manager
             ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
           (if bluetooth?
