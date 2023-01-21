@@ -1985,7 +1985,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             work
             services-only-packages
             services-sans-packages
-            os-features
+            system-features
             sway-environment
             programs
             applications
@@ -8710,25 +8710,24 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define very-big-history 1000000)
 #+end_src
 ** Composite components
-*** OS features
-- TODO rename this "System features"?
+*** System features
 #+begin_src scheme
-(define* (os-features #:key
-                      stateless?
-                      stateless-storage-paths
-                      login-shell
-                      doom?
-                      doom-flags
-                      package-managers
-                      console?
-                      kmonad?
-                      desktop?
-                      pipewire?
-                      login-manager
-                      desktop-tty-start-cmds
-                      sessions
-                      sway-environment
-                      virtualization?)
+(define* (system-features #:key
+                          stateless?
+                          stateless-storage-paths
+                          login-shell
+                          doom?
+                          doom-flags
+                          package-managers
+                          console?
+                          kmonad?
+                          desktop?
+                          pipewire?
+                          login-manager
+                          desktop-tty-start-cmds
+                          sessions
+                          sway-environment
+                          virtualization?)
   (append
    (if stateless?
        (stateless #:storage-paths stateless-storage-paths) '())
@@ -8961,29 +8960,29 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (portal-services (portal-services #:wayland? wayland?))
          (pipewire? (equal? multimedia #:media/pipewire)))
     (append
-     (os-features #:stateless? stateless?
-                  #:stateless-storage-paths stateless-storage-paths
-                  #:login-shell login-shell
-                  #:doom? doom?
-                  #:doom-flags doom-flags
-                  #:package-managers package-managers
-                  #:console? console?
-                  #:kmonad? kmonad?
-                  #:desktop? desktop?
-                  #:pipewire? pipewire?
-                  #:login-manager login-manager
-                  #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                             (#:session/sway . ,(sway-start pipewire?)))
-                  #:sessions sessions
-                  #:sway-environment (sway-environment #:pipewire? pipewire?
-                                                       #:connection-manager connection-manager
-                                                       #:doom? doom?
-                                                       #:portal-services portal-services
-                                                       #:colors colors
-                                                       #:fonts fonts
-                                                       #:font-variable-pitch font-variable-pitch
-                                                       #:emacs-editor emacs-editor)
-                  #:virtualization? virtualization?)
+     (system-features #:stateless? stateless?
+                      #:stateless-storage-paths stateless-storage-paths
+                      #:login-shell login-shell
+                      #:doom? doom?
+                      #:doom-flags doom-flags
+                      #:package-managers package-managers
+                      #:console? console?
+                      #:kmonad? kmonad?
+                      #:desktop? desktop?
+                      #:pipewire? pipewire?
+                      #:login-manager login-manager
+                      #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                 (#:session/sway . ,(sway-start pipewire?)))
+                      #:sessions sessions
+                      #:sway-environment (sway-environment #:pipewire? pipewire?
+                                                           #:connection-manager connection-manager
+                                                           #:doom? doom?
+                                                           #:portal-services portal-services
+                                                           #:colors colors
+                                                           #:fonts fonts
+                                                           #:font-variable-pitch font-variable-pitch
+                                                           #:emacs-editor emacs-editor)
+                      #:virtualization? virtualization?)
      (shells #:stateless? stateless?
              #:doom? doom?
              #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
