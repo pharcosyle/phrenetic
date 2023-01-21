@@ -1484,7 +1484,8 @@ Must succeed [[*Accounts][Accounts]] component.
                 (operating-system-user-services os))
          (operating-system-user-services os)))))
 #+end_src
-**** Apple
+**** Vendors
+***** Apple
 #+begin_src scheme
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
@@ -1495,7 +1496,7 @@ Must succeed [[*Accounts][Accounts]] component.
 (define %macbook-kb-layout
   (keyboard-layout "us" #:model "macbook78"))
 #+end_src
-***** Wireless
+****** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
 #+begin_src scheme
 (define-system-comp (apple-broadcom-wireless #:key bluetooth?)
@@ -1508,7 +1509,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
              (if bluetooth?
                  (list broadcom-bt-firmware) '()))))
 #+end_src
-****** Broadcom STA :package:version:upstream:
+******* Broadcom STA :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
 (define-module (phrenetic packages linux)
   #:use-module (guix download)
@@ -1547,7 +1548,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define-public broadcom-sta
   (with-patch-updates linux:broadcom-sta))
 #+end_src
-***** Camera :upstream:
+****** Camera :upstream:
 Colors could probably be improved by adding sensor calibration files, as described on the wiki: [[https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files][Extracting the sensor calibration files · patjak/facetimehd Wiki · GitHub]]
 Adapt the Nix module like I did for the kernel module and firmware:
 - [[https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/hardware/video/webcam/facetimehd.nix][nixpkgs/facetimehd.nix at master · NixOS/nixpkgs · GitHub]]
@@ -1566,7 +1567,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
                           '("facetimehd"))
           (operating-system-user-services os))))
 #+end_src
-****** Linux module :package:version:
+******* Linux module :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/facetimehd.scm")
 (define-module (phrenetic packages facetimehd)
   #:use-module (guix build-system linux-module)
@@ -1596,7 +1597,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
     (license license:gpl2)
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
-****** Firmware :package:version:
+******* Firmware :package:version:
 This is very messy, I naively ported the package from Nix. Ideally I'd rewrite it to not use ~curl~ (copy out the byte range with ~dd~ or guile / guix utils), not rely on ~system~ and use it for things like piping and appending command output (perhaps with guile's ~pipe~ / ~pipeline~ / ~redirect-port~), etc.
 #+begin_src scheme :tangle (meta-in-dir "packages/facetimehd-firmware.scm")
 (define-module (phrenetic packages facetimehd-firmware)
@@ -1673,7 +1674,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
     (license (license:nonfree "https://www.apple.com/legal"))
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
-***** Macbook power key
+****** Macbook power key
 Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
 #+begin_src scheme
 (define-system-comp (apple-macbook-power-key)
@@ -1685,7 +1686,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
        (inherit config)
        (handle-power-key 'suspend))))))
 #+end_src
-***** Shared
+****** Shared
 #+begin_src scheme
 (define (with-blacklist kernel-args new-kernel-args)
   (let* ((blacklist-param "modprobe.blacklist")
@@ -6877,7 +6878,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (waybar-memory)
       (waybar-battery #:show-percentage? #t)))))
 #+end_src
-******** Modules
+********* Modules
 #+begin_src scheme
 (define* (waybar-module name
                         #:optional
@@ -6897,7 +6898,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (style-css (if style
                    style '())))))
 #+end_src
-********* Backlight
+********** Backlight
 #+begin_src scheme
 (define* (waybar-backlight #:key show-percentage?)
   (waybar-module
@@ -6907,7 +6908,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  (if show-percentage? " {percent}" "")))
      (fomat-icons . #(🌕 🌔 🌗 🌒 🌑))))) ; TODO These aren't displaying for some reason.
 #+end_src
-********* Battery
+********** Battery
 #+begin_src scheme
 (define* (waybar-battery #:key show-percentage?)
   (waybar-module
@@ -6937,9 +6938,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (#{#battery.full}#
       ((color . @green))))))
 #+end_src
-********** TODO [#D] Fix battery capacity output
+*********** TODO [#D] Fix battery capacity output
 It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug. Andrew Tropin uses a Waybar fork that has a fix for some battery issue, possibly mine, see [[https://github.com/grfrederic/Waybar/tree/normalize-battery-capacity][GitHub - grfrederic/Waybar at normalize-battery-capacity]]. Don't worry about this for a while plus hopefully that fork will get upstreamed into mainline.
-********* Clock
+********** Clock
 #+begin_src scheme
 (define* (waybar-clock #:key
                        date-format
@@ -6956,7 +6957,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    '()
    #:placement 'modules-left))
 #+end_src
-********* CPU
+********** CPU
 - TODO histogram
   - I don't understand the histogram output.
   - The histogram is "jumpy", it changes width.
@@ -6975,7 +6976,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        'cpu
        '((format . " {usage}%")))))
 #+end_src
-********* Idle inhibitor
+********** Idle inhibitor
 #+begin_src scheme
 (define (waybar-idle-inhibitor)
   (waybar-module
@@ -6984,14 +6985,14 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
      (format-icons . ((activated . )
                       (deactivated . ))))))
 #+end_src
-********* Memory
+********** Memory
 #+begin_src scheme
 (define (waybar-memory)
   (waybar-module
    'memory
    '((format . " {}%"))))
 #+end_src
-********* Microphone
+********** Microphone
 #+begin_src scheme
 (define* (waybar-microphone #:key show-percentage?)
   (waybar-module
@@ -7007,7 +7008,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                                 "--tab=4")))
                       (string-append "\"" (string-join cmd) "\""))))))
 #+end_src
-********* Tray
+********** Tray
 #+begin_src scheme
 (define (waybar-tray)
   (waybar-module
@@ -7034,7 +7035,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-********* Volume
+********** Volume
 #+begin_src scheme
 (define* (waybar-volume #:key show-percentage?)
   (waybar-module
@@ -7049,8 +7050,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (tooltip-format . "{desc} is on {volume}%")
        (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
 #+end_src
-********* Sway
-********** Sway window
+********** Sway
+*********** Sway window
 #+begin_src scheme
 (define (waybar-sway-window)
   (waybar-module
@@ -7061,7 +7062,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (margin-right . 1em))))
    #:placement 'modules-center))
 #+end_src
-********** Sway workspaces
+*********** Sway workspaces
 #+begin_src scheme
 (define* (waybar-sway-workspaces
           #:key
