@@ -6770,26 +6770,21 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 ******** Waybar
 #+begin_src scheme
 (define* (waybar-wm-piece #:key
+                          bars
                           colors
                           font
-                          modules
                           transitions?
                           extra-style
-                          height
-                          output
-                          extra-config)
+                          modules)
   (append
    (list
     (service
      home-waybar-service-type
      (home-waybar-configuration
-      (config `#(((position . top)
-                  (name . main)
-                  ,@(if height
-                        `((height . ,height)) '())
-                  ,@(if output
-                        `((output . ,output)) '())
-                  ,@(or extra-config '()))))
+      (config (->> bars
+                   (map (lambda (bar)
+                          (apply waybar-bar (alist->list bar))))
+                   (apply vector)))
       (style-css
        (waybar-style #:colors colors
                      #:font font
@@ -6813,6 +6808,20 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (map (lambda (f)
               (list (waybar-file f) reload-cmd))
             '("config" "style.css")))))))
+
+(define* (waybar-bar #:key
+                     bar-id
+                     (position 'top)
+                     height
+                     output
+                     extra-config)
+  `((name . ,bar-id)
+    (position . ,position)
+    ,@(if height
+          `((height . ,height)) '())
+    ,@(if output
+          `((output . ,output)) '())
+    ,@(or extra-config '())))
 
 (define* (waybar-style #:key
                        colors
@@ -6883,39 +6892,45 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                              "-SIGUSR1" "waybar"))))
 
 (define* (waybar-modules #:key
+                         bar-id
                          session
                          date-format
                          time-format)
   (append
    (list
-    (waybar-clock #:date-format date-format
+    (waybar-clock bar-id
+                  #:date-format date-format
                   #:time-format time-format))
    (case session
      ((#:session/sway)
       (list
-       (waybar-sway-workspaces)
-       (waybar-sway-window)))
+       (waybar-sway-workspaces bar-id)
+       (waybar-sway-window bar-id)))
      (else '()))
    (let ((default-show-percentage? #f))
      (list
-      (waybar-tray)
-      (waybar-idle-inhibitor)
-      (waybar-volume #:show-percentage? default-show-percentage?)
-      (waybar-microphone #:show-percentage? default-show-percentage?)
-      (waybar-backlight #:show-percentage? default-show-percentage?)
-      (waybar-cpu)
-      (waybar-memory)
-      (waybar-battery #:show-percentage? #t)))))
+      (waybar-tray bar-id)
+      (waybar-idle-inhibitor bar-id)
+      (waybar-volume bar-id
+                     #:show-percentage? default-show-percentage?)
+      (waybar-microphone bar-id
+                         #:show-percentage? default-show-percentage?)
+      (waybar-backlight bar-id
+                        #:show-percentage? default-show-percentage?)
+      (waybar-cpu bar-id)
+      (waybar-memory bar-id)
+      (waybar-battery bar-id
+                      #:show-percentage? #t)))))
 #+end_src
 ********* Modules
 #+begin_src scheme
 (define* (waybar-module name
+                        bar-id
                         #:optional
                         config
                         style
                         #:key
-                        (placement 'modules-right)
-                        (bar-id 'main))
+                        (placement 'modules-right))
   (simple-service
    (symbol-append 'waybar-module- name)
    home-waybar-service-type
@@ -6927,9 +6942,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ********** Backlight
 #+begin_src scheme
-(define* (waybar-backlight #:key show-percentage?)
+(define* (waybar-backlight bar-id
+                           #:key show-percentage?)
   (waybar-module
    'backlight
+   bar-id
    `((format . ,(string-append
                  "{icon}"
                  (if show-percentage? " {percent}" "")))
@@ -6937,9 +6954,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ********** Battery
 #+begin_src scheme
-(define* (waybar-battery #:key show-percentage?)
+(define* (waybar-battery bar-id
+                         #:key show-percentage?)
   (waybar-module
    'battery
+   bar-id
    (let ((base-format (string-append
                        "{icon}"
                        (if show-percentage? " {capacity}%" ""))))
@@ -6969,11 +6988,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug. Andrew Tropin uses a Waybar fork that has a fix for some battery issue, possibly mine, see [[https://github.com/grfrederic/Waybar/tree/normalize-battery-capacity][GitHub - grfrederic/Waybar at normalize-battery-capacity]]. Don't worry about this for a while plus hopefully that fork will get upstreamed into mainline.
 ********** Clock
 #+begin_src scheme
-(define* (waybar-clock #:key
+(define* (waybar-clock bar-id
+                       #:key
                        date-format
                        time-format)
   (waybar-module
    'clock
+   bar-id
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
      ;; Workarounds for https://github.com/Alexays/Waybar/issues/1452.
      (format . ,(string-append "{:"
@@ -6989,10 +7010,12 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   - I don't understand the histogram output.
   - The histogram is "jumpy", it changes width.
 #+begin_src scheme
-(define* (waybar-cpu #:key (histogram? #t))
+(define* (waybar-cpu bar-id
+                     #:key (histogram? #t))
   (if histogram?
       (waybar-module
        'custom/cpu-hist
+       bar-id
        `((format . {})
          (return-type . "json")
          (exec . ,#~(let ((cmd (string-append #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
@@ -7001,29 +7024,34 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
          (interval . 10)))
       (waybar-module
        'cpu
+       bar-id
        '((format . " {usage}%")))))
 #+end_src
 ********** Idle inhibitor
 #+begin_src scheme
-(define (waybar-idle-inhibitor)
+(define (waybar-idle-inhibitor bar-id)
   (waybar-module
    'idle_inhibitor
+   bar-id
    '((format . {icon})
      (format-icons . ((activated . )
                       (deactivated . ))))))
 #+end_src
 ********** Memory
 #+begin_src scheme
-(define (waybar-memory)
+(define (waybar-memory bar-id)
   (waybar-module
    'memory
+   bar-id
    '((format . " {}%"))))
 #+end_src
 ********** Microphone
 #+begin_src scheme
-(define* (waybar-microphone #:key show-percentage?)
+(define* (waybar-microphone bar-id
+                            #:key show-percentage?)
   (waybar-module
    'pulseaudio#source
+   bar-id
    `((format . "{format_source}")
      (format-source . ,(string-append
                         (if show-percentage? "{volume}% " "")
@@ -7037,9 +7065,10 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ********** Tray
 #+begin_src scheme
-(define (waybar-tray)
+(define (waybar-tray bar-id)
   (waybar-module
    'tray
+   bar-id
    '()
    `(((#{#tray}# menu)
       ((color . @fg)
@@ -7064,9 +7093,11 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ********** Volume
 #+begin_src scheme
-(define* (waybar-volume #:key show-percentage?)
+(define* (waybar-volume bar-id
+                        #:key show-percentage?)
   (waybar-module
    'pulseaudio#sink
+   bar-id
    (let ((base-format (string-append
                        (if show-percentage? "{volume}% " "")
                        "{icon}")))
@@ -7080,9 +7111,10 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 ********** Sway
 *********** Sway window
 #+begin_src scheme
-(define (waybar-sway-window)
+(define (waybar-sway-window bar-id)
   (waybar-module
    'sway/window
+   bar-id
    '()
    `((#{#window}#
       ((margin-left . 1em)
@@ -7092,6 +7124,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 *********** Sway workspaces
 #+begin_src scheme
 (define* (waybar-sway-workspaces
+          bar-id
           #:key
           persistent-workspaces
           (format-icons '(("1" . )
@@ -7109,6 +7142,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                           ("default" . ))))
   (waybar-module
    'sway/workspaces
+   bar-id
    `((disable-scroll . #t)
      (format . {icon})
      (format-icons . ,format-icons)
@@ -8781,11 +8815,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
      (mako-wm-piece #:colors colors
                     #:font (assoc-ref fonts font-variable-pitch))
-     (waybar-wm-piece #:colors colors
-                      #:font (assoc-ref fonts font-variable-pitch)
-                      #:modules (waybar-modules #:session session
-                                                #:date-format date-format
-                                                #:time-format time-format))
+     (let ((bar-id 'main))
+       (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)))
+                        #:colors colors
+                        #:font (assoc-ref fonts font-variable-pitch)
+                        #:modules (waybar-modules #:bar-id bar-id
+                                                  #:session session
+                                                  #:date-format date-format
+                                                  #:time-format time-format)))
      ;; (kanshi-wm-piece)
      (case connection-manager
        ((#:cm/network-manager) (network-manager-wm-applet)))
