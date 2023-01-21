@@ -1744,8 +1744,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   (login #:login/greetd)
                   login-number-of-ttys
                   users-info
-                  guix?
-                  nix?
+                  package-managers
                   console?
                   kmonad?
                   kmonad-users
@@ -1768,9 +1767,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       ((#:login/greetd) (greetd-login $ #:number-of-ttys login-number-of-ttys)))
     (certs $)
     (accounts $ #:users-info users-info)
-    (if guix?
+    (if (member #:pm/guix (or package-managers '()))
         (guix-pm $ #:stateless? stateless?) $)
-    (if nix?
+    (if (member #:pm/nix (or package-managers '()))
         (nix-pm $ #:stateless? stateless?) $)
     (if console?
         (if kmonad?
@@ -8724,8 +8723,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       login-shell
                       doom?
                       doom-flags
-                      guix?
-                      nix?
+                      package-managers
                       console?
                       kmonad?
                       desktop?
@@ -8738,11 +8736,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   (append
    (if stateless?
        (stateless #:storage-paths stateless-storage-paths) '())
-   (if guix?
+   (if (member #:pm/guix (or package-managers '()))
        (guix-pm #:stateless? stateless?
                 #:doom? doom?)
        '())
-   (if nix?
+   (if (member #:pm/nix (or package-managers '()))
        (nix-pm #:stateless? stateless?
                #:doom? doom?
                #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
@@ -8941,8 +8939,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (interactive-shells '(#:shell/zsh))
                   doom?
                   doom-flags
-                  guix?
-                  nix?
+                  package-managers
                   console?
                   kmonad?
                   desktop?
@@ -8972,8 +8969,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   #:login-shell login-shell
                   #:doom? doom?
                   #:doom-flags doom-flags
-                  #:guix? guix?
-                  #:nix? nix?
+                  #:package-managers package-managers
                   #:console? console?
                   #:kmonad? kmonad?
                   #:desktop? desktop?
@@ -10039,8 +10035,7 @@ delete it when leaving the dynamic extent of this call."
 ***** OS+HE shared opts
 #+begin_src scheme
 (define (os+he-shared-opts)
-  '(#:guix? #t
-    #:nix? #t
+  '(#:package-managers '(#:pm/guix #:pm/nix)
     #:console? #t
     #:desktop? #t
     #:pipewire? #t
