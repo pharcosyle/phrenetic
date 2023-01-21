@@ -9143,7 +9143,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
             (delete-file target)
             (begin
               (when (no-follow-file-exists? state-file)
-                (if (nil? (find-files state-file)) ; TODO did I have `nil?` instead of `null?` for some reason or was it just an accident?
+                (if (nil? (find-files state-file)) ; TODO did I have `nil?` instead of `null?` for some reason or was it just an accident? Update: remember nil? and null? are different (empyt list and #f ar false vs just the empty list)
                     (delete-file-recursively state-file)
                     (backup-file state-file)))
               (migrate-file target state-file))))))
