@@ -801,23 +801,32 @@ Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (btrfs #:key
                            label
-                           subvols
-                           (flags '(no-atime))
-                           (options '(("compress" . "zstd")
-                                      "autodefrag")))
+                           mounts)
   (file-systems
    (append
-    (map (match-lambda
-           ((subvol . mount-point)
-            (file-system
-              (device (file-system-label label))
-              (mount-point mount-point)
-              (type "btrfs")
-              (flags (or flags '()))
-              (options (alist->file-system-options
-                        (acons "subvol" subvol (or options '())))))))
-         subvols)
-    (operating-system-file-systems os))))
+    (operating-system-file-systems os)
+    (map (lambda (mount)
+           (apply btrfs-mount
+                  #:label label
+                  (alist->list mount)))
+         mounts))))
+
+(define* (btrfs-mount #:key
+                      label
+                      mount-point
+                      subvol
+                      (flags '(no-atime))
+                      (options '(("compress" . "zstd")
+                                 "autodefrag")))
+  (file-system
+    (device (file-system-label label))
+    (mount-point mount-point)
+    (type "btrfs")
+    (flags (or flags '()))
+    (options (as-> (or options '()) $
+                   (if subvol
+                       (acons "subvol" subvol $) $)
+                   (alist->file-system-options $)))))
 #+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
@@ -9796,7 +9805,11 @@ delete it when leaving the dynamic extent of this call."
         ;;           #:mount-point "/"))
         ((#:filesystem/btrfs)
          (os:btrfs $ #:label root-label
-                   #:subvols mountables)))
+                   #:mounts (map (match-lambda
+                                   ((subvol . mount-point)
+                                    `((#:mount-point . ,mount-point)
+                                      (#:subvol . ,subvol))))
+                                 mountables))))
       (if disk-encryption?
           (os:disk-encryption $ #:device-uuid luks-uuid
                               #:mount-points (case filesystem
