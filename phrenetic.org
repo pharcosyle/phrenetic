@@ -269,8 +269,8 @@ Run with ~sudo~.
             grub-efi
             %efi-label
             %efi-boot-target
-            console-keyboard-layouts
             virtualization
+            console-keyboard-layouts
             macbook
             %macbook-kb-layout
             os-base
@@ -1463,16 +1463,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
            (if nonfree?
                nonfree libre)))))
 #+end_src
-**** Console
-***** Console keyboard layouts
-Must succeed [[*Bootloader][Bootloader]] component.
-#+begin_src scheme
-(define-system-comp (console-keyboard-layouts #:key kb-layout)
-  (keyboard-layout kb-layout)
-  (bootloader (bootloader-configuration
-               (inherit (operating-system-bootloader os))
-               (keyboard-layout kb-layout))))
-#+end_src
 **** Virtualization
 Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
@@ -1495,6 +1485,16 @@ Must succeed [[*Accounts][Accounts]] component.
                           (platforms (apply lookup-qemu-platforms platforms))))
                 (operating-system-user-services os))
          (operating-system-user-services os)))))
+#+end_src
+**** Console
+***** Console keyboard layouts
+Must succeed [[*Bootloader][Bootloader]] component.
+#+begin_src scheme
+(define-system-comp (console-keyboard-layouts #:key kb-layout)
+  (keyboard-layout kb-layout)
+  (bootloader (bootloader-configuration
+               (inherit (operating-system-bootloader os))
+               (keyboard-layout kb-layout))))
 #+end_src
 **** Vendor-specific
 ***** Apple
@@ -1816,11 +1816,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               #:stateless? stateless?)
     (linux-kernel $ #:system "x86_64-linux"
                   #:nonfree? #t)
-    (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
     (virtualization $ #:kvm-support? #t
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
+    (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
