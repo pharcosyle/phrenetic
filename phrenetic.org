@@ -221,12 +221,12 @@ Run with ~sudo~.
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
   #:use-module ((gnu system linux-initrd) #:select (base-initrd))
-  #:use-module (gnu system keyboard)
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde gexp) #:select (slurp-file-like))
   #:use-module (rde system services networking)
+  #:use-module (phrenetic io-devices)
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
@@ -273,7 +273,6 @@ Run with ~sudo~.
             console-keyboard-layouts
             console-hidpi-fonts
             macbook
-            %macbook-kb-layout
             os-base
             with-macbook-hardware))
 
@@ -1508,9 +1507,6 @@ Must succeed [[*Bootloader][Bootloader]] component.
       (apple-broadcom-wireless #:bluetooth? bluetooth?)
       apple-facetime-camera
       apple-macbook-power-key))
-
-(define %macbook-kb-layout
-  (keyboard-layout "us" #:model "macbook78"))
 #+end_src
 ****** Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
@@ -1822,7 +1818,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
-    (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
+    (console-keyboard-layouts $ #:kb-layout (assoc-ref %macbook-keyboard #:keyboard/layout))
     (if (assoc-ref %macbook-display #:hidpi?)
         (console-hidpi-fonts $ #:number-of-ttys number-of-ttys) $)
     (apple-macbook $ #:bluetooth? bluetooth?)))
@@ -9529,6 +9525,29 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (any (lambda (storage-dir)
                 (string-prefix? storage-dir (readlink file)))
               storage-dirs))))
+#+end_src
+** Input/output devices
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "io-devices.scm")
+:END:
+#+begin_src scheme
+(define-module (phrenetic devices)
+  #:use-module (gnu system keyboard)
+  #:export (%macbook-keyboard
+            %macbook-display))
+#+end_src
+*** Apple
+#+begin_src scheme
+(define %macbook-keyboard
+  `((#:keyboard/name . "Apple_Inc._Apple_Internal_Keyboard_/_Trackpad")
+    (#:keyboard/vendor-id . 1452)
+    (#:keyboard/product-id . 610)
+    (#:keyboard/layout . ,(keyboard-layout "us" #:model "macbook78"))))
+
+(define %macbook-display
+  '((#:display/make . "Apple Computer Inc")
+    (#:display/model . "Color LCD")
+    (#:display/hidpi? . #t)))
 #+end_src
 * Modules
 :PROPERTIES:
