@@ -6937,6 +6937,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (#{#battery.full}#
       ((color . @green))))))
 #+end_src
+********** TODO [#D] Fix battery capacity output
+It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug. Andrew Tropin uses a Waybar fork that has a fix for some battery issue, possibly mine, see [[https://github.com/grfrederic/Waybar/tree/normalize-battery-capacity][GitHub - grfrederic/Waybar at normalize-battery-capacity]]. Don't worry about this for a while plus hopefully that fork will get upstreamed into mainline.
 ********* Clock
 #+begin_src scheme
 (define* (waybar-clock #:key
