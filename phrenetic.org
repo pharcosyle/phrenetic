@@ -258,7 +258,6 @@ Run with ~sudo~.
             sway-wm
             host-info
             %root-label
-            ;; ext4
             btrfs
             %btrfs-mount-flags
             %btrfs-mount-options
@@ -786,12 +785,18 @@ Must succeed [[*Accounts][Accounts]] component.
 #+end_src
 ***** Ext4
 #+begin_src scheme
-;; (define-system-comp (ext4 #:key label)
+;; (define-system-comp (ext4 #:key
+;;                           label
+;;                           mount-point
+;;                           flags
+;;                           options)
 ;;   (file-systems
 ;;    (cons* (file-system
 ;;             (device (file-system-label label))
-;;             (mount-point "/")
-;;             (type "ext4"))
+;;             (mount-point mount-point)
+;;             (type "ext4")
+;;             (flags (or flags '()))
+;;             (options options))
 ;;           (operating-system-file-systems os))))
 #+end_src
 ***** Btrfs
@@ -9792,7 +9797,8 @@ delete it when leaving the dynamic extent of this call."
                     #:timezone "America/Los_Angeles")
       (case filesystem
         ;; ((#:filesystem/ext4)
-        ;;  (os:ext4 $ #:label root-label))
+        ;;  (os:ext4 $ #:label root-label
+        ;;           #:mount-point "/"))
         ((#:filesystem/btrfs)
          (os:btrfs $ #:label root-label
                    #:subvols mountables
