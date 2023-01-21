@@ -5948,7 +5948,7 @@ nix-channel --update
                 (list #$(file-append pipewire "/bin/pipewire"))
                 #:log-file #$(home-shepherd-service-log-file "pipewire.log")
                 #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
+                (append (list #$disable-rtkit-env-var)
                         (default-environment-variables))))
       (stop  #~(make-kill-destructor)))
      (shepherd-service
@@ -5958,7 +5958,7 @@ nix-channel --update
                 (list #$(file-append pipewire "/bin/pipewire-pulse"))
                 #:log-file #$(home-shepherd-service-log-file "pipewire-pulse.log")
                 #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
+                (append (list #$disable-rtkit-env-var)
                         (default-environment-variables))))
       (stop  #~(make-kill-destructor)))))
 
@@ -5979,6 +5979,8 @@ nix-channel --update
                  (#:storage . #:storage/machine)
                  (#:parent-dir-perms . ((#:mode . #o700)))))))))
 
+(define disable-rtkit-env-var
+  "DISABLE_RTKIT=1")
 
 (define (asoundrc-file name config)
   (apply mixed-text-file name (asoundrc-serialize config)))
@@ -6029,7 +6031,7 @@ nix-channel --update
                 (list #$(file-append wireplumber "/bin/wireplumber"))
                 #:log-file #$(home-shepherd-service-log-file "wireplumber.log")
                 #:environment-variables
-                (append (list "DISABLE_RTKIT=1")
+                (append (list #$disable-rtkit-env-var)
                         (default-environment-variables))))
       (stop  #~(make-kill-destructor)))))
 
