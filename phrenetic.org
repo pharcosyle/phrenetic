@@ -277,6 +277,10 @@ Run with ~sudo~.
             with-macbook-hardware))
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
+
+;; Not exported. Probably an oversight that'll get fixed at some point.
+(define greetd-terminals (@@ (gnu services base) greetd-terminals))
+(define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
 #+end_src
 ** Create
 #+begin_src scheme
@@ -1987,7 +1991,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             applications
             he-base))
 
-;; TODO Remove once this is the default in RDE.
+;; TODO Remove once this is the default in RDE (or Guix).
 (use-modules (guix transformations))
 (define transform-sway
   (options->transformation
@@ -6460,9 +6464,9 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                         `((xkb_options ,(string-join
                                          (keyboard-layout-options kb-layout) ","))))))
                  '())
-             (if repeat-delay
+             (if kb-repeat-delay
                  `((repeat_delay ,kb-repeat-delay)) '())
-             (if (repeat-rate)
+             (if kb-repeat-rate
                  `((repeat_rate ,kb-repeat-rate)) '())))
 
     (input type:touchpad
