@@ -6883,13 +6883,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (waybar-sway-workspaces)
        (waybar-sway-window)))
      (else '()))
-   (let ((show-percentage? #f))
+   (let ((default-show-percentage? #f))
      (list
       (waybar-tray)
       (waybar-idle-inhibitor)
-      (waybar-volume #:show-percentage? show-percentage?)
-      (waybar-microphone #:show-percentage? show-percentage?)
-      (waybar-backlight #:show-percentage? show-percentage?)
+      (waybar-volume #:show-percentage? default-show-percentage?)
+      (waybar-microphone #:show-percentage? default-show-percentage?)
+      (waybar-backlight #:show-percentage? default-show-percentage?)
       (waybar-cpu)
       (waybar-memory)
       (waybar-battery #:show-percentage? #t)))))
@@ -6909,10 +6909,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (home-waybar-extension
     (config `#(((name . ,bar-id)
                 (,placement . #(,name))
-                (,name . ,(if config
-                              config '())))))
-    (style-css (if style
-                   style '())))))
+                (,name . ,(or config '())))))
+    (style-css (or style '())))))
 #+end_src
 ********** Backlight
 #+begin_src scheme
@@ -7029,7 +7027,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 (define (waybar-tray)
   (waybar-module
    'tray
-   `()
+   '()
    `(((#{#tray}# menu)
       ((color . @fg)
        (background . @bg)
@@ -7072,7 +7070,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 (define (waybar-sway-window)
   (waybar-module
    'sway/window
-   `()
+   '()
    `((#{#window}#
       ((margin-left . 1em)
        (margin-right . 1em))))
