@@ -241,11 +241,11 @@ Run with ~sudo~.
             base-services
             classic-login
             greetd-login
+            %number-of-ttys
             certs
             accounts
             guix-pm
             nix-pm
-            console-fonts
             kmonad-tool
             desktop-base-services
             classic-sound
@@ -271,6 +271,7 @@ Run with ~sudo~.
             %efi-boot-target
             virtualization
             console-keyboard-layouts
+            console-hidpi-fonts
             macbook
             %macbook-kb-layout
             os-base
@@ -382,6 +383,10 @@ Run with ~sudo~.
                              (terminal-vt (number->string n))))
                           (iota number-of-ttys 1)))))
           (operating-system-user-services os))))
+#+end_src
+**** Shared
+#+begin_src scheme
+(define %number-of-ttys 6)
 #+end_src
 *** Certificates
 #+begin_src scheme
@@ -507,21 +512,6 @@ Run with ~sudo~.
                      config)))
 #+end_src
 *** Console
-**** Fonts
-#+begin_src scheme
-(define-system-comp (console-fonts #:key
-                                   number-of-ttys
-                                   (hidpi? #t))
-  (services
-   (cons* (service console-font-service-type
-                   (map (lambda (n)
-                          (cons (string-append "tty" (number->string n))
-                                (if hidpi?
-                                    (file-append font-terminus "/share/consolefonts/ter-132n")
-                                    %default-console-font)))
-                        (iota number-of-ttys 1)))
-          (operating-system-user-services os))))
-#+end_src
 **** KMonad
 Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
@@ -1497,6 +1487,17 @@ Must succeed [[*Bootloader][Bootloader]] component.
                (inherit (operating-system-bootloader os))
                (keyboard-layout kb-layout))))
 #+end_src
+***** HiDPI fonts
+#+begin_src scheme
+(define-system-comp (console-hidpi-fonts #:key number-of-ttys)
+  (services
+   (cons* (service console-font-service-type
+                   (map (lambda (n)
+                          (cons (string-append "tty" (number->string n))
+                                (file-append font-terminus "/share/consolefonts/ter-132n")))
+                        (iota number-of-ttys 1)))
+          (operating-system-user-services os))))
+#+end_src
 **** Vendor-specific
 ***** Apple
 #+begin_src scheme
@@ -1739,7 +1740,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   source?
                   source-path
                   (greetd? #t)
-                  (number-of-ttys 6)
+                  login-number-of-ttys
                   users-info
                   guix?
                   nix?
@@ -1761,8 +1762,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (source $ #:path source-path) $)
     (base-services $ #:stateless? stateless?)
     (if greetd?
-        (greetd-login $ #:number-of-ttys number-of-ttys)
-        (classic-login $ #:number-of-ttys number-of-ttys))
+        (greetd-login $ #:number-of-ttys login-number-of-ttys)
+        (classic-login $ #:number-of-ttys login-number-of-ttys))
     (certs $)
     (accounts $ #:users-info users-info)
     (if guix?
@@ -1770,10 +1771,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if nix?
         (nix-pm $ #:stateless? stateless?) $)
     (if console?
-        (as-> $ $
-          (console-fonts $ #:number-of-ttys number-of-ttys)
-          (if kmonad?
-              (kmonad-tool $ #:who kmonad-users) $))
+        (if kmonad?
+            (kmonad-tool $ #:who kmonad-users) $)
         $)
     (if desktop?
         (as-> $ $
@@ -1809,6 +1808,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 efi-label
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
+                                number-of-ttys
                                 bluetooth?
                                 stateless?)
   (as-> os $
@@ -1822,6 +1822,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
     (console-keyboard-layouts $ #:kb-layout %macbook-kb-layout)
+    (if (assoc-ref %macbook-display #:hidpi?)
+        (console-hidpi-fonts $ #:number-of-ttys number-of-ttys) $)
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
@@ -9839,6 +9841,7 @@ delete it when leaving the dynamic extent of this call."
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "mellon")
+        (number-of-ttys os:%number-of-ttys)
         (bluetooth? #t))
     (as-> (os-base #:users-info `(((#:name . ,primary-name)
                                    (#:comment . "Krzysztof Baranowski")
@@ -9848,6 +9851,7 @@ delete it when leaving the dynamic extent of this call."
                                    (#:admin? . #t))
                                   ((#:name . ,guest-name)
                                    (#:comment . "Mellon")))
+                   #:login-number-of-ttys number-of-ttys
                    #:kmonad? #t
                    #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                    (,aux-name . ,aux-he-kmonad?)
@@ -9911,6 +9915,7 @@ delete it when leaving the dynamic extent of this call."
                                                                             (,aux-name . ,aux-he-virtualization?)
                                                                             (,guest-name . ,guest-he-virtualization?)))
                                 ;; #:virtualization-binfmt-platforms '("aarch64")
+                                #:number-of-ttys number-of-ttys
                                 #:bluetooth? bluetooth?
                                 #:stateless? stateless?))))
 
@@ -9927,6 +9932,7 @@ delete it when leaving the dynamic extent of this call."
 ***** OS
 #+begin_src scheme
 (define* (os-base #:key
+                  login-number-of-ttys
                   users-info
                   kmonad?
                   kmonad-users
@@ -9941,6 +9947,7 @@ delete it when leaving the dynamic extent of this call."
    os:blank-os
    ;; #:source? #t
    ;; #:source-path "/.persist/home/pharcosyle/work_for_now/phrenetic"
+   #:login-number-of-ttys login-number-of-ttys
    #:users-info users-info
    #:kmonad? kmonad?
    #:kmonad-users kmonad-users
