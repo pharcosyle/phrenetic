@@ -6926,10 +6926,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+begin_src scheme
 (define* (waybar-module name
                         bar-id
-                        #:optional
+                        #:key
                         config
                         style
-                        #:key
                         (placement 'modules-right))
   (simple-service
    (symbol-append 'waybar-module- name)
@@ -6947,6 +6946,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (waybar-module
    'backlight
    bar-id
+   #:config
    `((format . ,(string-append
                  "{icon}"
                  (if show-percentage? " {percent}" "")))
@@ -6959,6 +6959,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
   (waybar-module
    'battery
    bar-id
+   #:config
    (let ((base-format (string-append
                        "{icon}"
                        (if show-percentage? " {capacity}%" ""))))
@@ -6977,6 +6978,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                         (high . )
                         (full . )))
        (tooltip-format . "Current capacity: {capacity}%\n\n{timeTo}")))
+   #:style
    `((#{#battery.discharging.empty}#
       ((color . @red)))
      (#{#battery.discharging.low}#
@@ -6995,6 +6997,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'clock
    bar-id
+   #:config
    `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
      ;; Workarounds for https://github.com/Alexays/Waybar/issues/1452.
      (format . ,(string-append "{:"
@@ -7002,7 +7005,6 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                                "  "
                                ((@ (ice-9 string-fun) string-replace-substring) time-format "%-I" "%I")
                                "}")))
-   '()
    #:placement 'modules-left))
 #+end_src
 ********** CPU
@@ -7016,6 +7018,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       (waybar-module
        'custom/cpu-hist
        bar-id
+       #:config
        `((format . {})
          (return-type . "json")
          (exec . ,#~(let ((cmd (string-append #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
@@ -7025,6 +7028,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       (waybar-module
        'cpu
        bar-id
+       #:config
        '((format . " {usage}%")))))
 #+end_src
 ********** Idle inhibitor
@@ -7033,6 +7037,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'idle_inhibitor
    bar-id
+   #:config
    '((format . {icon})
      (format-icons . ((activated . )
                       (deactivated . ))))))
@@ -7043,6 +7048,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'memory
    bar-id
+   #:config
    '((format . " {}%"))))
 #+end_src
 ********** Microphone
@@ -7052,6 +7058,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'pulseaudio#source
    bar-id
+   #:config
    `((format . "{format_source}")
      (format-source . ,(string-append
                         (if show-percentage? "{volume}% " "")
@@ -7069,7 +7076,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'tray
    bar-id
-   '()
+   #:style
    `(((#{#tray}# menu)
       ((color . @fg)
        (background . @bg)
@@ -7098,6 +7105,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'pulseaudio#sink
    bar-id
+   #:config
    (let ((base-format (string-append
                        (if show-percentage? "{volume}% " "")
                        "{icon}")))
@@ -7115,7 +7123,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'sway/window
    bar-id
-   '()
+   #:style
    `((#{#window}#
       ((margin-left . 1em)
        (margin-right . 1em))))
@@ -7143,11 +7151,13 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (waybar-module
    'sway/workspaces
    bar-id
+   #:config
    `((disable-scroll . #t)
      (format . {icon})
      (format-icons . ,format-icons)
      (persistent_workspaces . ,(if persistent-workspaces
                                    persistent-workspaces '())))
+   #:style
    `(((#{#workspaces}# button)
       ((background . none)
        (border-radius . 0.2em)
