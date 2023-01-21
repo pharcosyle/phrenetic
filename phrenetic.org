@@ -5326,7 +5326,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+end_src
 ****** Markdown
 #+begin_src scheme
-(define* (doom-markdown)
+(define (doom-markdown)
   (list
    (doom-service
     'markdown
@@ -7628,10 +7628,10 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 (define* (doom-org #:key
                    stateless?
                    evil?
+                   (pretty? #t)
                    org-dir)
   (append
-   (let ((name 'org)
-         (pretty? #t))
+   (let ((name 'org))
      (list
       (doom-service
        name
@@ -7850,9 +7850,9 @@ use_guixs() {
                           stateless?
                           icons?
                           desktop?
+                          (dirvish? #t)
                           emacs-handler)
-  (let ((name 'dired)
-        (dirvish? #t))
+  (let ((name 'dired))
     (append
      (list
       (doom-service
@@ -8872,7 +8872,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   virtualization?
                   email
                   projects)
-  (let* ((login-shell #:shell/bash)
+  ;; TODO Make these arguments but I might change how config is passed around (in an alist intstead of "destructuring" in procedures everywhere) so don't bother yet.
+  (let* ((login-shell #:shell/bash) ; Currently setting the account login shell isn't supported in system so changing this is a bad idea.
          (emacs-package %emacs-package)
          (emacs-editor (emacs-editor #:emacs emacs-package))
          (doom-flags (acons #:doom/icons? #t doom-flags))
