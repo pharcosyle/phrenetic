@@ -665,7 +665,7 @@ Must succeed [[*Accounts][Accounts]] component.
 ***** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
-                                 greetd?
+                                 login
                                  (tty-number 2)
                                  auto-login?
                                  auto-login-user)
@@ -673,7 +673,7 @@ Must succeed [[*Accounts][Accounts]] component.
    (cons* (switch-to-tty-service #:tty-number tty-number)
           (if auto-login?
               (with-auto-login-to-tty (operating-system-user-services os)
-                                      #:greetd? greetd?
+                                      #:login login
                                       #:tty-number tty-number
                                       #:user auto-login-user)
               (operating-system-user-services os)))))
@@ -691,34 +691,36 @@ Must succeed [[*Accounts][Accounts]] component.
                 (invoke #$(file-append kbd "/bin/chvt")
                         (number->string #$tty-number))))))))
 
-(define* (with-auto-login-to-tty services #:key greetd? tty-number user)
-  (if greetd?
-      (modify-services services
-        (greetd-service-type
-         config =>
-         (greetd-configuration
-          (inherit config)
-          (terminals
-           (map (lambda (terminal-config)
-                  (if (equal? (greetd-terminal-vt terminal-config)
-                              (number->string tty-number))
-                      (greetd-terminal-configuration
-                       (inherit terminal-config)
-                       ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or submit a patch myself.
-                       ;; (initial-session-user user)
-                       ;; (initial-session-command "default-session-start")
-                       )
-                      terminal-config))
-                (greetd-terminals config))))))
-      (modify-services services
-        (mingetty-service-type
-         config =>
-         (if (equal? (mingetty-configuration-tty config)
-                     (string-append "tty" (number->string tty-number)))
-             (mingetty-configuration
-              (inherit config)
-              (auto-login user))
-             config)))))
+(define* (with-auto-login-to-tty services #:key login tty-number user)
+  (case login
+    ((#:login/classic)
+     (modify-services services
+       (mingetty-service-type
+        config =>
+        (if (equal? (mingetty-configuration-tty config)
+                    (string-append "tty" (number->string tty-number)))
+            (mingetty-configuration
+             (inherit config)
+             (auto-login user))
+            config))))
+    ((#:login/greetd)
+     (modify-services services
+       (greetd-service-type
+        config =>
+        (greetd-configuration
+         (inherit config)
+         (terminals
+          (map (lambda (terminal-config)
+                 (if (equal? (greetd-terminal-vt terminal-config)
+                             (number->string tty-number))
+                     (greetd-terminal-configuration
+                      (inherit terminal-config)
+                      ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or submit a patch myself.
+                      ;; (initial-session-user user)
+                      ;; (initial-session-command "default-session-start")
+                      )
+                     terminal-config))
+               (greetd-terminals config)))))))))
 #+end_src
 **** Sessions
 ***** Desktop environments
@@ -1739,7 +1741,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   #:key
                   source?
                   source-path
-                  (greetd? #t)
+                  (login #:login/greetd)
                   login-number-of-ttys
                   users-info
                   guix?
@@ -1761,9 +1763,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if source?
         (source $ #:path source-path) $)
     (base-services $ #:stateless? stateless?)
-    (if greetd?
-        (greetd-login $ #:number-of-ttys login-number-of-ttys)
-        (classic-login $ #:number-of-ttys login-number-of-ttys))
+    (case login
+      ((#:login/classic) (classic-login $ #:number-of-ttys login-number-of-ttys))
+      ((#:login/greetd) (greetd-login $ #:number-of-ttys login-number-of-ttys)))
     (certs $)
     (accounts $ #:users-info users-info)
     (if guix?
@@ -1791,7 +1793,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                 ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
                                  #:auto-login-user auto-login-user
                                  #:stateless? stateless?)))
-              (desktop-tty $ #:greetd? greetd?
+              (desktop-tty $ #:login login
                            #:auto-login? auto-login?
                            #:auto-login-user auto-login-user))
           (if (member #:session/gnome (or sessions '()))
