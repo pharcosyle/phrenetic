@@ -6439,8 +6439,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 #+begin_src scheme
 (define* (sway-input #:key
                      kb-layout
-                     kb-repeat-delay
-                     kb-repeat-rate)
+                     (kb-repeat-delay 200)
+                     (kb-repeat-rate 40))
   `((input type:keyboard
            ,(append
              (if kb-layout
@@ -8730,8 +8730,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:portal-services portal-services
               #:bg-image wallpaper
               #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
-              #:kb-repeat-delay 200
-              #:kb-repeat-rate 40
               #:idle-manager (swayidle-idle-manager)
               #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
               #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
