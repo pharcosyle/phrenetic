@@ -6774,6 +6774,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                           font
                           modules
                           transitions?
+                          extra-style
                           height
                           output
                           extra-config)
@@ -6790,59 +6791,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                         `((output . ,output)) '())
                   ,@(or extra-config '()))))
       (style-css
-       `(,#~#$(->> `(("fg" . #:color/fg)
-                     ("bg" . #:color/bg)
-                     ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
-                     ("accent" . #:color/accent)
-                     ("green" . #:color/green)
-                     ("orange" . #:color/orange)
-                     ("red" . #:color/red))
-                   (map (match-lambda
-                          ((name . color)
-                           (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
-                   (apply string-append))
-         (*
-          ((font-family . #(FontAwesome
-                            ,@(if font
-                                  (list
-                                   (as-> font $
-                                         (assoc-ref $ #:font/name)
-                                         (string-append "\"" $ "\"")
-                                         (string->symbol $)))
-                                  '())))
-           ,@(if transitions? '() '((transition . none)))
-           (box-shadow . none)
-           (text-shadow . none)
-           (min-height . 0)))
-
-         (tooltip
-          ((border . (solid @bg-alt))
-           (background . @bg)
-           (opacity . 0.9)))
-
-         ((tooltip label)
-          ((color . @fg)
-           (padding . 0)))
-
-         (#{#waybar}#
-          ((color . @fg)
-           (background . @bg)))
-
-         (#((.modules-right label)
-            (.modules-right image))
-          ((margin . (0.4em 0.2em))
-           (padding . (0 0.4em))
-           (background . @bg-alt)
-           (border-radius . 0.2em)))
-
-         ;; To accommodate the crack in my screen.
-         (.modules-left
-          ((margin-left . 82px)))
-         ;; (.modules-left
-         ;;  ((margin-left . 0.2em)))
-
-         (.modules-right
-          ((margin-right . 0.2em))))))))
+       (waybar-style #:colors colors
+                     #:font font
+                     #:transitions? transitions?
+                     #:extra-style extra-style)))))
 
    modules
 
@@ -6861,6 +6813,67 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
        (map (lambda (f)
               (list (waybar-file f) reload-cmd))
             '("config" "style.css")))))))
+
+(define* (waybar-style #:key
+                       colors
+                       font
+                       transitions?
+                       extra-style)
+  `(,#~#$(->> `(("fg" . #:color/fg)
+                ("bg" . #:color/bg)
+                ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
+                ("accent" . #:color/accent)
+                ("green" . #:color/green)
+                ("orange" . #:color/orange)
+                ("red" . #:color/red))
+              (map (match-lambda
+                     ((name . color)
+                      (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
+              (apply string-append))
+    (*
+     ((font-family . #(FontAwesome
+                       ,@(if font
+                             (list
+                              (as-> font $
+                                    (assoc-ref $ #:font/name)
+                                    (string-append "\"" $ "\"")
+                                    (string->symbol $)))
+                             '())))
+      ,@(if transitions? '() '((transition . none)))
+      (box-shadow . none)
+      (text-shadow . none)
+      (min-height . 0)))
+
+    (tooltip
+     ((border . (solid @bg-alt))
+      (background . @bg)
+      (opacity . 0.9)))
+
+    ((tooltip label)
+     ((color . @fg)
+      (padding . 0)))
+
+    (#{#waybar}#
+     ((color . @fg)
+      (background . @bg)))
+
+    (#((.modules-right label)
+       (.modules-right image))
+     ((margin . (0.4em 0.2em))
+      (padding . (0 0.4em))
+      (background . @bg-alt)
+      (border-radius . 0.2em)))
+
+    ;; To accommodate the crack in my screen.
+    (.modules-left
+     ((margin-left . 82px)))
+    ;; (.modules-left
+    ;;  ((margin-left . 0.2em)))
+
+    (.modules-right
+     ((margin-right . 0.2em)))
+
+    ,@(or extra-style '())))
 
 (define (waybar-status-bar)
   `((#:status-bar/command . ,(list
