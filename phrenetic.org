@@ -8951,7 +8951,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   email
                   projects)
   ;; TODO Make these arguments but I might change how config is passed around (in an alist intstead of "destructuring" in procedures everywhere) so don't bother yet.
-  (let* ((login-shell #:shell/bash) ; Currently setting the account login shell isn't supported in system so changing this is a bad idea.
+  (let* ((login-shell #:shell/bash) ; Currently setting the login shell isn't supported in the Accounts system component so you probably don't want to change this.
          (emacs-package %emacs-package)
          (emacs-editor (emacs-editor #:emacs emacs-package))
          (doom-flags (acons #:doom/icons? #t doom-flags))
