@@ -1488,7 +1488,7 @@ Must succeed [[*Accounts][Accounts]] component.
          (operating-system-user-services os)))))
 #+end_src
 **** Console
-***** Console keyboard layouts
+***** Keyboard layouts
 Must succeed [[*Bootloader][Bootloader]] component.
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key kb-layout)
@@ -1807,9 +1807,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 #:key
                                 boot-target
                                 efi-label
-                                bluetooth?
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
+                                bluetooth?
                                 stateless?)
   (as-> os $
     (grub-efi $ #:label efi-label
