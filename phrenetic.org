@@ -6326,12 +6326,6 @@ Maybe this shouldn't be a standalone component but rather added by programs that
        (append
         `((xwayland ,(if xwayland? 'enable 'disable))
 
-          (set $mod ,sway-mod)
-
-          (floating_modifier $mod normal)
-
-          (bindsym $mod+Shift+r reload)
-
           ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
           ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
           ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
@@ -6339,55 +6333,11 @@ Maybe this shouldn't be a standalone component but rather added by programs that
           (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
                 DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
 
-          ;; Manipulating windows.
-          (bindsym $mod+Shift+c kill)
-          (bindsym $mod+Shift+f fullscreen)
-          (bindsym $mod+Shift+space floating toggle)
-          (bindsym $mod+Control+space focus mode_toggle)
-          (bindsym $mod+h focus left)
-          (bindsym $mod+j focus down)
-          (bindsym $mod+k focus up)
-          (bindsym $mod+l focus right)
-          (bindsym $mod+Shift+h move left)
-          (bindsym $mod+Shift+j move down)
-          (bindsym $mod+Shift+k move up)
-          (bindsym $mod+Shift+l move right)
+          (set $mod ,sway-mod)
 
-          ;; Moving around workspaces.
-          (bindsym $mod+tab workspace back_and_forth)
-          ,@(append-map
-             (lambda (x)
-               `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                  workspace number ,x)
-                 (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                          move container to workspace number ,x)))
-             (iota 10 1))
+          (gaps left 78)) ; To accommodate the crack in my screen.
 
-          ;; Scratchpad settings.
-          (bindsym $mod+Shift+minus move scratchpad)
-          (bindsym $mod+minus scratchpad show)
-
-          (default_border pixel)
-          (default_floating_border pixel)
-          (gaps inner 8)
-
-          (bindsym $mod+Shift+b splith)
-          (bindsym $mod+Shift+v splitv)
-          (bindsym $mod+Shift+s layout stacking)
-          (bindsym $mod+Shift+w layout tabbed)
-          (bindsym $mod+Shift+e layout toggle split)
-          (bindsym $mod+Shift+a focus parent)
-          (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
-                   -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
-                   -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
-          (gaps left 78) ; To accommodate the crack in my screen.
-
-          ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-          (for_window "[title=\".* - Emacs Assistant\"]"
-                      floating enable,
-                      resize set
-                      width ,(assoc-ref emacs-assistant-window-params #:width) ppt
-                      height ,(assoc-ref emacs-assistant-window-params #:height) ppt))
+        (sway-general)
 
         (apply sway-input (alist->list input))
         (apply sway-output (alist->list output))
@@ -6423,6 +6373,65 @@ Maybe this shouldn't be a standalone component but rather added by programs that
     (cons* (xdg-current-desktop-env-var "sway")
            xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars pipewire?)))))
+#+end_src
+******* General
+#+begin_src scheme
+(define (sway-general)
+  `(;; Windows
+    (bindsym $mod+Shift+c kill)
+    (bindsym $mod+Shift+f fullscreen)
+    (bindsym $mod+Shift+space floating toggle)
+    (bindsym $mod+Control+space focus mode_toggle)
+    (bindsym $mod+h focus left)
+    (bindsym $mod+j focus down)
+    (bindsym $mod+k focus up)
+    (bindsym $mod+l focus right)
+    (bindsym $mod+Shift+h move left)
+    (bindsym $mod+Shift+j move down)
+    (bindsym $mod+Shift+k move up)
+    (bindsym $mod+Shift+l move right)
+
+    ;; Workspaces
+    ,@(append-map
+       (lambda (x)
+         `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+            workspace number ,x)
+           (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                    move container to workspace number ,x)))
+       (iota 10 1))
+    (bindsym $mod+tab workspace back_and_forth)
+
+    ;; Scratchpad
+    (bindsym $mod+Shift+minus move scratchpad)
+    (bindsym $mod+minus scratchpad show)
+
+    ;; Layout
+    (bindsym $mod+Shift+b splith)
+    (bindsym $mod+Shift+v splitv)
+    (bindsym $mod+Shift+s layout stacking)
+    (bindsym $mod+Shift+w layout tabbed)
+    (bindsym $mod+Shift+e layout toggle split)
+
+    (bindsym $mod+Shift+a focus parent)
+
+    (bindsym $mod+Shift+r reload)
+    (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
+             -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
+             -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+
+
+    (default_border pixel)
+    (default_floating_border pixel)
+    (gaps inner 8)
+
+    (floating_modifier $mod normal)
+
+    ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+    (for_window "[title=\".* - Emacs Assistant\"]"
+                floating enable,
+                resize set
+                width ,(assoc-ref emacs-assistant-window-params #:width) ppt
+                height ,(assoc-ref emacs-assistant-window-params #:height) ppt)))
 #+end_src
 ******* Input/output
 #+begin_src scheme
