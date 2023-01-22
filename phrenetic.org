@@ -2411,7 +2411,8 @@ SAVEHIST=$HISTSIZE
   #~(lambda (args input)
       `(with-selected-frame
         (make-frame '(,@(if #$assistant?
-                            `((name . ,(string-append #$assistant-title " - Emacs Assistant"))
+                            `((name . ,(string-append #$assistant-title
+                                                      #$(assoc-ref emacs-assistant-window-params #:title-tail)))
                               ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
                               )
                             '())
@@ -2433,7 +2434,8 @@ SAVEHIST=$HISTSIZE
           (write expr port)))))
 
 (define emacs-assistant-window-params
-  '((#:width . 50)
+  '((#:title-tail . " - Emacs Assistant")
+    (#:width . 50)
     (#:height . 50)))
 #+end_src
 **** XDG service
@@ -6427,7 +6429,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
     (floating_modifier $mod normal)
 
     ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-    (for_window "[title=\".* - Emacs Assistant\"]"
+    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
                 floating enable,
                 resize set
                 width ,(assoc-ref emacs-assistant-window-params #:width) ppt
