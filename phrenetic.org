@@ -8960,7 +8960,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define* (he-base #:key
                   stateless?
                   stateless-storage-paths
+                  (login-shell #:shell/bash) ; Currently setting the login shell isn't supported in the Accounts system component so you probably don't want to change this.
                   (interactive-shells '(#:shell/zsh))
+                  (emacs-package %emacs-package)
+                  (emacs-editor (emacs-editor #:emacs emacs-package))
                   doom?
                   doom-flags
                   package-managers
@@ -8968,6 +8971,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   kmonad?
                   desktop?
                   multimedia
+                  (theme #:theme/dark)
+                  (light-colors %light-colors)
+                  (dark-colors %dark-colors)
+                  (colors dark-colors)
+                  (fonts %fonts)
+                  (font-variable-pitch #:fonts/sans)
+                  (wayland? #t)
+                  (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
                   login-manager
                   sessions
@@ -8976,20 +8987,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   virtualization?
                   email
                   projects)
-  ;; TODO Make these arguments but I might change how config is passed around (in an alist intstead of "destructuring" in procedures everywhere) so don't bother yet.
-  (let* ((login-shell #:shell/bash) ; Currently setting the login shell isn't supported in the Accounts system component so you probably don't want to change this.
-         (emacs-package %emacs-package)
-         (emacs-editor (emacs-editor #:emacs emacs-package))
-         (doom-flags (acons #:doom/icons? #t doom-flags))
-         (theme #:theme/dark)
-         (light-colors %light-colors)
-         (dark-colors %dark-colors)
-         (colors dark-colors)
-         (fonts %fonts)
-         (font-variable-pitch #:fonts/sans)
-         (wayland? #t)
-         (portal-services (portal-services #:wayland? wayland?))
-         (pipewire? (equal? multimedia #:media/pipewire)))
+  (let ((pipewire? (equal? multimedia #:media/pipewire)))
     (append
      (system-features #:stateless? stateless?
                       #:stateless-storage-paths stateless-storage-paths
@@ -10062,7 +10060,7 @@ delete it when leaving the dynamic extent of this call."
    (os+he-shared-opts)
    `(#:stateless-storage-paths ,stateless-storage-paths
      #:doom? ,doom?
-     #:doom-flags ,doom-flags
+     #:doom-flags ,(acons #:doom/icons? #t doom-flags)
      #:session-inputs ,(list %macbook-keyboard)
      #:session-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
                                      %macbook-display)))))
