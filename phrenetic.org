@@ -9894,31 +9894,32 @@ delete it when leaving the dynamic extent of this call."
         (guest-name "mellon")
         (number-of-ttys os:%number-of-ttys)
         (bluetooth? #t))
-    (as-> (os-base #:users-info `(((#:name . ,primary-name)
-                                   (#:comment . "Krzysztof Baranowski")
-                                   (#:admin? . #t))
-                                  ((#:name . ,aux-name)
-                                   (#:comment . "Phil Coulson")
-                                   (#:admin? . #t))
-                                  ((#:name . ,guest-name)
-                                   (#:comment . "Mellon")))
-                   #:login-number-of-ttys number-of-ttys
-                   #:kmonad? #t
-                   #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
-                                                   (,aux-name . ,aux-he-kmonad?)
-                                                   (,guest-name . ,guest-he-kmonad?)))
-                   ;; #:bluetooth? bluetooth?
-                   ;; #:bluetooth-users (list primary-name
-                   ;;                         aux-name
-                   ;;                         guest-name)
-                   #:auto-login? disk-encryption?
-                   #:auto-login-user primary-name
-                   #:sessions (->> (list primary-he-sessions
-                                         aux-he-sessions
-                                         guest-he-sessions)
-                                   (apply append)
-                                   delete-duplicates)
-                   #:stateless? stateless?) $
+    (as-> os:blank-os $
+      (os-base $ #:users-info `(((#:name . ,primary-name)
+                                 (#:comment . "Krzysztof Baranowski")
+                                 (#:admin? . #t))
+                                ((#:name . ,aux-name)
+                                 (#:comment . "Phil Coulson")
+                                 (#:admin? . #t))
+                                ((#:name . ,guest-name)
+                                 (#:comment . "Mellon")))
+               #:login-number-of-ttys number-of-ttys
+               #:kmonad? #t
+               #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
+                                               (,aux-name . ,aux-he-kmonad?)
+                                               (,guest-name . ,guest-he-kmonad?)))
+               ;; #:bluetooth? bluetooth?
+               ;; #:bluetooth-users (list primary-name
+               ;;                         aux-name
+               ;;                         guest-name)
+               #:auto-login? disk-encryption?
+               #:auto-login-user primary-name
+               #:sessions (->> (list primary-he-sessions
+                                     aux-he-sessions
+                                     guest-he-sessions)
+                               (apply append)
+                               delete-duplicates)
+               #:stateless? stateless?)
       (os:host-info $ #:host-name "frostfire"
                     #:timezone "America/Los_Angeles")
       (case filesystem
@@ -9982,31 +9983,11 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 ***** OS
 #+begin_src scheme
-(define* (os-base #:key
-                  login-number-of-ttys
-                  users-info
-                  kmonad?
-                  kmonad-users
-                  bluetooth?
-                  bluetooth-users
-                  auto-login?
-                  auto-login-user
-                  sessions
-                  stateless?)
-  (apply
-   os:os-base
-   os:blank-os
-   #:login-number-of-ttys login-number-of-ttys
-   #:users-info users-info
-   #:kmonad? kmonad?
-   #:kmonad-users kmonad-users
-   #:bluetooth? bluetooth?
-   #:bluetooth-users bluetooth-users
-   #:auto-login? auto-login?
-   #:auto-login-user auto-login-user
-   #:sessions sessions
-   #:stateless? stateless?
-   (os+he-shared-opts)))
+(define* (os-base os #:rest opts)
+  (apply os:os-base
+         os
+         (append opts
+                 (os+he-shared-opts))))
 #+end_src
 ***** HEs
 ****** Primary
