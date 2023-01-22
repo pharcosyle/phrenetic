@@ -1900,6 +1900,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
+  #:use-module ((ice-9 string-fun) #:select (string-replace-substring))
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
   #:export (create-he
             stateless
@@ -6299,15 +6300,13 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ****** Sway
 #+begin_src scheme
 (define* (sway-wm #:key
+                  input
+                  output
                   pipewire?
                   doom?
                   portal-services
                   (sway-mod 'Mod1)
                   (xwayland? #t)
-                  bg-image
-                  kb-layout
-                  kb-repeat-delay
-                  kb-repeat-rate
                   idle-manager
                   screen-locker
                   notifier
@@ -6398,12 +6397,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                       width ,(assoc-ref emacs-assistant-window-params #:width) ppt
                       height ,(assoc-ref emacs-assistant-window-params #:height) ppt))
 
-        (if bg-image
-            `((output * bg ,bg-image fill)) '())
-
-        (sway-input #:kb-layout kb-layout
-                    #:kb-repeat-delay kb-repeat-delay
-                    #:kb-repeat-rate kb-repeat-rate)
+        (sway-input input)
+        (sway-output output)
 
         (sway-external-programs #:idle-manager idle-manager
                                 #:screen-locker screen-locker
@@ -6445,35 +6440,55 @@ Maybe this shouldn't be a standalone component but rather added by programs that
            xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars pipewire?)))))
 #+end_src
-******* Input
+******* Input/output
 #+begin_src scheme
-(define* (sway-input #:key
-                     kb-layout
-                     kb-repeat-delay
-                     kb-repeat-rate)
-  `((input type:keyboard
-           ,(append
-             (if kb-layout
-                 (append
-                  `((xkb_layout ,(keyboard-layout-name kb-layout)))
-                  (if-let ((variant (keyboard-layout-variant kb-layout)))
-                          `((xkb_variant ,variant)) '())
-                  (if-let ((model (keyboard-layout-model kb-layout)))
-                          `((xkb_model ,model)) '())
-                  (let ((options (keyboard-layout-options kb-layout)))
-                    (if (null? options)
-                        '()
-                        `((xkb_options ,(string-join
-                                         (keyboard-layout-options kb-layout) ","))))))
-                 '())
-             (if kb-repeat-delay
-                 `((repeat_delay ,kb-repeat-delay)) '())
-             (if kb-repeat-rate
-                 `((repeat_rate ,kb-repeat-rate)) '())))
+(define* (sway-input config)
+  (append
+   `((input type:keyboard
+      ,(append
+        (if-let ((repeat-delay (assoc-ref config #:default-kb-repeat-delay)))
+                `((repeat_delay ,repeat-delay)) '())
+        (if-let ((repeat-rate (assoc-ref config #:default-kb-repeat-rate)))
+                `((repeat_rate ,repeat-rate)) '())))
+     (input type:touchpad
+            ((natural_scroll enabled)
+             (tap ,(if (assoc-ref config #:default-tp-tap?)
+                       'enabled 'disabled)))))
 
-    (input type:touchpad
-           ((natural_scroll enabled)
-            (tap enabled)))))
+   (->> (or (assoc-ref config #:inputs))
+        (filter (lambda (input)
+                  (assoc-ref input #:keyboard/layout)))
+        (map (lambda (input)
+               `((input ,(string-join (list (assoc-ref input #:keyboard/vendor-id)
+                                            (assoc-ref input #:keyboard/product-id)
+                                            (string-replace-substring
+                                             (assoc-ref input #:keyboard/name) " " "_"))
+                                      ":"))
+                 ,(let ((kb-layout (assoc-ref #:keyboard/layout)))
+                    (append
+                     `((xkb_layout ,(keyboard-layout-name kb-layout)))
+                     (if-let ((variant (keyboard-layout-variant kb-layout)))
+                             `((xkb_variant ,variant)) '())
+                     (if-let ((model (keyboard-layout-model kb-layout)))
+                             `((xkb_model ,model)) '())
+                     (let ((options (keyboard-layout-options kb-layout)))
+                       (if (null? options)
+                           '()
+                           `((xkb_options ,(string-join
+                                            (keyboard-layout-options kb-layout) ",")))))))))))))
+
+(define (sway-output config)
+  (append
+   `((output *
+      ,(if-let ((bg-image (assoc-ref config #:default-bg-image)))
+               `((bg ,bg-image fill)) '())))
+   ;; (map (lambda (output)
+   ;;        `((output ,(string-join (list (assoc-ref output #:display/make)
+   ;;                                      (assoc-ref output #:display/model))))
+   ;;          ;; ...
+   ;;          ))
+   ;;      (or (assoc-ref config #:outputs)))
+   ))
 #+end_src
 ******* External programs
 #+begin_src scheme
@@ -7187,12 +7202,15 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 ******* Display configuration
 ******** Kanshi
 #+begin_src scheme
-(define* (kanshi-wm-piece #:key extra-config)
+(define* (kanshi-wm-piece #:key
+                          outputs
+                          extra-config)
   (list
    (service
     home-kanshi-service-type
     (home-kanshi-configuration
      (config
+      ;; Not done yet.
       `(,@(or extra-config '())))))))
 #+end_src
 ******* Applets
@@ -8778,6 +8796,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 *** Sway environment
 #+begin_src scheme
 (define* (sway-environment #:key
+                           inputs
+                           outputs
                            pipewire?
                            connection-manager
                            doom?
@@ -8795,13 +8815,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                      (rofi-menu #:wayland? #t))))
   (let ((session #:session/sway))
     (append
-     (sway-wm #:pipewire? pipewire?
+     (sway-wm #:input `((#:inputs . ,inputs)
+                        (#:default-kb-repeat-delay . 200)
+                        (#:default-kb-repeat-rate . 40)
+                        (#:default-tp-tap? . #t))
+              #:output `((#:outputs . ,outputs)
+                         (#:default-bg-image . ,wallpaper))
+              #:pipewire? pipewire?
               #:doom? doom?
               #:portal-services portal-services
-              #:bg-image wallpaper
-              #:kb-layout ((@ (gnu system keyboard) keyboard-layout) "us" #:model "macbook78") ; TODO
-              #:kb-repeat-delay 200
-              #:kb-repeat-rate 40
               #:idle-manager (swayidle-idle-manager)
               #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
               #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
@@ -8831,14 +8853,19 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (mako-wm-piece #:colors colors
                     #:font (assoc-ref fonts font-variable-pitch))
      (let ((bar-id 'main))
-       (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)))
+       (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
+                                  (#:not-outputs . ,(->> outputs
+                                                         (filter (lambda (o)
+                                                                   (assoc-ref outputs #:display/no-status-bar?)))
+                                                         (map (lambda (o)
+                                                                (assoc-ref outputs #:display/ephemeral-name)))))))
                         #:colors colors
                         #:font (assoc-ref fonts font-variable-pitch)
                         #:modules (waybar-modules #:bar-id bar-id
                                                   #:session session
                                                   #:date-format date-format
                                                   #:time-format time-format)))
-     ;; (kanshi-wm-piece)
+     ;; (kanshi-wm-piece #:outputs outputs)
      (case connection-manager
        ((#:cm/network-manager) (network-manager-wm-applet)))
      ;; (gammastep-wm-applet)
@@ -8949,6 +8976,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   connection-manager
                   login-manager
                   sessions
+                  session-inputs
+                  session-outputs
                   virtualization?
                   email
                   projects)
@@ -8981,7 +9010,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
                                                  (#:session/sway . ,(sway-start pipewire?)))
                       #:sessions sessions
-                      #:sway-environment (sway-environment #:pipewire? pipewire?
+                      #:sway-environment (sway-environment #:inputs session-inputs
+                                                           #:outputs session-outputs
+                                                           #:pipewire? pipewire?
                                                            #:connection-manager connection-manager
                                                            #:doom? doom?
                                                            #:portal-services portal-services
@@ -9545,7 +9576,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 *** Apple
 #+begin_src scheme
 (define %macbook-keyboard
-  `((#:keyboard/name . "Apple_Inc._Apple_Internal_Keyboard_/_Trackpad")
+  `((#:keyboard/name . "Apple Inc. Apple Internal Keyboard / Trackpad")
     (#:keyboard/vendor-id . 1452)
     (#:keyboard/product-id . 610)
     (#:keyboard/layout . ,(keyboard-layout "us" #:model "macbook78"))))
@@ -9846,6 +9877,7 @@ delete it when leaving the dynamic extent of this call."
 (define-module (phrenetic configs frostfire)
   #:use-module ((phrenetic home) #:prefix he:)
   #:use-module (phrenetic install)
+  #:use-module (phrenetic io-devices)
   #:use-module ((phrenetic system) #:prefix os:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
@@ -10056,7 +10088,10 @@ delete it when leaving the dynamic extent of this call."
    (os+he-shared-opts)
    `(#:stateless-storage-paths ,stateless-storage-paths
      #:doom? ,doom?
-     #:doom-flags ,doom-flags)))
+     #:doom-flags ,doom-flags
+     #:session-inputs (list %macbook-keyboard)
+     #:session-outputs (list (acons #:display/ephemeral-name "eDP-1"
+                                    %macbook-display)))))
 #+end_src
 ***** OS+HE shared opts
 #+begin_src scheme
