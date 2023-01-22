@@ -6813,14 +6813,21 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                      bar-id
                      (position 'top)
                      height
-                     output
+                     outputs
+                     not-outputs
                      extra-config)
   `((name . ,bar-id)
     (position . ,position)
     ,@(if height
           `((height . ,height)) '())
-    ,@(if output
-          `((output . ,output)) '())
+    ,@(let ((output (append
+                     (or outputs '())
+                     (map (lambda (o)
+                            (string-append "!" o))
+                          (or not-outputs '())))))
+        (if (null? output)
+            '()
+            `((output . ,output))))
     ,@(or extra-config '())))
 
 (define* (waybar-style #:key
