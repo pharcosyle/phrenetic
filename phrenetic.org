@@ -6389,8 +6389,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                       width ,(assoc-ref emacs-assistant-window-params #:width) ppt
                       height ,(assoc-ref emacs-assistant-window-params #:height) ppt))
 
-        (sway-input input)
-        (sway-output output)
+        (apply sway-input (alist->list input))
+        (apply sway-output (alist->list output))
 
         (apply sway-external-programs (alist->list external-programs))
 
@@ -6426,20 +6426,24 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 #+end_src
 ******* Input/output
 #+begin_src scheme
-(define* (sway-input config)
+(define* (sway-input #:key
+                     inputs
+                     default-kb-repeat-delay
+                     default-kb-repeat-rate
+                     default-tp-tap?)
   (append
    `((input type:keyboard
       ,(append
-        (if-let ((repeat-delay (assoc-ref config #:default-kb-repeat-delay)))
-                `((repeat_delay ,repeat-delay)) '())
-        (if-let ((repeat-rate (assoc-ref config #:default-kb-repeat-rate)))
-                `((repeat_rate ,repeat-rate)) '())))
+        (if default-kb-repeat-delay
+            `((repeat_delay ,default-kb-repeat-delay)) '())
+        (if default-kb-repeat-rate
+            `((repeat_rate ,default-kb-repeat-rate)) '())))
      (input type:touchpad
             ((natural_scroll enabled)
-             (tap ,(if (assoc-ref config #:default-tp-tap?)
+             (tap ,(if default-tp-tap?
                        'enabled 'disabled)))))
 
-   (->> (or (assoc-ref config #:inputs))
+   (->> (or inputs '())
         (filter (lambda (input)
                   (assoc-ref input #:keyboard/layout)))
         (map (lambda (input)
@@ -6461,17 +6465,19 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                            `((xkb_options ,(string-join
                                             (keyboard-layout-options kb-layout) ",")))))))))))))
 
-(define (sway-output config)
+(define* (sway-output #:key
+                      outputs
+                      default-bg-image)
   (append
    `((output *
-      ,(if-let ((bg-image (assoc-ref config #:default-bg-image)))
-               `((bg ,bg-image fill)) '())))
+      ,(if default-bg-image
+           `((bg ,default-bg-image fill)) '())))
    ;; (map (lambda (output)
    ;;        `((output ,(string-join (list (assoc-ref output #:display/make)
    ;;                                      (assoc-ref output #:display/model))))
    ;;          ;; ...
    ;;          ))
-   ;;      (or (assoc-ref config #:outputs)))
+   ;;      (or outputs '()))
    ))
 #+end_src
 ******* External programs
