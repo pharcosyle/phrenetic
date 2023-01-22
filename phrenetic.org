@@ -334,7 +334,8 @@ Run with ~sudo~.
            agetty-service-type
            mingetty-service-type
            console-font-service-type
-           guix-service-type))
+           guix-service-type
+           log-cleanup-service-type))
     (if stateless?
         (list
          (stateless-service
@@ -430,7 +431,10 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list
-     (service guix-service-type))
+     (service guix-service-type)
+     (service log-cleanup-service-type
+              (log-cleanup-configuration
+               (directory "/var/log/guix/drvs"))))
     (if nonguix-substitutes?
         (list (nonguix-substitutes-service)) '())
     ;; TODO Should these (at least e.g. "/var/guix") be in Stateless > Guix System? Update: or in both places?
@@ -482,7 +486,10 @@ Run with ~sudo~.
                (extra-config (if stateless?
                                  (list
                                   (nix-conf-serialize '((allow-symlinked-store . #t))))
-                                 '())))))
+                                 '()))))
+     (service log-cleanup-service-type
+              (log-cleanup-configuration
+               (directory "/nix/var/log/nix/drvs"))))
     (if stateless?
         (list
          (stateless-service
