@@ -6300,13 +6300,13 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ****** Sway
 #+begin_src scheme
 (define* (sway-wm #:key
-                  input
-                  output
                   pipewire?
                   doom?
                   portal-services
                   (sway-mod 'Mod1)
                   (xwayland? #t)
+                  input
+                  output
                   external-programs
                   extra-config)
   (append
@@ -8780,11 +8780,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 *** Sway environment
 #+begin_src scheme
 (define* (sway-environment #:key
-                           inputs
-                           outputs
                            pipewire?
                            connection-manager
                            doom?
+                           inputs
+                           outputs
                            portal-services
                            colors
                            (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
@@ -8799,16 +8799,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                      (rofi-menu #:wayland? #t))))
   (let ((session #:session/sway))
     (append
-     (sway-wm #:input `((#:inputs . ,inputs)
+     (sway-wm #:pipewire? pipewire?
+              #:doom? doom?
+              #:portal-services portal-services
+              #:external-programs
+              #:input `((#:inputs . ,inputs)
                         (#:default-kb-repeat-delay . 200)
                         (#:default-kb-repeat-rate . 40)
                         (#:default-tp-tap? . #t))
               #:output `((#:outputs . ,outputs)
                          (#:default-bg-image . ,wallpaper))
-              #:pipewire? pipewire?
-              #:doom? doom?
-              #:portal-services portal-services
-              #:external-programs
               `((#:idle-manager . ,(swayidle-idle-manager))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
@@ -8995,11 +8995,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
                                                  (#:session/sway . ,(sway-start pipewire?)))
                       #:sessions sessions
-                      #:sway-environment (sway-environment #:inputs session-inputs
-                                                           #:outputs session-outputs
-                                                           #:pipewire? pipewire?
+                      #:sway-environment (sway-environment #:pipewire? pipewire?
                                                            #:connection-manager connection-manager
                                                            #:doom? doom?
+                                                           #:inputs session-inputs
+                                                           #:outputs session-outputs
                                                            #:portal-services portal-services
                                                            #:colors colors
                                                            #:fonts fonts
