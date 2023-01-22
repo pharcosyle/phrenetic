@@ -6448,7 +6448,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                                             (string-replace-substring
                                              (assoc-ref input #:keyboard/name) " " "_"))
                                       ":"))
-                 ,(let ((kb-layout (assoc-ref #:keyboard/layout)))
+                 ,(let ((kb-layout (assoc-ref input #:keyboard/layout)))
                     (append
                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
                      (if-let ((variant (keyboard-layout-variant kb-layout)))
@@ -8802,13 +8802,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      (sway-wm #:pipewire? pipewire?
               #:doom? doom?
               #:portal-services portal-services
-              #:external-programs
               #:input `((#:inputs . ,inputs)
                         (#:default-kb-repeat-delay . 200)
                         (#:default-kb-repeat-rate . 40)
                         (#:default-tp-tap? . #t))
               #:output `((#:outputs . ,outputs)
                          (#:default-bg-image . ,wallpaper))
+              #:external-programs
               `((#:idle-manager . ,(swayidle-idle-manager))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
