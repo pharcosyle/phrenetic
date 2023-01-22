@@ -6447,11 +6447,13 @@ Maybe this shouldn't be a standalone component but rather added by programs that
         (filter (lambda (input)
                   (assoc-ref input #:keyboard/layout)))
         (map (lambda (input)
-               `((input ,(string-join (list (assoc-ref input #:keyboard/vendor-id)
-                                            (assoc-ref input #:keyboard/product-id)
-                                            (string-replace-substring
-                                             (assoc-ref input #:keyboard/name) " " "_"))
-                                      ":"))
+               `(input ,(string-join (list (number->string
+                                            (assoc-ref input #:keyboard/vendor-id))
+                                           (number->string
+                                            (assoc-ref input #:keyboard/product-id))
+                                           (string-replace-substring
+                                            (assoc-ref input #:keyboard/name) " " "_"))
+                                     ":")
                  ,(let ((kb-layout (assoc-ref input #:keyboard/layout)))
                     (append
                      `((xkb_layout ,(keyboard-layout-name kb-layout)))
@@ -6473,8 +6475,10 @@ Maybe this shouldn't be a standalone component but rather added by programs that
       ,(if default-bg-image
            `((bg ,default-bg-image fill)) '())))
    ;; (map (lambda (output)
-   ;;        `((output ,(string-join (list (assoc-ref output #:display/make)
-   ;;                                      (assoc-ref output #:display/model))))
+   ;;        `((output ,(as-> (list (assoc-ref output #:display/make)
+   ;;                               (assoc-ref output #:display/model)) $
+   ;;                         (string-join $)
+   ;;                         (string-append "\"" $ "\"")))
    ;;          ;; ...
    ;;          ))
    ;;      (or outputs '()))
@@ -10080,9 +10084,9 @@ delete it when leaving the dynamic extent of this call."
    `(#:stateless-storage-paths ,stateless-storage-paths
      #:doom? ,doom?
      #:doom-flags ,doom-flags
-     #:session-inputs (list %macbook-keyboard)
-     #:session-outputs (list (acons #:display/ephemeral-name "eDP-1"
-                                    %macbook-display)))))
+     #:session-inputs ,(list %macbook-keyboard)
+     #:session-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
+                                     %macbook-display)))))
 #+end_src
 ***** OS+HE shared opts
 #+begin_src scheme
