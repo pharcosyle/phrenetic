@@ -207,7 +207,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
-  #:use-module ((gnu services admin) #:select (log-cleanup-service-type))
+  #:use-module (gnu services admin)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
@@ -10076,7 +10076,7 @@ delete it when leaving the dynamic extent of this call."
 ***** OS+HE shared opts
 #+begin_src scheme
 (define (os+he-shared-opts)
-  '(#:package-managers '(#:pm/guix #:pm/nix)
+  '(#:package-managers (#:pm/guix #:pm/nix)
     #:console? #t
     #:desktop? #t
     #:multimedia #:media/pipewire
