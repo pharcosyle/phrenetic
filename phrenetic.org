@@ -6307,15 +6307,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   portal-services
                   (sway-mod 'Mod1)
                   (xwayland? #t)
-                  idle-manager
-                  screen-locker
-                  notifier
-                  status-bar
-                  applets
-                  app-launcher
-                  terminal
-                  backup-terminal
-                  emacs-editor
+                  external-programs
                   extra-config)
   (append
    (list
@@ -6400,15 +6392,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
         (sway-input input)
         (sway-output output)
 
-        (sway-external-programs #:idle-manager idle-manager
-                                #:screen-locker screen-locker
-                                #:notifier notifier
-                                #:status-bar status-bar
-                                #:applets applets
-                                #:app-launcher app-launcher
-                                #:terminal terminal
-                                #:backup-terminal backup-terminal
-                                #:emacs-editor emacs-editor)
+        (apply sway-external-programs (alist->list external-programs))
 
         (or extra-config '())))))
 
@@ -8824,25 +8808,26 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:pipewire? pipewire?
               #:doom? doom?
               #:portal-services portal-services
-              #:idle-manager (swayidle-idle-manager)
-              #:screen-locker (assoc-ref screen-locker #:screen-locker/lock-immediately)
-              #:notifier (mako-notifier (assoc-ref menu #:menu/menu))
-              #:status-bar (waybar-status-bar)
-              #:applets (list
-                         (case connection-manager
-                           ((#:cm/network-manager) (network-manager-applet)))
-                         ;; (gammastep-applet)
-                         (udiskie-applet))
-              #:app-launcher (assoc-ref menu #:menu/app-launcher)
-              #:terminal (if doom?
-                             (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
-                             (alacritty-terminal))
-              #:backup-terminal (if doom?
-                                    (list
-                                     (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
-                                    ;; (alacritty-terminal)
-                                    #f)
-              #:emacs-editor emacs-editor)
+              #:external-programs
+              `((#:idle-manager . ,(swayidle-idle-manager))
+                (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
+                (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
+                (#:status-bar . ,(waybar-status-bar))
+                (#:applets . ,(list
+                               (case connection-manager
+                                 ((#:cm/network-manager) (network-manager-applet)))
+                               ;; (gammastep-applet)
+                               (udiskie-applet)))
+                (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
+                (#:terminal . ,(if doom?
+                                   (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
+                                   (alacritty-terminal)))
+                (#:backup-terminal . ,(if doom?
+                                          (list
+                                           (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
+                                          ;; (alacritty-terminal)
+                                          #f))
+                (#:emacs-editor . ,emacs-editor)))
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
                         #:font (assoc-ref fonts font-variable-pitch)
