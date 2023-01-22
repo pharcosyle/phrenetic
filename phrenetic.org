@@ -1978,7 +1978,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             sway-environment
             programs
             applications
-            he-base))
+            he-entire))
 
 ;; TODO Remove once this is the default in RDE (or Guix).
 (use-modules (guix transformations))
@@ -8955,9 +8955,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;;          #:qt-services qt)
      )))
 #+end_src
-*** Base
+*** Entire
 #+begin_src scheme
-(define* (he-base #:key
+(define* (he-entire #:key
                   stateless?
                   stateless-storage-paths
                   (login-shell #:shell/bash) ; Currently setting the login shell isn't supported in the Accounts system component so you probably don't want to change this.
@@ -8988,85 +8988,93 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   email
                   projects)
   (let ((pipewire? (equal? multimedia #:media/pipewire)))
-    (append
-     (system-features #:stateless? stateless?
-                      #:stateless-storage-paths stateless-storage-paths
-                      #:login-shell login-shell
-                      #:doom? doom?
-                      #:doom-flags doom-flags
-                      #:package-managers package-managers
-                      #:console? console?
-                      #:kmonad? kmonad?
-                      #:desktop? desktop?
-                      #:pipewire? pipewire?
-                      #:login-manager login-manager
-                      #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                 (#:session/sway . ,(sway-start pipewire?)))
-                      #:sessions sessions
-                      #:sway-environment (sway-environment #:pipewire? pipewire?
-                                                           #:connection-manager connection-manager
-                                                           #:doom? doom?
-                                                           #:inputs session-inputs
-                                                           #:outputs session-outputs
-                                                           #:portal-services portal-services
-                                                           #:colors colors
-                                                           #:fonts fonts
-                                                           #:font-variable-pitch font-variable-pitch
-                                                           #:emacs-editor emacs-editor)
-                      #:virtualization? virtualization?)
-     (shells #:stateless? stateless?
-             #:doom? doom?
-             #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
-             #:login-shell login-shell
-             #:interactive-shells interactive-shells)
-     (emacs #:emacs emacs-package)
-     (if doom?
-         (append
-          (doom #:stateless? stateless?
-                #:services (doom-core #:stateless? stateless?
-                                      #:evil? (assoc-ref doom-flags #:doom/evil?)
-                                      #:icons? (assoc-ref doom-flags #:doom/icons?)
-                                      #:email email))
-          (if desktop?
-              (doom-desktop #:theme theme
-                            #:light-colors light-colors
-                            #:dark-colors dark-colors
-                            #:font (assoc-ref fonts #:fonts/mono)
-                            #:font-variable-pitch (assoc-ref fonts font-variable-pitch)
-                            #:font-unicode (assoc-ref fonts #:fonts/unicode)
-                            #:font-serif (assoc-ref fonts #:fonts/serif))
-              '()))
-         '())
-     (programs #:stateless? stateless?
-               #:interactive-shells interactive-shells
-               #:doom? doom?
-               #:doom-flags doom-flags
-               #:email email
-               #:desktop? desktop?
-               #:emacs-editor emacs-editor)
-     (if desktop?
-         (append
-          (font-library #:stateless? stateless?
-                        #:packages (append
-                                    (map (lambda (font)
-                                           (assoc-ref font #:font/package))
-                                         fonts)
-                                    %font-packages-misc))
-          (xdg #:stateless? stateless?)
-          (mesa #:stateless? stateless?)
-          (applications #:stateless? stateless?
-                        #:pipewire? pipewire?
-                        #:doom? doom?
-                        #:theme theme
-                        #:colors colors
-                        #:fonts fonts
-                        #:font-variable-pitch font-variable-pitch
-                        #:wayland? wayland?)
-          (flatpak-apps #:stateless? stateless?
-                        #:portal-services portal-services))
-         '())
-     (work #:stateless? stateless?
-           #:projects projects))))
+    (let ((he-base
+           (append
+            (system-features #:stateless? stateless?
+                             #:stateless-storage-paths stateless-storage-paths
+                             #:login-shell login-shell
+                             #:doom? doom?
+                             #:doom-flags doom-flags
+                             #:package-managers package-managers
+                             #:console? console?
+                             #:kmonad? kmonad?
+                             #:desktop? desktop?
+                             #:pipewire? pipewire?
+                             #:login-manager login-manager
+                             #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                        (#:session/sway . ,(sway-start pipewire?)))
+                             #:sessions sessions
+                             #:sway-environment (sway-environment #:pipewire? pipewire?
+                                                                  #:connection-manager connection-manager
+                                                                  #:doom? doom?
+                                                                  #:inputs session-inputs
+                                                                  #:outputs session-outputs
+                                                                  #:portal-services portal-services
+                                                                  #:colors colors
+                                                                  #:fonts fonts
+                                                                  #:font-variable-pitch font-variable-pitch
+                                                                  #:emacs-editor emacs-editor)
+                             #:virtualization? virtualization?)
+            (shells #:stateless? stateless?
+                    #:doom? doom?
+                    #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
+                    #:login-shell login-shell
+                    #:interactive-shells interactive-shells)
+            (emacs #:emacs emacs-package)
+            (if doom?
+                (append
+                 (doom #:stateless? stateless?
+                       #:services (doom-core #:stateless? stateless?
+                                             #:evil? (assoc-ref doom-flags #:doom/evil?)
+                                             #:icons? (assoc-ref doom-flags #:doom/icons?)
+                                             #:email email))
+                 (if desktop?
+                     (doom-desktop #:theme theme
+                                   #:light-colors light-colors
+                                   #:dark-colors dark-colors
+                                   #:font (assoc-ref fonts #:fonts/mono)
+                                   #:font-variable-pitch (assoc-ref fonts font-variable-pitch)
+                                   #:font-unicode (assoc-ref fonts #:fonts/unicode)
+                                   #:font-serif (assoc-ref fonts #:fonts/serif))
+                     '()))
+                '())
+            (if desktop?
+                (append
+                 (font-library #:stateless? stateless?
+                               #:packages (append
+                                           (map (lambda (font)
+                                                  (assoc-ref font #:font/package))
+                                                fonts)
+                                           %font-packages-misc))
+                 (xdg #:stateless? stateless?)
+                 (mesa #:stateless? stateless?)
+                 (flatpak-apps #:stateless? stateless?
+                               #:portal-services portal-services))
+                '())
+            (work #:stateless? stateless?
+                  #:projects projects)))
+          (he-programs
+           (programs #:stateless? stateless?
+                     #:interactive-shells interactive-shells
+                     #:doom? doom?
+                     #:doom-flags doom-flags
+                     #:email email
+                     #:desktop? desktop?
+                     #:emacs-editor emacs-editor))
+          (he-applications
+           (applications #:stateless? stateless?
+                         #:pipewire? pipewire?
+                         #:doom? doom?
+                         #:theme theme
+                         #:colors colors
+                         #:fonts fonts
+                         #:font-variable-pitch font-variable-pitch
+                         #:wayland? wayland?)))
+      (append
+       he-base
+       he-programs
+       (if desktop?
+           he-applications '())))))
 #+end_src
 * Common
 :PROPERTIES:
@@ -9993,7 +10001,7 @@ delete it when leaving the dynamic extent of this call."
 (define (primary-he)
   (he:create-he
    (apply
-    he:he-base
+    he:he-entire
     #:stateless? primary-he-stateless?
     #:email "pharcosyle@gmail.com"
     #:kmonad? primary-he-kmonad?
@@ -10016,7 +10024,7 @@ delete it when leaving the dynamic extent of this call."
 (define (aux-he)
   (he:create-he
    (apply
-    he:he-base
+    he:he-entire
     #:stateless? aux-he-stateless?
     #:email "pharcosyle@gmail.com"
     #:kmonad? aux-he-kmonad?
@@ -10034,7 +10042,7 @@ delete it when leaving the dynamic extent of this call."
 (define (guest-he)
   (he:create-he
    (apply
-    he:he-base
+    he:he-entire
     #:stateless? guest-he-stateless?
     #:kmonad? guest-he-kmonad?
     #:sessions guest-he-sessions
