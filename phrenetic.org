@@ -906,7 +906,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
 (define (create-swap-device-gexp target)
   #~(begin
       ;; ...
-      ;; Find the swap device using the same logic as `swap-service-type' and run `mkswap' on it (if that hasn't been done already, donno how I'd check).
+      ;; Find the swap device using the same (somewhat complex) logic as `swap-service-type' and run `mkswap' on it (if that hasn't been done already, donno how I'd check).
       ))
 #+end_src
 **** Stateless
