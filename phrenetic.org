@@ -6149,14 +6149,14 @@ nix-channel --update
 **** XDG
 #+begin_src scheme
 (define* (xdg #:key
-              (desktop "$HOME/desktop")
-              (documents "$HOME/docs")
-              (download "$HOME/dl")
-              (music "$HOME/music")
-              (pictures "$HOME/pics")
-              (publicshare "$HOME/public")
-              (templates "$HOME/templates")
-              (videos "$HOME/vids")
+              (dirs '((#:desktop . "$HOME/desktop")
+                      (#:documents . "$HOME/docs")
+                      (#:download . "$HOME/dl")
+                      (#:music . "$HOME/music")
+                      (#:pictures . "$HOME/pics")
+                      (#:publicshare . "$HOME/public")
+                      (#:templates . "$HOME/templates")
+                      (#:videos . "$HOME/vids")))
               stateless?)
   (list
    (simple-service
@@ -6169,14 +6169,14 @@ nix-channel --update
    (service
     home-xdg-user-directories-service-type
     (home-xdg-user-directories-configuration
-     (desktop desktop)
-     (documents documents)
-     (download download)
-     (music music)
-     (pictures pictures)
-     (publicshare publicshare)
-     (templates templates)
-     (videos videos)))
+     (desktop (assoc-ref dirs #:desktop))
+     (documents (assoc-ref dirs #:documents))
+     (download (assoc-ref dirs #:download))
+     (music (assoc-ref dirs #:music))
+     (pictures (assoc-ref dirs #:pictures))
+     (publicshare (assoc-ref dirs #:publicshare))
+     (templates (assoc-ref dirs #:templates))
+     (videos (assoc-ref dirs #:videos))))
 
    (when stateless?
      (home-stateless-service
@@ -6200,13 +6200,13 @@ nix-channel --update
          `(,@(map (lambda (dir)
                     `((#:path . ,(normalize dir))
                       (#:storage . #:storage/persist)))
-                  (list desktop
-                        documents
-                        music
-                        pictures
-                        publicshare
-                        templates
-                        videos))
+                  (list (assoc-ref dirs #:desktop)
+                        (assoc-ref dirs #:documents)
+                        (assoc-ref dirs #:music)
+                        (assoc-ref dirs #:pictures)
+                        (assoc-ref dirs #:publicshare)
+                        (assoc-ref dirs #:templates)
+                        (assoc-ref dirs #:videos)))
            ((#:path . ,(normalize download))
             (#:storage . #:storage/machine)))))))))
 #+end_src
