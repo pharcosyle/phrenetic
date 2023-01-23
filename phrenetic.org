@@ -719,10 +719,10 @@ Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
-   (cons* (service gnome-desktop-without-package-service-type)
+   (cons* (service gnome-desktop-service-type-no-package)
           (operating-system-user-services os))))
 
-(define gnome-desktop-without-package-service-type
+(define gnome-desktop-service-type-no-package
   (let ((base gnome-desktop-service-type))
     (service-type
      (inherit base)
