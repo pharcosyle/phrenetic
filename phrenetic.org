@@ -2114,36 +2114,56 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                  doom-tree-sitter?
                  login-shell
                  interactive-shells
-                 (bashrc (local-file "bashrc"))
-                 (zshrc (local-file "zshrc")))
+                 (shell-configs `((#:shell/bash . ((#:bashrc . ,(list (local-file "bashrc")))))
+                                  (#:shell/zsh . ((#:zshrc . ,(list (local-file "zshrc"))))))))
   (append
    (append-map
     (lambda (shell)
       (case shell
         ((#:shell/bash)
-         (list
-          (service home-bash-service-type
-                   (home-bash-configuration
-                    (bashrc
-                     (list bashrc))))
-          (when stateless?
-            (home-stateless-service
-             'bash
-             #:state '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:storage . #:storage/persist)))))))
+         (cons* (service home-bash-service-type
+                         (let ((config (assoc-ref shell-configs #:shell/bash)))
+                           (home-bash-configuration
+                            (bashrc (or (assoc-ref config #:bashrc) '()))
+                            ;; ... other fields
+                            )))
+                (if stateless?
+                    (list
+                     (home-stateless-service
+                      'bash
+                      #:state '(((#:path . ("bash/" #:xdg-base "XDG_STATE_HOME"))
+                                 (#:storage . #:storage/persist))))
+                     (simple-service 'bash-history
+                                     home-bash-service-type
+                                     (home-bash-extension
+                                      (bashrc
+                                       (list
+                                        ;; TODO Line that sets HISTFILE to match stateless path.
+                                        )))))
+                    '())))
         ((#:shell/zsh)
-         (list
-          (service home-zsh-service-type
-                   (home-zsh-configuration
-                    (zshrc
-                     (list zshrc))))
-          (when stateless?
-            (home-stateless-service
-             'zsh
-             #:state '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
-                        (#:storage . #:storage/persist))
-                       ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
-                        (#:storage . #:storage/machine)))))))))
+         (cons* (service home-zsh-service-type
+                         (let ((config (assoc-ref shell-configs #:shell/zsh)))
+                           (home-zsh-configuration
+                            (zshrc (or (assoc-ref config #:zshrc) '()))
+                            ;; ... other fields
+                            )))
+                (if stateless?
+                    (list
+                     (home-stateless-service
+                      'zsh
+                      #:state '(((#:path . ("zsh/" #:xdg-base "XDG_STATE_HOME"))
+                                 (#:storage . #:storage/persist))
+                                ((#:path . ("zsh/" #:xdg-base "XDG_CACHE_HOME"))
+                                 (#:storage . #:storage/machine))))
+                     (simple-service 'zsh-history
+                                     home-zsh-service-type
+                                     (home-zsh-extension
+                                      (zshrc
+                                       (list
+                                        ;; TODO Line that sets HISTFILE to match stateless path.
+                                        )))))
+                    '())))))
     (cons login-shell interactive-shells))
 
    (list
