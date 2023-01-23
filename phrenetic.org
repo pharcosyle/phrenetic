@@ -2164,7 +2164,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                         ;; TODO Line that sets HISTFILE to match stateless path.
                                         )))))
                     '())))))
-    (cons login-shell interactive-shells))
+    (delete-duplicates
+     (cons login-shell interactive-shells)))
 
    (list
     (let ((name 'shells-setup-login-shell)
