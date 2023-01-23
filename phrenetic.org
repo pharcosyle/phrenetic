@@ -6207,7 +6207,7 @@ nix-channel --update
                         (assoc-ref dirs #:publicshare)
                         (assoc-ref dirs #:templates)
                         (assoc-ref dirs #:videos)))
-           ((#:path . ,(normalize download))
+           ((#:path . ,(normalize (assoc-ref dirs #:download)))
             (#:storage . #:storage/machine)))))))))
 #+end_src
 **** Mesa
