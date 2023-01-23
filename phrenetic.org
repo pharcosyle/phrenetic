@@ -9863,15 +9863,10 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: phrenetic/configs
+:meta-dir+: phrenetic
 :END:
-** Frostfire
-*** Source
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "frostfire.scm")
-:END:
-#+begin_src scheme
-(define-module (phrenetic configs frostfire)
+#+begin_src scheme :tangle (meta-in-dir "configs.scm")
+(define-module (phrenetic configs)
   #:use-module ((phrenetic home) #:prefix he:)
   #:use-module (phrenetic install)
   #:use-module (phrenetic io-devices)
@@ -9885,11 +9880,12 @@ delete it when leaving the dynamic extent of this call."
             aux-he
             guest-he))
 
+
 (define stateless? #t)
 (define stateless-storage-paths os:%stateless-storage-paths)
-#+end_src
-**** System
-#+begin_src scheme
+
+
+
 (define (system)
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
@@ -9981,18 +9977,17 @@ delete it when leaving the dynamic extent of this call."
   (->> flags
        (filter (match-lambda ((_ . enable?) enable?)))
        (map (match-lambda ((user . _) user)))))
-#+end_src
-***** OS
-#+begin_src scheme
+
+
+
 (define* (os-base os #:rest opts)
   (apply os:os-base
          os
          (append opts
                  (os+he-shared-opts))))
-#+end_src
-***** HEs
-****** Primary
-#+begin_src scheme
+
+
+
 (define (primary-he)
   (he:create-he
    (apply
@@ -10013,9 +10008,8 @@ delete it when leaving the dynamic extent of this call."
 (define primary-he-kmonad? #t)
 (define primary-he-sessions '(#:session/sway))
 (define primary-he-virtualization? #t)
-#+end_src
-****** Aux
-#+begin_src scheme
+
+
 (define (aux-he)
   (he:create-he
    (apply
@@ -10031,9 +10025,8 @@ delete it when leaving the dynamic extent of this call."
 (define aux-he-kmonad? #f)
 (define aux-he-sessions primary-he-sessions)
 (define aux-he-virtualization? primary-he-virtualization?)
-#+end_src
-****** Guest
-#+begin_src scheme
+
+
 (define (guest-he)
   (he:create-he
    (apply
@@ -10049,9 +10042,10 @@ delete it when leaving the dynamic extent of this call."
 (define guest-he-sessions '(;; #:session/gnome
                             #:session/sway))
 (define guest-he-virtualization? #f)
-#+end_src
-****** HE shared opts
-#+begin_src scheme
+
+
+
+;; HE shared opts
 (define doom? #t)
 (define doom-flags '((#:doom/calendar? . #t)
                      (#:doom/org? . #t)
@@ -10067,9 +10061,10 @@ delete it when leaving the dynamic extent of this call."
      #:session-inputs ,(list %macbook-keyboard)
      #:session-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
                                      %macbook-display)))))
-#+end_src
-***** OS+HE shared opts
-#+begin_src scheme
+
+
+
+;; OS+HE shared opts
 (define (os+he-shared-opts)
   '(#:package-managers (#:pm/guix #:pm/nix)
     #:console? #t
@@ -10078,9 +10073,9 @@ delete it when leaving the dynamic extent of this call."
     #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
     ))
-#+end_src
-**** Installer
-#+begin_src scheme
+
+
+
 (define (installer)
   #f
   ;; (installer-package
@@ -10095,9 +10090,11 @@ delete it when leaving the dynamic extent of this call."
   ;;  #:btrfs-mount-flags btrfs-mount-flags
   ;;  #:btrfs-mount-options btrfs-mount-options)
   )
-#+end_src
-**** System+installer shared opts
-#+begin_src scheme
+
+
+
+;; System+installer shared opts
+
 (define efi-label os:%efi-label)
 (define filesystem #:filesystem/btrfs)
 (define root-label os:%root-label)
@@ -10107,17 +10104,30 @@ delete it when leaving the dynamic extent of this call."
                        ))
 (define disk-encryption? #t)
 (define luks-uuid os:%luks-uuid)
-#+end_src
-**** Module
-***** Exports
-#+begin_src scheme
+
+
+
 (define system (system))
 (define installer (installer))
 (define primary-he (primary-he))
 (define aux-he (aux-he))
 (define guest-he (guest-he))
 #+end_src
-*** Channels
+** Machines
+:PROPERTIES:
+:meta-dir+: configs
+:END:
+*** Frostfire
+#+begin_src scheme :tangle (meta-in-dir "frostfire.scm")
+(define-module (phrenetic configs frostfire)
+  #:use-module (phrenetic configs)
+  #:re-export (system
+               installer
+               primary-he
+               aux-he
+               guest-he))
+#+end_src
+**** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'rde)
@@ -10140,7 +10150,7 @@ delete it when leaving the dynamic extent of this call."
         (url "https://gitlab.com/mbakke/guix-chromium"))
        %default-channels)
 #+end_src
-**** COMMENT From project channel
+***** COMMENT From project channel
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'phrenetic)
@@ -10148,7 +10158,7 @@ delete it when leaving the dynamic extent of this call."
         (branch "tangled"))
        %default-channels)
 #+end_src
-**** COMMENT From project channel (local)
+***** COMMENT From project channel (local)
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 (cons* (channel
         (name 'phrenetic)
@@ -10156,7 +10166,7 @@ delete it when leaving the dynamic extent of this call."
         (branch "tangled"))
        %default-channels)
 #+end_src
-*** Channels lock :version:
+**** Channels lock :version:
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels-lock")
 (list (channel
        (name 'guix)
