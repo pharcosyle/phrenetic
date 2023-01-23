@@ -761,8 +761,10 @@ Must succeed [[*Accounts][Accounts]] component.
                                timezone
                                locale)
   (host-name host-name)
-  (timezone (or timezone "Etc/UTC"))
-  (locale (or locale "en_US.utf8")))
+  (timezone (or timezone
+                (operating-system-timezone os)))
+  (locale (or locale
+              (operating-system-locale os))))
 #+end_src
 **** File systems
 ***** Ext4
@@ -873,9 +875,9 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
                           file-no-cow?
                           stateless?)
   (swap-devices
-   (list
-    (swap-space
-     (target target))))
+   (cons* (swap-space
+           (target target))
+          (operating-system-swap-devices os)))
   (services
    (append
     (operating-system-user-services os)
@@ -1345,9 +1347,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
    (if (not lectures?)
        (mixed-text-file
         "sudoers"
-        (slurp-file-like %sudoers-specification)
+        (slurp-file-like (operating-system-sudoers-file os))
         "Defaults lecture=never" "\n")
-       %sudoers-specification)))
+       (operating-system-sudoers-file os))))
 #+end_src
 *** Hardware-specific
 **** Bootloaders
@@ -1435,8 +1437,11 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                 kernel)))
   (initrd (if (and nonfree?
                    (member system '("x86_64-linux" "i686-linux")))
-              microcode-initrd
-              base-initrd))
+              (lambda* (file-systems #:rest rest)
+                (apply microcode-initrd file-systems
+                       #:initrd (operating-system-initrd os)
+                       rest))
+              (operating-system-initrd os)))
   (firmware
    (append
     (if nonfree?
