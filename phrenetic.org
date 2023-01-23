@@ -267,7 +267,6 @@ Run with ~sudo~.
             linux-kernel
             grub-efi
             %efi-label
-            %efi-boot-target
             virtualization
             console-keyboard-layouts
             console-hidpi-fonts
@@ -1350,7 +1349,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+begin_src scheme
 (define-system-comp (grub-efi #:key
                               label
-                              target
+                              (target "/boot/efi")
                               stateless?)
   (bootloader (bootloader-configuration
                (bootloader grub-efi-bootloader)
@@ -1407,7 +1406,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                    (apply string-append (repeat padding-size "#")))))
 
 (define %efi-label "genesis")
-(define %efi-boot-target "/boot/efi")
 #+end_src
 ***** U-Boot
 #+begin_src scheme
@@ -1789,7 +1787,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+begin_src scheme
 (define* (with-macbook-hardware os
                                 #:key
-                                boot-target
                                 efi-label
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
@@ -1798,7 +1795,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 stateless?)
   (as-> os $
     (grub-efi $ #:label efi-label
-              #:target boot-target
               #:stateless? stateless?)
     (linux-kernel $ #:system "x86_64-linux"
                   #:nonfree? #t)
@@ -9967,8 +9963,7 @@ delete it when leaving the dynamic extent of this call."
                         ;;               (/ virtual-memory 2))
                         )
           $)
-      (os:with-macbook-hardware $ #:boot-target boot-target
-                                #:efi-label efi-label
+      (os:with-macbook-hardware $ #:efi-label efi-label
                                 #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
                                                                             (,aux-name . ,aux-he-virtualization?)
                                                                             (,guest-name . ,guest-he-virtualization?)))
@@ -10103,7 +10098,6 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 **** System+installer shared opts
 #+begin_src scheme
-(define boot-target os:%efi-boot-target)
 (define efi-label os:%efi-label)
 (define filesystem #:filesystem/btrfs)
 (define root-label os:%root-label)
