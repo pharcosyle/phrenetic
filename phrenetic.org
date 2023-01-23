@@ -257,6 +257,7 @@ Run with ~sudo~.
             sway-wm
             host-info
             btrfs
+            tmpfs
             disk-encryption
             %root-label
             %luks-uuid
@@ -811,6 +812,24 @@ Must succeed [[*Accounts][Accounts]] component.
                        (acons "subvol" subvol $) $)
                    (alist->file-system-options $)))))
 #+end_src
+***** Tmpfs
+#+begin_src scheme
+(define-system-comp (tmpfs #:key
+                           mount-point
+                           size)
+  (file-systems
+   (cons* (file-system
+            (device (if (equal? mount-point "/")
+                        ":/root" ; HACK Guix boot will hang forever waiting for a device to appear even though this is a tmpfs. Fake it out by using a name that looks like an NFS device (see `canonicalize-device-spec'). Thus the ":/" is necessary but the name is otherwise arbitrary.
+                        "none"))
+            (mount-point "/")
+            (options (if size
+                         (string-append "size=" (number->string size))
+                         #f))
+            (type "tmpfs")
+            (check? #f))
+          (operating-system-file-systems os))))
+#+end_src
 ***** Shared
 #+begin_src scheme
 (define %root-label "firmament")
@@ -916,21 +935,12 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                     storage-paths
                     hes
                     state-users
-                    password-users
-                    root-size)
+                    password-users)
   (as-> os $
     (system-comp
      $
      (file-systems
       (->> (operating-system-file-systems os)
-           (cons* (file-system
-                    (device ":/root") ; HACK Guix boot will hang forever waiting for a device to appear even though this is a tmpfs. Fake it out by using a name that looks like an NFS device (see `canonicalize-device-spec'). Thus the ":/" is necessary but the name is otherwise arbitrary.
-                    (mount-point "/")
-                    (options (if root-size
-                                 (string-append "size=" (number->string root-size))
-                                 #f))
-                    (type "tmpfs")
-                    (check? #f)))
            (map (lambda (fs)
                   (if (member (file-system-mount-point fs)
                               (cons "/var/guix"
@@ -9920,6 +9930,11 @@ delete it when leaving the dynamic extent of this call."
                #:stateless? stateless?)
       (os:host-info $ #:host-name "frostfire"
                     #:timezone "America/Los_Angeles")
+      (os:tmpfs $ #:mount-point "/"
+                ;; TODO trying without at the moment
+                ;; #:size (let ((virtual-memory (+ physical-memory swap-size)))
+                ;;          (/ virtual-memory 2))
+                )
       (case filesystem
         ;; ((#:filesystem/ext4)
         ;;  (os:ext4 $ #:label root-label
@@ -9953,11 +9968,7 @@ delete it when leaving the dynamic extent of this call."
                                                        (,aux-name . ,aux-he-stateless?)
                                                        (,guest-name . ,guest-he-stateless?)))
                         #:password-users (list primary-name
-                                               aux-name)
-                        ;; TODO trying without at the moment
-                        ;; #:root-size (let ((virtual-memory (+ physical-memory swap-size)))
-                        ;;               (/ virtual-memory 2))
-                        )
+                                               aux-name))
           $)
       (os:with-macbook-hardware $ #:efi-label efi-label
                                 #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
