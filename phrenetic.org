@@ -6149,7 +6149,6 @@ nix-channel --update
 **** XDG
 #+begin_src scheme
 (define* (xdg #:key
-              stateless?
               (desktop "$HOME/desktop")
               (documents "$HOME/docs")
               (download "$HOME/dl")
@@ -6157,7 +6156,8 @@ nix-channel --update
               (pictures "$HOME/pics")
               (publicshare "$HOME/public")
               (templates "$HOME/templates")
-              (videos "$HOME/vids"))
+              (videos "$HOME/vids")
+              stateless?)
   (list
    (simple-service
     'xdg-add-packages
