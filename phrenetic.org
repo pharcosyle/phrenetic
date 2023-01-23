@@ -5742,7 +5742,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                  doom?
                  doom-tree-sitter?
                  login-shell
-                 (channels '(("https://nixos.org/channels/nixpkgs-unstable" "nixpkgs")))
+                 (channels '(("https://nixos.org/channels/nixpkgs-unstable" . "nixpkgs")))
                  allow-unfree?
                  extra-nixpkgs-config)
   (append
@@ -5810,7 +5810,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
 (define (nix-channels-serialize entries)
   (append-map (match-lambda
-                ((channel name)
+                ((channel . name)
                  (list channel " " name "\n")))
               entries))
 
