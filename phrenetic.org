@@ -200,11 +200,13 @@ Run with ~sudo~.
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
+  #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
+  #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services admin)
@@ -393,7 +395,7 @@ Run with ~sudo~.
 (define* (account #:key
                   name
                   comment
-                  ;; shell
+                  shell
                   admin?)
   (user-account
    (name name)
@@ -401,10 +403,9 @@ Run with ~sudo~.
    (group "users")
    (supplementary-groups (append '("netdev" "audio" "video")
                                  (if admin? '("wheel") '())))
-   ;; (shell (case shell
-   ;;          ((#:shell/bash) ...)
-   ;;          ((#:shell/zsh) ...)))
-   ))
+   (shell (case shell
+            ((#:shell/bash) (file-append bash "/bin/bash"))
+            ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))
 #+end_src
 *** Package management
 **** Guix
@@ -1845,6 +1846,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip zstd))
+  #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages fonts) #:select (font-google-noto font-iosevka-etoile font-liberation font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
@@ -2195,7 +2197,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                  'shells-set-shell-env-var
                  home-environment-variables-service-type
                  `(("SHELL" . ,(case default-interactive-shell
-                                 ;; ((#:shell/bash) (file-append bash "/bin/bash"))
+                                 ((#:shell/bash) (file-append bash "/bin/bash"))
                                  ((#:shell/zsh) (file-append zsh "/bin/zsh")))))))))
 
    (if doom?
@@ -8992,7 +8994,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define* (he-entire #:key
                   stateless?
                   stateless-storage-paths
-                  (login-shell #:shell/bash) ; Currently setting the login shell isn't supported in the Accounts system component so you probably don't want to change this.
+                  login-shell
                   (interactive-shells '(#:shell/zsh))
                   (emacs-package %emacs-package)
                   (emacs-editor (emacs-editor #:emacs emacs-package))
@@ -9931,12 +9933,15 @@ delete it when leaving the dynamic extent of this call."
     (as-> os:blank-os $
       (os-base $ #:users-info `(((#:name . ,primary-name)
                                  (#:comment . "Krzysztof Baranowski")
+                                 (#:shell . ,primary-he-shell)
                                  (#:admin? . #t))
                                 ((#:name . ,aux-name)
                                  (#:comment . "Phil Coulson")
+                                 (#:shell . ,aux-he-shell)
                                  (#:admin? . #t))
                                 ((#:name . ,guest-name)
-                                 (#:comment . "Mellon")))
+                                 (#:comment . "Mellon")
+                                 (#:shell . ,guest-he-shell)))
                #:login-number-of-ttys number-of-ttys
                #:kmonad? #t
                #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
@@ -10025,11 +10030,15 @@ delete it when leaving the dynamic extent of this call."
 
 
 
+(define default-shell #:shell/bash)
+
+
 (define (primary-he)
   (he:create-he
    (apply
     he:he-entire
     #:stateless? primary-he-stateless?
+    #:login-shell primary-he-shell
     #:email "pharcosyle@gmail.com"
     #:kmonad? primary-he-kmonad?
     #:sessions primary-he-sessions
@@ -10042,6 +10051,7 @@ delete it when leaving the dynamic extent of this call."
     (he-shared-opts))))
 
 (define primary-he-stateless? stateless?)
+(define primary-he-shell default-shell)
 (define primary-he-kmonad? #t)
 (define primary-he-sessions '(#:session/sway))
 (define primary-he-virtualization? #t)
@@ -10052,6 +10062,7 @@ delete it when leaving the dynamic extent of this call."
    (apply
     he:he-entire
     #:stateless? aux-he-stateless?
+    #:login-shell aux-he-shell
     #:email "pharcosyle@gmail.com"
     #:kmonad? aux-he-kmonad?
     #:sessions aux-he-sessions
@@ -10059,6 +10070,7 @@ delete it when leaving the dynamic extent of this call."
     (he-shared-opts))))
 
 (define aux-he-stateless? #f)
+(define aux-he-shell default-shell)
 (define aux-he-kmonad? #f)
 (define aux-he-sessions primary-he-sessions)
 (define aux-he-virtualization? primary-he-virtualization?)
@@ -10069,12 +10081,14 @@ delete it when leaving the dynamic extent of this call."
    (apply
     he:he-entire
     #:stateless? guest-he-stateless?
+    #:login-shell guest-he-shell
     #:kmonad? guest-he-kmonad?
     #:sessions guest-he-sessions
     #:virtualization? guest-he-virtualization?
     (he-shared-opts))))
 
 (define guest-he-stateless? #f)
+(define guest-he-shell default-shell)
 (define guest-he-kmonad? #f)
 (define guest-he-sessions '(;; #:session/gnome
                             #:session/sway))
