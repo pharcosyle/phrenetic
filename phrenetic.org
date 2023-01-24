@@ -389,8 +389,8 @@ Run with ~sudo~.
 (define-system-comp (accounts #:key users-info)
   (services
    (cons* (service accounts-service-type
-                   (map (lambda (user-info)
-                          (apply account (alist->list user-info)))
+                   (map (lambda (user)
+                          (apply account (alist->list user)))
                         users-info))
           (operating-system-user-services os))))
 
@@ -915,7 +915,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
     (let ((name (lambda (base)
                   (symbol-append base '- (string->symbol target)))))
       (if file?
-          (cons* (simple-service (name 'create-swap-file)
+          (cons* (simple-service (name 'swap-create-file)
                                  activation-service-type
                                  (create-swap-file-gexp target file-size file-no-cow?))
                  (if stateless?
