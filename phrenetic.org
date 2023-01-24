@@ -289,7 +289,8 @@ Run with ~sudo~.
   (operating-system
     (host-name #f)
     (timezone #f)
-    (bootloader #f)
+    (bootloader (bootloader-configuration
+                 (bootloader #f)))
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
@@ -1365,6 +1366,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                               (target "/boot/efi")
                               stateless?)
   (bootloader (bootloader-configuration
+               (inherit (operating-system-bootloader os))
                (bootloader grub-efi-bootloader)
                (targets (list target))))
   (file-systems
@@ -1486,7 +1488,6 @@ Must succeed [[*Accounts][Accounts]] component.
 #+end_src
 **** Console
 ***** Keyboard layouts
-Must succeed [[*Bootloader][Bootloader]] component.
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key kb-layout)
   (keyboard-layout kb-layout)
