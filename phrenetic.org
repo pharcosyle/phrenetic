@@ -1472,7 +1472,7 @@ Must succeed [[*Accounts][Accounts]] component.
                                     native-platform
                                     binfmt-platforms)
   (users
-   (if (and kvm-support? kvm-users)
+   (if kvm-support?
        (accounts-with-groups (operating-system-users os) kvm-users '("kvm"))
        (operating-system-users os)))
   (services
