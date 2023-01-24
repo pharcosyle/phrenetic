@@ -9880,7 +9880,7 @@ delete it when leaving the dynamic extent of this call."
       (list k v)))
    alist))
 
-(define (merge #:rest alists)
+(define* (merge #:rest alists)
   (apply merge-with
          (match-lambda
            ((_ . latter) latter))
