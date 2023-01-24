@@ -9948,18 +9948,13 @@ delete it when leaving the dynamic extent of this call."
             aux-he
             guest-he))
 
-
-(define stateless? #t)
-(define stateless-storage-paths os:%stateless-storage-paths)
-
-
-
 (define (system)
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "mellon")
         (number-of-ttys os:%number-of-ttys)
-        (bluetooth? #t))
+        (bluetooth? #t)
+        (stateless? #t))
     (as-> os:blank-os $
       (os-base $ #:who `(((#:name . ,primary-name)
                           (#:comment . "Krzysztof Baranowski")
@@ -10021,13 +10016,11 @@ delete it when leaving the dynamic extent of this call."
                #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
                #:stateless? stateless?)
       (if stateless?
-          (os:stateless $ #:storage-paths stateless-storage-paths
+          (os:stateless $ #:storage-paths os:%stateless-storage-paths
                         #:hes `((,primary-name . ,(primary-he))
                                 (,aux-name . ,(aux-he))
                                 (,guest-name . ,(guest-he)))
-                        #:state-users (feature-users `((,primary-name . ,primary-he-stateless?)
-                                                       (,aux-name . ,aux-he-stateless?)
-                                                       (,guest-name . ,guest-he-stateless?)))
+                        #:state-users (list primary-name)
                         #:password-users (list primary-name
                                                aux-name
                                                guest-name))
@@ -10065,23 +10058,25 @@ delete it when leaving the dynamic extent of this call."
 
 
 (define (primary-he)
-  (he:create-he
-   (apply
-    he:he-entire
-    #:stateless? primary-he-stateless?
-    #:login-shell primary-he-shell
-    #:email "pharcosyle@gmail.com"
-    #:kmonad? primary-he-kmonad?
-    #:sessions primary-he-sessions
-    #:virtualization? primary-he-virtualization?
-    #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
-                 ("Krush/hyperdrive" . ((#:stateless? . ,primary-he-stateless?)
-                                        (#:doom? . ,doom?)
-                                        (#:doom-org? . ,(assoc-ref doom-flags #:doom/org?))
-                                        (#:doom-tree-sitter? . ,(assoc-ref doom-flags #:doom/tree-sitter?)))))
-    (he-shared-opts))))
+  (let ((stateless? #t))
+    (he:create-he
+     (apply
+      he:he-entire
+      ;; TODO
+      #:stateless-storage-paths '((#:storage/machine . "/.machine")
+                                  (#:storage/persist . "/.persist"))
+      #:login-shell primary-he-shell
+      #:email "pharcosyle@gmail.com"
+      #:kmonad? primary-he-kmonad?
+      #:sessions primary-he-sessions
+      #:virtualization? primary-he-virtualization?
+      #:projects `(("phrenetic" . ((#:doom? . ,doom?)))
+                   ("Krush/hyperdrive" . ((#:stateless? . ,stateless?)
+                                          (#:doom? . ,doom?)
+                                          (#:doom-org? . ,(assoc-ref doom-flags #:doom/org?))
+                                          (#:doom-tree-sitter? . ,(assoc-ref doom-flags #:doom/tree-sitter?)))))
+      (he-shared-opts)))))
 
-(define primary-he-stateless? stateless?)
 (define primary-he-shell default-shell)
 (define primary-he-kmonad? #t)
 (define primary-he-sessions '(#:session/sway))
@@ -10092,7 +10087,9 @@ delete it when leaving the dynamic extent of this call."
   (he:create-he
    (apply
     he:he-entire
-    #:stateless? aux-he-stateless?
+    ;; TODO
+    #:stateless-storage-paths '((#:storage/machine . "/home/pcoulson/.machine")
+                                (#:storage/persist . "/home/pcoulson/.persist"))
     #:login-shell aux-he-shell
     #:email "pharcosyle@gmail.com"
     #:kmonad? aux-he-kmonad?
@@ -10100,7 +10097,6 @@ delete it when leaving the dynamic extent of this call."
     #:virtualization? aux-he-virtualization?
     (he-shared-opts))))
 
-(define aux-he-stateless? #f)
 (define aux-he-shell default-shell)
 (define aux-he-kmonad? #f)
 (define aux-he-sessions primary-he-sessions)
@@ -10111,14 +10107,15 @@ delete it when leaving the dynamic extent of this call."
   (he:create-he
    (apply
     he:he-entire
-    #:stateless? guest-he-stateless?
+    ;; TODO
+    #:stateless-storage-paths '((#:storage/machine . "/home/mellon/.machine")
+                                (#:storage/persist . "/home/mellon/.persist"))
     #:login-shell guest-he-shell
     #:kmonad? guest-he-kmonad?
     #:sessions guest-he-sessions
     #:virtualization? guest-he-virtualization?
     (he-shared-opts))))
 
-(define guest-he-stateless? #f)
 (define guest-he-shell default-shell)
 (define guest-he-kmonad? #f)
 (define guest-he-sessions '(;; #:session/gnome
@@ -10137,7 +10134,7 @@ delete it when leaving the dynamic extent of this call."
 (define (he-shared-opts)
   (append
    (os+he-shared-opts)
-   `(#:stateless-storage-paths ,stateless-storage-paths
+   `(#:stateless? #t
      #:doom? ,doom?
      #:doom-flags ,(acons #:doom/icons? #t doom-flags)
      #:session-inputs ,(list %macbook-keyboard)
@@ -10180,10 +10177,7 @@ delete it when leaving the dynamic extent of this call."
 (define efi-label os:%efi-label)
 (define filesystem #:filesystem/btrfs)
 (define root-label os:%root-label)
-(define mountables (if stateless?
-                       os:%stateless-mountables
-                       ;; ...
-                       ))
+(define mountables os:%stateless-mountables) ; TODO nb: had this in `(if stateless? ...)' before.
 (define disk-encryption? #t)
 (define luks-uuid os:%luks-uuid)
 
