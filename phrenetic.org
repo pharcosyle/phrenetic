@@ -10029,7 +10029,8 @@ delete it when leaving the dynamic extent of this call."
                                                        (,aux-name . ,aux-he-stateless?)
                                                        (,guest-name . ,guest-he-stateless?)))
                         #:password-users (list primary-name
-                                               aux-name))
+                                               aux-name
+                                               guest-name))
           $)
       (os:with-macbook-hardware $ #:efi-label efi-label
                                 #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
