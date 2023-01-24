@@ -6349,8 +6349,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                   pipewire?
                   doom?
                   portal-services
-                  (sway-mod 'Mod1)
                   (xwayland? #t)
+                  (sway-mod 'Mod1)
                   input
                   output
                   external-programs
@@ -6362,7 +6362,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
      home-profile-service-type
      (list (sway-start-package pipewire?)
            qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
-           swayhide)) ; TODO I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
+           swayhide)) ; TODO Copied from RDE. I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
     (service
      home-sway-service-type
@@ -6371,25 +6371,19 @@ Maybe this shouldn't be a standalone component but rather added by programs that
       (config
        (append
         `((xwayland ,(if xwayland? 'enable 'disable))
-
           ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
           ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
           ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
           ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
           (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
                 DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
-
           (set $mod ,sway-mod)
-
           (gaps left 78)) ; To accommodate the crack in my screen.
 
         (sway-general)
-
         (apply sway-input (alist->list input))
         (apply sway-output (alist->list output))
-
         (apply sway-external-programs (alist->list external-programs))
-
         (or extra-config '())))))
 
     (simple-service
