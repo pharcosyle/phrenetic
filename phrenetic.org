@@ -386,12 +386,12 @@ Run with ~sudo~.
 #+end_src
 *** Accounts
 #+begin_src scheme
-(define-system-comp (accounts #:key users-info)
+(define-system-comp (accounts #:key who)
   (services
    (cons* (service accounts-service-type
                    (map (lambda (user)
                           (apply account (alist->list user)))
-                        users-info))
+                        who))
           (operating-system-user-services os))))
 
 (define* (account #:key
@@ -534,7 +534,7 @@ Run with ~sudo~.
 *** Console
 **** KMonad
 #+begin_src scheme
-(define-system-comp (kmonad-tool #:key who)
+(define-system-comp (kmonad-tool #:key users)
   (packages
    (cons* kmonad
           (operating-system-packages os)))
@@ -544,7 +544,7 @@ Run with ~sudo~.
     (list
      (simple-service 'kmonad-users-add-input-group
                      accounts-service-type
-                     (cons who '("input")))
+                     (cons users '("input")))
      (udev-rules-service 'kmonad-add-udev-rules kmonad)))))
 #+end_src
 *** Desktop
@@ -639,7 +639,7 @@ Run with ~sudo~.
 **** Bluetooth
 #+begin_src scheme
 (define-system-comp (bluetooth #:key
-                               who
+                               users
                                stateless?)
   (services
    (append
@@ -647,7 +647,7 @@ Run with ~sudo~.
     (list
      (simple-service 'bluetooth-users-add-lp-group
                      accounts-service-type
-                     (cons who '("lp")))
+                     (cons users '("lp")))
      (bluetooth-service #:auto-enable? #t))
     (if stateless?
         (list
@@ -1765,7 +1765,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   #:key
                   (login #:login/greetd)
                   login-number-of-ttys
-                  users-info
+                  who
                   package-managers
                   console?
                   kmonad?
@@ -1786,14 +1786,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
       ((#:login/classic) (classic-login $ #:number-of-ttys login-number-of-ttys))
       ((#:login/greetd) (greetd-login $ #:number-of-ttys login-number-of-ttys)))
     (certs $)
-    (accounts $ #:users-info users-info)
+    (accounts $ #:who who)
     (if (member #:pm/guix (or package-managers '()))
         (guix-pm $ #:stateless? stateless?) $)
     (if (member #:pm/nix (or package-managers '()))
         (nix-pm $ #:stateless? stateless?) $)
     (if console?
         (if kmonad?
-            (kmonad-tool $ #:who kmonad-users) $)
+            (kmonad-tool $ #:users kmonad-users) $)
         $)
     (if desktop?
         (as-> $ $
@@ -1804,7 +1804,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (case connection-manager
             ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
           (if bluetooth?
-              (bluetooth $ #:who bluetooth-users
+              (bluetooth $ #:users bluetooth-users
                          #:stateless? stateless?)
               $)
           (if login-manager
@@ -9953,17 +9953,17 @@ delete it when leaving the dynamic extent of this call."
         (number-of-ttys os:%number-of-ttys)
         (bluetooth? #t))
     (as-> os:blank-os $
-      (os-base $ #:users-info `(((#:name . ,primary-name)
-                                 (#:comment . "Krzysztof Baranowski")
-                                 (#:shell . ,primary-he-shell)
-                                 (#:admin? . #t))
-                                ((#:name . ,aux-name)
-                                 (#:comment . "Phil Coulson")
-                                 (#:shell . ,aux-he-shell)
-                                 (#:admin? . #t))
-                                ((#:name . ,guest-name)
-                                 (#:comment . "Mellon")
-                                 (#:shell . ,guest-he-shell)))
+      (os-base $ #:who `(((#:name . ,primary-name)
+                          (#:comment . "Krzysztof Baranowski")
+                          (#:shell . ,primary-he-shell)
+                          (#:admin? . #t))
+                         ((#:name . ,aux-name)
+                          (#:comment . "Phil Coulson")
+                          (#:shell . ,aux-he-shell)
+                          (#:admin? . #t))
+                         ((#:name . ,guest-name)
+                          (#:comment . "Mellon")
+                          (#:shell . ,guest-he-shell)))
                #:login-number-of-ttys number-of-ttys
                #:kmonad? #t
                #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
