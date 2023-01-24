@@ -936,6 +936,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
     #~(begin
         (use-modules ((guix build utils) #:select (mkdir-p invoke symbolic-link?)))
 
+        ;; TODO Forget what I said in the comment below, do do this just for stateless
         ;; Check if the swap file is a symblic link and create its target if so. I do this to make stateless setups work but don't gate it because hey having this functionality available can't hurt.
         (let ((file* (if (and (file-exists? #$file)
                               (symbolic-link? #$file))
