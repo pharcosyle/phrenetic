@@ -223,6 +223,7 @@ Run with ~sudo~.
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
   #:use-module ((gnu system linux-initrd) #:select (base-initrd))
+  #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
@@ -386,12 +387,12 @@ Run with ~sudo~.
 *** Accounts
 #+begin_src scheme
 (define-system-comp (accounts #:key users-info)
-  (users
-   (append
-    (operating-system-users os)
-    (map (lambda (user-info)
-           (apply account (alist->list user-info)))
-         users-info))))
+  (services
+   (cons* (service accounts-service-type
+                   (map (lambda (user-info)
+                          (apply account (alist->list user-info)))
+                        users-info))
+          (operating-system-user-services os))))
 
 (define* (account #:key
                   name
@@ -407,6 +408,32 @@ Run with ~sudo~.
    (shell (case shell
             ((#:shell/bash) (file-append bash "/bin/bash"))
             ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))
+#+end_src
+*** Service
+#+begin_src scheme
+(define accounts-service-type
+  (service-type (name 'accounts-servce)
+                (extensions
+                 (list (service-extension account-service-type
+                                          identity)))
+                (compose identity)
+                (extend (lambda (accounts groups)
+                          (map (lambda (account)
+                                 (account-with-groups account groups))
+                               accounts)))
+                (description "Add user accounts and extend them with supplementary groups.")))
+
+(define (account-with-groups account groups)
+  (user-account
+   (inherit account)
+   (supplementary-groups (-> (user-account-supplementary-groups account)
+                             (append (->> groups
+                                          (filter (match-lambda
+                                                    ((users . _)
+                                                     (member (user-account-name account) users))))
+                                          (append-map (match-lambda
+                                                        ((_ . groups) groups)))))
+                             delete-duplicates))))
 #+end_src
 *** Package management
 **** Guix
@@ -506,17 +533,19 @@ Run with ~sudo~.
 #+end_src
 *** Console
 **** KMonad
-Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (kmonad-tool #:key who)
   (packages
    (cons* kmonad
           (operating-system-packages os)))
-  (users
-   (accounts-with-groups (operating-system-users os) who '("input")))
   (services
-   (cons* (udev-rules-service 'kmonad-add-udev-rules kmonad)
-          (operating-system-user-services os))))
+   (append
+    (operating-system-user-services os)
+    (list
+     (simple-service 'kmonad-users-add-input-group
+                     accounts-service-type
+                     (cons who '("input")))
+     (udev-rules-service 'kmonad-add-udev-rules kmonad)))))
 #+end_src
 *** Desktop
 **** Base services
@@ -608,17 +637,17 @@ Must succeed [[*Accounts][Accounts]] component.
         '()))))
 #+end_src
 **** Bluetooth
-Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (bluetooth #:key
                                who
                                stateless?)
-  (users
-   (accounts-with-groups (operating-system-users os) who '("lp")))
   (services
    (append
     (operating-system-user-services os)
     (list
+     (simple-service 'bluetooth-users-add-lp-group
+                     accounts-service-type
+                     (cons who '("lp")))
      (bluetooth-service #:auto-enable? #t))
     (if stateless?
         (list
@@ -1464,27 +1493,30 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                nonfree libre)))))
 #+end_src
 **** Virtualization
-Must succeed [[*Accounts][Accounts]] component.
 #+begin_src scheme
 (define-system-comp (virtualization #:key
                                     kvm-support?
                                     kvm-users
                                     native-platform
                                     binfmt-platforms)
-  (users
-   (if kvm-support?
-       (accounts-with-groups (operating-system-users os) kvm-users '("kvm"))
-       (operating-system-users os)))
   (services
-   (let ((platforms (remove (lambda (p)
-                              (equal? p native-platform))
-                            (or binfmt-platforms '()))))
-     (if (not (null? platforms))
-         (cons* (service qemu-binfmt-service-type
-                         (qemu-binfmt-configuration
-                          (platforms (apply lookup-qemu-platforms platforms))))
-                (operating-system-user-services os))
-         (operating-system-user-services os)))))
+   (append
+    (operating-system-user-services os)
+    (if kvm-support?
+        (list
+         (simple-service 'virtualization-users-add-kvm-group
+                         accounts-service-type
+                         (cons kvm-users '("kvm"))))
+        '())
+    (let ((platforms (remove (lambda (p)
+                               (equal? p native-platform))
+                             (or binfmt-platforms '()))))
+      (if (not (null? platforms))
+          (list
+           (service qemu-binfmt-service-type
+                    (qemu-binfmt-configuration
+                     (platforms (apply lookup-qemu-platforms platforms)))))
+          '())))))
 #+end_src
 **** Console
 ***** Keyboard layouts
@@ -1725,17 +1757,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
-
-(define (accounts-with-groups accounts users groups)
-  (map (lambda (account)
-         (if (member (user-account-name account) users)
-             (user-account
-              (inherit account)
-              (supplementary-groups (-> (user-account-supplementary-groups account)
-                                        (append groups)
-                                        delete-duplicates)))
-             account))
-       accounts))
 #+end_src
 ** Composite components
 *** Base
