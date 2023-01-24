@@ -9789,7 +9789,9 @@ delete it when leaving the dynamic extent of this call."
             as->
             list->alist
             alist->list
+            merge
             merge-with
+            select-keys
             update-keys
             update-vals
             KiB
@@ -9877,6 +9879,12 @@ delete it when leaving the dynamic extent of this call."
       (list k v)))
    alist))
 
+(define (merge #:rest alists)
+  (apply merge-with
+         (match-lambda
+           ((_ . latter) latter))
+         alists))
+
 (define* (merge-with f #:rest alists)
   (fold
    (lambda (a res)
@@ -9896,6 +9904,12 @@ delete it when leaving the dynamic extent of this call."
                         (keys a))))))
    '()
    alists))
+
+(define (select-keys alist ks)
+  (filter (match-lambda
+            ((k . v)
+             (member k ks)))
+          alist))
 
 (define (update-keys alist f)
   (map (match-lambda
