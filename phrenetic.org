@@ -1798,11 +1798,15 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if desktop?
         (as-> $ $
           (desktop-base-services $ #:stateless? stateless?)
-          (case multimedia
-            ((#:media/classic) (classic-multimedia $))
-            ((#:media/pipewire) (pipewire-multimedia $)))
-          (case connection-manager
-            ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
+          (if multimedia
+              (case multimedia
+                ((#:media/classic) (classic-multimedia $))
+                ((#:media/pipewire) (pipewire-multimedia $)))
+              $)
+          (if connection-manager
+              (case connection-manager
+                ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
+              $)
           (if bluetooth?
               (bluetooth $ #:users bluetooth-users
                          #:stateless? stateless?)
@@ -8874,11 +8878,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:status-bar . ,(waybar-status-bar))
-                (#:applets . ,(list
-                               (case connection-manager
-                                 ((#:cm/network-manager) (network-manager-applet)))
-                               ;; (gammastep-applet)
-                               (udiskie-applet)))
+                (#:applets . ,(append
+                               (if connection-manager
+                                   (list
+                                    (case connection-manager
+                                      ((#:cm/network-manager) (network-manager-applet))))
+                                   '())
+                               (list
+                                ;; (gammastep-applet)
+                                (udiskie-applet))))
                 (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
                 (#:terminal . ,(if doom?
                                    (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
@@ -8912,8 +8920,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                   #:date-format date-format
                                                   #:time-format time-format)))
      ;; (kanshi-wm-piece #:outputs outputs)
-     (case connection-manager
-       ((#:cm/network-manager) (network-manager-wm-applet)))
+     (if connection-manager
+         (case connection-manager
+           ((#:cm/network-manager) (network-manager-wm-applet)))
+         '())
      ;; (gammastep-wm-applet)
      (udiskie-wm-applet))))
 #+end_src
