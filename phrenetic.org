@@ -6966,12 +6966,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     (waybar-clock bar-id
                   #:date-format date-format
                   #:time-format time-format))
-   (case session
-     ((#:session/sway)
-      (list
-       (waybar-sway-workspaces bar-id)
-       (waybar-sway-window bar-id)))
-     (else '()))
+   (if session
+       (case session
+         ((#:session/sway)
+          (list
+           (waybar-sway-workspaces bar-id)
+           (waybar-sway-window bar-id))))
+       '())
    (let ((default-show-percentage? #f))
      (list
       (waybar-tray bar-id)
