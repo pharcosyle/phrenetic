@@ -2479,7 +2479,7 @@ SAVEHIST=$HISTSIZE
           (write expr port)))))
 
 (define emacs-assistant-window-params
-  '((#:title-tail . " - Emacs Assistant")
+  `((#:title-tail . ,(string-append " - " "Emacs Assistant"))
     (#:width . 50)
     (#:height . 50)))
 #+end_src
@@ -2523,8 +2523,8 @@ SAVEHIST=$HISTSIZE
     ;;                  #:commit "91394b03a1de09b5908a4fdfd9411feed8ec2c18"
     ;;                  #:hash "1v6xib9mpcdnnssbb06kj9pb4vbpzsppcq6lvdjd3rkcdzd221cw")
     (with-git-commit $ #:upstream-version "28.1.91"
-                       #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
-                       #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
+                     #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
+                     #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
     (package
       (inherit $)
       (source
@@ -9154,23 +9154,23 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
 (define-public kmonad
   (let ((commit "cbdace2bb7b27e47c2397e662265a28a1030b7c7"))
-    (with-git-commit
-     (package
-       (inherit haskell-apps:kmonad)
-       (arguments
-        (substitute-keyword-arguments (package-arguments haskell-apps:kmonad)
-          ((#:phases phases '%standard-phases)
-           #~(modify-phases #$phases
-               (add-after 'unpack 'patch-git-revision
-                 (lambda _
-                   (substitute* "src/KMonad/Args/Cmd.hs"
-                     (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
-       (inputs
-        (modify-inputs (package-inputs haskell-apps:kmonad)
-          (prepend ghc-hspec
-                   hspec-discover))))
-     #:commit commit
-     #:hash "1kgnf0yv7h8scfacwdj3l1lrmjibjri5ybbnyw5m8wn6sjxbpaab")))
+    (as-> haskell-apps:kmonad $
+      (with-git-commit $ #:commit commit
+                       #:hash "1kgnf0yv7h8scfacwdj3l1lrmjibjri5ybbnyw5m8wn6sjxbpaab")
+      (package
+        (inherit $)
+        (arguments
+         (substitute-keyword-arguments (package-arguments $)
+           ((#:phases phases '%standard-phases)
+            #~(modify-phases #$phases
+                (add-after 'unpack 'patch-git-revision
+                  (lambda _
+                    (substitute* "src/KMonad/Args/Cmd.hs"
+                      (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
+        (inputs
+         (modify-inputs (package-inputs $)
+           (prepend ghc-hspec
+                    hspec-discover)))))))
 #+end_src
 ** Stateless
 :PROPERTIES:
@@ -9675,14 +9675,27 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module (phrenetic common utils)
-  #:export (with-git-version
-            with-git-commit
+  #:export (simple-package
             with-git-url
-            simple-package))
+            with-git-version
+            with-git-commit))
 
 (re-export-public-interface (phrenetic common utils))
 #+end_src
-**** Git
+**** Packages
+#+begin_src scheme
+(define simple-package
+  (package
+    (name #f)
+    (version "0")
+    (source #f)
+    (build-system trivial-build-system)
+    (synopsis #f)
+    (description #f)
+    (home-page #f)
+    (license #f)))
+#+end_src
+***** Git
 #+begin_src scheme
 (define (with-git-url pkg url)
   (package
@@ -9733,19 +9746,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
-#+end_src
-**** Misc
-#+begin_src scheme
-(define simple-package
-  (package
-    (name #f)
-    (version "0")
-    (source #f)
-    (build-system trivial-build-system)
-    (synopsis #f)
-    (description #f)
-    (home-page #f)
-    (license #f)))
 #+end_src
 ** Build
 :PROPERTIES:
