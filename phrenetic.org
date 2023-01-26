@@ -1933,7 +1933,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             stateless
             shells
             emacs
-            %emacs-package
             emacs-editor
             emacs-new-frame
             doom
@@ -2411,8 +2410,6 @@ SAVEHIST=$HISTSIZE
                            (file-append emacs "/bin/emacsclient")
                            "--create-frame"))
     (#:emacs/handler . ,(emacs-handler emacs))))
-
-(define %emacs-package emacs-pgtk)
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -9023,7 +9020,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   stateless-storage-paths
                   login-shell
                   (interactive-shells '(#:shell/zsh))
-                  (emacs-package %emacs-package)
+                  (emacs-package emacs-pgtk)
                   (emacs-editor (emacs-editor #:emacs emacs-package))
                   doom?
                   doom-flags
