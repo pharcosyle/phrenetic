@@ -1878,6 +1878,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages compression) #:select (zip unzip zstd))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
+  #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
   #:use-module ((gnu packages fonts) #:select (font-google-noto font-iosevka-etoile font-liberation font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -1925,7 +1926,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((phrenetic packages emacs) #:select (emacs-pgtk))
   #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-code-pro font-adobe-source-sans))
   #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
@@ -1936,8 +1936,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:export (create-he
             stateless
             shells
-            emacs
             emacs-editor
+            emacs-interface
             emacs-new-frame
             doom
             doom-service
@@ -2396,26 +2396,46 @@ SAVEHIST=$HISTSIZE
 #+end_src
 *** Emacs
 #+begin_src scheme
-(define* (emacs #:key emacs)
-  (list
-   (simple-service
-    'emacs-add-packages
-    home-profile-service-type
-    (list emacs))
+(define* (emacs-editor #:key
+                       wayland?
+                       (emacs emacs)
+                       (emacs-pgtk emacs-pgtk))
+  (let ((emacs (get-emacs #:wayland? wayland?
+                          #:emacs emacs
+                          #:emacs-pgtk emacs-pgtk)))
+    (list
+     (simple-service
+      'emacs-add-packages
+      home-profile-service-type
+      (list emacs))
 
-   (simple-service
-    'emacs-set-editor-env-vars
-    home-environment-variables-service-type
-    `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
-      ("EDITOR" . "$VISUAL")))))
+     (simple-service
+      'emacs-set-editor-env-vars
+      home-environment-variables-service-type
+      `(("VISUAL" . ,(file-append emacs "/bin/emacsclient"))
+        ("EDITOR" . "$VISUAL"))))))
 
-(define* (emacs-editor #:key emacs)
-  `((#:emacs/program . ,(list
-                         (file-append emacs "/bin/emacs")))
-    (#:emacs/new-frame . ,(list
-                           (file-append emacs "/bin/emacsclient")
-                           "--create-frame"))
-    (#:emacs/handler . ,(emacs-handler emacs))))
+(define* (emacs-interface #:key
+                          wayland?
+                          (emacs emacs)
+                          (emacs-pgtk emacs-pgtk))
+  (let ((emacs (get-emacs #:wayland? wayland?
+                          #:emacs emacs
+                          #:emacs-pgtk emacs-pgtk)))
+    `((#:emacs/program . ,(list
+                           (file-append emacs "/bin/emacs")))
+      (#:emacs/new-frame . ,(list
+                             (file-append emacs "/bin/emacsclient")
+                             "--create-frame"))
+      (#:emacs/handler . ,(emacs-handler emacs)))))
+
+(define* (get-emacs #:key
+                    wayland?
+                    emacs
+                    emacs-pgtk)
+  (if wayland?
+      emacs-pgtk
+      emacs))
 #+end_src
 **** Handler
 #+begin_src scheme
@@ -6553,7 +6573,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                                  app-launcher
                                  terminal
                                  backup-terminal
-                                 emacs-editor)
+                                 emacs-interface)
   (let ((executions
          (append
           `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
@@ -6575,8 +6595,8 @@ Maybe this shouldn't be a standalone component but rather added by programs that
             ;;                                          (list
             ;;                                           (file-append elogind "/bin/loginctl")
             ;;                                           "lock-session")))
-            (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-editor #:emacs/program))
-            (bindsym $mod+y exec ,@(assoc-ref emacs-editor #:emacs/new-frame)))
+            (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-interface #:emacs/program))
+            (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
           (sway-notifications notifier)
           (sway-status-bar status-bar)
@@ -8895,11 +8915,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            font-variable-pitch
                            (date-format %date-format)
                            (time-format %time-format)
-                           emacs-editor
+                           emacs-interface
                            swaylock-effects?
                            (screen-locker (swaylock-screen-locker #:effects? swaylock-effects?))
                            (menu (if doom?
-                                     (doom-menu (assoc-ref emacs-editor #:emacs/handler))
+                                     (doom-menu (assoc-ref emacs-interface #:emacs/handler))
                                      (rofi-menu #:wayland? #t)))
                            (applets '(#:applet/connection-manager
                                       ;; #:applet/color-temperature
@@ -8934,7 +8954,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                    (list (udiskie-applet)) '())))
                 (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
                 (#:terminal . ,(if doom?
-                                   (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
+                                   (doom-vterm-terminal (assoc-ref emacs-interface #:emacs/handler))
                                    (alacritty-terminal)))
                 (#:backup-terminal . ,(if doom?
                                           ;; Alacritty not working since upgrading to Sway 1.8 (not necessarily the cause of the problem), use Foot for now.
@@ -8942,7 +8962,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                           (list
                                            (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
                                           #f))
-                (#:emacs-editor . ,emacs-editor)))
+                (#:emacs-interface . ,emacs-interface)))
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
                         #:font (assoc-ref fonts font-variable-pitch)
@@ -8986,7 +9006,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                    doom-flags
                    email
                    desktop?
-                   emacs-editor)
+                   emacs-interface)
   (append
    (direnv-prog #:doom? doom?
                 #:shells interactive-shells)
@@ -9008,7 +9028,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (doom-dired-prog #:stateless? stateless?
                          #:icons? (assoc-ref doom-flags #:doom/icons?)
                          #:desktop? desktop?
-                         #:emacs-handler (assoc-ref emacs-editor #:emacs/handler))
+                         #:emacs-handler (assoc-ref emacs-interface #:emacs/handler))
         (doom-trash-prog))
        '()) ; Maybe have some alternatives for non-Doom here: Some file manager, trash-cli...
    (misc-progs)))
@@ -9073,8 +9093,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   stateless-storage-paths
                   login-shell
                   (interactive-shells '(#:shell/zsh))
-                  (emacs-package emacs-pgtk)
-                  (emacs-editor (emacs-editor #:emacs emacs-package))
+                  (wayland? #t)
+                  (emacs-pgtk (@ (phrenetic packages emacs) emacs-pgtk))
+                  (emacs-interface (emacs-interface #:wayland? wayland?
+                                                    #:emacs-pgtk emacs-pgtk))
                   doom?
                   doom-flags
                   package-managers
@@ -9088,7 +9110,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (colors dark-colors)
                   (fonts %fonts)
                   (font-variable-pitch #:fonts/sans)
-                  (wayland? #t)
                   (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
                   login-manager
@@ -9125,7 +9146,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                   #:colors colors
                                                                   #:fonts fonts
                                                                   #:font-variable-pitch font-variable-pitch
-                                                                  #:emacs-editor emacs-editor
+                                                                  #:emacs-interface emacs-interface
                                                                   #:swaylock-effects? sessions-swaylock-effects?)
                              #:virtualization? virtualization?)
             (shells #:stateless? stateless?
@@ -9133,7 +9154,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                     #:login-shell login-shell
                     #:interactive-shells interactive-shells)
-            (emacs #:emacs emacs-package)
+            (emacs-editor #:wayland? wayland?
+                          #:emacs-pgtk emacs-pgtk)
             (if doom?
                 (append
                  (doom #:stateless? stateless?
@@ -9173,7 +9195,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                      #:doom-flags doom-flags
                      #:email email
                      #:desktop? desktop?
-                     #:emacs-editor emacs-editor))
+                     #:emacs-interface emacs-interface))
           (he-applications
            (applications #:stateless? stateless?
                          #:pipewire? pipewire?
