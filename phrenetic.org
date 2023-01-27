@@ -6925,7 +6925,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  ("red" . #:color/red))
                (map (match-lambda
                       ((name . color)
-                       (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
+                       (string-append (string-join
+                                       (list "@define-color" name (assoc-ref colors color)))
+                                      ";" "\n"))))
                (apply string-append))
      (*
       ((font-family . #(FontAwesome
