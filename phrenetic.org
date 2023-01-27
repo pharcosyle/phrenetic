@@ -207,7 +207,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
   #:use-module ((gnu packages shells) #:select (zsh))
-  #:use-module ((gnu packages wm) #:select (swaylock-effects))
+  #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services admin)
   #:use-module (gnu services base)
@@ -764,18 +764,21 @@ Run with ~sudo~.
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-(define-system-comp (sway-wm)
+(define-system-comp (sway-wm #:key swaylock-effects?)
   (services
    (append (operating-system-user-services os)
-           (list swaylock-service
+           (list (swaylock-service #:effects? swaylock-effects?)
                  brightnessctl-udev-rules))))
 #+end_src
 ****** Pieces
 ******* Screen lockers
 ******** Swaylock
 #+begin_src scheme
-(define swaylock-service
-  (screen-locker-service swaylock-effects "swaylock"))
+(define* (swaylock-service #:key effects?)
+  (screen-locker-service (if effects?
+                             swaylock-effects
+                             swaylock)
+                         "swaylock"))
 #+end_src
 ******* Backlight
 ******** Brightnessctl
@@ -1779,6 +1782,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   auto-login?
                   auto-login-user
                   sessions
+                  sessions-swaylock-effects?
                   stateless?)
   (as-> os $
     (base-services $ #:stateless? stateless?)
@@ -1822,7 +1826,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (if (member #:session/gnome (or sessions '()))
               (gnome-desktop $) $)
           (if (member #:session/sway (or sessions '()))
-              (sway-wm $) $))
+              (sway-wm $ #:swaylock-effects? sessions-swaylock-effects?) $))
         $)))
 #+end_src
 *** Macbook hardware
@@ -1898,7 +1902,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock-effects waybar waybar-cpu-histogram))
+  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -6674,12 +6678,13 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                             time-format
                             date-format
                             image
+                            effects?
                             extra-config)
   (list
    (service
     home-swaylock-service-type
     (home-swaylock-configuration
-     (swaylock swaylock-effects)
+     (swaylock (get-swaylock #:effects? effects?))
      (config
       (let ((clr (lambda* (color #:optional alpha)
                    (as-> color $
@@ -6692,7 +6697,6 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 
            (font . ,(assoc-ref font #:font/name))
 
-           (indicator)
            (indicator-idle-visible)
            (indicator-caps-lock)
            (indicator-radius . "150")
@@ -6716,30 +6720,38 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 
            (text-color . ,(clr #:color/violet))
            (separator-color . "00000000")
-           (line-uses-ring)
-
-           ;; Effects
-
-           (grace . "15")
-           (effect-blur . 7x5)
-           (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
-
-           (clock)
-           (timestr . ,time-format)
-           (datestr . ,date-format))
+           (line-uses-ring))
 
          (if image
              (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
              '())
 
+         (if effects?
+             `((indicator)
+
+               (grace . "15")
+               (effect-blur . 7x5)
+               (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
+
+               (clock)
+               (timestr . ,time-format)
+               (datestr . ,date-format))
+             '())
+
          (or extra-config '()))))))))
 
-(define (swaylock-screen-locker)
-  (let ((swaylock "/run/setuid-programs/swaylock"))
+(define* (swaylock-screen-locker #:key effects?)
+  (let (;; (swaylock (get-swaylock #:effects? effects?))
+        (swaylock "/run/setuid-programs/swaylock"))
     `((#:screen-locker/lock . ,(list swaylock))
       (#:screen-locker/lock-immediately . ,(list
                                             swaylock
                                             "--grace=0")))))
+
+(define* (get-swaylock #:key effects?)
+  (if effects?
+      swaylock-effects
+      swaylock))
 #+end_src
 ******** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
@@ -8870,7 +8882,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (date-format %date-format)
                            (time-format %time-format)
                            emacs-editor
-                           (screen-locker (swaylock-screen-locker))
+                           swaylock-effects?
+                           (screen-locker (swaylock-screen-locker #:effects? swaylock-effects?))
                            (menu (if doom?
                                      (doom-menu (assoc-ref emacs-editor #:emacs/handler))
                                      (rofi-menu #:wayland? #t)))
@@ -8920,7 +8933,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         #:image wallpaper
                         #:font (assoc-ref fonts font-variable-pitch)
                         #:date-format date-format
-                        #:time-format time-format)
+                        #:time-format time-format
+                        #:effects? swaylock-effects?)
      ;; (swayidle-wm-piece #:session session
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
      (mako-wm-piece #:colors colors
@@ -9067,6 +9081,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   sessions
                   session-inputs
                   session-outputs
+                  sessions-swaylock-effects?
                   virtualization?
                   email
                   projects)
@@ -9096,7 +9111,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                   #:colors colors
                                                                   #:fonts fonts
                                                                   #:font-variable-pitch font-variable-pitch
-                                                                  #:emacs-editor emacs-editor)
+                                                                  #:emacs-editor emacs-editor
+                                                                  #:swaylock-effects? sessions-swaylock-effects?)
                              #:virtualization? virtualization?)
             (shells #:stateless? stateless?
                     #:doom? doom?
@@ -10184,7 +10200,7 @@ delete it when leaving the dynamic extent of this call."
     #:multimedia #:media/pipewire
     #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
-    ))
+    #:sessions-swaylock-effects? #t))
 
 
 
