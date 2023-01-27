@@ -205,6 +205,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
+  #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects))
@@ -233,7 +234,6 @@ Run with ~sudo~.
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
-  #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
   #:use-module ((phrenetic packages linux) #:select (broadcom-sta))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
@@ -533,7 +533,9 @@ Run with ~sudo~.
 *** Console
 **** KMonad
 #+begin_src scheme
-(define-system-comp (kmonad-tool #:key users)
+(define-system-comp (kmonad-tool #:key
+                                 users
+                                 kmonad)
   (packages
    (cons* kmonad
           (operating-system-packages os)))
@@ -599,7 +601,7 @@ Run with ~sudo~.
 #+end_src
 ***** Pipewire
 #+begin_src scheme
-(define-system-comp (pipewire-multimedia)
+(define-system-comp (pipewire-multimedia #:key pipewire)
   (services
    (cons* (udev-rules-service 'pipewire-add-udev-rules
                               pipewire)
@@ -764,17 +766,25 @@ Run with ~sudo~.
 ***** Window managers
 ****** Sway
 #+begin_src scheme
-(define-system-comp (sway-wm #:key swaylock-effects?)
+(define-system-comp (sway-wm #:key
+                             swaylock-effects?
+                             swaylock
+                             swaylock-effects)
   (services
    (append (operating-system-user-services os)
-           (list (swaylock-service #:effects? swaylock-effects?)
+           (list (swaylock-service #:effects? swaylock-effects?
+                                   #:swaylock swaylock
+                                   #:swaylock-effects swaylock-effects)
                  (brightnessctl-service)))))
 #+end_src
 ****** Pieces
 ******* Screen lockers
 ******** Swaylock
 #+begin_src scheme
-(define* (swaylock-service #:key effects?)
+(define* (swaylock-service #:key
+                           effects?
+                           swaylock
+                           swaylock-effects)
   (screen-locker-service (if effects?
                              swaylock-effects
                              swaylock)
@@ -1773,8 +1783,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   console?
                   kmonad?
                   kmonad-users
+                  kmonad
                   desktop?
                   multimedia
+                  multimedia-pipewire
                   connection-manager
                   bluetooth?
                   bluetooth-users
@@ -1783,6 +1795,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   auto-login-user
                   sessions
                   sessions-swaylock-effects?
+                  sessions-swaylock
+                  sessions-swaylock-effects
                   stateless?)
   (as-> os $
     (base-services $ #:stateless? stateless?)
@@ -1797,7 +1811,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (nix-pm $ #:stateless? stateless?) $)
     (if console?
         (if kmonad?
-            (kmonad-tool $ #:users kmonad-users) $)
+            (kmonad-tool $ #:users kmonad-users
+                         #:kmonad kmonad)
+            $)
         $)
     (if desktop?
         (as-> $ $
@@ -1805,7 +1821,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (if multimedia
               (case multimedia
                 ((#:media/classic) (classic-multimedia $))
-                ((#:media/pipewire) (pipewire-multimedia $)))
+                ((#:media/pipewire) (pipewire-multimedia $ #:pipewire multimedia-pipewire)))
               $)
           (if connection-manager
               (case connection-manager
@@ -1826,7 +1842,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
           (if (member #:session/gnome (or sessions '()))
               (gnome-desktop $) $)
           (if (member #:session/sway (or sessions '()))
-              (sway-wm $ #:swaylock-effects? sessions-swaylock-effects?) $))
+              (sway-wm $ #:swaylock-effects? sessions-swaylock-effects?
+                       #:swaylock sessions-swaylock
+                       #:swaylock-effects sessions-swaylock-effects)
+              $))
         $)))
 #+end_src
 *** Macbook hardware
@@ -1879,12 +1898,13 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
-  #:use-module ((gnu packages fonts) #:select (font-google-noto font-iosevka-etoile font-liberation font-awesome))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-iosevka-etoile font-liberation font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
+  #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber))
@@ -1910,7 +1930,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (default-skeletons))
-  #:use-module ((nongnu packages chrome) #:select (google-chrome-stable))
+  #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
   #:use-module ((nongnu packages clojure) #:select (clj-kondo))
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
@@ -1926,8 +1946,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-code-pro font-adobe-source-sans))
-  #:use-module ((phrenetic packages haskell-apps) #:select (kmonad))
+  #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-sans))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
@@ -1951,8 +1970,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %dark-colors
             %wallpapers
             font-library
-            %fonts
-            %font-packages-misc
+            fonts
+            font-packages-misc
             %date-format
             %time-format
             xdg
@@ -5966,12 +5985,14 @@ nix-channel --update
                       doom?
                       (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
                       ;; (kbd (local-file "config.kbd"))
-                      (kbd (local-file "../mine.kbd")))
+                      (kbd (local-file "../mine.kbd"))
+                      kmonad)
   (list
    (simple-service
     'kmonad
     home-shepherd-service-type
-    (kmonad-shepherd-service kbd))
+    (kmonad-shepherd-service #:kbd kbd
+                             #:kmonad kmonad))
 
    (when doom?
      (doom-service
@@ -5981,7 +6002,9 @@ nix-channel --update
                                       :repo "kmonad/kbd-mode")
                              :pin "4a26abcbfc04208f437fd6b6a5bf3217b124db84"))))))
 
-(define (kmonad-shepherd-service kbd)
+(define* (kmonad-shepherd-service #:key
+                                  kbd
+                                  kmonad)
   (list
    (shepherd-service
     (provision '(kmonad))
@@ -5995,15 +6018,18 @@ nix-channel --update
 #+begin_src scheme
 (define* (pipewire-multimedia #:key
                               stateless?
-                              dbus?)
+                              dbus?
+                              pipewire)
   (append
    (pipewire-services #:stateless? stateless?
-                      #:dbus? dbus?)
+                      #:dbus? dbus?
+                      #:pipewire pipewire)
    (wireplumber-services #:stateless? stateless?)))
 
 (define* (pipewire-services #:key
                             stateless?
-                            dbus?)
+                            dbus?
+                            pipewire)
   (list
    (simple-service
     'pipewire-add-packages
@@ -6159,7 +6185,7 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
-(define %fonts
+(define* (fonts #:key font-adobe-source-code-pro)
   (let ((font-size 10))
     `((#:fonts/mono . ((#:font/name . "Source Code Pro")
                        (#:font/size . ,font-size)
@@ -6172,7 +6198,7 @@ nix-channel --update
                         (#:font/package . ,font-iosevka-etoile)))
       (#:fonts/unicode . ((#:font/name . "Noto Sans")
                           (#:font/package . ,font-google-noto))))))
-(define %font-packages-misc
+(define (font-packages-misc)
   (list font-noto-color-emoji
         font-liberation))
 #+end_src
@@ -6701,12 +6727,16 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                             date-format
                             image
                             effects?
-                            extra-config)
+                            extra-config
+                            swaylock
+                            swaylock-effects)
   (list
    (service
     home-swaylock-service-type
     (home-swaylock-configuration
-     (swaylock (get-swaylock #:effects? effects?))
+     (swaylock (get-swaylock #:effects? effects?
+                             #:swaylock swaylock
+                             #:swaylock-effects swaylock-effects))
      (config
       (let ((clr (lambda* (color #:optional alpha)
                    (as-> color $
@@ -6762,15 +6792,23 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 
          (or extra-config '()))))))))
 
-(define* (swaylock-screen-locker #:key effects?)
-  (let (;; (swaylock (get-swaylock #:effects? effects?))
+(define* (swaylock-screen-locker #:key
+                                 effects?
+                                 swaylock
+                                 swaylock-effects)
+  (let (;; (swaylock (get-swaylock #:effects? effects?
+        ;;                         #:swaylock swaylock
+        ;;                         #:swaylock-effects swaylock-effects))
         (swaylock "/run/setuid-programs/swaylock"))
     `((#:screen-locker/lock . ,(list swaylock))
       (#:screen-locker/lock-immediately . ,(list
                                             swaylock
                                             "--grace=0")))))
 
-(define* (get-swaylock #:key effects?)
+(define* (get-swaylock #:key
+                       effects?
+                       swaylock
+                       swaylock-effects)
   (if effects?
       swaylock-effects
       swaylock))
@@ -6786,11 +6824,13 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                             session
                             screen-locker
                             (lock-timeout 600)
-                            extra-config)
+                            extra-config
+                            swayidle)
   (list
    (service
     home-swayidle-service-type
     (home-swayidle-configuration
+     (swayidle swayidle)
      (config
       (append
        (if screen-locker
@@ -6812,7 +6852,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
          home-swayidle-service-type
          `((timeout ,idle-timeout ,(swaymsg-cmd "output * power off") resume ,(swaymsg-cmd "output * power on")))))))))
 
-(define (swayidle-idle-manager)
+(define* (swayidle-idle-manager #:key swayidle)
   (list
    (file-append swayidle "/bin/swayidle")
    "-w"))
@@ -8460,7 +8500,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                        pipewire?
                        theme
                        gtk-services
-                       (flavors '(#:google-chrome)))
+                       (flavors '(#:google-chrome))
+                       (google-chrome google-chrome))
   (append
    (list
     (simple-service
@@ -8478,7 +8519,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
              (list ublock-origin/chromium))
             '())
         (if (chrome? flavors)
-            (list (wrapper google-chrome-stable)) '()))))
+            (list (wrapper google-chrome)) '()))))
 
     (when stateless?
       (home-stateless-service
@@ -8852,8 +8893,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                           package-managers
                           console?
                           kmonad?
+                          kmonad
                           desktop?
                           pipewire?
+                          pipewire
                           login-manager
                           desktop-tty-start-cmds
                           sessions
@@ -8875,14 +8918,17 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        '())
    (if console?
        (if kmonad?
-           (kmonad-tool #:doom? doom?) '())
+           (kmonad-tool #:doom? doom?
+                        #:kmonad kmonad)
+           '())
        '())
    (if desktop?
        (let ((dbus? (not login-manager)))
          (append
           (if pipewire?
               (pipewire-multimedia #:stateless? stateless?
-                                   #:dbus? dbus?)
+                                   #:dbus? dbus?
+                                   #:pipewire pipewire)
               '())
           (if dbus?
               (dbus-ipc) '())
@@ -8917,7 +8963,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (time-format %time-format)
                            emacs-interface
                            swaylock-effects?
-                           (screen-locker (swaylock-screen-locker #:effects? swaylock-effects?))
+                           swaylock
+                           swaylock-effects
+                           swayidle
+                           (screen-locker (swaylock-screen-locker #:effects? swaylock-effects?
+                                                                  #:swaylock swaylock
+                                                                  #:swaylock-effects swaylock-effects))
                            (menu (if doom?
                                      (doom-menu (assoc-ref emacs-interface #:emacs/handler))
                                      (rofi-menu #:wayland? #t)))
@@ -8937,7 +8988,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:output `((#:outputs . ,outputs)
                          (#:default-bg-image . ,wallpaper))
               #:external-programs
-              `((#:idle-manager . ,(swayidle-idle-manager))
+              `((#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:status-bar . ,(waybar-status-bar))
@@ -8968,9 +9019,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                         #:font (assoc-ref fonts font-variable-pitch)
                         #:date-format date-format
                         #:time-format time-format
-                        #:effects? swaylock-effects?)
+                        #:effects? swaylock-effects?
+                        #:swaylock swaylock
+                        #:swaylock-effects swaylock-effects)
      ;; (swayidle-wm-piece #:session session
-     ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
+     ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
+     ;;                    #:swayidle swayidle)
      (mako-wm-piece #:colors colors
                     #:font (assoc-ref fonts font-variable-pitch))
      (let ((bar-id 'main))
@@ -9043,7 +9097,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        colors
                        fonts
                        font-variable-pitch
-                       wayland?)
+                       wayland?
+                       google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
                            #:font (assoc-ref fonts font-variable-pitch)
@@ -9075,7 +9130,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                    #:wayland? wayland?
                    #:pipewire? pipewire?
                    #:theme theme
-                   #:gtk-services gtk)
+                   #:gtk-services gtk
+                   #:google-chrome google-chrome)
      ;; (firefox-app #:stateless? stateless?
      ;;              #:wayland? wayland?
      ;;              #:gtk-services gtk)
@@ -9094,7 +9150,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   login-shell
                   (interactive-shells '(#:shell/zsh))
                   (wayland? #t)
-                  (emacs-pgtk (@ (phrenetic packages emacs) emacs-pgtk))
+                  emacs-pgtk
                   (emacs-interface (emacs-interface #:wayland? wayland?
                                                     #:emacs-pgtk emacs-pgtk))
                   doom?
@@ -9102,13 +9158,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   package-managers
                   console?
                   kmonad?
+                  kmonad
                   desktop?
                   multimedia
+                  multimedia-pipewire
                   (theme #:theme/dark)
                   (light-colors %light-colors)
                   (dark-colors %dark-colors)
                   (colors dark-colors)
-                  (fonts %fonts)
+                  font-adobe-source-code-pro
+                  (fonts (fonts #:font-adobe-source-code-pro font-adobe-source-code-pro))
                   (font-variable-pitch #:fonts/sans)
                   (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
@@ -9117,9 +9176,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   sessions-inputs
                   sessions-outputs
                   sessions-swaylock-effects?
+                  sessions-swaylock
+                  sessions-swaylock-effects
+                  sessions-swayidle
                   virtualization?
                   email
-                  projects)
+                  projects
+                  apps-google-chrome)
   (let ((pipewire? (equal? multimedia #:media/pipewire)))
     (let ((he-base
            (append
@@ -9131,8 +9194,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:package-managers package-managers
                              #:console? console?
                              #:kmonad? kmonad?
+                             #:kmonad kmonad
                              #:desktop? desktop?
                              #:pipewire? pipewire?
+                             #:pipewire multimedia-pipewire
                              #:login-manager login-manager
                              #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
                                                         (#:session/sway . ,(sway-start pipewire?)))
@@ -9147,7 +9212,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                   #:fonts fonts
                                                                   #:font-variable-pitch font-variable-pitch
                                                                   #:emacs-interface emacs-interface
-                                                                  #:swaylock-effects? sessions-swaylock-effects?)
+                                                                  #:swaylock-effects? sessions-swaylock-effects?
+                                                                  #:swaylock sessions-swaylock
+                                                                  #:swaylock-effects sessions-swaylock-effects
+                                                                  #:swayidle sessions-swayidle)
                              #:virtualization? virtualization?)
             (shells #:stateless? stateless?
                     #:doom? doom?
@@ -9180,7 +9248,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                            (map (lambda (font)
                                                   (assoc-ref font #:font/package))
                                                 fonts)
-                                           %font-packages-misc))
+                                           (font-packages-misc)))
                  (xdg #:stateless? stateless?)
                  (mesa #:stateless? stateless?)
                  (flatpak-apps #:stateless? stateless?
@@ -9204,7 +9272,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                          #:colors colors
                          #:fonts fonts
                          #:font-variable-pitch font-variable-pitch
-                         #:wayland? wayland?)))
+                         #:wayland? wayland?
+                         #:google-chrome apps-google-chrome)))
       (append
        he-base
        he-programs
@@ -10224,19 +10293,31 @@ delete it when leaving the dynamic extent of this call."
      #:doom-flags ,(acons #:doom/icons? #t doom-flags)
      #:sessions-inputs ,(list %macbook-keyboard)
      #:sessions-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
-                                      %macbook-display)))))
+                                      %macbook-display))
+
+     ;; NEW package parameterization
+     #:emacs-pgtk ,(@ (phrenetic packages emacs) emacs-pgtk)
+     #:font-adobe-source-code-pro ,(@ (phrenetic packages fonts) font-adobe-source-code-pro)
+     #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
+     #:apps-google-chrome ,(@ (nongnu packages chrome) google-chrome-stable))))
 
 
 
 ;; OS+HE shared opts
 (define (os+he-shared-opts)
-  '(#:package-managers (#:pm/guix #:pm/nix)
+  `(#:package-managers (#:pm/guix #:pm/nix)
     #:console? #t
     #:desktop? #t
     #:multimedia #:media/pipewire
     #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
-    #:sessions-swaylock-effects? #t))
+
+    ;; NEW package parameterization
+    #:kmonad ,(@ (phrenetic packages haskell-apps) kmonad)
+    #:multimedia-pipewire ,(@ (gnu packages linux) pipewire)
+    #:sessions-swaylock-effects? #t
+    #:sessions-swaylock ,(@ (gnu packages wm) swaylock)
+    #:sessions-swaylock-effects ,(@ (gnu packages wm) swaylock-effects)))
 
 
 
