@@ -8871,7 +8871,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (screen-locker (swaylock-screen-locker))
                            (menu (if doom?
                                      (doom-menu (assoc-ref emacs-editor #:emacs/handler))
-                                     (rofi-menu #:wayland? #t))))
+                                     (rofi-menu #:wayland? #t)))
+                           (applets '(#:applet/connection-manager
+                                      ;; #:applet/color-temperature
+                                      ;; #:applet/auto-mounter
+                                      )))
   (let ((session #:session/sway))
     (append
      (sway-wm #:pipewire? pipewire?
@@ -8889,14 +8893,16 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:status-bar . ,(waybar-status-bar))
                 (#:applets . ,(append
-                               (if connection-manager
+                               (if (and (member #:applet/connection-manager (or applets '()))
+                                        connection-manager)
                                    (list
                                     (case connection-manager
                                       ((#:cm/network-manager) (network-manager-applet))))
                                    '())
-                               (list
-                                ;; (gammastep-applet)
-                                (udiskie-applet))))
+                               (if (member #:applet/color-temperature (or applets '()))
+                                   (list (gammastep-applet)) '())
+                               (if (member #:applet/auto-mounter (or applets '()))
+                                   (list (udiskie-applet)) '())))
                 (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
                 (#:terminal . ,(if doom?
                                    (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
@@ -8930,12 +8936,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                   #:date-format date-format
                                                   #:time-format time-format)))
      ;; (kanshi-wm-piece #:outputs outputs)
-     (if connection-manager
+     (if (and (member #:applet/connection-manager (or applets '()))
+              connection-manager)
          (case connection-manager
            ((#:cm/network-manager) (network-manager-wm-applet)))
          '())
-     ;; (gammastep-wm-applet)
-     (udiskie-wm-applet))))
+     (if (member #:applet/color-temperature (or applets '()))
+         (gammastep-wm-applet) '())
+     (if (member #:applet/auto-mounter (or applets '()))
+         (udiskie-wm-applet) '()))))
 #+end_src
 *** Programs
 #+begin_src scheme
