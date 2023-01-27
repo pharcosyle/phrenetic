@@ -6687,50 +6687,52 @@ Maybe this shouldn't be a standalone component but rather added by programs that
                          (string-drop $ 1)
                          (string-append $ (or alpha "")))))
             (alpha "7f")) ; 50%
-        `((daemonize)
+        (append
+         `((daemonize)
 
-          (font . ,(assoc-ref font #:font/name))
-          ,@(if image
-                (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
-                '())
+           (font . ,(assoc-ref font #:font/name))
 
-          (indicator)
-          (indicator-idle-visible)
-          (indicator-caps-lock)
-          (indicator-radius . "150")
-          (indicator-thickness . "10")
+           (indicator)
+           (indicator-idle-visible)
+           (indicator-caps-lock)
+           (indicator-radius . "150")
+           (indicator-thickness . "10")
 
-          (key-hl-color . ,(clr #:color/green))
-          (bs-hl-color . ,(clr #:color/yellow))
-          (inside-color . ,(clr #:color/bg alpha))
+           (key-hl-color . ,(clr #:color/green))
+           (bs-hl-color . ,(clr #:color/yellow))
+           (inside-color . ,(clr #:color/bg alpha))
 
-          (ring-color . ,(clr #:color/bg))
-          (ring-clear-color . ,(clr #:color/bg alpha))
-          (ring-ver-color . ,(clr #:color/bg alpha))
-          (ring-wrong-color . ,(clr #:color/bg alpha))
+           (ring-color . ,(clr #:color/bg))
+           (ring-clear-color . ,(clr #:color/bg alpha))
+           (ring-ver-color . ,(clr #:color/bg alpha))
+           (ring-wrong-color . ,(clr #:color/bg alpha))
 
-          (text-clear-color . ,(clr #:color/orange))
-          (text-ver-color . ,(clr #:color/blue))
-          (text-wrong-color . ,(clr #:color/red))
-          (inside-clear-color . ,(clr #:color/orange))
-          (inside-ver-color . ,(clr #:color/blue))
-          (inside-wrong-color . ,(clr #:color/red))
+           (text-clear-color . ,(clr #:color/orange))
+           (text-ver-color . ,(clr #:color/blue))
+           (text-wrong-color . ,(clr #:color/red))
+           (inside-clear-color . ,(clr #:color/orange))
+           (inside-ver-color . ,(clr #:color/blue))
+           (inside-wrong-color . ,(clr #:color/red))
 
-          (text-color . ,(clr #:color/violet))
-          (separator-color . "00000000")
-          (line-uses-ring)
+           (text-color . ,(clr #:color/violet))
+           (separator-color . "00000000")
+           (line-uses-ring)
 
-          ;; Effects
+           ;; Effects
 
-          (grace . "15")
-          (effect-blur . 7x5)
-          (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
+           (grace . "15")
+           (effect-blur . 7x5)
+           (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
 
-          (clock)
-          (timestr . ,time-format)
-          (datestr . ,date-format)
+           (clock)
+           (timestr . ,time-format)
+           (datestr . ,date-format))
 
-          ,@(or extra-config '()))))))))
+         (if image
+             (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
+             '())
+
+         (or extra-config '()))))))))
 
 (define (swaylock-screen-locker)
   (let ((swaylock "/run/setuid-programs/swaylock"))
