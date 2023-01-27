@@ -6764,7 +6764,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 (define* (swayidle-wm-piece #:key
                             session
                             screen-locker
-                            (lock-timeout 300)
+                            (lock-timeout 600)
                             extra-config)
   (list
    (service
@@ -6785,7 +6785,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (let* ((swaymsg (file-append sway "/bin/swaymsg"))
              (swaymsg-cmd (lambda (cmd)
                             #~(format #f "'~a \"~a\"'" #$swaymsg #$cmd)))
-             (idle-timeout (+ lock-timeout 30)))
+             (idle-timeout (+ lock-timeout 300)))
         (simple-service
          'swayidle-add-sway-power
          home-swayidle-service-type
