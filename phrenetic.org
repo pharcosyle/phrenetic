@@ -6759,6 +6759,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
 Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
 ******* Idle managers
+- TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
 ******** Swayidle
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
