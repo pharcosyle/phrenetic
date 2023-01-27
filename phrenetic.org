@@ -8238,7 +8238,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
    (service
     home-rofi-service-type
     (home-rofi-configuration
-     (rofi (get-rofi #:key wayland?))
+     (rofi (get-rofi #:wayland? wayland?))
      (config-rasi
       (append
        ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
