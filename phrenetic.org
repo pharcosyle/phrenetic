@@ -768,7 +768,7 @@ Run with ~sudo~.
   (services
    (append (operating-system-user-services os)
            (list (swaylock-service #:effects? swaylock-effects?)
-                 brightnessctl-udev-rules))))
+                 (brightnessctl-service)))))
 #+end_src
 ****** Pieces
 ******* Screen lockers
@@ -783,7 +783,7 @@ Run with ~sudo~.
 ******* Backlight
 ******** Brightnessctl
 #+begin_src scheme
-(define brightnessctl-udev-rules
+(define (brightnessctl-service)
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
 *** Host-specific
@@ -8235,7 +8235,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
    (service
     home-rofi-service-type
     (home-rofi-configuration
-     (rofi (get-rofi-package wayland?))
+     (rofi (get-rofi #:key wayland?))
      (config-rasi
       (append
        ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
@@ -8277,12 +8277,14 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                  (#:storage . #:storage/machine)))))))
 
 (define* (rofi-menu #:key wayland?)
-  (let ((rofi (file-append (get-rofi-package wayland?) "/bin/rofi")))
+  (let ((rofi (file-append (get-rofi #:wayland? wayland?) "/bin/rofi")))
     `((#:menu/menu . ,(list rofi "-dmenu" "-p"))
       (#:menu/app-launcher . ,(list rofi "-show" "drun")))))
 
-(define (get-rofi-package wayland?)
-  (if wayland? rofi-wayland rofi))
+(define* (get-rofi #:key wayland?)
+  (if wayland?
+      rofi-wayland
+      rofi))
 #+end_src
 ***** Messaging
 ****** Zoom
@@ -9088,8 +9090,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   connection-manager
                   login-manager
                   sessions
-                  session-inputs
-                  session-outputs
+                  sessions-inputs
+                  sessions-outputs
                   sessions-swaylock-effects?
                   virtualization?
                   email
@@ -9114,8 +9116,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:sway-environment (sway-environment #:pipewire? pipewire?
                                                                   #:connection-manager connection-manager
                                                                   #:doom? doom?
-                                                                  #:inputs session-inputs
-                                                                  #:outputs session-outputs
+                                                                  #:inputs sessions-inputs
+                                                                  #:outputs sessions-outputs
                                                                   #:portal-services portal-services
                                                                   #:colors colors
                                                                   #:fonts fonts
@@ -10195,9 +10197,9 @@ delete it when leaving the dynamic extent of this call."
    `(#:stateless? #t
      #:doom? ,doom?
      #:doom-flags ,(acons #:doom/icons? #t doom-flags)
-     #:session-inputs ,(list %macbook-keyboard)
-     #:session-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
-                                     %macbook-display)))))
+     #:sessions-inputs ,(list %macbook-keyboard)
+     #:sessions-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
+                                      %macbook-display)))))
 
 
 
