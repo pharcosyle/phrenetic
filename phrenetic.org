@@ -8908,9 +8908,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                    (doom-vterm-terminal (assoc-ref emacs-editor #:emacs/handler))
                                    (alacritty-terminal)))
                 (#:backup-terminal . ,(if doom?
+                                          ;; Alacritty not working since upgrading to Sway 1.8 (not necessarily the cause of the problem), use Foot for now.
+                                          ;; (alacritty-terminal)
                                           (list
                                            (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
-                                          ;; (alacritty-terminal)
                                           #f))
                 (#:emacs-editor . ,emacs-editor)))
      (swaylock-wm-piece #:colors colors
