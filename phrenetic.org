@@ -6249,18 +6249,19 @@ nix-channel --update
                             (string-drop $ (string-length home-prefix))
                             $))
                       (string-append $ "/")))))
-         `(,@(map (lambda (dir)
-                    `((#:path . ,(normalize dir))
-                      (#:storage . #:storage/persist)))
-                  (list (assoc-ref dirs #:desktop)
-                        (assoc-ref dirs #:documents)
-                        (assoc-ref dirs #:music)
-                        (assoc-ref dirs #:pictures)
-                        (assoc-ref dirs #:publicshare)
-                        (assoc-ref dirs #:templates)
-                        (assoc-ref dirs #:videos)))
-           ((#:path . ,(normalize (assoc-ref dirs #:download)))
-            (#:storage . #:storage/machine)))))))))
+         (append
+          (map (lambda (dir)
+                 `((#:path . ,(normalize dir))
+                   (#:storage . #:storage/persist)))
+               (list (assoc-ref dirs #:desktop)
+                     (assoc-ref dirs #:documents)
+                     (assoc-ref dirs #:music)
+                     (assoc-ref dirs #:pictures)
+                     (assoc-ref dirs #:publicshare)
+                     (assoc-ref dirs #:templates)
+                     (assoc-ref dirs #:videos)))
+          `(((#:path . ,(normalize (assoc-ref dirs #:download)))
+             (#:storage . #:storage/machine))))))))))
 #+end_src
 **** Mesa
 Maybe this shouldn't be a standalone component but rather added by programs that "use Mesa", if that's even the right way of thinking about it.
@@ -6424,61 +6425,62 @@ Maybe this shouldn't be a standalone component but rather added by programs that
 ******* General
 #+begin_src scheme
 (define (sway-general)
-  `(;; Windows
-    (bindsym $mod+Shift+c kill)
-    (bindsym $mod+Shift+f fullscreen)
-    (bindsym $mod+Shift+space floating toggle)
-    (bindsym $mod+Control+space focus mode_toggle)
-    (bindsym $mod+h focus left)
-    (bindsym $mod+j focus down)
-    (bindsym $mod+k focus up)
-    (bindsym $mod+l focus right)
-    (bindsym $mod+Shift+h move left)
-    (bindsym $mod+Shift+j move down)
-    (bindsym $mod+Shift+k move up)
-    (bindsym $mod+Shift+l move right)
+  (append
+   `(;; Windows
+     (bindsym $mod+Shift+c kill)
+     (bindsym $mod+Shift+f fullscreen)
+     (bindsym $mod+Shift+space floating toggle)
+     (bindsym $mod+Control+space focus mode_toggle)
+     (bindsym $mod+h focus left)
+     (bindsym $mod+j focus down)
+     (bindsym $mod+k focus up)
+     (bindsym $mod+l focus right)
+     (bindsym $mod+Shift+h move left)
+     (bindsym $mod+Shift+j move down)
+     (bindsym $mod+Shift+k move up)
+     (bindsym $mod+Shift+l move right))
 
-    ;; Workspaces
-    ,@(append-map
-       (lambda (x)
-         `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-            workspace number ,x)
-           (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                    move container to workspace number ,x)))
-       (iota 10 1))
-    (bindsym $mod+tab workspace back_and_forth)
+   ;; Workspaces
+   (append
+    (append-map (lambda (x)
+                  `((bindsym ,(format #f "$mod+~a" (modulo x 10))
+                     workspace number ,x)
+                    (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
+                             move container to workspace number ,x)))
+                (iota 10 1))
+    `((bindsym $mod+tab workspace back_and_forth)))
 
-    ;; Scratchpad
-    (bindsym $mod+Shift+minus move scratchpad)
-    (bindsym $mod+minus scratchpad show)
+   `(;; Scratchpad
+     (bindsym $mod+Shift+minus move scratchpad)
+     (bindsym $mod+minus scratchpad show)
 
-    ;; Layout
-    (bindsym $mod+Shift+b splith)
-    (bindsym $mod+Shift+v splitv)
-    (bindsym $mod+Shift+s layout stacking)
-    (bindsym $mod+Shift+w layout tabbed)
-    (bindsym $mod+Shift+e layout toggle split)
+     ;; Layout
+     (bindsym $mod+Shift+b splith)
+     (bindsym $mod+Shift+v splitv)
+     (bindsym $mod+Shift+s layout stacking)
+     (bindsym $mod+Shift+w layout tabbed)
+     (bindsym $mod+Shift+e layout toggle split)
 
-    (bindsym $mod+Shift+a focus parent)
+     (bindsym $mod+Shift+a focus parent)
 
-    (bindsym $mod+Shift+r reload)
-    (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
-             -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
-             -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+     (bindsym $mod+Shift+r reload)
+     (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
+              -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
+              -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
 
 
-    (default_border pixel)
-    (default_floating_border pixel)
-    (gaps inner 8)
+     (default_border pixel)
+     (default_floating_border pixel)
+     (gaps inner 8)
 
-    (floating_modifier $mod normal)
+     (floating_modifier $mod normal)
 
-    ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
-                floating enable,
-                resize set
-                width ,(assoc-ref emacs-assistant-window-params #:width) ppt
-                height ,(assoc-ref emacs-assistant-window-params #:height) ppt)))
+     ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+     (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
+                 floating enable,
+                 resize set
+                 width ,(assoc-ref emacs-assistant-window-params #:width) ppt
+                 height ,(assoc-ref emacs-assistant-window-params #:height) ppt))))
 #+end_src
 ******* Input/output
 #+begin_src scheme
@@ -6769,13 +6771,14 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
     home-swayidle-service-type
     (home-swayidle-configuration
      (config
-      `(,@(if screen-locker
-              (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
-                `((lock ,lock-cmd-quoted)
-                  (before-sleep ,lock-cmd-quoted)
-                  (timeout ,lock-timeout ,lock-cmd-quoted)))
-              '())
-        ,@(or extra-config '())))))
+      (append
+       `((if screen-locker
+             (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
+               `((lock ,lock-cmd-quoted)
+                 (before-sleep ,lock-cmd-quoted)
+                 (timeout ,lock-timeout ,lock-cmd-quoted)))
+             '()))
+       (or extra-config '())))))
 
    (case session
      ((#:session/sway)
@@ -6891,80 +6894,82 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                      outputs
                      not-outputs
                      extra-config)
-  `((name . ,bar-id)
-    (position . ,position)
-    ,@(if height
-          `((height . ,height)) '())
-    ,@(let ((output (append
-                     (or outputs '())
-                     (map (lambda (o)
-                            (string-append "!" o))
-                          (or not-outputs '())))))
-        (if (null? output)
-            '()
-            `((output . ,output))))
-    ,@(or extra-config '())))
+  (append
+   `((name . ,bar-id)
+     (position . ,position))
+   (if height
+         `((height . ,height)) '())
+   (let ((output (append
+                  (or outputs '())
+                  (map (lambda (o)
+                         (string-append "!" o))
+                       (or not-outputs '())))))
+     (if (null? output)
+         '()
+         `((output . ,output))))
+   (or extra-config '())))
 
 (define* (waybar-style #:key
                        colors
                        font
                        transitions?
                        extra-style)
-  `(,#~#$(->> `(("fg" . #:color/fg)
-                ("bg" . #:color/bg)
-                ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
-                ("accent" . #:color/accent)
-                ("green" . #:color/green)
-                ("orange" . #:color/orange)
-                ("red" . #:color/red))
-              (map (match-lambda
-                     ((name . color)
-                      (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
-              (apply string-append))
-    (*
-     ((font-family . #(FontAwesome
-                       ,@(if font
-                             (list
-                              (as-> font $
-                                    (assoc-ref $ #:font/name)
-                                    (string-append "\"" $ "\"")
-                                    (string->symbol $)))
-                             '())))
-      ,@(if transitions? '() '((transition . none)))
-      (box-shadow . none)
-      (text-shadow . none)
-      (min-height . 0)))
+  (append
+   `(,#~#$(->> `(("fg" . #:color/fg)
+                 ("bg" . #:color/bg)
+                 ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
+                 ("accent" . #:color/accent)
+                 ("green" . #:color/green)
+                 ("orange" . #:color/orange)
+                 ("red" . #:color/red))
+               (map (match-lambda
+                      ((name . color)
+                       (string-append "@define-color " name " " (assoc-ref colors color) ";\n"))))
+               (apply string-append))
+     (*
+      ((font-family . #(FontAwesome
+                        ,@(if font
+                              (list
+                               (as-> font $
+                                     (assoc-ref $ #:font/name)
+                                     (string-append "\"" $ "\"")
+                                     (string->symbol $)))
+                              '())))
+       ,@(if transitions? '() '((transition . none)))
+       (box-shadow . none)
+       (text-shadow . none)
+       (min-height . 0)))
 
-    (tooltip
-     ((border . (solid @bg-alt))
-      (background . @bg)
-      (opacity . 0.9)))
+     (tooltip
+      ((border . (solid @bg-alt))
+       (background . @bg)
+       (opacity . 0.9)))
 
-    ((tooltip label)
-     ((color . @fg)
-      (padding . 0)))
+     ((tooltip label)
+      ((color . @fg)
+       (padding . 0)))
 
-    (#{#waybar}#
-     ((color . @fg)
-      (background . @bg)))
+     (#{#waybar}#
+      ((color . @fg)
+       (background . @bg)))
 
-    (#((.modules-right label)
-       (.modules-right image))
-     ((margin . (0.4em 0.2em))
-      (padding . (0 0.4em))
-      (background . @bg-alt)
-      (border-radius . 0.2em)))
+     (#((.modules-right label)
+        (.modules-right image))
+      ((margin . (0.4em 0.2em))
+       (padding . (0 0.4em))
+       (background . @bg-alt)
+       (border-radius . 0.2em)))
 
-    ;; To accommodate the crack in my screen.
-    (.modules-left
-     ((margin-left . 82px)))
-    ;; (.modules-left
-    ;;  ((margin-left . 0.2em)))
+     ;; To accommodate the crack in my screen.
+     (.modules-left
+      ((margin-left . 82px)))
+     ;; (.modules-left
+     ;;  ((margin-left . 0.2em)))
 
-    (.modules-right
-     ((margin-right . 0.2em)))
+     (.modules-right
+      ((margin-right . 0.2em))))
 
-    ,@(or extra-style '())))
+   (or extra-style '())))
 
 (define (waybar-status-bar)
   `((#:status-bar/command . ,(list
@@ -7272,7 +7277,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
     (home-kanshi-configuration
      (config
       ;; Not done yet.
-      `(,@(or extra-config '())))))))
+      (or extra-config '()))))))
 #+end_src
 ******* Applets
 ******** Network
@@ -8097,30 +8102,32 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
      home-git-service-type
      (home-git-configuration
       (config
-       `((user
-          ((email . ,email)
-           ,@(if sign-commits?
-                 `((signingkey . ,gpg-sign-key)) '())))
-         ;; TODO stuff from feature-git, figure it out later
-         ;; (merge
-         ;;  ;; diff3 makes it easier to solve conflicts with smerge, zdiff3
-         ;;  ;; should make a conflict scope smaller, but guile-git fails if
-         ;;  ;; this option is set.
-         ;;  ((conflictStyle . diff3)))
-         ;; (diff
-         ;;  ;; histogram should be smarter about diff generation.
-         ;;  ((algorithm . histogram)))
-         (commit
-          (,@(if sign-commits?
-                 '((gpgsign . #t)) '())))
-         ;; (sendemail
-         ;;  ((annotate . #t)))
-         ;;  TODO these two (http and gpg) sections were in the RDE example home environment (but notably not in the rde feature-git). Figure out what they're for after I do gpg.
-         ;; (http "https://weak.example.com"
-         ;;       ((ssl-verify . #f)))
-         ;; (gpg
-         ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
-         ,@(or extra-config '()))))))
+       (append
+        `((user
+           ((email . ,email)
+            ,@(if sign-commits?
+                  `((signingkey . ,gpg-sign-key)) '())))
+          ;; TODO stuff from feature-git, figure it out later
+          ;; (merge
+          ;;  ;; diff3 makes it easier to solve conflicts with smerge, zdiff3
+          ;;  ;; should make a conflict scope smaller, but guile-git fails if
+          ;;  ;; this option is set.
+          ;;  ((conflictStyle . diff3)))
+          ;; (diff
+          ;;  ;; histogram should be smarter about diff generation.
+          ;;  ((algorithm . histogram)))
+          (commit
+           (,@(if sign-commits?
+                  '((gpgsign . #t)) '())))
+          ;; (sendemail
+          ;;  ((annotate . #t)))
+          ;;  TODO these two (http and gpg) sections were in the RDE example home environment (but notably not in the rde feature-git). Figure out what they're for after I do gpg.
+          ;; (http "https://weak.example.com"
+          ;;       ((ssl-verify . #f)))
+          ;; (gpg
+          ;;  ((program . ,(file-append gnupg "/bin/gpg"))))
+          )
+        (or extra-config '()))))))
 
    (if doom?
        (doom-git #:stateless? stateless?) '())))
@@ -8230,37 +8237,38 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     (home-rofi-configuration
      (rofi (get-rofi-package wayland?))
      (config-rasi
-      ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
-      `((configuration
-         ((modi . "run,ssh,drun")
-          (drun-show-actions . #t)
-          (show-icons . #t)
-          (font . ,(font-specification font))
+      (append
+       ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
+       `((configuration
+          ((modi . "run,ssh,drun")
+           (drun-show-actions . #t)
+           (show-icons . #t)
+           (font . ,(font-specification font))
 
-          (kb-element-next . "")
-          (kb-row-select . "Tab,Control+i")
-          (kb-secondary-paste . "Control+y")
-          (kb-remove-word-forward . "Alt+d")
-          (kb-remove-word-back . "Control+w,Control+BackSpace")
-          (kb-clear-line . "Control+slash")
-          (kb-page-next . "Control+v")
-          (kb-page-prev . "Alt+v")))
+           (kb-element-next . "")
+           (kb-row-select . "Tab,Control+i")
+           (kb-secondary-paste . "Control+y")
+           (kb-remove-word-forward . "Alt+d")
+           (kb-remove-word-back . "Control+w,Control+BackSpace")
+           (kb-clear-line . "Control+slash")
+           (kb-page-next . "Control+v")
+           (kb-page-prev . "Alt+v"))))
 
-        ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
-        ;; ,#~"@theme \"paper-float\""
-        ;; ,@(let ((clr (lambda* (color #:optional alpha)
-        ;;                (as-> color $
-        ;;                      (assoc-ref colors $)
-        ;;                      (string-append $ (or alpha ""))))))
-        ;;     `((*
-        ;;        (;; (white . ,(clr #:color/fg))
-        ;;         ;; (black . ,(clr #:color/bg))
-        ;;         ;; (grey . ,(clr #:color/...))
-        ;;         ;; (blue . ,(clr #:color/blue))
-        ;;         (background . "#000000BF")))))
-        ;; (window
-        ;;  ((transparency . "real")))
-        ))))
+       ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
+       ;; (list #~"@theme \"paper-float\"")
+       ;; (let ((clr (lambda* (color #:optional alpha)
+       ;;              (as-> color $
+       ;;                    (assoc-ref colors $)
+       ;;                    (string-append $ (or alpha ""))))))
+       ;;   `((*
+       ;;      (;; (white . ,(clr #:color/fg))
+       ;;       ;; (black . ,(clr #:color/bg))
+       ;;       ;; (grey . ,(clr #:color/...))
+       ;;       ;; (blue . ,(clr #:color/blue))
+       ;;       (background . "#000000BF")))))
+       ;; `((window
+       ;;    ((transparency . "real"))))
+       ))))
 
    (when stateless?
      (home-stateless-service
@@ -8335,28 +8343,29 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     home-alacritty-service-type
     (home-alacritty-configuration
      (config
-      `((window . ((padding . ((x . 5)
-                               (y . 5)))))
-        (background_opacity . 0.75) ; Change this to window.opacity when Guix updates Alacritty version (to 1.10.0 or above).
-        ,@(if font
-              `((font . ((normal . ,(append
-                                     `((family . ,(assoc-ref font #:font/name)))
-                                     (if-let ((weight (assoc-ref font #:font/weight)))
-                                             `((style . ,(font-weight->style weight))) '())))
-                         (size . ,(- (assoc-ref font #:font/size) 1)))))
-              '())
-        ,@(let ((clr (lambda (color)
-                       (assoc-ref colors color))))
-            `((colors . ((primary . ((background . ,(clr #:color/bg))
-                                     (foreground . ,(clr #:color/fg))))
-                         (normal . ((black . ,(clr #:color/base0))
-                                    (white . ,(clr #:color/base8))
-                                    (red . ,(clr #:color/red))
-                                    (green . ,(clr #:color/green))
-                                    (yellow . ,(clr #:color/yellow))
-                                    (blue . ,(clr #:color/blue))
-                                    (magenta . ,(clr #:color/magenta))
-                                    (cyan . ,(clr #:color/cyan))))))))))))))
+      (append
+       `((window . ((padding . ((x . 5)
+                                (y . 5)))))
+         (background_opacity . 0.75)) ; Change this to window.opacity when Guix updates Alacritty version (to 1.10.0 or above).
+       (if font
+           `((font . ((normal . ,(append
+                                  `((family . ,(assoc-ref font #:font/name)))
+                                  (if-let ((weight (assoc-ref font #:font/weight)))
+                                          `((style . ,(font-weight->style weight))) '())))
+                      (size . ,(- (assoc-ref font #:font/size) 1)))))
+           '())
+       (let ((clr (lambda (color)
+                    (assoc-ref colors color))))
+         `((colors . ((primary . ((background . ,(clr #:color/bg))
+                                  (foreground . ,(clr #:color/fg))))
+                      (normal . ((black . ,(clr #:color/base0))
+                                 (white . ,(clr #:color/base8))
+                                 (red . ,(clr #:color/red))
+                                 (green . ,(clr #:color/green))
+                                 (yellow . ,(clr #:color/yellow))
+                                 (blue . ,(clr #:color/blue))
+                                 (magenta . ,(clr #:color/magenta))
+                                 (cyan . ,(clr #:color/cyan))))))))))))))
 
 (define (font-weight->style weight)
   (->> weight
