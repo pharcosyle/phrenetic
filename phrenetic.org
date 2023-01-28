@@ -1898,7 +1898,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-iosevka-etoile font-liberation font-awesome))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation font-awesome))
   #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
@@ -1937,7 +1937,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
-  #:use-module ((rde packages fonts) #:select (font-noto-color-emoji))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module ((chromium chromium) #:select (chromium+drm))
@@ -6199,7 +6198,7 @@ nix-channel --update
       (#:fonts/unicode . ((#:font/name . "Noto Sans")
                           (#:font/package . ,font-google-noto))))))
 (define (font-packages-misc)
-  (list font-noto-color-emoji
+  (list font-google-noto-emoji
         font-liberation))
 #+end_src
 ***** Source Code Pro :package:version:
