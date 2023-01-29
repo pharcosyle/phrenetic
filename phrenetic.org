@@ -273,7 +273,7 @@ Run with ~sudo~.
             %efi-label
             virtualization
             console-keyboard-layouts
-            console-hidpi-fonts
+            console-fonts
             macbook
             os-base
             with-macbook-hardware))
@@ -1540,14 +1540,18 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                (inherit (operating-system-bootloader os))
                (keyboard-layout kb-layout))))
 #+end_src
-***** HiDPI fonts
+***** Fonts
 #+begin_src scheme
-(define-system-comp (console-hidpi-fonts #:key number-of-ttys)
+(define-system-comp (console-fonts #:key
+                                   number-of-ttys
+                                   hidpi?)
   (services
    (cons* (service console-font-service-type
                    (map (lambda (n)
                           (cons (string-append "tty" (number->string n))
-                                (file-append font-terminus "/share/consolefonts/ter-132n")))
+                                (if hidpi?
+                                    (file-append font-terminus "/share/consolefonts/ter-132n")
+                                    %default-console-font)))
                         (iota number-of-ttys 1)))
           (operating-system-user-services os))))
 #+end_src
@@ -1868,8 +1872,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
     (console-keyboard-layouts $ #:kb-layout (assoc-ref %macbook-keyboard #:keyboard/layout))
-    (if (assoc-ref %macbook-display #:hidpi?)
-        (console-hidpi-fonts $ #:number-of-ttys number-of-ttys) $)
+    (console-fonts $ #:number-of-ttys number-of-ttys
+                   #:hidpi? (assoc-ref %macbook-display #:hidpi?))
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
