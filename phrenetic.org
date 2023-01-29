@@ -6017,7 +6017,8 @@ nix-channel --update
     (stop #~(make-kill-destructor)))))
 #+end_src
 *** Desktop
-**** Pipewire
+**** Multimedia
+***** Pipewire
 #+begin_src scheme
 (define* (pipewire-multimedia #:key
                               stateless?
@@ -6114,7 +6115,7 @@ nix-channel --update
        (list "\n"))))
    config))
 #+end_src
-***** Wireplumber
+****** Wireplumber
 #+begin_src scheme
 (define* (wireplumber-services #:key stateless?)
   (list
