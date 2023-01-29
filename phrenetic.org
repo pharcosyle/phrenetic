@@ -250,8 +250,8 @@ Run with ~sudo~.
             nix-pm
             kmonad-tool
             desktop-base-services
-            classic-multimedia
-            pipewire-multimedia
+            classic-media
+            pipewire-media
             network-manager
             bluetooth
             gdm
@@ -589,10 +589,10 @@ Run with ~sudo~.
                       (#:preds . ((#:empty-dir)))))))
         '()))))
 #+end_src
-**** Multimedia
+**** Media
 ***** Classic
 #+begin_src scheme
-(define-system-comp (classic-multimedia)
+(define-system-comp (classic-media)
   (services
    (append
     (operating-system-user-services os)
@@ -601,7 +601,7 @@ Run with ~sudo~.
 #+end_src
 ***** Pipewire
 #+begin_src scheme
-(define-system-comp (pipewire-multimedia #:key pipewire)
+(define-system-comp (pipewire-media #:key pipewire)
   (services
    (cons* (udev-rules-service 'pipewire-add-udev-rules
                               pipewire)
@@ -1789,8 +1789,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   kmonad-users
                   kmonad
                   desktop?
-                  multimedia
-                  multimedia-pipewire
+                  media
+                  media-pipewire
                   connection-manager
                   bluetooth?
                   bluetooth-users
@@ -1822,10 +1822,10 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (if desktop?
         (as-> $ $
           (desktop-base-services $ #:stateless? stateless?)
-          (if multimedia
-              (case multimedia
-                ((#:media/classic) (classic-multimedia $))
-                ((#:media/pipewire) (pipewire-multimedia $ #:pipewire multimedia-pipewire)))
+          (if media
+              (case media
+                ((#:media/classic) (classic-media $))
+                ((#:media/pipewire) (pipewire-media $ #:pipewire media-pipewire)))
               $)
           (if connection-manager
               (case connection-manager
@@ -1968,7 +1968,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             nix-pm
             virtualization
             kmonad-tool
-            pipewire-multimedia
+            pipewire-media
             %light-colors
             %dark-colors
             %wallpapers
@@ -6017,13 +6017,13 @@ nix-channel --update
     (stop #~(make-kill-destructor)))))
 #+end_src
 *** Desktop
-**** Multimedia
+**** Media
 ***** Pipewire
 #+begin_src scheme
-(define* (pipewire-multimedia #:key
-                              stateless?
-                              dbus?
-                              pipewire)
+(define* (pipewire-media #:key
+                         stateless?
+                         dbus?
+                         pipewire)
   (append
    (pipewire-services #:stateless? stateless?
                       #:dbus? dbus?
@@ -8931,9 +8931,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        (let ((dbus? (not login-manager)))
          (append
           (if pipewire?
-              (pipewire-multimedia #:stateless? stateless?
-                                   #:dbus? dbus?
-                                   #:pipewire pipewire)
+              (pipewire-media #:stateless? stateless?
+                              #:dbus? dbus?
+                              #:pipewire pipewire)
               '())
           (if dbus?
               (dbus-ipc) '())
@@ -9165,8 +9165,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   kmonad?
                   kmonad
                   desktop?
-                  multimedia
-                  multimedia-pipewire
+                  media
+                  media-pipewire
                   (theme #:theme/dark)
                   (light-colors %light-colors)
                   (dark-colors %dark-colors)
@@ -9188,7 +9188,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   email
                   projects
                   apps-google-chrome)
-  (let ((pipewire? (equal? multimedia #:media/pipewire)))
+  (let ((pipewire? (equal? media #:media/pipewire)))
     (let ((he-base
            (append
             (system-features #:stateless? stateless?
@@ -9202,7 +9202,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                              #:kmonad kmonad
                              #:desktop? desktop?
                              #:pipewire? pipewire?
-                             #:pipewire multimedia-pipewire
+                             #:pipewire media-pipewire
                              #:login-manager login-manager
                              #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
                                                         (#:session/sway . ,(sway-start pipewire?)))
@@ -10313,13 +10313,13 @@ delete it when leaving the dynamic extent of this call."
   `(#:package-managers (#:pm/guix #:pm/nix)
     #:console? #t
     #:desktop? #t
-    #:multimedia #:media/pipewire
+    #:media #:media/pipewire
     #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
 
     ;; NEW package parameterization
     #:kmonad ,(@ (phrenetic packages haskell-apps) kmonad)
-    #:multimedia-pipewire ,(@ (gnu packages linux) pipewire)
+    #:media-pipewire ,(@ (gnu packages linux) pipewire)
     #:sessions-swaylock-effects? #t
     #:sessions-swaylock ,(@ (gnu packages wm) swaylock)
     #:sessions-swaylock-effects ,(@ (gnu packages wm) swaylock-effects)))
