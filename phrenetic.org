@@ -1859,6 +1859,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                                 efi-label
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
+                                (console-input %macbook-keyboard)
+                                (console-output %macbook-display)
                                 number-of-ttys
                                 bluetooth?
                                 stateless?)
@@ -1871,9 +1873,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
-    (console-keyboard-layouts $ #:kb-layout (assoc-ref %macbook-keyboard #:keyboard/layout))
+    (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
     (console-fonts $ #:number-of-ttys number-of-ttys
-                   #:hidpi? (assoc-ref %macbook-display #:hidpi?))
+                   #:hidpi? (assoc-ref console-output #:hidpi?))
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
