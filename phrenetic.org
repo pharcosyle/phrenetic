@@ -243,7 +243,6 @@ Run with ~sudo~.
             base-services
             classic-login
             greetd-login
-            %number-of-ttys
             certs
             accounts
             guix-pm
@@ -371,10 +370,6 @@ Run with ~sudo~.
                              (terminal-vt (number->string n))))
                           (iota number-of-ttys 1)))))
           (operating-system-user-services os))))
-#+end_src
-**** Shared
-#+begin_src scheme
-(define %number-of-ttys 6)
 #+end_src
 *** Certificates
 #+begin_src scheme
@@ -10113,7 +10108,7 @@ delete it when leaving the dynamic extent of this call."
   (let ((primary-name "pharcosyle")
         (aux-name "pcoulson")
         (guest-name "mellon")
-        (number-of-ttys os:%number-of-ttys)
+        (number-of-ttys 6)
         (bluetooth? #t)
         (stateless? #t))
     (as-> os:blank-os $
