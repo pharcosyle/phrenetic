@@ -261,15 +261,10 @@ Run with ~sudo~.
             btrfs
             tmpfs
             disk-encryption
-            %root-label
-            %luks-uuid
             swap
             stateless
-            %stateless-storage-paths
-            %stateless-mountables
             linux-kernel
             grub-efi
-            %efi-label
             virtualization
             console-keyboard-layouts
             console-fonts
@@ -870,10 +865,6 @@ Run with ~sudo~.
             (check? #f))
           (operating-system-file-systems os))))
 #+end_src
-***** Shared
-#+begin_src scheme
-(define %root-label "firmament")
-#+end_src
 **** Disk encryption
 Must succeed [[*File systems][File systems]] component.
 #+begin_src scheme
@@ -900,8 +891,6 @@ Must succeed [[*File systems][File systems]] component.
                                         (file-system-dependencies fs))))
                  fs))
            (operating-system-file-systems os))))))
-
-(define %luks-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5")
 #+end_src
 **** Swap
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
@@ -1011,23 +1000,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                      #:log-storage-dir ,machine-dir)))))))
 
     (stateless-guix-system $)))
-
-(define %stateless-storage-paths
-  '((#:storage/machine . "/.machine")
-    (#:storage/persist . "/.persist")))
-
-(define %stateless-mountables
-  (append
-   `(("boot" . "/boot")
-     ("guix-store" . "/gnu/store")
-     ("guix-var" . "/var/guix"))
-   (map (match-lambda
-          ((storage . dir)
-           (cons (case storage
-                   ((#:storage/machine) "machine")
-                   ((#:storage/persist) "persist"))
-                 dir)))
-        %stateless-storage-paths)))
 #+end_src
 ***** Service
 ****** Service type
@@ -1456,8 +1428,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
          (padding-size (- envblk-size (string-length message))))
     (string-append message
                    (apply string-append (repeat padding-size "#")))))
-
-(define %efi-label "genesis")
 #+end_src
 ***** U-Boot
 #+begin_src scheme
@@ -1966,14 +1936,13 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             virtualization
             kmonad-tool
             pipewire-media
-            %light-colors
-            %dark-colors
+            %colors
             %wallpapers
             font-library
-            fonts
-            font-packages-misc
-            %date-format
-            %time-format
+            fontsets
+            font-packages-useful
+            %date-formats
+            %time-formats
             xdg
             mesa
             doom-desktop
@@ -5844,7 +5813,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                  doom?
                  doom-tree-sitter?
                  login-shell
-                 (channels '(("https://nixos.org/channels/nixpkgs-unstable" . "nixpkgs")))
+                 (channels `((,%nixpkgs-unstable-url . "nixpkgs")))
                  allow-unfree?
                  extra-nixpkgs-config)
   (append
@@ -5933,6 +5902,8 @@ Some colors from the original Atom theme on which I based mine that might be use
           (if more
               (list more) '())
           (list "}" "\n"))))
+
+(define %nixpkgs-unstable-url "https://nixos.org/channels/nixpkgs-unstable")
 #+end_src
 ***** Source Nix profile
 #+begin_src sh :tangle (meta-in-dir "source-nix-profile")
@@ -6145,24 +6116,21 @@ nix-channel --update
 #+end_src
 **** Colors
 #+begin_src scheme
-;; Nothing here yet.
-(define %light-colors
-  '())
-
-(define %dark-colors
-  '((#:color/fg . "#dee2f8")
-    (#:color/bg . "#31343f")
-    (#:color/base0 . "#1e1f27")
-    (#:color/base8 . "#eef0fb") ; (doom-lighten "#dee2f8" 0.5)
-    (#:color/accent . "#8496ff")
-    (#:color/red . "#fb8578")
-    (#:color/orange . "#fdce5f")
-    (#:color/green . "#9fed9c")
-    (#:color/yellow . "#eddc91")
-    (#:color/blue . "#7db9fe")
-    (#:color/magenta . "#e29bf7")
-    (#:color/violet . "#aeb9f3")
-    (#:color/cyan . "#75e0f9")))
+(define %colors
+  '((#:colors/nuclear-light . ()) ; Nothing here yet.
+    (#:colors/nuclear-dark . ((#:color/fg . "#dee2f8")
+                              (#:color/bg . "#31343f")
+                              (#:color/base0 . "#1e1f27")
+                              (#:color/base8 . "#eef0fb") ; (doom-lighten "#dee2f8" 0.5)
+                              (#:color/accent . "#8496ff")
+                              (#:color/red . "#fb8578")
+                              (#:color/orange . "#fdce5f")
+                              (#:color/green . "#9fed9c")
+                              (#:color/yellow . "#eddc91")
+                              (#:color/blue . "#7db9fe")
+                              (#:color/magenta . "#e29bf7")
+                              (#:color/violet . "#aeb9f3")
+                              (#:color/cyan . "#75e0f9")))))
 #+end_src
 **** Wallpapers
 #+begin_src scheme
@@ -6186,20 +6154,22 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
-(define* (fonts #:key font-adobe-source-code-pro)
-  (let ((font-size 10))
-    `((#:fonts/mono . ((#:font/name . "Source Code Pro")
-                       (#:font/size . ,font-size)
-                       (#:font/weight . ,'medium)
-                       (#:font/package . ,font-adobe-source-code-pro)))
-      (#:fonts/sans . ((#:font/name . "Source Sans 3")
-                       (#:font/size . ,font-size)
-                       (#:font/package . ,font-adobe-source-sans)))
-      (#:fonts/serif . ((#:font/name . "Iosevka Etoile")
-                        (#:font/package . ,font-iosevka-etoile)))
-      (#:fonts/unicode . ((#:font/name . "Noto Sans")
-                          (#:font/package . ,font-google-noto))))))
-(define (font-packages-misc)
+(define fontsets
+  `((#:fontset/titanium . ,(lambda* (#:key font-adobe-source-code-pro)
+                             (let ((font-size 10))
+                               `((#:fonts/mono . ((#:font/name . "Source Code Pro")
+                                                  (#:font/size . ,font-size)
+                                                  (#:font/weight . ,'medium)
+                                                  (#:font/package . ,font-adobe-source-code-pro)))
+                                 (#:fonts/sans . ((#:font/name . "Source Sans 3")
+                                                  (#:font/size . ,font-size)
+                                                  (#:font/package . ,font-adobe-source-sans)))
+                                 (#:fonts/serif . ((#:font/name . "Iosevka Etoile")
+                                                   (#:font/package . ,font-iosevka-etoile)))
+                                 (#:fonts/unicode . ((#:font/name . "Noto Sans")
+                                                     (#:font/package . ,font-google-noto)))))))))
+
+(define (font-packages-useful)
   (list font-google-noto-emoji
         font-liberation))
 #+end_src
@@ -6241,9 +6211,11 @@ nix-channel --update
 #+end_src
 **** Date/time formats
 #+begin_src scheme
-(define %date-format "%a %b %-d")
+(define %date-formats
+  '((#:date-format/simple . "%a %b %-d")))
 
-(define %time-format "%-I:%M %p")
+(define %time-formats
+  '((#:time-format/simple . "%-I:%M %p")))
 #+end_src
 **** XDG
 #+begin_src scheme
@@ -8961,8 +8933,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
                            fonts
                            font-variable-pitch
-                           (date-format %date-format)
-                           (time-format %time-format)
+                           (date-format (assoc-ref %date-formats #:date-format/simple))
+                           (time-format (assoc-ref %time-formats #:time-format/simple))
                            emacs-interface
                            swaylock-effects?
                            swaylock
@@ -9165,11 +9137,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   media
                   media-pipewire
                   (theme #:theme/dark)
-                  (light-colors %light-colors)
-                  (dark-colors %dark-colors)
+                  (light-colors (assoc-ref %colors #:colors/nuclear-light))
+                  (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
                   (colors dark-colors)
                   font-adobe-source-code-pro
-                  (fonts (fonts #:font-adobe-source-code-pro font-adobe-source-code-pro))
+                  (fonts ((assoc-ref fontsets #:fontset/titanium)
+                          #:font-adobe-source-code-pro font-adobe-source-code-pro))
                   (font-variable-pitch #:fonts/sans)
                   (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
@@ -9250,7 +9223,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                            (map (lambda (font)
                                                   (assoc-ref font #:font/package))
                                                 fonts)
-                                           (font-packages-misc)))
+                                           (font-packages-useful)))
                  (xdg #:stateless? stateless?)
                  (mesa #:stateless? stateless?)
                  (flatpak-apps #:stateless? stateless?
@@ -10172,7 +10145,7 @@ delete it when leaving the dynamic extent of this call."
                #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
                #:stateless? stateless?)
       (if stateless?
-          (os:stateless $ #:storage-paths os:%stateless-storage-paths
+          (os:stateless $ #:storage-paths %stateless-storage-paths
                         #:hes `((,primary-name . ,(primary-he))
                                 (,aux-name . ,(aux-he))
                                 (,guest-name . ,(guest-he)))
@@ -10340,14 +10313,38 @@ delete it when leaving the dynamic extent of this call."
 
 
 
+
+
+;; TODO temporarily putting these two here as I removed them from system component
+(define %stateless-storage-paths
+  '((#:storage/machine . "/.machine")
+    (#:storage/persist . "/.persist")))
+
+(define %stateless-mountables
+  (append
+   `(("boot" . "/boot")
+     ("guix-store" . "/gnu/store")
+     ("guix-var" . "/var/guix"))
+   (map (match-lambda
+          ((storage . dir)
+           (cons (case storage
+                   ((#:storage/machine) "machine")
+                   ((#:storage/persist) "persist"))
+                 dir)))
+        %stateless-storage-paths)))
+
+
+
+
+
 ;; System+installer shared opts
 
-(define efi-label os:%efi-label)
+(define efi-label "genesis")
 (define filesystem #:filesystem/btrfs)
-(define root-label os:%root-label)
-(define mountables os:%stateless-mountables) ; TODO nb: had this in `(if stateless? ...)' before.
+(define root-label "firmament")
+(define mountables %stateless-mountables) ; TODO nb: had this in `(if stateless? ...)' before.
 (define disk-encryption? #t)
-(define luks-uuid os:%luks-uuid)
+(define luks-uuid "bdda56af-6ca0-4953-bc13-d5af8715e0e5")
 
 
 
