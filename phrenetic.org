@@ -1525,8 +1525,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+begin_src scheme
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
-      ;; (apple-broadcom-wireless #:bluetooth? bluetooth?)
-      ;; apple-facetime-camera
+      (apple-broadcom-wireless #:bluetooth? bluetooth?)
+      apple-facetime-camera
       apple-macbook-power-key))
 #+end_src
 ****** Wireless
@@ -6577,8 +6577,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
          (append
           `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
             (exec ,@idle-manager)
-            ;; (exec ,@(assoc-ref notifier #:notifier/daemon))
-            )
+            (exec ,@(assoc-ref notifier #:notifier/daemon)))
 
           (map (lambda (applet)
                  `(exec ,@applet))
@@ -6598,7 +6597,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
             (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-interface #:emacs/program))
             (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
-          ;; (sway-notifications notifier)
+          (sway-notifications notifier)
           (sway-status-bar status-bar)
           (sway-backlight)
           (sway-volume)
@@ -8965,7 +8964,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               #:external-programs
               `((#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
-                ;; (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
+                (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:status-bar . ,(waybar-status-bar))
                 (#:applets . ,(append
                                (if (and (member #:applet/connection-manager (or applets '()))
@@ -9000,8 +8999,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;; (swayidle-wm-piece #:session session
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
      ;;                    #:swayidle swayidle)
-     ;; (mako-wm-piece #:colors colors
-     ;;                #:font (assoc-ref fonts font-variable-pitch))
+     (mako-wm-piece #:colors colors
+                    #:font (assoc-ref fonts font-variable-pitch))
      (let ((bar-id 'main))
        (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
                                   (#:not-outputs . ,(->> outputs
