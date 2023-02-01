@@ -223,7 +223,6 @@ Run with ~sudo~.
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
-  #:use-module ((gnu system linux-initrd) #:select (base-initrd))
   #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
@@ -274,7 +273,7 @@ Run with ~sudo~.
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
 
-;; Not exported. Probably an oversight that'll get fixed at some point.
+;; Not exported. Probably an oversight that'll get fixed at some point (or send a patch upstream myself).
 (define greetd-terminals (@@ (gnu services base) greetd-terminals))
 (define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
 #+end_src
@@ -728,7 +727,7 @@ Run with ~sudo~.
                              (number->string tty-number))
                      (greetd-terminal-configuration
                       (inherit terminal-config)
-                      ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or submit a patch myself.
+                      ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or upstream a patch myself.
                       ;; (initial-session-user user)
                       ;; (initial-session-command "default-session-start")
                       )
@@ -1856,7 +1855,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services desktop)
-  ;; #:use-module (gnu home services guix)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services ssh)
@@ -1869,8 +1867,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation font-awesome))
-  #:use-module ((gnu packages freedesktop) #:select (elogind udiskie xdg-utils xdg-user-dirs desktop-file-utils xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages fonts) #:select (font-awesome font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation))
+  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
@@ -1939,7 +1937,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             %colors
             %wallpapers
             font-library
-            fontsets
+            %fontsets
             font-packages-useful
             %date-formats
             %time-formats
@@ -6163,7 +6161,7 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
-(define fontsets
+(define %fontsets
   `((#:fontset/titanium . ,(lambda* (#:key font-adobe-source-code-pro)
                              (let ((font-size 10))
                                `((#:fonts/mono . ((#:font/name . "Source Code Pro")
@@ -6182,7 +6180,7 @@ nix-channel --update
   (list font-google-noto-emoji
         font-liberation))
 #+end_src
-***** Source Code Pro :package:version:
+***** Fonts :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
 (define-module (phrenetic packages fonts)
   #:use-module (guix build-system font)
@@ -7647,7 +7645,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (if doom?
        (doom-clojure #:stateless? stateless?) '())))
 #+end_src
-***** Clojure tools :package:
+***** Clojure tools :package:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
 (define-module (phrenetic packages clojure)
   #:use-module (guix gexp)
@@ -8649,7 +8647,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
                    common-lisp))))))
 #+end_src
 ****** Tor browser
-Not available in Guix, install through Nix.
+Not available in Guix, install through Nix (=tor-browser-bundle-bin=).
 - TODO Add ~gtk-services~ param if Tor browser uses gtk settings (font, light/dark theme). Note that (the Nix package) seems to use use a fake Home directory under =~/.local/share/tor-browser=, notably there's a =.config/glib-2.0=, so it might not be possible (or even just advisable?) to use the global gtk settings. Screw it if so.
 #+begin_src scheme
 (define* (tor-browser-app #:key stateless?)
@@ -9150,7 +9148,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
                   (colors dark-colors)
                   font-adobe-source-code-pro
-                  (fonts ((assoc-ref fontsets #:fontset/titanium)
+                  (fonts ((assoc-ref %fontsets #:fontset/titanium)
                           #:font-adobe-source-code-pro font-adobe-source-code-pro))
                   (font-variable-pitch #:fonts/sans)
                   (portal-services (portal-services #:wayland? wayland?))
