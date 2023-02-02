@@ -257,6 +257,7 @@ Run with ~sudo~.
             gnome-desktop
             sway-wm
             host-info
+            ext4
             btrfs
             tmpfs
             disk-encryption
@@ -801,19 +802,19 @@ Run with ~sudo~.
 **** File systems
 ***** Ext4
 #+begin_src scheme
-;; (define-system-comp (ext4 #:key
-;;                           label
-;;                           mount-point
-;;                           flags
-;;                           options)
-;;   (file-systems
-;;    (cons* (file-system
-;;             (device (file-system-label label))
-;;             (mount-point mount-point)
-;;             (type "ext4")
-;;             (flags (or flags '()))
-;;             (options (alist->file-system-options (or options '()))))
-;;           (operating-system-file-systems os))))
+(define-system-comp (ext4 #:key
+                          label
+                          mount-point
+                          flags
+                          options)
+  (file-systems
+   (cons* (file-system
+            (device (file-system-label label))
+            (mount-point mount-point)
+            (type "ext4")
+            (flags (or flags '()))
+            (options (alist->file-system-options (or options '()))))
+          (operating-system-file-systems os))))
 #+end_src
 ***** Btrfs
 #+begin_src scheme
@@ -2209,13 +2210,12 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                          (home-bash-extension
                           (bash-logout
                            (list shepherd-stop-cmd)))))
-        ;; ((#:shell/zsh)
-        ;;  (simple-service name
-        ;;                  home-zsh-service-type
-        ;;                  (home-zsh-extension
-        ;;                   (zlogout
-        ;;                    (list shepherd-stop-cmd)))))
-        ))
+        ((#:shell/zsh)
+         (simple-service name
+                         home-zsh-service-type
+                         (home-zsh-extension
+                          (zlogout
+                           (list shepherd-stop-cmd)))))))
 
     (match-let (((default-interactive-shell _ ...) interactive-shells))
       (when-not (equal? login-shell default-interactive-shell)
@@ -5834,13 +5834,12 @@ Some colors from the original Atom theme on which I based mine that might be use
                          (home-bash-extension
                           (bash-profile
                            (list source)))))
-        ;; ((#:shell/zsh)
-        ;;  (simple-service name
-        ;;                  home-zsh-service-type
-        ;;                  (home-zsh-extension
-        ;;                   (zprofile
-        ;;                    (list source)))))
-        ))
+        ((#:shell/zsh)
+         (simple-service name
+                         home-zsh-service-type
+                         (home-zsh-extension
+                          (zprofile
+                           (list source)))))))
 
     (simple-service
      'nix-add-channels
@@ -7949,12 +7948,12 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                             "eval" (quoted-subshell (list
                                                      #$direnv-bin "hook" #$shell-name))))))))))
             (case shell
-              ;; ((#:shell/bash) (simple-service
-              ;;                  'direnv-bash-hook
-              ;;                  home-bash-service-type
-              ;;                  (home-bash-extension
-              ;;                   (bashrc
-              ;;                    (list (direnv-hook "bash"))))))
+              ((#:shell/bash) (simple-service
+                               'direnv-bash-hook
+                               home-bash-service-type
+                               (home-bash-extension
+                                (bashrc
+                                 (list (direnv-hook "bash"))))))
               ((#:shell/zsh) (simple-service
                               'direnv-zsh-hook
                               home-zsh-service-type
