@@ -6754,7 +6754,7 @@ Maybe this shouldn't be a standalone component but rather added by programs that
            (line-uses-ring))
 
          (if image
-             (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'.
+             (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'. Maybe upstream a patch.
              '())
 
          (if effects?
@@ -7488,6 +7488,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   - [2022-04-13 Wed] dependencies don't need to be propagated?
     [[https://github.com/guix-mirror/guix/commit/fc89b50b7bb2edbc38b20adf8c899934dedcb6c3][gnu: awscli: Do not propagate inputs. · guix-mirror/guix@fc89b50 · GitHub]]
     This is for v1, might not apply here. At the time of this writing, this commit is only two hours old, see if there's any follow-up.
+  - [2023-02-03 Fri] new upstream package
+    An =awscli-2= package was added in [[https://github.com/guix-mirror/guix/commit/58f6b246a6c3f3cf1cfdcce6bd2cdb3a26c23c9b][this commit]].
 #+begin_src scheme
 (define-module (phrenetic packages aws)
   #:use-module (guix build-system python)
