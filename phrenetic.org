@@ -2552,7 +2552,10 @@ SAVEHIST=$HISTSIZE
        (origin
          (inherit (package-source $))
          (patches
-          (-> emacs package-source origin-patches)))))))
+          (-> emacs package-source origin-patches))))
+      (inputs
+       (modify-inputs (package-inputs $)
+         (delete "tree-sitter"))))))
 #+end_src
 *** Doom
 #+begin_src scheme
