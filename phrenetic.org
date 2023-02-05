@@ -1536,8 +1536,10 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
 (define-system-comp (apple-broadcom-wireless #:key bluetooth?)
   (kernel-loadable-modules (cons* broadcom-sta
                                   (operating-system-kernel-loadable-modules os)))
-  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
-                                    "b43,b43legacy,ssb,bcm43xx,brcm80211,brcmfmac,brcmsmac,bcma"))
+  (kernel-arguments (add-or-update-kernel-argument
+                     (operating-system-user-kernel-arguments os)
+                     "modprobe.blacklist"
+                     '("b43" "b43legacy" "ssb" "bcm43xx" "brcm80211" "brcmfmac" "brcmsmac" "bcma")))
   (firmware (append
              (operating-system-firmware os)
              (if bluetooth?
@@ -1591,8 +1593,10 @@ Adapt the Nix module like I did for the kernel module and firmware:
 (define-system-comp (apple-facetime-camera)
   (kernel-loadable-modules (cons* facetimehd
                                   (operating-system-kernel-loadable-modules os)))
-  (kernel-arguments (with-blacklist (operating-system-user-kernel-arguments os)
-                                    "bdc_pci"))
+  (kernel-arguments (add-or-update-kernel-arguments
+                     (operating-system-user-kernel-arguments os)
+                     "modprobe.blacklist"
+                     '("bdc_pci")))
   (firmware (cons* facetimehd-firmware
                    (operating-system-firmware os)))
   (services
@@ -1722,17 +1726,19 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 #+end_src
 ****** Shared
 #+begin_src scheme
-(define (with-blacklist kernel-args new-kernel-args)
-  (let* ((blacklist-param "modprobe.blacklist")
-         (blacklist? (lambda (arg)
-                       (string-prefix? blacklist-param arg))))
-    (if (any blacklist? kernel-args)
-        (map (lambda (arg)
-               (if (blacklist? arg)
-                   (string-append arg "," new-kernel-args)
-                   arg))
-             kernel-args)
-        (cons* (string-append blacklist-param "=" new-kernel-args) kernel-args))))
+(define (add-or-update-kernel-argument kargs param-name vs)
+  (let ((param? (lambda (p)
+                  (and (string? p)
+                       (string-prefix? param-name p))))
+        (vs* (string-join vs ",")))
+    (if (any param? kargs)
+        (map (lambda (p)
+               (if (param? p)
+                   (string-append p "," vs*)
+                   p))
+             kargs)
+        (cons (string-append param-name "=" vs*)
+              kargs))))
 #+end_src
 *** Shared
 #+begin_src scheme
