@@ -6077,10 +6077,10 @@ nix-channel --update
                                   (list "<" file ">" "\n"))
                                 entries))
          (section (let ((format-component
-                         (lambda (component)
-                           (match component
-                             ((? symbol? c) (symbol->string c))
-                             (c c)))))
+                         (lambda (c)
+                           (cond
+                            ((symbol? c) (symbol->string c))
+                            (else c)))))
                     (append
                      (list (format-component section) " {" "\n")
                      (append-map (lambda (entry)
