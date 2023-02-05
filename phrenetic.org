@@ -6078,9 +6078,9 @@ nix-channel --update
                                 entries))
          (section (let ((format-component
                          (lambda (c)
-                           (cond
-                            ((symbol? c) (symbol->string c))
-                            (else c)))))
+                           (if (symbol? c)
+                               (symbol->string c)
+                               c))))
                     (append
                      (list (format-component section) " {" "\n")
                      (append-map (lambda (entry)
