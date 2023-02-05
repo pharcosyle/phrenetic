@@ -213,7 +213,7 @@ Run with ~sudo~.
   #:use-module (gnu services admin)
   #:use-module (gnu services base)
   #:use-module (gnu services desktop)
-  #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
+  #:use-module (gnu services linux)
   #:use-module (gnu services networking)
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
@@ -262,6 +262,8 @@ Run with ~sudo~.
             tmpfs
             disk-encryption
             swap
+            zram-swap
+            zswap
             stateless
             linux-kernel
             grub-efi
@@ -893,6 +895,7 @@ Must succeed [[*File systems][File systems]] component.
            (operating-system-file-systems os))))))
 #+end_src
 **** Swap
+***** Disk-backed
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
 (define-system-comp (swap #:key
@@ -956,6 +959,43 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
       ;; ...
       ;; Find the swap device using the same (somewhat complex) logic as `swap-service-type' and run `mkswap' on it (if that hasn't been done already, donno how I'd check).
       ))
+#+end_src
+****** Zswap
+Works only if disk-backed swap is available, consider [[*Zram][Zram]] otherwise.
+#+begin_src scheme
+(define-system-comp (zswap #:key
+                           (compressor "zstd")
+                           (allocator "z3fold")
+                           (max-pool-percent 20))
+  (kernel-arguments (append
+                     (operating-system-user-kernel-arguments os)
+                     (map (match-lambda
+                            ((k . v)
+                             (string-append k "=" v)))
+                          `(("zswap.enabled" . "1")
+                            ("zswap.compressor" . ,compressor)
+                            ("zswap.zpool" . ,allocator)
+                            ("zswap.max_pool_percent" . ,(number->string max-pool-percent))))))
+  (initrd-modules (cons* compressor
+                         allocator
+                         (operating-system-initrd-modules os))))
+#+end_src
+***** Zram
+Useful when disk-backed swap doesn't make sense (e.g. a system on a flash drive where there's no room or I/O would be slow), consider [[*Zswap][Zswap]] otherise.
+#+begin_src scheme
+(define-system-comp (zram-swap #:key
+                               (compression 'zstd)
+                               size
+                               memory-limit
+                               priority)
+  (services
+   (cons* (service zram-device-service-type
+                   (zram-device-configuration
+                    (size size)
+                    (compression-algorithm compression)
+                    (memory-limit memory-limit)
+                    (priority priority)))
+          (operating-system-user-services os))))
 #+end_src
 **** Stateless
 Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
@@ -10162,6 +10202,7 @@ delete it when leaving the dynamic extent of this call."
                #:file-size swap-size
                #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
                #:stateless? stateless?)
+      (os:zswap $)
       (if stateless?
           (os:stateless $ #:storage-paths %stateless-storage-paths
                         #:hes `((,primary-name . ,(primary-he))
