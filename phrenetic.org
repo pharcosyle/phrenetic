@@ -1633,7 +1633,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
 (define-system-comp (apple-facetime-camera)
   (kernel-loadable-modules (cons* facetimehd
                                   (operating-system-kernel-loadable-modules os)))
-  (kernel-arguments (add-or-update-kernel-arguments
+  (kernel-arguments (add-or-update-kernel-argument
                      (operating-system-user-kernel-arguments os)
                      "modprobe.blacklist"
                      '("bdc_pci")))
