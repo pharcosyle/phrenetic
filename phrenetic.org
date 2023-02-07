@@ -6206,9 +6206,9 @@ nix-channel --update
                                                   (#:font/size . ,font-size)
                                                   (#:font/weight . ,'medium)
                                                   (#:font/package . ,font-adobe-source-code-pro)))
-                                 (#:fonts/sans . ((#:font/name . "Source Sans 3")
-                                                  (#:font/size . ,font-size)
-                                                  (#:font/package . ,font-adobe-source-sans)))))))))
+                                 (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
+                                                            (#:font/size . ,font-size)
+                                                            (#:font/package . ,font-adobe-source-sans)))))))))
 
 (define (font-packages-useful)
   (list font-iosevka-etoile
@@ -8977,7 +8977,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            colors
                            (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
                            fonts
-                           font-variable-pitch
                            (date-format (assoc-ref %date-formats #:date-format/simple))
                            (time-format (assoc-ref %time-formats #:time-format/simple))
                            emacs-interface
@@ -9035,7 +9034,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                 (#:emacs-interface . ,emacs-interface)))
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
-                        #:font (assoc-ref fonts font-variable-pitch)
+                        #:font (assoc-ref fonts #:fonts/variable-pitch)
                         #:date-format date-format
                         #:time-format time-format
                         #:effects? swaylock-effects?
@@ -9045,7 +9044,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
      ;;                    #:swayidle swayidle)
      (mako-wm-piece #:colors colors
-                    #:font (assoc-ref fonts font-variable-pitch))
+                    #:font (assoc-ref fonts #:fonts/variable-pitch))
      (let ((bar-id 'main))
        (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
                                   (#:not-outputs . ,(->> outputs
@@ -9054,7 +9053,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                          (map (lambda (o)
                                                                 (assoc-ref outputs #:display/ephemeral-name)))))))
                         #:colors colors
-                        #:font (assoc-ref fonts font-variable-pitch)
+                        #:font (assoc-ref fonts #:fonts/variable-pitch)
                         #:modules (waybar-modules #:bar-id bar-id
                                                   #:session session
                                                   #:date-format date-format
@@ -9115,12 +9114,11 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        theme
                        colors
                        fonts
-                       font-variable-pitch
                        wayland?
                        google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
-                           #:font (assoc-ref fonts font-variable-pitch)
+                           #:font (assoc-ref fonts #:fonts/variable-pitch)
                            #:font-monospace (assoc-ref fonts #:fonts/mono)))
         ;; (qt (qt-services #:stateless? stateless?))
         )
@@ -9132,7 +9130,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (rofi-app #:stateless? stateless?
                    #:wayland? wayland?
                    #:colors colors
-                   #:font (assoc-ref fonts font-variable-pitch)))
+                   #:font (assoc-ref fonts #:fonts/variable-pitch)))
      ;; (zoom-app #:stateless? stateless?
      ;;           #:qt-services qt)
      ;; (gimp-app #:stateless? stateless?
@@ -9188,7 +9186,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   font-adobe-source-code-pro
                   (fonts ((assoc-ref %fontsets #:fontset/titanium)
                           #:font-adobe-source-code-pro font-adobe-source-code-pro))
-                  (font-variable-pitch #:fonts/sans)
                   (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
                   login-manager
@@ -9230,7 +9227,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                   #:portal-services portal-services
                                                                   #:colors colors
                                                                   #:fonts fonts
-                                                                  #:font-variable-pitch font-variable-pitch
                                                                   #:emacs-interface emacs-interface
                                                                   #:swaylock-effects? sessions-swaylock-effects?
                                                                   #:swaylock sessions-swaylock
@@ -9256,7 +9252,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                    #:light-colors light-colors
                                    #:dark-colors dark-colors
                                    #:font (assoc-ref fonts #:fonts/mono)
-                                   #:font-variable-pitch (assoc-ref fonts font-variable-pitch))
+                                   #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch))
                      '()))
                 '())
             (if desktop?
@@ -9289,7 +9285,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                          #:theme theme
                          #:colors colors
                          #:fonts fonts
-                         #:font-variable-pitch font-variable-pitch
                          #:wayland? wayland?
                          #:google-chrome apps-google-chrome)))
       (append
