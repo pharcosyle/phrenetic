@@ -5522,13 +5522,15 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        light-colors
                        dark-colors
                        font
-                       font-variable-pitch)
+                       font-variable-pitch
+                       font-size)
   (append
    (doom-themes #:theme theme
                 #:light-colors light-colors
                 #:dark-colors dark-colors)
    (doom-fonts #:font font
-               #:font-variable-pitch font-variable-pitch)))
+               #:font-variable-pitch font-variable-pitch
+               #:font-size font-size)))
 #+end_src
 ***** Themes
 #+begin_src scheme
@@ -5662,7 +5664,8 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+begin_src scheme
 (define* (doom-fonts #:key
                      font
-                     font-variable-pitch)
+                     font-variable-pitch
+                     font-size)
   (append
    (list
     (doom-service
@@ -5676,16 +5679,23 @@ Some colors from the original Atom theme on which I based mine that might be use
         'doom-font
         (font-spec ;; :family ,(assoc-ref font #:font/name)
                    ;; Work around what I suspect is a PGTK issue. It's doesn't happen in Emacs 29, remove this when its released.
-                   :family ,(if (equal? (assoc-ref font #:font/weight) 'medium)
+                   :family ,(if (equal? (assoc-ref font #:font/weight) "Medium")
                                 (string-append (assoc-ref font #:font/name) " Medium")
                                 (assoc-ref font #:font/name))
-                   :size ,(+ (assoc-ref font #:font/size) 2)
-                   :weight ',(or (assoc-ref font #:font/weight) 'normal)))
+                   :size ,(+ font-size 2)
+                   :weight ',(if-let ((weight (assoc-ref font #:font/weight)))
+                                     (font-weight->emacs-face-weight weight)
+                                     'normal)))
        (biome--set-font-safe
         'doom-variable-pitch-font
         (font-spec :family ,(assoc-ref font-variable-pitch #:font/name))))))
 
    (doom-dash)))
+
+(define (font-weight->emacs-face-weight weight)
+  (-> weight
+      string-downcase
+      string->symbol))
 #+end_src
 *** Package management
 **** Guix
@@ -6201,14 +6211,11 @@ nix-channel --update
 
 (define %fontsets
   `((#:fontset/titanium . ,(lambda* (#:key font-adobe-source-code-pro)
-                             (let ((font-size 10))
-                               `((#:fonts/mono . ((#:font/name . "Source Code Pro")
-                                                  (#:font/size . ,font-size)
-                                                  (#:font/weight . ,'medium)
-                                                  (#:font/package . ,font-adobe-source-code-pro)))
-                                 (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
-                                                            (#:font/size . ,font-size)
-                                                            (#:font/package . ,font-adobe-source-sans)))))))))
+                             `((#:fonts/mono . ((#:font/name . "Source Code Pro")
+                                                (#:font/weight . "Medium")
+                                                (#:font/package . ,font-adobe-source-code-pro)))
+                               (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
+                                                          (#:font/package . ,font-adobe-source-sans))))))))
 
 (define (font-packages-useful)
   (list font-iosevka-etoile
@@ -6879,7 +6886,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+begin_src scheme
 (define* (mako-wm-piece #:key
                         colors
-                        font)
+                        font
+                        font-size)
   (list
    (simple-service
     'mako-add-packages
@@ -6897,7 +6905,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                             (assoc-ref colors $)
                             (string-append $ (or alpha ""))
                             (string->symbol $)))))
-           `((global ((font . ,(string->symbol (font-specification font)))
+           `((global ((font . ,(string->symbol (pango-font-description font font-size)))
                       (max-icon-size . 32)
                       (text-color . ,(clr #:color/fg))
                       (background-color . ,(clr #:color/bg "e6")) ; 90% alpha
@@ -7484,12 +7492,13 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                    #:key (ini-serialize ini-serialize))
   (apply mixed-text-file name (ini-serialize config)))
 
-(define (font-specification font)
+(define* (pango-font-description font #:optional size)
   (string-join
-   (list
-    (assoc-ref font #:font/name)
-    (number->string
-     (assoc-ref font #:font/size)))))
+   (append
+    (list
+     (assoc-ref font #:font/name))
+    (if size
+        (list (number->string size)) '()))))
 #+end_src
 *** Virtualization
 #+begin_src scheme
@@ -8312,7 +8321,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                    stateless?
                    wayland?
                    colors
-                   font)
+                   font
+                   font-size)
   (list
    (service
     home-rofi-service-type
@@ -8325,7 +8335,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
           ((modi . "run,ssh,drun")
            (drun-show-actions . #t)
            (show-icons . #t)
-           (font . ,(font-specification font))
+           (font . ,(pango-font-description font font-size))
 
            (kb-element-next . "")
            (kb-row-select . "Tab,Control+i")
@@ -8421,7 +8431,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 #+begin_src scheme
 (define* (alacritty-app #:key
                         colors
-                        font)
+                        font
+                        font-size)
   (list
    (service
     home-alacritty-service-type
@@ -8435,8 +8446,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
            `((font . ((normal . ,(append
                                   `((family . ,(assoc-ref font #:font/name)))
                                   (if-let ((weight (assoc-ref font #:font/weight)))
-                                          `((style . ,(font-weight->style weight))) '())))
-                      (size . ,(- (assoc-ref font #:font/size) 1)))))
+                                          `((style . ,(font-weight->alacritty-style weight))) '())))
+                      (size . ,(- font-size 1)))))
            '())
        (let ((clr (lambda (color)
                     (assoc-ref colors color))))
@@ -8451,10 +8462,10 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                  (magenta . ,(clr #:color/magenta))
                                  (cyan . ,(clr #:color/cyan))))))))))))))
 
-(define (font-weight->style weight)
+(define (font-weight->alacritty-style weight)
   (->> weight
-       symbol->string
        (string-delete #\-)
+       string-downcase
        string-capitalize))
 
 (define (alacritty-terminal)
@@ -8727,7 +8738,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                        stateless?
                        theme
                        font
-                       font-monospace)
+                       font-monospace
+                       font-size)
   (list
    (simple-service
     'gtk-add-packages
@@ -8755,9 +8767,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                               ((#:theme/light) "Arc")
                               ((#:theme/dark) "Arc-Dark"))))
              (font-name . ,(quoted-symbol
-                            (font-specification font)))
+                            (pango-font-description font font-size)))
              (monospace-font-name . ,(quoted-symbol
-                                      (font-specification font-monospace))))))))))
+                                      (pango-font-description font-monospace font-size))))))))))
 
    (when stateless?
      (home-stateless-service
@@ -8977,6 +8989,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                            colors
                            (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
                            fonts
+                           base-font-size
                            (date-format (assoc-ref %date-formats #:date-format/simple))
                            (time-format (assoc-ref %time-formats #:time-format/simple))
                            emacs-interface
@@ -9044,7 +9057,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
      ;;                    #:swayidle swayidle)
      (mako-wm-piece #:colors colors
-                    #:font (assoc-ref fonts #:fonts/variable-pitch))
+                    #:font (assoc-ref fonts #:fonts/variable-pitch)
+                    #:font-size base-font-size)
      (let ((bar-id 'main))
        (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
                                   (#:not-outputs . ,(->> outputs
@@ -9114,12 +9128,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        theme
                        colors
                        fonts
+                       base-font-size
                        wayland?
                        google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
                            #:font (assoc-ref fonts #:fonts/variable-pitch)
-                           #:font-monospace (assoc-ref fonts #:fonts/mono)))
+                           #:font-monospace (assoc-ref fonts #:fonts/mono)
+                           #:font-size base-font-size))
         ;; (qt (qt-services #:stateless? stateless?))
         )
     (append
@@ -9130,13 +9146,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (rofi-app #:stateless? stateless?
                    #:wayland? wayland?
                    #:colors colors
-                   #:font (assoc-ref fonts #:fonts/variable-pitch)))
+                   #:font (assoc-ref fonts #:fonts/variable-pitch)
+                   #:font-size base-font-size))
      ;; (zoom-app #:stateless? stateless?
      ;;           #:qt-services qt)
      ;; (gimp-app #:stateless? stateless?
      ;;           #:gtk-services gtk)
      (alacritty-app #:colors colors
-                    #:font (assoc-ref fonts #:fonts/mono))
+                    #:font (assoc-ref fonts #:fonts/mono)
+                    #:font-size base-font-size)
      (if doom?
          (doom-vterm-app #:setup-zsh? #t
                          ;; TODO
@@ -9186,6 +9204,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   font-adobe-source-code-pro
                   (fonts ((assoc-ref %fontsets #:fontset/titanium)
                           #:font-adobe-source-code-pro font-adobe-source-code-pro))
+                  (base-font-size 10)
                   (portal-services (portal-services #:wayland? wayland?))
                   connection-manager
                   login-manager
@@ -9227,6 +9246,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                                   #:portal-services portal-services
                                                                   #:colors colors
                                                                   #:fonts fonts
+                                                                  #:base-font-size base-font-size
                                                                   #:emacs-interface emacs-interface
                                                                   #:swaylock-effects? sessions-swaylock-effects?
                                                                   #:swaylock sessions-swaylock
@@ -9252,7 +9272,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                    #:light-colors light-colors
                                    #:dark-colors dark-colors
                                    #:font (assoc-ref fonts #:fonts/mono)
-                                   #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch))
+                                   #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch)
+                                   #:font-size base-font-size)
                      '()))
                 '())
             (if desktop?
@@ -9285,6 +9306,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                          #:theme theme
                          #:colors colors
                          #:fonts fonts
+                         #:base-font-size base-font-size
                          #:wayland? wayland?
                          #:google-chrome apps-google-chrome)))
       (append
