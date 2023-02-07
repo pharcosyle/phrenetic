@@ -5522,17 +5522,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                        light-colors
                        dark-colors
                        font
-                       font-variable-pitch
-                       font-unicode
-                       font-serif)
+                       font-variable-pitch)
   (append
    (doom-themes #:theme theme
                 #:light-colors light-colors
                 #:dark-colors dark-colors)
    (doom-fonts #:font font
-               #:font-variable-pitch font-variable-pitch
-               #:font-unicode font-unicode
-               #:font-serif font-serif)))
+               #:font-variable-pitch font-variable-pitch)))
 #+end_src
 ***** Themes
 #+begin_src scheme
@@ -5666,9 +5662,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 #+begin_src scheme
 (define* (doom-fonts #:key
                      font
-                     font-variable-pitch
-                     font-unicode
-                     font-serif)
+                     font-variable-pitch)
   (append
    (list
     (doom-service
@@ -5687,14 +5681,9 @@ Some colors from the original Atom theme on which I based mine that might be use
                                 (assoc-ref font #:font/name))
                    :size ,(+ (assoc-ref font #:font/size) 2)
                    :weight ',(or (assoc-ref font #:font/weight) 'normal)))
-
-       (-each '((doom-variable-pitch-font ,(assoc-ref font-variable-pitch #:font/name))
-                (doom-unicode-font ,(assoc-ref font-unicode #:font/name))
-                (doom-serif-font ,(assoc-ref font-serif #:font/name)))
-              (-lambda ((font-sym family))
-                       (biome--set-font-safe
-                        font-sym
-                        (font-spec :family family)))))))
+       (biome--set-font-safe
+        'doom-variable-pitch-font
+        (font-spec :family ,(assoc-ref font-variable-pitch #:font/name))))))
 
    (doom-dash)))
 #+end_src
@@ -6219,14 +6208,12 @@ nix-channel --update
                                                   (#:font/package . ,font-adobe-source-code-pro)))
                                  (#:fonts/sans . ((#:font/name . "Source Sans 3")
                                                   (#:font/size . ,font-size)
-                                                  (#:font/package . ,font-adobe-source-sans)))
-                                 (#:fonts/serif . ((#:font/name . "Iosevka Etoile")
-                                                   (#:font/package . ,font-iosevka-etoile)))
-                                 (#:fonts/unicode . ((#:font/name . "Noto Sans")
-                                                     (#:font/package . ,font-google-noto)))))))))
+                                                  (#:font/package . ,font-adobe-source-sans)))))))))
 
 (define (font-packages-useful)
-  (list font-google-noto-emoji
+  (list font-iosevka-etoile
+        font-google-noto
+        font-google-noto-emoji
         font-liberation))
 #+end_src
 ***** Fonts :package:version:upstream:
@@ -9269,9 +9256,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                    #:light-colors light-colors
                                    #:dark-colors dark-colors
                                    #:font (assoc-ref fonts #:fonts/mono)
-                                   #:font-variable-pitch (assoc-ref fonts font-variable-pitch)
-                                   #:font-unicode (assoc-ref fonts #:fonts/unicode)
-                                   #:font-serif (assoc-ref fonts #:fonts/serif))
+                                   #:font-variable-pitch (assoc-ref fonts font-variable-pitch))
                      '()))
                 '())
             (if desktop?
