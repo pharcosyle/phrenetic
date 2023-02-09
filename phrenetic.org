@@ -1479,7 +1479,17 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                                   system
                                   nonfree?
                                   linux-customization-params)
-  (kernel (let ((kernel (get-linux system nonfree?)))
+  (kernel (let (;; TODO  Remove this workaround when https://gitlab.com/nonguix/nonguix/-/issues/238 is resolved.
+                ;; (kernel (get-linux system nonfree?))
+                (kernel (let ((p (get-linux system nonfree?)))
+                          (package
+                            (inherit p)
+                            (source
+                             (origin
+                               (inherit (package-source p))
+                               (sha256
+                                (base32
+                                 "17fifhfh2jrvlhry696n428ldl5ag3g2km5l9hx8gx8wm6dr3qhb"))))))))
             (if linux-customization-params
                 (apply customize-linux
                        #:linux kernel
@@ -1565,9 +1575,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+begin_src scheme
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
-      ;; TODO Follow https://gitlab.com/nonguix/nonguix/-/issues/238 and comment these back in when it's resolved.
-      ;; (apple-broadcom-wireless #:bluetooth? bluetooth?)
-      ;; apple-facetime-camera
+      (apple-broadcom-wireless #:bluetooth? bluetooth?)
+      apple-facetime-camera
       apple-macbook-power-key))
 #+end_src
 ****** Wireless
