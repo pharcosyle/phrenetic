@@ -1897,6 +1897,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 :END:
 #+begin_src scheme
 (define-module (phrenetic home)
+  #:use-module ((guix download) #:select (url-fetch))
   #:use-module (guix gexp)
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
@@ -6190,7 +6191,13 @@ nix-channel --update
 **** Wallpapers
 #+begin_src scheme
 (define %wallpapers
-  `((#:wallpaper/alucard . ,(local-file "wallpapers/alucard.png"))))
+  `((#:wallpaper/alucard . ,(origin
+                              (method url-fetch)
+                              (uri "https://i.redd.it/ba5x648wvsu21.png")
+                              (sha256
+                               (base32
+                                "1kjpbjxsrq6671his86z4grx7z06bkbg5025sxnmnwahibdfvhc1"))
+                              (file-name "alucard.png")))))
 #+end_src
 **** Font library
 #+begin_src scheme
