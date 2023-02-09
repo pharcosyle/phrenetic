@@ -2063,15 +2063,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   (options->transformation
    '((with-commit . "sway=1.8"))))
 (define sway (transform-sway (@ (rde packages) sway-latest)))
-
-;; TODO remove this fix when upstreamed
-(define mako
-  (let ((pkg (@ (gnu packages wm) mako)))
-    (package
-      (inherit pkg)
-      (native-inputs
-       (modify-inputs (package-native-inputs pkg)
-                      (prepend (@ (gnu packages linux) libcap)))))))
 #+end_src
 ** Create
 #+begin_src scheme
