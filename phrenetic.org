@@ -10211,7 +10211,7 @@ delete it when leaving the dynamic extent of this call."
                #:file-size swap-size
                #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
                #:stateless? stateless?)
-      (os:zswap $)
+      ;; (os:zswap $)
       (if stateless?
           (os:stateless $ #:storage-paths %stateless-storage-paths
                         #:hes `((,primary-name . ,(primary-he))
