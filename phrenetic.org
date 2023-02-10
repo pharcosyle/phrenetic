@@ -1790,13 +1790,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (cons (string-append param-name "=" vs*)
               kargs))))
 #+end_src
-*** Shared
-#+begin_src scheme
-(define (remove-services-by-type services kinds)
-  (remove (lambda (s)
-            (member (service-kind s) kinds))
-          services))
-#+end_src
 ** Composite components
 *** Base
 #+begin_src scheme
@@ -9863,11 +9856,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
   #:use-module (guix build-system trivial)
   #:use-module (guix git-download)
   #:use-module (guix packages)
+  #:use-module ((gnu services) #:select (service-kind))
   #:use-module (phrenetic common utils)
+  #:use-module ((srfi srfi-1) #:select (remove))
   #:export (simple-package
             with-git-url
             with-git-version
-            with-git-commit))
+            with-git-commit
+            remove-services-by-type))
 
 (re-export-public-interface (phrenetic common utils))
 #+end_src
@@ -9935,6 +9931,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (base32
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
+#+end_src
+**** Services
+#+begin_src scheme
+(define (remove-services-by-type services kinds)
+  (remove (lambda (s)
+            (member (service-kind s) kinds))
+          services))
 #+end_src
 ** Build
 :PROPERTIES:
