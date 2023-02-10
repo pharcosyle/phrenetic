@@ -1976,6 +1976,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:export (create-he
             stateless
             shells
+            xdg-base-directories
+            xdg-trash
             emacs-editor
             emacs-interface
             emacs-new-frame
@@ -2436,6 +2438,38 @@ SAVEHIST=$HISTSIZE
                    (#:storage . #:storage/persist))
                   ((#:path . ("eshell/z" #:doom-base #:data))
                    (#:storage . #:storage/persist))))))))
+#+end_src
+*** XDG
+**** Base directories
+#+begin_src scheme
+(define* (xdg-base-directories #:key stateless?)
+  (list
+   ;; Allowing parameterization not done. I'm unlikely to want to change any of these dirs and I'm lazy.
+   ;; (simple-service
+   ;;  'xdg-base-directories
+   ;;  home-xdg-base-directories-service-type
+   ;;  (xdg-base-directories-configuration
+   ;;   ...))
+
+   (when stateless?
+     (home-stateless-service
+      'xdg-base-directories
+      #:state
+      '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
+         (#:storage . #:storage/machine)))))))
+#+end_src
+**** Trash
+~home-xdg-base-directories-service-type~ has an activation service to create the directories if they don't already exist, perhaps I should do the same thing here if only for consistency. The freedesktop specs for both don't require that the directories already exists so I don't know why we bother.
+#+begin_src scheme
+(define* (xdg-trash #:key stateless?)
+  (list
+   (when stateless?
+     (home-stateless-service
+      'xdg-trash
+      #:state
+      '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
+         (#:storage . #:storage/machine)
+         (#:mode . #o700)))))))
 #+end_src
 *** Emacs
 #+begin_src scheme
@@ -6313,34 +6347,27 @@ nix-channel --update
      (home-stateless-service
       'xdg-user-directories
       #:state
-      (append
-       '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
-          (#:storage . #:storage/machine)
-          (#:mode . #o700))
-         ;; Handle `XDG_LOG_HOME' here even though it isn't officially part of the XDG specification ("at least not yet", according to Andrew Tropin).
-         ((#:path . (#:xdg-base "XDG_LOG_HOME"))
-          (#:storage . #:storage/machine)))
-       (let ((normalize
-              (lambda (dir)
-                (as-> dir $
-                      (let ((home-prefix "$HOME/"))
-                        (if (string-prefix? home-prefix $)
-                            (string-drop $ (string-length home-prefix))
-                            $))
-                      (string-append $ "/")))))
-         (append
-          (map (lambda (dir)
-                 `((#:path . ,(normalize dir))
-                   (#:storage . #:storage/persist)))
-               (list (assoc-ref dirs #:desktop)
-                     (assoc-ref dirs #:documents)
-                     (assoc-ref dirs #:music)
-                     (assoc-ref dirs #:pictures)
-                     (assoc-ref dirs #:publicshare)
-                     (assoc-ref dirs #:templates)
-                     (assoc-ref dirs #:videos)))
-          `(((#:path . ,(normalize (assoc-ref dirs #:download)))
-             (#:storage . #:storage/machine))))))))))
+      (let ((normalize
+             (lambda (dir)
+               (as-> dir $
+                     (let ((home-prefix "$HOME/"))
+                       (if (string-prefix? home-prefix $)
+                           (string-drop $ (string-length home-prefix))
+                           $))
+                     (string-append $ "/")))))
+        (append
+         (map (lambda (dir)
+                `((#:path . ,(normalize dir))
+                  (#:storage . #:storage/persist)))
+              (list (assoc-ref dirs #:desktop)
+                    (assoc-ref dirs #:documents)
+                    (assoc-ref dirs #:music)
+                    (assoc-ref dirs #:pictures)
+                    (assoc-ref dirs #:publicshare)
+                    (assoc-ref dirs #:templates)
+                    (assoc-ref dirs #:videos)))
+         `(((#:path . ,(normalize (assoc-ref dirs #:download)))
+            (#:storage . #:storage/machine)))))))))
 #+end_src
 **** Mesa
 Maybe this shouldn't be a standalone component but rather added by programs that use Mesa (if that's even how it works, I understand Mesa well enough).
@@ -9269,6 +9296,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                       #:login-shell login-shell
                       #:interactive-shells interactive-shells)
+              (xdg-base-directories #:stateless? stateless?)
+              (xdg-trash #:stateless? stateless?)
               (emacs-editor #:wayland? wayland?
                             #:emacs-pgtk emacs-pgtk)
               (if doom?
