@@ -2022,6 +2022,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             gammastep-applet
             udiskie-wm-applet
             udiskie-applet
+            portal-services
+            flatpak-apps
             aws-prog
             clojure-prog
             datomic-prog
@@ -2053,7 +2055,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             nyxt-app
             tor-browser-app
             vlc-app
-            flatpak-apps
             work
             services-only-packages
             services-sans-packages
@@ -7498,6 +7499,42 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (if pipewire?
        '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
 #+end_src
+**** Flatpak
+I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
+#+begin_src scheme
+(define* (flatpak-apps #:key
+                       stateless?
+                       portal-services)
+  (append
+   (list
+    (simple-service
+     'flatpak-add-packages
+     home-profile-service-type
+     (list flatpak))
+
+    (simple-service
+     'flatpak-exports
+     home-environment-variables-service-type
+     `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
+
+    (when stateless?
+      (home-stateless-service
+       'flatpak
+       #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))))))
+
+   (or portal-services '())))
+#+end_src
+***** Setup instructions
+#+begin_src sh :tangle no
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+# flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
+
+# flatpak install --user flathub com.discordapp.Discord
+# flatpak install --user flathub-beta com.obsproject.Studio
+# ...
+#+end_src
 **** Portals
 #+begin_src scheme
 (define* (portal-services #:key wayland?)
@@ -8845,42 +8882,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       'qt
       #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:storage . #:storage/machine)))))))
-#+end_src
-***** Flatpak
-I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
-#+begin_src scheme
-(define* (flatpak-apps #:key
-                       stateless?
-                       portal-services)
-  (append
-   (list
-    (simple-service
-     'flatpak-add-packages
-     home-profile-service-type
-     (list flatpak))
-
-    (simple-service
-     'flatpak-exports
-     home-environment-variables-service-type
-     `(("XDG_DATA_DIRS" . "$XDG_DATA_DIRS${XDG_DATA_DIRS:+:}$XDG_DATA_HOME/flatpak/exports/share")))
-
-    (when stateless?
-      (home-stateless-service
-       'flatpak
-       #:state '(((#:path . ("flatpak/" #:xdg-base "XDG_DATA_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))))))
-
-   (or portal-services '())))
-#+end_src
-****** Setup instructions
-#+begin_src sh :tangle no
-flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-# flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
-
-# flatpak install --user flathub com.discordapp.Discord
-# flatpak install --user flathub-beta com.obsproject.Studio
-# ...
 #+end_src
 *** Work
 #+begin_src scheme
