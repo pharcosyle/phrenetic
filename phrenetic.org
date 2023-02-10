@@ -9163,19 +9163,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        '()) ; Maybe have some alternatives for non-Doom here: Some file manager, trash-cli...
    (misc-progs)))
 #+end_src
-*** Applications
+*** Apps
 #+begin_src scheme
-(define* (applications #:key
-                       stateless?
-                       pipewire?
-                       doom?
-                       doom-ui?
-                       theme
-                       colors
-                       fonts
-                       base-font-size
-                       wayland?
-                       google-chrome)
+(define* (apps #:key
+               stateless?
+               pipewire?
+               doom?
+               doom-ui?
+               theme
+               colors
+               fonts
+               base-font-size
+               wayland?
+               google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
                            #:font (assoc-ref fonts #:fonts/variable-pitch)
@@ -9225,46 +9225,46 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 *** Entire
 #+begin_src scheme
 (define* (he-entire #:key
-                  stateless?
-                  stateless-storage-paths
-                  login-shell
-                  (interactive-shells '(#:shell/zsh))
-                  (wayland? #t)
-                  emacs-pgtk
-                  (emacs-interface (emacs-interface #:wayland? wayland?
-                                                    #:emacs-pgtk emacs-pgtk))
-                  doom?
-                  doom-flags
-                  doom-ui?
-                  package-managers
-                  console?
-                  kmonad?
-                  kmonad
-                  desktop?
-                  media
-                  media-pipewire
-                  (theme #:theme/dark)
-                  (light-colors (assoc-ref %colors #:colors/nuclear-light))
-                  (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
-                  (colors dark-colors)
-                  font-adobe-source-code-pro
-                  (fonts ((assoc-ref %fontsets #:fontset/titanium)
-                          #:font-adobe-source-code-pro font-adobe-source-code-pro))
-                  (base-font-size 10)
-                  (portal-services (portal-services #:wayland? wayland?))
-                  connection-manager
-                  login-manager
-                  sessions
-                  sessions-inputs
-                  sessions-outputs
-                  sessions-swaylock-effects?
-                  sessions-swaylock
-                  sessions-swaylock-effects
-                  sessions-swayidle
-                  virtualization?
-                  email
-                  projects
-                  apps-google-chrome)
+                    stateless?
+                    stateless-storage-paths
+                    login-shell
+                    (interactive-shells '(#:shell/zsh))
+                    (wayland? #t)
+                    emacs-pgtk
+                    (emacs-interface (emacs-interface #:wayland? wayland?
+                                                      #:emacs-pgtk emacs-pgtk))
+                    doom?
+                    doom-flags
+                    doom-ui?
+                    package-managers
+                    console?
+                    kmonad?
+                    kmonad
+                    desktop?
+                    media
+                    media-pipewire
+                    (theme #:theme/dark)
+                    (light-colors (assoc-ref %colors #:colors/nuclear-light))
+                    (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
+                    (colors dark-colors)
+                    font-adobe-source-code-pro
+                    (fonts ((assoc-ref %fontsets #:fontset/titanium)
+                            #:font-adobe-source-code-pro font-adobe-source-code-pro))
+                    (base-font-size 10)
+                    (portal-services (portal-services #:wayland? wayland?))
+                    connection-manager
+                    login-manager
+                    sessions
+                    sessions-inputs
+                    sessions-outputs
+                    sessions-swaylock-effects?
+                    sessions-swaylock
+                    sessions-swaylock-effects
+                    sessions-swayidle
+                    virtualization?
+                    email
+                    projects
+                    apps-google-chrome)
   (let ((pipewire? (equal? media #:media/pipewire)))
     (let ((he-base
            (lambda ()
@@ -9351,23 +9351,23 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                        #:email email
                        #:desktop? desktop?
                        #:emacs-interface emacs-interface)))
-          (he-applications
+          (he-apps
            (lambda ()
-             (applications #:stateless? stateless?
-                           #:pipewire? pipewire?
-                           #:doom? doom?
-                           #:doom-ui? doom-ui?
-                           #:theme theme
-                           #:colors colors
-                           #:fonts fonts
-                           #:base-font-size base-font-size
-                           #:wayland? wayland?
-                           #:google-chrome apps-google-chrome))))
+             (apps #:stateless? stateless?
+                   #:pipewire? pipewire?
+                   #:doom? doom?
+                   #:doom-ui? doom-ui?
+                   #:theme theme
+                   #:colors colors
+                   #:fonts fonts
+                   #:base-font-size base-font-size
+                   #:wayland? wayland?
+                   #:google-chrome apps-google-chrome))))
       (append
        (he-base)
        (he-programs)
        (if desktop?
-           (he-applications) '())))))
+           (he-apps) '())))))
 #+end_src
 * Common
 :PROPERTIES:
