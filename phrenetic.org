@@ -1994,7 +1994,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             font-packages-useful
             %date-formats
             %time-formats
-            xdg
+            xdg-user-directories
             mesa
             doom-desktop
             dbus-ipc
@@ -6279,19 +6279,19 @@ nix-channel --update
 **** XDG
 ***** User directories
 #+begin_src scheme
-(define* (xdg-user-dirs #:key
-                        stateless?
-                        (dirs '((#:desktop . "$HOME/desktop")
-                                (#:documents . "$HOME/docs")
-                                (#:download . "$HOME/dl")
-                                (#:music . "$HOME/music")
-                                (#:pictures . "$HOME/pics")
-                                (#:publicshare . "$HOME/public")
-                                (#:templates . "$HOME/templates")
-                                (#:videos . "$HOME/vids"))))
+(define* (xdg-user-directories #:key
+                               stateless?
+                               (dirs '((#:desktop . "$HOME/desktop")
+                                       (#:documents . "$HOME/docs")
+                                       (#:download . "$HOME/dl")
+                                       (#:music . "$HOME/music")
+                                       (#:pictures . "$HOME/pics")
+                                       (#:publicshare . "$HOME/public")
+                                       (#:templates . "$HOME/templates")
+                                       (#:videos . "$HOME/vids"))))
   (list
    (simple-service
-    'xdg-add-packages
+    'xdg-user-directories-add-packages
     home-profile-service-type
     (list xdg-utils
           xdg-user-dirs ; Copied from RDE. I don't think I need this (the only reason would be if programs ever call the `xdg-user-dir' shell command and this package isn't an input to theirs).
@@ -6311,7 +6311,7 @@ nix-channel --update
 
    (when stateless?
      (home-stateless-service
-      'xdg
+      'xdg-user-directories
       #:state
       (append
        '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
@@ -9295,7 +9295,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                                                     (assoc-ref font #:font/package))
                                                   fonts)
                                              (font-packages-useful)))
-                   (xdg-user-dirs #:stateless? stateless?)
+                   (xdg-user-directories #:stateless? stateless?)
                    (mesa #:stateless? stateless?)
                    (flatpak-apps #:stateless? stateless?
                                  #:portal-services portal-services))
