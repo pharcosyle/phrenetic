@@ -1907,6 +1907,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services desktop)
+  #:use-module (gnu home services fontutils)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
   #:use-module (gnu home services ssh)
@@ -2070,9 +2071,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 ** Create
 #+begin_src scheme
 (define (create-he services)
-  (home-environment
-   (services
-    (filter service? services)))) ; A convenience to allow passing a list of services with #f, <unspecified> not filtered out.
+  (let ((he (home-environment)))
+    (home-environment
+     (inherit he)
+     (essential-services (remove-services-by-type
+                          (home-environment-essential-services he)
+                          (list home-fontconfig-service-type)))
+     (services
+      (filter service? services))))) ; A convenience to allow passing a list of services with #f, <unspecified> not filtered out.
 #+end_src
 ** Components
 *** Stateless
@@ -6199,6 +6205,8 @@ nix-channel --update
                        stateless?
                        packages)
   (list
+   (service home-fontconfig-service-type)
+
    (simple-service
     'fonts-add-packages
     home-profile-service-type
