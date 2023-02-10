@@ -976,9 +976,10 @@ Works only if disk-backed swap is available, consider [[*Zram][Zram]] otherwise.
                             ("zswap.compressor" . ,compressor)
                             ("zswap.zpool" . ,allocator)
                             ("zswap.max_pool_percent" . ,(number->string max-pool-percent))))))
-  (initrd-modules (cons* compressor
-                         allocator
-                         (operating-system-initrd-modules os))))
+  (initrd-modules (append
+                   (operating-system-initrd-modules os)
+                   (list compressor
+                         allocator))))
 #+end_src
 ***** Zram
 Useful when disk-backed swap doesn't make sense (e.g. a system on a flash drive where there's no room or I/O would be slow), consider [[*Zswap][Zswap]] otherise.
