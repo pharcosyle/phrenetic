@@ -6294,8 +6294,8 @@ nix-channel --update
     'xdg-add-packages
     home-profile-service-type
     (list xdg-utils
-          xdg-user-dirs ; I don't think I need this (the only reason would be if programs ever call the `xdg-user-dir' shell command and this package isn't an input to theirs).
-          desktop-file-utils)) ; I don't think I need this at all but it adds elisp code (a mode for editing .desktop files). Andrew Tropin has it, I'll keep it just in case.
+          xdg-user-dirs ; Copied from RDE. I don't think I need this (the only reason would be if programs ever call the `xdg-user-dir' shell command and this package isn't an input to theirs).
+          desktop-file-utils)) ; Copied from RDE. I don't think I need this at all but it adds elisp code (a mode for editing .desktop files). I'll keep it just in case.
 
    (service
     home-xdg-user-directories-service-type
@@ -8096,7 +8096,7 @@ use_guixs() {
    (if doom?
        (doom-javascript #:tree-sitter? doom-tree-sitter?) '())))
 #+end_src
-**** Proton VPN
+**** Proton VPN CLI
 #+begin_src scheme
 (define* (protonvpn-prog #:key stateless?)
   (list
