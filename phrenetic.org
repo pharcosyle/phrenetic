@@ -6277,17 +6277,18 @@ nix-channel --update
   '((#:time-format/simple . "%-I:%M %p")))
 #+end_src
 **** XDG
+***** User directories
 #+begin_src scheme
-(define* (xdg #:key
-              stateless?
-              (dirs '((#:desktop . "$HOME/desktop")
-                      (#:documents . "$HOME/docs")
-                      (#:download . "$HOME/dl")
-                      (#:music . "$HOME/music")
-                      (#:pictures . "$HOME/pics")
-                      (#:publicshare . "$HOME/public")
-                      (#:templates . "$HOME/templates")
-                      (#:videos . "$HOME/vids"))))
+(define* (xdg-user-dirs #:key
+                        stateless?
+                        (dirs '((#:desktop . "$HOME/desktop")
+                                (#:documents . "$HOME/docs")
+                                (#:download . "$HOME/dl")
+                                (#:music . "$HOME/music")
+                                (#:pictures . "$HOME/pics")
+                                (#:publicshare . "$HOME/public")
+                                (#:templates . "$HOME/templates")
+                                (#:videos . "$HOME/vids"))))
   (list
    (simple-service
     'xdg-add-packages
@@ -9230,99 +9231,102 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   apps-google-chrome)
   (let ((pipewire? (equal? media #:media/pipewire)))
     (let ((he-base
-           (append
-            (system-features #:stateless? stateless?
-                             #:stateless-storage-paths stateless-storage-paths
-                             #:login-shell login-shell
-                             #:doom? doom?
-                             #:doom-flags doom-flags
-                             #:package-managers package-managers
-                             #:console? console?
-                             #:kmonad? kmonad?
-                             #:kmonad kmonad
-                             #:desktop? desktop?
-                             #:pipewire? pipewire?
-                             #:pipewire media-pipewire
-                             #:login-manager login-manager
-                             #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                        (#:session/sway . ,(sway-start pipewire?)))
-                             #:sessions sessions
-                             #:sway-environment (sway-environment #:pipewire? pipewire?
-                                                                  #:connection-manager connection-manager
-                                                                  #:doom? doom?
-                                                                  #:inputs sessions-inputs
-                                                                  #:outputs sessions-outputs
-                                                                  #:portal-services portal-services
-                                                                  #:colors colors
-                                                                  #:fonts fonts
-                                                                  #:base-font-size base-font-size
-                                                                  #:emacs-interface emacs-interface
-                                                                  #:swaylock-effects? sessions-swaylock-effects?
-                                                                  #:swaylock sessions-swaylock
-                                                                  #:swaylock-effects sessions-swaylock-effects
-                                                                  #:swayidle sessions-swayidle)
-                             #:virtualization? virtualization?)
-            (shells #:stateless? stateless?
-                    #:doom? doom?
-                    #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
-                    #:login-shell login-shell
-                    #:interactive-shells interactive-shells)
-            (emacs-editor #:wayland? wayland?
-                          #:emacs-pgtk emacs-pgtk)
-            (if doom?
-                (append
-                 (doom #:stateless? stateless?
-                       #:services (doom-core #:stateless? stateless?
-                                             #:evil? (assoc-ref doom-flags #:doom/evil?)
-                                             #:icons? (assoc-ref doom-flags #:doom/icons?)
-                                             #:email email))
-                 (if desktop?
-                     (doom-desktop #:theme theme
-                                   #:light-colors light-colors
-                                   #:dark-colors dark-colors
-                                   #:font (assoc-ref fonts #:fonts/mono)
-                                   #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch)
-                                   #:font-size base-font-size)
-                     '()))
-                '())
-            (if desktop?
-                (append
-                 (font-library #:stateless? stateless?
-                               #:packages (append
-                                           (map (lambda (font)
-                                                  (assoc-ref font #:font/package))
-                                                fonts)
-                                           (font-packages-useful)))
-                 (xdg #:stateless? stateless?)
-                 (mesa #:stateless? stateless?)
-                 (flatpak-apps #:stateless? stateless?
-                               #:portal-services portal-services))
-                '())
-            (work #:stateless? stateless?
-                  #:projects projects)))
+           (lambda ()
+             (append
+              (system-features #:stateless? stateless?
+                               #:stateless-storage-paths stateless-storage-paths
+                               #:login-shell login-shell
+                               #:doom? doom?
+                               #:doom-flags doom-flags
+                               #:package-managers package-managers
+                               #:console? console?
+                               #:kmonad? kmonad?
+                               #:kmonad kmonad
+                               #:desktop? desktop?
+                               #:pipewire? pipewire?
+                               #:pipewire media-pipewire
+                               #:login-manager login-manager
+                               #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                          (#:session/sway . ,(sway-start pipewire?)))
+                               #:sessions sessions
+                               #:sway-environment (sway-environment #:pipewire? pipewire?
+                                                                    #:connection-manager connection-manager
+                                                                    #:doom? doom?
+                                                                    #:inputs sessions-inputs
+                                                                    #:outputs sessions-outputs
+                                                                    #:portal-services portal-services
+                                                                    #:colors colors
+                                                                    #:fonts fonts
+                                                                    #:base-font-size base-font-size
+                                                                    #:emacs-interface emacs-interface
+                                                                    #:swaylock-effects? sessions-swaylock-effects?
+                                                                    #:swaylock sessions-swaylock
+                                                                    #:swaylock-effects sessions-swaylock-effects
+                                                                    #:swayidle sessions-swayidle)
+                               #:virtualization? virtualization?)
+              (shells #:stateless? stateless?
+                      #:doom? doom?
+                      #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
+                      #:login-shell login-shell
+                      #:interactive-shells interactive-shells)
+              (emacs-editor #:wayland? wayland?
+                            #:emacs-pgtk emacs-pgtk)
+              (if doom?
+                  (append
+                   (doom #:stateless? stateless?
+                         #:services (doom-core #:stateless? stateless?
+                                               #:evil? (assoc-ref doom-flags #:doom/evil?)
+                                               #:icons? (assoc-ref doom-flags #:doom/icons?)
+                                               #:email email))
+                   (if desktop?
+                       (doom-desktop #:theme theme
+                                     #:light-colors light-colors
+                                     #:dark-colors dark-colors
+                                     #:font (assoc-ref fonts #:fonts/mono)
+                                     #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch)
+                                     #:font-size base-font-size)
+                       '()))
+                  '())
+              (if desktop?
+                  (append
+                   (font-library #:stateless? stateless?
+                                 #:packages (append
+                                             (map (lambda (font)
+                                                    (assoc-ref font #:font/package))
+                                                  fonts)
+                                             (font-packages-useful)))
+                   (xdg-user-dirs #:stateless? stateless?)
+                   (mesa #:stateless? stateless?)
+                   (flatpak-apps #:stateless? stateless?
+                                 #:portal-services portal-services))
+                  '())
+              (work #:stateless? stateless?
+                    #:projects projects))))
           (he-programs
-           (programs #:stateless? stateless?
-                     #:interactive-shells interactive-shells
-                     #:doom? doom?
-                     #:doom-flags doom-flags
-                     #:email email
-                     #:desktop? desktop?
-                     #:emacs-interface emacs-interface))
+           (lambda ()
+             (programs #:stateless? stateless?
+                       #:interactive-shells interactive-shells
+                       #:doom? doom?
+                       #:doom-flags doom-flags
+                       #:email email
+                       #:desktop? desktop?
+                       #:emacs-interface emacs-interface)))
           (he-applications
-           (applications #:stateless? stateless?
-                         #:pipewire? pipewire?
-                         #:doom? doom?
-                         #:theme theme
-                         #:colors colors
-                         #:fonts fonts
-                         #:base-font-size base-font-size
-                         #:wayland? wayland?
-                         #:google-chrome apps-google-chrome)))
+           (lambda ()
+             (applications #:stateless? stateless?
+                           #:pipewire? pipewire?
+                           #:doom? doom?
+                           #:theme theme
+                           #:colors colors
+                           #:fonts fonts
+                           #:base-font-size base-font-size
+                           #:wayland? wayland?
+                           #:google-chrome apps-google-chrome))))
       (append
-       he-base
-       he-programs
+       (he-base)
+       (he-programs)
        (if desktop?
-           he-applications '())))))
+           (he-applications) '())))))
 #+end_src
 * Common
 :PROPERTIES:
