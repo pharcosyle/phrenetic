@@ -1921,6 +1921,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
   #:use-module ((gnu packages fonts) #:select (font-awesome font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation))
+  #:use-module ((gnu packages fontutils) #:select (fontmanager))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
@@ -2040,6 +2041,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             git-prog
             misc-progs
             pavucontrol-app
+            font-manager-app
             doom-menu-app
             doom-menu
             rofi-app
@@ -8364,6 +8366,29 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 
    (or gtk-services '())))
 #+end_src
+**** Fonts
+***** Font Manager
+#+begin_src scheme
+(define* (font-manager-app #:key
+                           stateless?
+                           gtk-services)
+  (append
+   (list
+    (simple-service
+     'font-manager-add-packages
+     home-profile-service-type
+     (list fontmanager))
+
+    (when stateless?
+      (home-stateless-service
+       'font-manager
+       #:state '(((#:path . ("font-manager/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine))
+                 ((#:path . ("font-manager/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/persist))))))
+
+   (or gtk-services '())))
+#+end_src
 **** Menus
 ***** Doom menu
 #+begin_src scheme
@@ -9191,6 +9216,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (append
      (pavucontrol-app #:stateless? stateless?
                       #:gtk-services gtk)
+     (font-manager-app #:stateless? stateless?
+                       #:gtk-services gtk)
      (if doom-ui?
          (doom-menu-app)
          (rofi-app #:stateless? stateless?
