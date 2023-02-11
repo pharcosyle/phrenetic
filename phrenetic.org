@@ -6474,7 +6474,7 @@ nix-channel --update
      'sway-add-packages
      home-profile-service-type
      (list (sway-start-package pipewire?)
-           qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'.
+           qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
            swayhide)) ; TODO Copied from RDE. I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
     (service
