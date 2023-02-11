@@ -2586,14 +2586,14 @@ SAVEHIST=$HISTSIZE
     (#:width . 50)
     (#:height . 50)))
 #+end_src
-**** XDG MIME service
+**** XDG service
 #+begin_src scheme
-(define* (emacs-xdg-mime-service name
-                                 xdg-name
-                                 program
-                                 #:key
-                                 (exec-argument "%u")
-                                 default-for)
+(define* (emacs-xdg-service name
+                            xdg-name
+                            program
+                            #:key
+                            (exec-argument "%u")
+                            default-for)
   (let ((file (symbol-append 'emacs- name)))
     (simple-service
      (symbol-append 'emacs-xdg- name)
@@ -8211,12 +8211,12 @@ use_guixs() {
 
      (if (and desktop? doom-ui?)
          (list
-          (emacs-xdg-mime-service name
-                                  "file"
-                                  (emacs-handler
-                                   "dired"
-                                   '((dired (car args))))
-                                  #:default-for '(inode/directory)))
+          (emacs-xdg-service name
+                             "file"
+                             (emacs-handler
+                              "dired"
+                              '((dired (car args))))
+                             #:default-for '(inode/directory)))
          '()))))
 #+end_src
 **** Text editors
