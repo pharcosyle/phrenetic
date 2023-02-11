@@ -7585,7 +7585,59 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
           ))))
 #+end_src
 *** Programs
-**** AWS
+**** Calendars
+***** Doom calendar
+#+begin_src scheme
+(define* (doom-calendar-prog #:key
+                             stateless?
+                             org?)
+  (append
+   (list
+    (doom-service
+     'calendar
+     #:modules '((#:app
+                  calendar))))
+
+   (if org?
+       (doom-org-gcal #:stateless? stateless?) '())))
+
+(define* (doom-org-gcal #:key stateless?)
+  (append
+   (let ((name 'org-gcal))
+     (list
+      (doom-service
+       name
+       #:modules '((#:app
+                    calendar))
+       #:config
+       '((after! org-gcal
+                 (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
+                       org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
+                       org-gcal-recurring-events-mode 'nested))))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
+                    (#:storage . #:storage/machine))
+                   ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
+                    (#:storage . #:storage/machine)))))))
+
+   (doom-dash)))
+
+;; TODO
+;; - This comonent no longers depens on doom-user so don't rely on user-mail-address?
+;; - nb: also it uses `org-directory'
+;; '((after! org-gcal
+;;           (setq ;; TODO `elisp-serialize' doesn't like the unquotes.
+;;                 ;; org-gcal-fetch-file-alist (let ((cal-dir concat org-directory "/cal"))
+;;                 ;;                             `((user-mail-address . ,(concat cal-dir "/" user-mail-address ".org"))
+;;                 ;;                               ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat cal-dir "/contacts.org"))
+;;                 ;;                               ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
+;;                 )))
+#+end_src
+**** Development
+***** AWS
 #+begin_src scheme
 (define (aws-prog)
   (list
@@ -7594,7 +7646,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list awscli-2))))
 #+end_src
-***** AWS CLI 2 :package:version:upstream:
+****** AWS CLI 2 :package:version:upstream:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "packages/aws.scm")
 :END:
@@ -7671,7 +7723,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            python-pytest-cov
            python-pytest-xdist))))
 #+end_src
-****** Deps :package:version:
+******* Deps :package:version:
 #+begin_src scheme
 (define python-awscrt
   (package
@@ -7742,7 +7794,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (base32
          "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
 #+end_src
-**** Clojure
+***** Clojure
 #+begin_src scheme
 (define* (clojure-prog #:key
                        stateless?
@@ -7766,7 +7818,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (if doom?
        (doom-clojure #:stateless? stateless?) '())))
 #+end_src
-***** Clojure tools :package:upstream:
+****** Clojure tools :package:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
 (define-module (phrenetic packages clojure)
   #:use-module (guix gexp)
@@ -7786,7 +7838,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define-public clojure-tools
   (with-man-pages clojure:clojure-tools))
 #+end_src
-***** Doom Clojure
+****** Doom Clojure
 #+begin_src scheme
 (define* (doom-clojure #:key stateless?)
   (append
@@ -7840,7 +7892,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (doom-xml+csv)
    (doom-dash)))
 #+end_src
-**** Datomic
+***** Datomic
 #+begin_src scheme
 (define (datomic-prog)
   (list
@@ -7849,7 +7901,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list datomic-cli-tools))))
 #+end_src
-***** Datomic CLI tools :package:version:upstream:
+****** Datomic CLI tools :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
 (define-module (phrenetic packages datomic)
   #:use-module (guix build-system copy)
@@ -7888,57 +7940,31 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (description synopsis)
     (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
 #+end_src
-**** Doom calendar
+***** Node
 #+begin_src scheme
-(define* (doom-calendar-prog #:key
-                             stateless?
-                             org?)
+(define* (node-prog #:key
+                    stateless?
+                    doom?
+                    doom-tree-sitter?)
   (append
    (list
-    (doom-service
-     'calendar
-     #:modules '((#:app
-                  calendar))))
+    (simple-service
+     'node-add-packages
+     home-profile-service-type
+     (list node))
 
-   (if org?
-       (doom-org-gcal #:stateless? stateless?) '())))
+    ;; (when stateless?
+    ;;   (home-stateless-service
+    ;;    'node
+    ;;    #:state '(((#:path . ".npm/")
+    ;;               (#:storage . #:storage/machine)))))
+    )
 
-(define* (doom-org-gcal #:key stateless?)
-  (append
-   (let ((name 'org-gcal))
-     (list
-      (doom-service
-       name
-       #:modules '((#:app
-                    calendar))
-       #:config
-       '((after! org-gcal
-                 (setq org-gcal-client-id "446729771716-pp79934q99aro2h8v3iki1fejcodbdoo.apps.googleusercontent.com"
-                       org-gcal-client-secret (-> (auth-source-search :host org-gcal-client-id) car (plist-get :secret) funcall)
-                       org-gcal-recurring-events-mode 'nested))))
-
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("org-gcal/token.gpg" #:doom-base #:cache))
-                    (#:storage . #:storage/machine))
-                   ((#:path . ("persist/org-gcal--sync-tokens" #:doom-base #:data))
-                    (#:storage . #:storage/machine)))))))
-
-   (doom-dash)))
-
-;; TODO
-;; - This comonent no longers depens on doom-user so don't rely on user-mail-address?
-;; - nb: also it uses `org-directory'
-;; '((after! org-gcal
-;;           (setq ;; TODO `elisp-serialize' doesn't like the unquotes.
-;;                 ;; org-gcal-fetch-file-alist (let ((cal-dir concat org-directory "/cal"))
-;;                 ;;                             `((user-mail-address . ,(concat cal-dir "/" user-mail-address ".org"))
-;;                 ;;                               ("addressbook%23contacts@group.v.calendar.google.com" . ,(concat cal-dir "/contacts.org"))
-;;                 ;;                               ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
-;;                 )))
+   (if doom?
+       (doom-javascript #:tree-sitter? doom-tree-sitter?) '())))
 #+end_src
-**** Doom org :bindings:
+**** Notes
+***** Doom org :bindings:
 #+begin_src scheme
 (define* (doom-org-prog #:key
                         (org-dir "org")
@@ -8038,7 +8064,46 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
    (doom-dash)))
 #+end_src
-**** Direnv
+**** File managers
+***** Doom dired
+#+begin_src scheme
+(define* (doom-dired-prog #:key
+                          stateless?
+                          icons?
+                          (dirvish? #t)
+                          desktop?
+                          doom-ui?
+                          emacs-handler)
+  (let ((name 'dired))
+    (append
+     (list
+      (doom-service
+       name
+       #:modules `((#:emacs
+                    (dired ,@(if icons? '(+icons) '())
+                           ,@(if dirvish? '(+dirvish) '())))))
+
+      (when (and stateless? dirvish?)
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
+                    (#:storage . #:storage/machine))))))
+
+     (if dirvish?
+         (doom-transient) '())
+
+     (if (and desktop? doom-ui?)
+         (list
+          (emacs-xdg-service name
+                             "file"
+                             (emacs-handler
+                              "dired"
+                              '((dired (car args))))
+                             #:default-for '(inode/directory)))
+         '()))))
+#+end_src
+**** Shell utils
+***** Direnv
 #+begin_src scheme
 (define* (direnv-prog #:key
                       doom?
@@ -8091,7 +8156,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        #:modules '((#:tools
                     direnv)))))))
 #+end_src
-***** Direnvrc
+****** Direnvrc
 #+begin_src sh :tangle (meta-in-dir "direnvrc")
 use_guixs() {
 	LOCK_FILE=channels-lock
@@ -8103,7 +8168,7 @@ use_guixs() {
 	fi
 }
 #+end_src
-***** Whitelist service
+****** Whitelist service
 #+begin_src scheme
 (define direnv-whitelist-service-type
   (service-type
@@ -8123,7 +8188,7 @@ use_guixs() {
    (default-value #f)
    (description "Whitelist for Direnv.")))
 #+end_src
-****** TOML serialization
+******* TOML serialization
 #+begin_src scheme
 (define (toml-file name config)
   (ini-file name config))
@@ -8137,87 +8202,11 @@ use_guixs() {
         (string-append "[ " $ " ]")
         (string->symbol $)))
 #+end_src
-**** Node
-#+begin_src scheme
-(define* (node-prog #:key
-                    stateless?
-                    doom?
-                    doom-tree-sitter?)
-  (append
-   (list
-    (simple-service
-     'node-add-packages
-     home-profile-service-type
-     (list node))
-
-    ;; (when stateless?
-    ;;   (home-stateless-service
-    ;;    'node
-    ;;    #:state '(((#:path . ".npm/")
-    ;;               (#:storage . #:storage/machine)))))
-    )
-
-   (if doom?
-       (doom-javascript #:tree-sitter? doom-tree-sitter?) '())))
-#+end_src
-**** Proton VPN CLI
-#+begin_src scheme
-(define* (protonvpn-prog #:key stateless?)
-  (list
-   (simple-service
-    'protonvpn-add-packages
-    home-profile-service-type
-    (list protonvpn-cli))
-
-   (when stateless?
-     (home-stateless-service
-      'protonvpn
-      #:state '(((#:path . ".pvpn-cli/")
-                 (#:storage . #:storage/machine)))))))
-#+end_src
 **** SSH
 #+begin_src scheme
 (define (ssh-prog)
   (list
    (service home-openssh-service-type)))
-#+end_src
-**** File managers
-***** Doom dired
-#+begin_src scheme
-(define* (doom-dired-prog #:key
-                          stateless?
-                          icons?
-                          (dirvish? #t)
-                          desktop?
-                          doom-ui?
-                          emacs-handler)
-  (let ((name 'dired))
-    (append
-     (list
-      (doom-service
-       name
-       #:modules `((#:emacs
-                    (dired ,@(if icons? '(+icons) '())
-                           ,@(if dirvish? '(+dirvish) '())))))
-
-      (when (and stateless? dirvish?)
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("dirvish/" #:doom-base #:cache))
-                    (#:storage . #:storage/machine))))))
-
-     (if dirvish?
-         (doom-transient) '())
-
-     (if (and desktop? doom-ui?)
-         (list
-          (emacs-xdg-service name
-                             "file"
-                             (emacs-handler
-                              "dired"
-                              '((dired (car args))))
-                             #:default-for '(inode/directory)))
-         '()))))
 #+end_src
 **** Text editors
 ***** Nano
@@ -8326,6 +8315,22 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                  vc)
                 (#:ui
                  (vc-gutter +pretty)))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+#+end_src
+**** VPM
+***** Proton VPN CLI
+#+begin_src scheme
+(define* (protonvpn-prog #:key stateless?)
+  (list
+   (simple-service
+    'protonvpn-add-packages
+    home-profile-service-type
+    (list protonvpn-cli))
+
+   (when stateless?
+     (home-stateless-service
+      'protonvpn
+      #:state '(((#:path . ".pvpn-cli/")
+                 (#:storage . #:storage/machine)))))))
 #+end_src
 **** Miscellaneous programs
 #+begin_src scheme
