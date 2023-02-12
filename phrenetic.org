@@ -311,7 +311,7 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services-by-type
+    (remove-services-by-types
      %base-services
      (list login-service-type
            agetty-service-type
@@ -547,7 +547,7 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services-by-type
+    (remove-services-by-types
      %desktop-services
      (append
       (map service-kind %base-services)
@@ -2079,7 +2079,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   (let ((he (home-environment)))
     (home-environment
      (inherit he)
-     (essential-services (remove-services-by-type
+     (essential-services (remove-services-by-types
                           (home-environment-essential-services he)
                           (list home-fontconfig-service-type)))
      (services
@@ -9948,7 +9948,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             with-git-url
             with-git-version
             with-git-commit
-            remove-services-by-type))
+            remove-services-by-types))
 
 (re-export-public-interface (phrenetic common utils))
 #+end_src
@@ -10019,7 +10019,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Services
 #+begin_src scheme
-(define (remove-services-by-type services kinds)
+(define (remove-services-by-types services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
