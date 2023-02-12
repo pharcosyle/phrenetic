@@ -2517,6 +2517,7 @@ SAVEHIST=$HISTSIZE
       emacs))
 #+end_src
 **** Handler
+A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
 #+begin_src scheme
 (define* (emacs-handler emacs)
   (lambda* (#:rest args)
@@ -2528,6 +2529,8 @@ SAVEHIST=$HISTSIZE
                          #:key
                          modal?
                          modal-title
+                         modal-width
+                         modal-height
                          minibuffer?
                          input?)
   (program-file
@@ -2547,6 +2550,8 @@ SAVEHIST=$HISTSIZE
                                  (#$(eval-expr exprs
                                                modal?
                                                modal-title
+                                               modal-width
+                                               modal-height
                                                minibuffer?)
                                     args input)))))
                       (apply open-pipe* OPEN_READ cmd))))
@@ -2557,12 +2562,14 @@ SAVEHIST=$HISTSIZE
                        (string-append res end)))
          (close-pipe pipe)))))
 
-(define (eval-expr exprs modal? modal-title minibuffer?)
+(define (eval-expr exprs modal? modal-title modal-width modal-height minibuffer?)
   #~(lambda (args input)
       `(with-selected-frame
         (make-frame '(,@(if #$modal?
                             `((name . ,(string-append #$modal-title
                                                       #$emacs-modal-title-tail))
+                              (width . ,(or #$modal-width 100))
+                              (height . ,(or #$modal-height 20))
                               ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
                               )
                             '())
@@ -2587,9 +2594,7 @@ SAVEHIST=$HISTSIZE
 
 (define emacs-modal-window-props
   `((#:window-prop.criteria/title . ,(string-append ".*" emacs-modal-title-tail))
-    (#:window-prop/floating? . #t)
-    (#:window-prop/width . 50)
-    (#:window-prop/height . 50)))
+    (#:window-prop/floating? . #t)))
 #+end_src
 **** XDG service
 #+begin_src scheme
@@ -6781,7 +6786,6 @@ Ideally the inclusions here would be gated but that would require a flag for eve
   (map (lambda (p)
          (let ((commands (as-> (list (if (assoc-ref p #:window-prop/floating?)
                                          '(floating enable) '())
-                                     ;; TODO Do #:window-prop/width and #:window-prop/height
                                      ;; ...
                                      ) $
                            ;; TODO Separate each command with a comma (added to the end of the last symbol in each list). Alternatively use the block form or output a separate full line for each command.
