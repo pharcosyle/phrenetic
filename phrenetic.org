@@ -2526,8 +2526,8 @@ SAVEHIST=$HISTSIZE
                          name
                          exprs
                          #:key
-                         assistant?
-                         assistant-title
+                         modal?
+                         modal-title
                          minibuffer?
                          input?)
   (program-file
@@ -2545,8 +2545,8 @@ SAVEHIST=$HISTSIZE
                                 "--eval"
                                 (#$serialize-eval-expr
                                  (#$(eval-expr exprs
-                                               assistant?
-                                               assistant-title
+                                               modal?
+                                               modal-title
                                                minibuffer?)
                                     args input)))))
                       (apply open-pipe* OPEN_READ cmd))))
@@ -2557,12 +2557,12 @@ SAVEHIST=$HISTSIZE
                        (string-append res end)))
          (close-pipe pipe)))))
 
-(define (eval-expr exprs assistant? assistant-title minibuffer?)
+(define (eval-expr exprs modal? modal-title minibuffer?)
   #~(lambda (args input)
       `(with-selected-frame
-        (make-frame '(,@(if #$assistant?
-                            `((name . ,(string-append #$assistant-title
-                                                      #$(assoc-ref emacs-assistant-window-params #:title-tail)))
+        (make-frame '(,@(if #$modal?
+                            `((name . ,(string-append #$modal-title
+                                                      #$(assoc-ref emacs-modal-window-params #:title-tail)))
                               ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
                               )
                             '())
@@ -2583,8 +2583,8 @@ SAVEHIST=$HISTSIZE
         (lambda (port)
           (write expr port)))))
 
-(define emacs-assistant-window-params
-  `((#:title-tail . ,(string-append " - " "Emacs Assistant"))
+(define emacs-modal-window-params
+  `((#:title-tail . ,(string-append " - " "Emacs Modal"))
     (#:width . 50)
     (#:height . 50)))
 #+end_src
@@ -6774,11 +6774,11 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 #+begin_src scheme
 (define (sway-apps)
   `(;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
+    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-modal-window-params #:title-tail) "\"]")
                 floating enable,
                 resize set
-                width ,(assoc-ref emacs-assistant-window-params #:width) ppt
-                height ,(assoc-ref emacs-assistant-window-params #:height) ppt)))
+                width ,(assoc-ref emacs-modal-window-params #:width) ppt
+                height ,(assoc-ref emacs-modal-window-params #:height) ppt)))
 #+end_src
 ****** Pieces
 ******* Screen lockers
@@ -8411,16 +8411,16 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                      (emacs-handler
                       "menu"
                       '((completing-read (concat (car args) ": ") (split-string input "\n") nil t))
-                      #:assistant? #t
-                      #:assistant-title "Menu"
+                      #:modal? #t
+                      #:modal-title "Menu"
                       #:minibuffer? #t
                       #:input? #t)))
     (#:menu/app-launcher . ,(list
                              (emacs-handler
                               "app-launcher"
                               '((app-launcher-run-app))
-                              #:assistant? #t
-                              #:assistant-title "App Launcher"
+                              #:modal? #t
+                              #:modal-title "App Launcher"
                               #:minibuffer? #t)))))
 #+end_src
 ****** TODO [#C] Emacs =app-launcher= improvements
