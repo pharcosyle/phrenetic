@@ -6734,7 +6734,7 @@ nix-channel --update
     (bindsym $mod+Control+grave exec ,swappy-clipboard)
     (bindsym $mod+Shift+grave exec ,shot-window-or-selection)))
 #+end_src
-******* Screenshot
+******** Screenshot
 #+begin_src scheme
 (define subject-output
   #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
