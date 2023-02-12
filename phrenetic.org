@@ -6499,6 +6499,7 @@ nix-channel --update
         (apply sway-input (alist->list input))
         (apply sway-output (alist->list output))
         (apply sway-external-programs (alist->list external-programs))
+        (sway-apps)
         (or extra-config '())))))
 
     (simple-service
@@ -6578,14 +6579,7 @@ nix-channel --update
      (default_floating_border pixel)
      (gaps inner 8)
 
-     (floating_modifier $mod normal)
-
-     ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-     (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
-                 floating enable,
-                 resize set
-                 width ,(assoc-ref emacs-assistant-window-params #:width) ppt
-                 height ,(assoc-ref emacs-assistant-window-params #:height) ppt))))
+     (floating_modifier $mod normal))))
 #+end_src
 ******* Input/output
 #+begin_src scheme
@@ -6774,6 +6768,17 @@ nix-channel --update
       (format #f "~a | ~a -f -"
               #$(file-append wl-clipboard "/bin/wl-paste")
               #$(file-append swappy "/bin/swappy")))))
+#+end_src
+******* App-specific
+Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
+#+begin_src scheme
+(define (sway-apps)
+  `(;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-assistant-window-params #:title-tail) "\"]")
+                floating enable,
+                resize set
+                width ,(assoc-ref emacs-assistant-window-params #:width) ppt
+                height ,(assoc-ref emacs-assistant-window-params #:height) ppt)))
 #+end_src
 ****** Pieces
 ******* Screen lockers
