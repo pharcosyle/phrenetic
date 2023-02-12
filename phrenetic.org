@@ -2562,7 +2562,7 @@ SAVEHIST=$HISTSIZE
       `(with-selected-frame
         (make-frame '(,@(if #$modal?
                             `((name . ,(string-append #$modal-title
-                                                      #$(assoc-ref emacs-modal-window-params #:title-tail)))
+                                                      #$emacs-modal-title-tail))
                               ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
                               )
                             '())
@@ -2583,10 +2583,13 @@ SAVEHIST=$HISTSIZE
         (lambda (port)
           (write expr port)))))
 
-(define emacs-modal-window-params
-  `((#:title-tail . ,(string-append " - " "Emacs Modal"))
-    (#:width . 50)
-    (#:height . 50)))
+(define emacs-modal-title-tail (string-append " - " "Emacs Modal"))
+
+(define emacs-modal-window-props
+  `((#:window-prop.criteria/title . ,(string-append ".*" emacs-modal-title-tail))
+    (#:window-prop/floating? . #t)
+    (#:window-prop/width . 50)
+    (#:window-prop/height . 50)))
 #+end_src
 **** XDG service
 #+begin_src scheme
@@ -6772,13 +6775,34 @@ nix-channel --update
 ******* App windows
 Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
 #+begin_src scheme
-(define (sway-app-windows)
-  `(;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
-    (for_window ,(string-append "[title=\".*" (assoc-ref emacs-modal-window-params #:title-tail) "\"]")
-                floating enable,
-                resize set
-                width ,(assoc-ref emacs-modal-window-params #:width) ppt
-                height ,(assoc-ref emacs-modal-window-params #:height) ppt)))
+(define* (sway-app-windows #:key (props (list emacs-modal-window-props
+                                              ;; ...
+                                              )))
+  (map (lambda (p)
+         (let ((commands (as-> (list (if (assoc-ref p #:window-prop/floating?)
+                                         '(floating enable) '())
+                                     ;; TODO Do #:window-prop/width and #:window-prop/height
+                                     ;; ...
+                                     ) $
+                           ;; TODO Separate each command with a comma (added to the end of the last symbol in each list). Alternatively use the block form or output a separate full line for each command.
+                           (apply append $))))
+           (if (not (null? commands))
+               (append
+                ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+                `(for_window ,(as-> (append
+                                     (if-let ((title (assoc-ref p #:window-prop.criteria/title)))
+                                             `(("title" . ,title)) '())
+                                     ;; ...
+                                     ) $
+                                (map (match-lambda
+                                       ((k . v)
+                                        (string-append k "=" "\"" v "\"")))
+                                     $)
+                                (string-join $)
+                                (string-append "[" $ "]")))
+                commands)
+               '())))
+       props))
 #+end_src
 ****** Pieces
 ******* Screen lockers
