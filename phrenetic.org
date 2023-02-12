@@ -6571,9 +6571,7 @@ nix-channel --update
      (bindsym $mod+Shift+a focus parent)
 
      (bindsym $mod+Shift+r reload)
-     (bindsym $mod+Shift+q exec ,(file-append sway "/bin/swaynag")
-              -t warning -m "'You pressed the exit shortcut. Do you really want to exit sway?'"
-              -B "'Yes, exit sway'" ,#~(format #f "'~a exit'" #$(file-append sway "/bin/swaymsg")))
+     (bindsym $mod+Control+Shift+q exit)
 
 
      (default_border pixel)
