@@ -8476,7 +8476,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 (define* (rofi-menu #:key wayland?)
   (let ((rofi-bin (file-append (get-rofi #:wayland? wayland?) "/bin/rofi")))
     `((#:menu/menu . ,(list rofi-bin "-dmenu" "-p"))
-      (#:menu/app-launcher . ,(list rofi-bin "-show" "drun")))))
+      (#:menu/app-launcher . ,(list rofi-bin "-show" "drun" "-drun-show-actions")))))
 
 (define* (get-rofi #:key wayland?)
   (if wayland?
