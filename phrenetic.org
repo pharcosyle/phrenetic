@@ -6499,7 +6499,7 @@ nix-channel --update
         (apply sway-input (alist->list input))
         (apply sway-output (alist->list output))
         (apply sway-external-programs (alist->list external-programs))
-        (sway-apps)
+        (sway-app-windows)
         (or extra-config '())))))
 
     (simple-service
@@ -6769,10 +6769,10 @@ nix-channel --update
               #$(file-append wl-clipboard "/bin/wl-paste")
               #$(file-append swappy "/bin/swappy")))))
 #+end_src
-******* App-specific
+******* App windows
 Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
 #+begin_src scheme
-(define (sway-apps)
+(define (sway-app-windows)
   `(;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
     (for_window ,(string-append "[title=\".*" (assoc-ref emacs-modal-window-params #:title-tail) "\"]")
                 floating enable,
