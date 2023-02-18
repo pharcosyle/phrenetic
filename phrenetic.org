@@ -7521,7 +7521,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 
 ;; I think these should really be set in packages / package program wrappers but this is easier and Andrew Tropin does it this way so I'll leave it as-is for now.
 (define (wayland-env-vars pipewire?)
-  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland.
+  ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland and https://wiki.archlinux.org/title/Wayland#GUI_libraries.
   (append
    '(("SDL_VIDEODRIVER" . "wayland")
      ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
