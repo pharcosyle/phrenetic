@@ -3131,7 +3131,7 @@ index e44d3dda0dd..00000000000
 -       (locate-dominating-file "." ".git")
 -       (dired-git-info-mode 1)))
 diff --git a/modules/emacs/dired/config.el b/modules/emacs/dired/config.el
-index 26e5e74e20b..c7d12bb33e0 100644
+index 26e5e74e20b..d4cb615606e 100644
 --- a/modules/emacs/dired/config.el
 +++ b/modules/emacs/dired/config.el
 @@ -1,10 +1,9 @@
@@ -3146,7 +3146,7 @@ index 26e5e74e20b..c7d12bb33e0 100644
          ;; don't prompt to revert, just do it
          dired-auto-revert-buffer #'dired-buffer-stale-p
          ;; Always copy/delete recursively
-@@ -25,31 +24,21 @@
+@@ -25,31 +24,28 @@
      :slot 20 :size 0.8 :select t :quit nil :ttl 0)
    (set-evil-initial-state! 'image-dired-display-image-mode 'emacs)
  
@@ -3175,25 +3175,32 @@ index 26e5e74e20b..c7d12bb33e0 100644
 -
 -  ;; Don't complain about this command being disabled when we use it
 -  (put 'dired-find-alternate-file 'disabled nil)
-+  (let ((non-gnu-args "-alh")
-+        (gnu-args
-+         "-l --almost-all --human-readable --group-directories-first"))
-+    (cond ((and (boundp 'ls-lisp-use-insert-directory-program)
-+                (not ls-lisp-use-insert-directory-program)
-+                (< emacs-major-version 28))
-+           ;; Fixes #3939: unsortable dired entries on Windows
-+           (setq dired-listing-switches non-gnu-args))
-+          (IS-BSD
-+           ;; BSD ls doesn't support long options
-+           (if-let (gls (executable-find "gls"))
-+               (setq insert-directory-program gls
-+                     dired-listing-switches gnu-args)
-+             (setq dired-listing-switches non-gnu-args)))
-+          (t (setq dired-listing-switches gnu-args))))
++  (let* ((ls (executable-find "ls"))
++         (gls (executable-find "gls"))
++         (idp (executable-find insert-directory-program))
++         (ls-is-gnu? (and ls (= 0 (process-file ls nil nil nil "--version"))))
++         (idp-is-gnu-ls?
++          (and idp (= 0 (process-file idp nil nil nil "--version")))))
++    (setq dired-listing-switches
++          "-l --almost-all --human-readable --group-directories-first")
++    (setq insert-directory-program
++          (cond
++           ;; just use GNU ls if found
++           (ls-is-gnu? ls)
++           ;; use insert-directory-program if it points to GNU ls
++           (idp-is-gnu-ls? insert-directory-program)
++           ;; heuristic: GNU ls is often installed as gls by Homebrew on Mac
++           ((and (eq system-type 'darwin) gls) gls)
++           (t
++            ;; Emacs 28+ sanitizes unknown switches silently
++            (when (< emacs-major-version 28)
++              (setq dired-listing-switches "-alh"))
++            ;; fallback to insert-directory-program
++            insert-directory-program))))
  
    (defadvice! +dired--no-revert-in-virtual-buffers-a (&rest args)
      "Don't auto-revert in dired-virtual buffers (see `dired-virtual-revert')."
-@@ -57,127 +46,11 @@ Fixes #3939: unsortable dired entries on Windows."
+@@ -57,127 +53,11 @@ Fixes #3939: unsortable dired entries on Windows."
      (not (eq revert-buffer-function #'dired-virtual-revert)))
  
    (map! :map dired-mode-map
@@ -3321,7 +3328,7 @@ index 26e5e74e20b..c7d12bb33e0 100644
    :hook (dired-mode . dired-omit-mode)
    :config
    (setq dired-omit-verbose nil
-@@ -211,37 +84,55 @@ we have to clean it up ourselves."
+@@ -211,37 +91,55 @@ we have to clean it up ourselves."
          "h" #'dired-omit-mode))
  
  
@@ -3367,7 +3374,7 @@ index 26e5e74e20b..c7d12bb33e0 100644
 +
 +(use-package! dirvish
 +  :defer t
-+  :general (dired-mode-map "C-c C-r" #'dirvish-yank) ; for backward compatibility
++  :general (dired-mode-map "C-c C-r" #'dirvish-rsync)
 +  :after-call dired-noselect dired dired-jump
 +  :config
 +  (dirvish-override-dired-mode)
@@ -3417,7 +3424,7 @@ index 2c2e77b29ab..3c0c77a8cfd 100644
 +(when (modulep! +ranger)
 +  (warn! "The +ranger flag has been removed from this module"))
 diff --git a/modules/emacs/dired/packages.el b/modules/emacs/dired/packages.el
-index 06e5659a592..a3dfc11359c 100644
+index 06e5659a592..57e3726e39f 100644
 --- a/modules/emacs/dired/packages.el
 +++ b/modules/emacs/dired/packages.el
 @@ -1,14 +1,5 @@
@@ -3436,7 +3443,7 @@ index 06e5659a592..a3dfc11359c 100644
 -  (package! all-the-icons-dired :pin "5e9b097f9950cc9f86de922b07903a4e5fefc733"))
 -(package! fd-dired :pin "458464771bb220b6eb87ccfd4c985c436e57dc7e")
 +(package! diredfl :pin "62b559e1d6b69834a56a57eb1832ac6ad4d2e5d0")
-+(package! dirvish :pin "22af07264007bdfced9f332d04053d9d93806289")
++(package! dirvish :pin "4b63cd2e5ba994f8e674388db7035de1a8f0343f")
 diff --git a/modules/ui/vc-gutter/config.el b/modules/ui/vc-gutter/config.el
 index c555f9d08f7..006de3e3fc6 100644
 --- a/modules/ui/vc-gutter/config.el
