@@ -5027,7 +5027,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       '((package! expand-region :pin "b70feaa644310dc2d599dc277cd20a1f2b6446ac")
         (package! tldr :pin "2b5d53571bd30b75d4f5a642aa129055803a6bfb")
         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
-        )
+
+        ;; TODO TEMPORARY add this to play around with it.
+        (package! org-tanglesync :pin "af83a73ae542d5cb3c9d433cbf2ce1d4f4259117"))
 
       #:config
       (append
@@ -5833,7 +5835,9 @@ Some colors from the original Atom theme on which I based mine that might be use
        #:modules '((#:lang
                     (scheme +guile)))
        #:packages
-       '((package! geiser :pin "e54d5e6dc659c252d10c4280f4c4d78d38623df5")) ; TODO Manual bump, remove this when Doom bumps the module.
+       ;; TODO Manual bumps, remove them when Doom bumps the module.
+       '((package! geiser :pin "e54d5e6dc659c252d10c4280f4c4d78d38623df5")
+         (package! geiser-guile :pin "24ce15de235c105daf5ecfb818200dae1c9815ee"))
 
        #:config
        '((after! scheme
