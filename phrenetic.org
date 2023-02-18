@@ -1880,7 +1880,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:binfmt-platforms virtualization-binfmt-platforms)
     (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
     (console-fonts $ #:number-of-ttys number-of-ttys
-                   #:hidpi? (assoc-ref console-output #:hidpi?))
+                   #:hidpi? (assoc-ref console-output #:display/hidpi?))
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 * Home
