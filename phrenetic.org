@@ -400,7 +400,7 @@ Run with ~sudo~.
             ((#:shell/bash) (file-append bash "/bin/bash"))
             ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))
 #+end_src
-*** Service
+**** Service
 #+begin_src scheme
 (define accounts-service-type
   (service-type (name 'accounts-servce)
@@ -2679,7 +2679,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                     (#:storage . #:storage/machine)))))
        '())))
 #+end_src
-**** Service
+**** Service :upstream:
 ***** Service type
 #+begin_src scheme
 (define doom-service-type
@@ -3111,7 +3111,7 @@ Taken from https://github.com/doomemacs/doomemacs/pull/6760.
 #+begin_src diff :tangle (meta-in-dir "patches/dirvish.patch")
 diff --git a/modules/emacs/dired/autoload.el b/modules/emacs/dired/autoload.el
 deleted file mode 100644
-index e44d3dda0dd..00000000000
+index e44d3dda0..000000000
 --- a/modules/emacs/dired/autoload.el
 +++ /dev/null
 @@ -1,15 +0,0 @@
@@ -3131,7 +3131,7 @@ index e44d3dda0dd..00000000000
 -       (locate-dominating-file "." ".git")
 -       (dired-git-info-mode 1)))
 diff --git a/modules/emacs/dired/config.el b/modules/emacs/dired/config.el
-index 26e5e74e20b..d4cb615606e 100644
+index 26e5e74e2..d4cb61560 100644
 --- a/modules/emacs/dired/config.el
 +++ b/modules/emacs/dired/config.el
 @@ -1,10 +1,9 @@
@@ -3413,7 +3413,7 @@ index 26e5e74e20b..d4cb615606e 100644
 +  (when (modulep! +icons)
 +    (appendq! dirvish-attributes '(all-the-icons subtree-state))))
 diff --git a/modules/emacs/dired/doctor.el b/modules/emacs/dired/doctor.el
-index 2c2e77b29ab..3c0c77a8cfd 100644
+index 2c2e77b29..3c0c77a8c 100644
 --- a/modules/emacs/dired/doctor.el
 +++ b/modules/emacs/dired/doctor.el
 @@ -2,3 +2,6 @@
@@ -3424,7 +3424,7 @@ index 2c2e77b29ab..3c0c77a8cfd 100644
 +(when (modulep! +ranger)
 +  (warn! "The +ranger flag has been removed from this module"))
 diff --git a/modules/emacs/dired/packages.el b/modules/emacs/dired/packages.el
-index 06e5659a592..57e3726e39f 100644
+index 802ec83c3..7edf7c69f 100644
 --- a/modules/emacs/dired/packages.el
 +++ b/modules/emacs/dired/packages.el
 @@ -1,14 +1,5 @@
@@ -3437,7 +3437,7 @@ index 06e5659a592..57e3726e39f 100644
 -(when (modulep! +ranger)
 -  (package! ranger :pin "2498519cb21dcd5791d240607a72a204d1761668"))
 -(when (modulep! +dirvish)
--  (package! dirvish :pin "73dcaa404da9ab84d25f2919e6e3af4b1f8e7f37"))
+-  (package! dirvish :pin "4fe9c00894304e99aca22ae4b6b656fe94b8f927"))
 -(when (and (modulep! +icons)
 -           (not (modulep! +dirvish)))
 -  (package! all-the-icons-dired :pin "5e9b097f9950cc9f86de922b07903a4e5fefc733"))
@@ -3445,15 +3445,16 @@ index 06e5659a592..57e3726e39f 100644
 +(package! diredfl :pin "62b559e1d6b69834a56a57eb1832ac6ad4d2e5d0")
 +(package! dirvish :pin "4b63cd2e5ba994f8e674388db7035de1a8f0343f")
 diff --git a/modules/ui/vc-gutter/config.el b/modules/ui/vc-gutter/config.el
-index c555f9d08f7..006de3e3fc6 100644
+index 0f3b2bea1..9e20d7b9f 100644
 --- a/modules/ui/vc-gutter/config.el
 +++ b/modules/ui/vc-gutter/config.el
-@@ -148,9 +148,10 @@ is deferred until the file is saved. Respects `git-gutter:disabled-modes'."
+@@ -148,10 +148,11 @@ is deferred until the file is saved. Respects `git-gutter:disabled-modes'."
    :when (modulep! +diff-hl)
    :hook (find-file    . diff-hl-mode)
    :hook (vc-dir-mode  . diff-hl-dir-mode)
 -  :hook (dired-mode   . diff-hl-dired-mode)
    :hook (diff-hl-mode . diff-hl-flydiff-mode)
+   :commands diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk
    :config
 +  (unless (modulep! :emacs dired)
 +    (add-hook! 'dired-mode-hook #'diff-hl-dired-mode))
@@ -6033,7 +6034,7 @@ nix-channel --update
 (define stateless-ensure-profiles-gexp
   (with-imported-modules (source-module-closure
                           '((guix build utils)
-                            (phrenetic build stateless))
+                            (phrenetic build utils))
                           #:select? phrenetic-module-name?)
     #~(lambda (profiles)
         (use-modules ((guix build utils) #:select (mkdir-p))
@@ -7533,7 +7534,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
 #+end_src
 **** Flatpak
-I might need to run apps specially for Wayland, see [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
+I might need to run apps specially in Wayland, with =--socket=wayland= and =--enable-features=UseOzonePlatform --ozone-platform=wayland= (if the app is based on Electron). See [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
 #+begin_src scheme
 (define* (flatpak-apps #:key
                        stateless?
@@ -7935,7 +7936,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list datomic-cli-tools))))
 #+end_src
-****** Datomic CLI tools :package:version:upstream:
+****** Datomic CLI tools :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
 (define-module (phrenetic packages datomic)
   #:use-module (guix build-system copy)
