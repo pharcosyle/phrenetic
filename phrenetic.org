@@ -5017,8 +5017,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (default +bindings +smartparens)))
 
       #:packages
-      '((package! expand-region :pin "c5c4362741deebb0985a8a29f9b8b0e25160764a")
-        (package! tldr :pin "d3fd2a809a266c005915026799121c78e8b358f0")
+      '((package! expand-region :pin "b70feaa644310dc2d599dc277cd20a1f2b6446ac")
+        (package! tldr :pin "2b5d53571bd30b75d4f5a642aa129055803a6bfb")
         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
         )
 
@@ -5529,7 +5529,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-service
     'dash
     #:packages
-    '((package! dash :pin "0ac1ecf6b56eb67bb81a3cf70f8d4354b5782341"))
+    '((package! dash :pin "3df46d7d9fe74f52a661565888e4d31fd760f0df"))
     #:config
     '((use-package! dash)))))
 #+end_src
@@ -5826,7 +5826,7 @@ Some colors from the original Atom theme on which I based mine that might be use
        #:modules '((#:lang
                     (scheme +guile)))
        #:packages
-       '((package! geiser :pin "3123a38e9ea036db9d9a884e7bb414490813e93c")) ; TODO Manual bump, remove this when Doom bumps the module.
+       '((package! geiser :pin "e54d5e6dc659c252d10c4280f4c4d78d38623df5")) ; TODO Manual bump, remove this when Doom bumps the module.
 
        #:config
        '((after! scheme
@@ -6061,7 +6061,7 @@ nix-channel --update
       #:packages '((package! kbd-mode
                              :recipe (:host github
                                       :repo "kmonad/kbd-mode")
-                             :pin "4a26abcbfc04208f437fd6b6a5bf3217b124db84"))))))
+                             :pin "96178a43d3c9ea3167362513fe4c3fdeb7074e9f"))))))
 
 (define* (kmonad-shepherd-service #:key
                                   kbd
@@ -8019,8 +8019,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     (org +journal)))
        #:packages
        (if pretty?
-           '((package! org-modern :pin "ed9d67d00f26148019acd67b4aac0e26360a33b1")
-             (package! org-appear :pin "60ba267c5da336e75e603f8c7ab3f44e6f4e4dac"))
+           '((package! org-modern :pin "42fdbd2d27f5a8652593577a200eeea96555d018")
+             (package! org-appear :pin "eb9f9db40aa529fe4b977235d86494b115281d17"))
            '())
 
        #:config
