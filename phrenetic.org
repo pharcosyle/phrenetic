@@ -6665,9 +6665,9 @@ nix-channel --update
                                  emacs-interface)
   (let ((executions
          (append
-          `((bar swaybar_command ,@(assoc-ref status-bar #:status-bar/command))
-            (exec ,@idle-manager)
-            (exec ,@(assoc-ref notifier #:notifier/daemon)))
+          `((exec ,@idle-manager)
+            (exec ,@(assoc-ref notifier #:notifier/daemon))
+            (exec ,@(assoc-ref status-bar #:status-bar/command)))
 
           (map (lambda (applet)
                  `(exec ,@applet))
