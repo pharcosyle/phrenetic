@@ -2868,7 +2868,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((phrenetic packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "9d4d5b756a8598c4b5c842e9f1f33148af2af8fd")
+  (let ((commit "0b921c2d341c6ce5ccd40800e24d24006dce954d")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2881,7 +2881,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                (commit commit)))
          (sha256
           (base32
-           "1j9768sp7823z6fz4jikapgyh1x2230xacslgvj2p5svpcb40i29"))
+           "1hygdslbk93qgwv1mp2fig9h5lzil5lrd8jwhpfbqnwjsdk7f25k"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/dirvish.patch")))))
@@ -9452,10 +9452,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:use-module (phrenetic utils))
 
 (define-public kmonad
-  (let ((commit "cbdace2bb7b27e47c2397e662265a28a1030b7c7"))
+  (let ((commit "3413f1be996142c8ef4f36e246776a6df7175979"))
     (as-> haskell-apps:kmonad $
       (with-git-commit $ #:commit commit
-                       #:hash "1kgnf0yv7h8scfacwdj3l1lrmjibjri5ybbnyw5m8wn6sjxbpaab")
+                       #:hash "0mm439r5qkkpld51spbkmn0qy27sff6iw8c7mb87x73xk4z5cjxq")
       (package
         (inherit $)
         (arguments
