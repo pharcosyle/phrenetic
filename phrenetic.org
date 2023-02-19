@@ -2062,6 +2062,11 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   (options->transformation
    '((with-commit . "sway=1.8.1"))))
 (define sway (transform-sway (@ (rde packages) sway-latest)))
+
+(define transform-waybar
+  (options->transformation
+   '((with-commit . "waybar=ea38eec2afd249481df737cc38e055974f83967c")))) ; A ways past 0.9.17.
+(define waybar (transform-waybar (@ (gnu packages wm) waybar)))
 #+end_src
 ** Create
 #+begin_src scheme
@@ -7253,8 +7258,9 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (#{#battery.full}#
       ((color . @green))))))
 #+end_src
-*********** TODO [#D] Fix battery capacity output
-It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug. Andrew Tropin uses a Waybar fork that has a fix for some battery issue, possibly mine, see [[https://github.com/grfrederic/Waybar/tree/normalize-battery-capacity][GitHub - grfrederic/Waybar at normalize-battery-capacity]]. Don't worry about this for a while plus hopefully that fork will get upstreamed into mainline.
+*********** WAIT [#D] Fix battery capacity output
+It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug.
+- [2023-02-18 Sat] I've upgraded to a new Waybar version (0.9.17) with some battery improvements that may fix this, wait and watch.
 ********** Clock
 #+begin_src scheme
 (define* (waybar-clock bar-id
