@@ -1909,7 +1909,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
   #:use-module ((gnu packages fonts) #:select (font-awesome font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
-  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
@@ -2003,6 +2003,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             waybar-wm-piece
             waybar-status-bar
             waybar-modules
+            poweralertd-wm-piece
+            poweralertd-monitor
             kanshi-wm-piece
             network-manager-wm-applet
             network-manager-applet
@@ -2064,6 +2066,13 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   (options->transformation
    '((with-commit . "waybar=ea38eec2afd249481df737cc38e055974f83967c")))) ; A ways past 0.9.17.
 (define waybar (transform-waybar (@ (gnu packages wm) waybar)))
+
+;; TODO put this in my upcoming "bumps" section in configuration. Also upstream it.
+(define poweralertd
+  (with-git-commit
+   (@ (gnu packages freedesktop) poweralertd)
+   #:commit "29f293d50d708d026abbf37b75c6d72d75b4153b"
+   #:hash "15kia2s1va14bzvyp3jm3v9wddjsyyh1g03y25c7nb11sn40ypnc"))
 #+end_src
 ** Create
 #+begin_src scheme
@@ -6685,6 +6694,7 @@ nix-channel --update
                                  screen-locker
                                  notifier
                                  status-bar
+                                 power-monitor
                                  applets
                                  app-launcher
                                  terminal
@@ -6694,7 +6704,8 @@ nix-channel --update
          (append
           `((exec ,@idle-manager)
             (exec ,@(assoc-ref notifier #:notifier/daemon))
-            (exec ,@(assoc-ref status-bar #:status-bar/command)))
+            (exec ,@(assoc-ref status-bar #:status-bar/command))
+            (exec ,@power-monitor))
 
           (map (lambda (applet)
                  `(exec ,@applet))
@@ -7454,6 +7465,28 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
      ((#{#workspaces}# button.urgent)
       ((color . @red))))
    #:placement 'modules-left))
+#+end_src
+******* Power monitors
+******** Poweralertd
+#+begin_src scheme
+(define* (poweralertd-wm-piece)
+  (list
+   (simple-service
+    'poweralertd-add-packages
+    home-profile-service-type
+    (list poweralertd))))
+
+(define* (poweralertd-monitor)
+  (let ((ignore-types '("line power")))
+    (append
+     (list
+      (file-append poweralertd "/bin/poweralertd")
+      "-s")
+     (append-map (lambda (t)
+                   `("-i" ,(if (string-contains t " ")
+                               (string-append "\"" t "\"")
+                               t)))
+                 ignore-types))))
 #+end_src
 ******* Display configuration
 ******** Kanshi
@@ -9161,6 +9194,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:status-bar . ,(waybar-status-bar))
+                (#:power-monitor . ,(poweralertd-monitor))
                 (#:applets . ,(append
                                (if (and (member #:applet/connection-manager (or applets '()))
                                         connection-manager)
@@ -9210,6 +9244,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                   #:session session
                                                   #:date-format date-format
                                                   #:time-format time-format)))
+     (poweralertd-wm-piece)
      ;; (kanshi-wm-piece #:outputs outputs)
      (if (and (member #:applet/connection-manager (or applets '()))
               connection-manager)
