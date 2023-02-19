@@ -528,9 +528,6 @@ Run with ~sudo~.
 (define-system-comp (kmonad-tool #:key
                                  users
                                  kmonad)
-  (packages
-   (cons* kmonad
-          (operating-system-packages os)))
   (services
    (append
     (operating-system-user-services os)
@@ -6086,6 +6083,11 @@ nix-channel --update
                       (kbd (local-file "../mine.kbd"))
                       kmonad)
   (list
+   (simple-service
+    'kmonad-add-packages
+    home-profile-service-type
+    (list kmonad))
+
    (simple-service
     'kmonad
     home-shepherd-service-type
