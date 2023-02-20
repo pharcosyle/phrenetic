@@ -2056,23 +2056,23 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             he-entire))
 
 ;; TODO Remove once this is the default in RDE (or Guix).
-(use-modules (guix transformations))
-(define transform-sway
-  (options->transformation
-   '((with-commit . "sway=1.8.1"))))
-(define sway (transform-sway (@ (rde packages) sway-latest)))
+(define sway
+  (with-git-version sway
+                    #:version "1.8.1"
+                    #:hash "1y7brfrsjnm9gksijgnr6zxqiqvn06mdiwsk5j87ggmxazxd66av"))
 
-(define transform-waybar
-  (options->transformation
-   '((with-commit . "waybar=ea38eec2afd249481df737cc38e055974f83967c")))) ; A ways past 0.9.17.
-(define waybar (transform-waybar (@ (gnu packages wm) waybar)))
+(define waybar
+  (with-git-commit waybar
+                   #:upstream-version "0.9.17"
+                   #:commit "ea38eec2afd249481df737cc38e055974f83967c"
+                   #:hash "0yjizixq0divcxkz2ha6s642iiwsi5wbh81sad9bch7nhxmard8g"))
 
 ;; TODO put this in my upcoming "bumps" section in configuration. Also upstream it.
 (define poweralertd
-  (with-git-commit
-   (@ (gnu packages freedesktop) poweralertd)
-   #:commit "29f293d50d708d026abbf37b75c6d72d75b4153b"
-   #:hash "15kia2s1va14bzvyp3jm3v9wddjsyyh1g03y25c7nb11sn40ypnc"))
+  (with-git-commit poweralertd
+                   #:upstream-version "0.2.0"
+                   #:commit "29f293d50d708d026abbf37b75c6d72d75b4153b"
+                   #:hash "15kia2s1va14bzvyp3jm3v9wddjsyyh1g03y25c7nb11sn40ypnc"))
 #+end_src
 ** Create
 #+begin_src scheme
