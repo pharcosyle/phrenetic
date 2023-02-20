@@ -9531,7 +9531,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define-public kmonad
   (let ((commit "3413f1be996142c8ef4f36e246776a6df7175979"))
     (as-> haskell-apps:kmonad $
-      (with-git-commit $ #:commit commit
+      (with-git-commit $ #:upstream-version "0.4.1"
+                       #:commit commit
                        #:hash "0mm439r5qkkpld51spbkmn0qy27sff6iw8c7mb87x73xk4z5cjxq")
       (package
         (inherit $)
@@ -10100,7 +10101,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define* (with-git-commit pkg
                           #:key
-                          (upstream-version (package-version pkg))
+                          upstream-version
                           (revision "0")
                           commit
                           hash)
