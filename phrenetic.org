@@ -2564,7 +2564,7 @@ SAVEHIST=$HISTSIZE
       (#:emacs/new-frame . ,(list
                              (file-append emacs "/bin/emacsclient")
                              "--create-frame"))
-      (#:emacs/handler . ,(emacs-handler emacs)))))
+      (#:emacs/handler . ,(partial emacs-handler emacs)))))
 
 (define* (get-emacs #:key
                     wayland?
@@ -2577,20 +2577,16 @@ SAVEHIST=$HISTSIZE
 **** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
 #+begin_src scheme
-(define* (emacs-handler emacs)
-  (lambda* (#:rest args)
-    (apply emacs-handler* emacs args)))
-
-(define* (emacs-handler* emacs
-                         name
-                         exprs
-                         #:key
-                         modal?
-                         modal-title
-                         modal-width
-                         modal-height
-                         minibuffer?
-                         input?)
+(define* (emacs-handler emacs
+                        name
+                        exprs
+                        #:key
+                        modal?
+                        modal-title
+                        modal-width
+                        modal-height
+                        minibuffer?
+                        input?)
   (program-file
    (string-append "emacs-handler-" name)
    #~(begin
@@ -10232,6 +10228,8 @@ delete it when leaving the dynamic extent of this call."
             if-let
             when-not
             if-not
+            partial
+            rpartial
             ->
             ->>
             as->
@@ -10287,7 +10285,17 @@ delete it when leaving the dynamic extent of this call."
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-*** Threading
+*** Functions
+#+begin_src scheme
+(define* (partial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append args more))))
+
+(define* (rpartial f #:rest args)
+  (lambda* (#:rest more)
+    (apply f (append more args))))
+#+end_src
+**** Threading
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
