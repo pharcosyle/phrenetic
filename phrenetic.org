@@ -6876,7 +6876,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                          '(floating enable) '())
                                      ;; ...
                                      ) $
-                           ;; TODO Separate each command with a comma (added to the end of the last symbol in each list). Alternatively use the block form or output a separate full line for each command.
+                           ;; TODO Separate each command with a comma or semicolon (added to the end of the last symbol in each list). Alternatively use the block form or output a separate full line for each command.
                            (apply append $))))
            (if (not (null? commands))
                (append
@@ -7526,16 +7526,15 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
     home-profile-service-type
     (list poweralertd))))
 
-(define* (poweralertd-monitor)
-  (let ((ignore-types '("line power")))
-    (append
-     (list
-      (file-append poweralertd "/bin/poweralertd")
-      "-s")
-     (append-map (lambda (t)
-                   `("-i" ,(if (string-contains t " ")
-                               (quoted t) t)))
-                 ignore-types))))
+(define* (poweralertd-monitor #:key (ignore-types '("line power")))
+  (append
+   (list
+    (file-append poweralertd "/bin/poweralertd")
+    "-s")
+   (append-map (lambda (t)
+                 `("-i" ,(if (string-contains t " ")
+                             (quoted t) t)))
+               ignore-types)))
 #+end_src
 ******* Display configuration
 ******** Kanshi
