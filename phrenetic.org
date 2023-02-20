@@ -6872,12 +6872,10 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                               ;; ...
                                               )))
   (map (lambda (p)
-         (let ((commands (as-> (list (if (assoc-ref p #:window-prop/floating?)
-                                         '(floating enable) '())
-                                     ;; ...
-                                     ) $
-                           ;; TODO Separate each command with a comma or semicolon (added to the end of the last symbol in each list). Alternatively use the block form or output a separate full line for each command.
-                           (apply append $))))
+         (let ((commands (append (list (if (assoc-ref p #:window-prop/floating?)
+                                           '((floating enable)) '())
+                                       ;; ...
+                                       ))))
            (if (not (null? commands))
                (append
                 ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
