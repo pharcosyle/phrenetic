@@ -6732,7 +6732,7 @@ nix-channel --update
    ;;        `((output ,(as-> (list (assoc-ref output #:display/make)
    ;;                               (assoc-ref output #:display/model)) $
    ;;                         (string-join $)
-   ;;                         (string-append "\"" $ "\"")))
+   ;;                         (quoted $)))
    ;;          ;; ...
    ;;          ))
    ;;      (or outputs '()))
@@ -6891,7 +6891,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                      ) $
                                 (map (match-lambda
                                        ((k . v)
-                                        (string-append k "=" "\"" v "\"")))
+                                        (string-append k "=" (quoted v))))
                                      $)
                                 (string-join $)
                                 (string-append "[" $ "]")))
@@ -7088,7 +7088,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (#:notifier/menu . ,`(,makoctl
                             "menu"
                             ,@menu
-                            "\"Notification action\"")))))
+                            ,(quoted "Notification action"))))))
 #+end_src
 ******* Status bars
 ******** Waybar
@@ -7179,10 +7179,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       ((font-family . #(FontAwesome
                         ,@(if font
                               (list
-                               (as-> font $
-                                     (assoc-ref $ #:font/name)
-                                     (string-append "\"" $ "\"")
-                                     (string->symbol $)))
+                               (-> font
+                                   (assoc-ref #:font/name)
+                                   quoted
+                                   string->symbol))
                               '())))
        ,@(if transitions? '() '((transition . none)))
        (box-shadow . none)
@@ -7359,9 +7359,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        #:config
        `((format . {})
          (return-type . "json")
-         (exec . ,#~(let ((cmd (string-append #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
-                                              " 2> /dev/null")))
-                      (string-append "\"" cmd "\"")))
+         (exec . ,#~(let ((cmd (list #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
+                                     "2>" "/dev/null")))
+                      (string-append "\"" (string-join cmd) "\"")))
          (interval . 10)))
       (waybar-module
        'cpu
@@ -7536,8 +7536,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       "-s")
      (append-map (lambda (t)
                    `("-i" ,(if (string-contains t " ")
-                               (string-append "\"" t "\"")
-                               t)))
+                               (quoted t) t)))
                  ignore-types))))
 #+end_src
 ******* Display configuration
@@ -8346,9 +8345,7 @@ use_guixs() {
 
 (define (serialize-toml-array elements)
   (as-> elements $
-        (map (lambda (element)
-               (string-append "\"" element "\""))
-             $)
+        (map quoted $)
         (string-join $ ", ")
         (string-append "[ " $ " ]")
         (string->symbol $)))
@@ -8604,8 +8601,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
            (kb-page-next . "Control+v")
            (kb-page-prev . "Alt+v"))))
 
+
        ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
-       ;; (list #~"@theme \"paper-float\"")
+       ;; (list #~#$(string-append "@theme" " " (quoted "paper-float")))
        ;; (let ((clr (lambda* (color #:optional alpha)
        ;;              (as-> color $
        ;;                    (assoc-ref colors $)
@@ -9053,7 +9051,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                   settings)))))))))
 
 (define (quoted-symbol s)
-  (string->symbol (string-append "'" s "'")))
+  (-> s single-quoted string->symbol))
 #+end_src
 ***** Qt
 #+begin_src scheme
@@ -9589,7 +9587,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (add-after 'unpack 'patch-git-revision
                   (lambda _
                     (substitute* "src/KMonad/Args/Cmd.hs"
-                      (("\\$\\(gitHash\\)") (string-append "\"" #$commit "\"")))))))))
+                      (("\\$\\(gitHash\\)") #$(quoted commit)))))))))
         (inputs
          (modify-inputs (package-inputs $)
            (prepend ghc-hspec
@@ -10241,6 +10239,9 @@ delete it when leaving the dynamic extent of this call."
             select-keys
             update-keys
             update-vals
+            around
+            quoted
+            single-quoted
             KiB
             MiB
             GiB))
@@ -10372,6 +10373,15 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 *** Misc
 #+begin_src scheme
+(define (around s x)
+  (string-append x s x))
+
+(define (quoted s)
+  (string-append "\"" s "\""))
+
+(define (single-quoted s)
+  (string-append "'" s "'"))
+
 (define KiB (expt 2 10))
 (define MiB (expt 2 20))
 (define GiB (expt 2 30))
