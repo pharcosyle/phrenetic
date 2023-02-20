@@ -6322,13 +6322,18 @@ nix-channel --update
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module (guix packages)
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
-  #:use-module (phrenetic utils))
+  #:use-module (phrenetic utils)
+  #:use-module ((ice-9 regex) #:select (regexp-substitute/global)))
 
 (define-public font-adobe-source-code-pro
   (with-git-version
    fonts:font-adobe-source-code-pro
    #:version "2.038R-ro-1.058R-it-1.018R-VAR"
-   #:commit "2.038R-ro/1.058R-it/1.018R-VAR"
+   #:commit-proc (lambda (v)
+                   ;; Copied from package definition.
+                   (regexp-substitute/global
+                    #f "((R-ro)|(R-it))(-)" v
+                    'pre 1 "/" 'post))
    #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
 
 (define-public font-adobe-source-sans
@@ -10081,10 +10086,16 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
              (inherit (-> pkg package-source origin-uri))
              (url url)))))))
 
-(define* (with-git-version pkg #:key version commit hash)
+(define* (with-git-version pkg
+                           #:key
+                           version
+                           commit-proc
+                           hash)
   (with-git pkg
             #:upstream-version version
-            #:commit commit
+            #:commit (if commit-proc
+                         (commit-proc version)
+                         version)
             #:hash hash))
 
 (define* (with-git-commit pkg
