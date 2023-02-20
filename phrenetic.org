@@ -575,7 +575,7 @@ Run with ~sudo~.
                                   (program program)))
                                (list (file-append nfs-utils "/sbin/mount.nfs")
                                      (file-append ntfs-3g "/sbin/mount.ntfs-3g"))))
-          fontconfig-file-system-service
+          fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
           (service avahi-service-type)
           (udisks-service)
           (service upower-service-type)
@@ -6648,10 +6648,11 @@ nix-channel --update
    ;; Workspaces
    (append
     (append-map (lambda (x)
-                  `((bindsym ,(format #f "$mod+~a" (modulo x 10))
-                     workspace number ,x)
-                    (bindsym ,(format #f "$mod+Shift+~a" (modulo x 10))
-                             move container to workspace number ,x)))
+                  (let ((n (number->string (modulo x 10))))
+                    `((bindsym ,(string-append "$mod+" n)
+                       workspace number ,x)
+                      (bindsym ,(string-append "$mod+Shift+" n)
+                               move container to workspace number ,x))))
                 (iota 10 1))
     `((bindsym $mod+tab workspace back_and_forth)))
 
@@ -7085,10 +7086,10 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                                    "dismiss"))
       (#:notifier/restore . ,(list makoctl
                                    "restore"))
-      (#:notifier/menu . ,`(,makoctl
-                            "menu"
-                            ,@menu
-                            ,(quoted "Notification action"))))))
+      (#:notifier/menu . ,(append
+                           (list makoctl "menu")
+                           menu
+                           (list (quoted "Notification action")))))))
 #+end_src
 ******* Status bars
 ******** Waybar
@@ -7519,6 +7520,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    #:placement 'modules-left))
 #+end_src
 ******* Power monitors
+- TODO this requires ~upower~ (so ~upower-service-type~), make that dependency explicit? Meh.
 ******** Poweralertd
 #+begin_src scheme
 (define* (poweralertd-wm-piece)
@@ -7541,6 +7543,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ******* Display configuration
 ******** Kanshi
+- TODO this is the only wm-peice daemon with a shepherd service. Just run it in the Sway config with ~exec~ like everything else for consistency?
 #+begin_src scheme
 (define* (kanshi-wm-piece #:key
                           outputs
