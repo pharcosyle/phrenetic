@@ -468,16 +468,26 @@ Run with ~sudo~.
    guix-service-type
    (guix-extension
     (authorized-keys
-     (list (local-file "substitutes.nonguix.org.pub")))
+     (list (plain-file "substitutes.nonguix.org.pub"
+                       (public-key-serialize nonguix-public-key))))
     (substitute-urls
      (list "https://substitutes.nonguix.org")))))
-#+end_src
-****** Signing key
-#+begin_src scheme :tangle (meta-in-dir "substitutes.nonguix.org.pub")
-(public-key
- (ecc
-  (curve Ed25519)
-  (q #C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98#)))
+
+(define* (public-key #:key
+                     (curve "Ed25519")
+                     q)
+  `(public-key
+    (ecc
+     (curve ,curve)
+     (q ,(string-append "#" q "#")))))
+
+(define (public-key-serialize k)
+  (call-with-output-string
+    (lambda (port)
+      (display k port))))
+
+(define nonguix-public-key
+  (public-key #:q "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98"))
 #+end_src
 **** Nix
 #+begin_src scheme
