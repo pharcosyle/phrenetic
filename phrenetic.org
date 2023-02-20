@@ -6796,7 +6796,7 @@ nix-channel --update
 
 (define* (sway-backlight #:key (step 10))
   (let* ((step->symbol (lambda (op)
-                         (symbol-append (string->symbol (number->string step)) '% op)))
+                         (symbol-append op (string->symbol (number->string step)) '%)))
          (brightnessctl (file-append brightnessctl "/bin/brightnessctl")))
     `((bindsym --locked XF86MonBrightnessUp exec ,brightnessctl set ,(step->symbol '+))
       (bindsym --locked XF86MonBrightnessDown exec ,brightnessctl set ,(step->symbol '-)))))
