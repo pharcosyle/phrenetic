@@ -206,23 +206,29 @@ Run with ~sudo~.
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-applet))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
-  #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
+  #:use-module ((gnu packages libusb) #:select (libmtp))
+  #:use-module ((gnu packages linux) #:select (alsa-utils brightnessctl crda customize-linux e2fsprogs fuse kbd linux-libre lvm2 ntfs-3g pipewire util-linux))
+  #:use-module ((gnu packages nfs) #:select (nfs-utils))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects))
   #:use-module (gnu services)
   #:use-module (gnu services admin)
+  #:use-module (gnu services avahi)
   #:use-module (gnu services base)
+  #:use-module (gnu services dbus)
   #:use-module (gnu services desktop)
   #:use-module (gnu services linux)
   #:use-module (gnu services networking)
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
   #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
+  #:use-module (gnu services sysctl)
   #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service screen-locker-service-type))
   #:use-module (gnu services virtualization)
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
+  #:use-module ((gnu system setuid) #:select (setuid-program))
   #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
@@ -311,14 +317,20 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services-by-types
-     %base-services
-     (list login-service-type
-           agetty-service-type
-           mingetty-service-type
-           console-font-service-type
-           guix-service-type
-           log-cleanup-service-type))
+    (list (service virtual-terminal-service-type)
+          (syslog-service)
+          (service static-networking-service-type
+                   (list %loopback-static-networking))
+          (service urandom-seed-service-type)
+          (service nscd-service-type)
+          (service rottlog-service-type)
+          (service udev-service-type
+                   (udev-configuration
+                    (rules (list lvm2 fuse alsa-utils crda))))
+          (service sysctl-service-type)
+          (service special-files-service-type
+                   `(("/bin/sh" ,(file-append bash "/bin/sh"))
+                     ("/usr/bin/env" ,(file-append coreutils "/bin/env")))))
     (if stateless?
         (list
          (stateless-service
@@ -554,21 +566,28 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (remove-services-by-types
-     %desktop-services
-     (append
-      (map service-kind %base-services)
-      (list screen-locker-service-type
-            network-manager-service-type
-            wpa-supplicant-service-type
-            (service-kind
-             (simple-service 'network-manager-applet
-                             profile-service-type
-                             (list network-manager-applet)))
-            gdm-service-type
-            (service-kind gdm-file-system-service)
-            pulseaudio-service-type
-            alsa-service-type)))
+    (list (simple-service 'mtp udev-service-type (list libmtp))
+          (service sane-service-type)
+          polkit-wheel-service
+          (simple-service 'mount-setuid-helpers setuid-program-service-type
+                          (map (lambda (program)
+                                 (setuid-program
+                                  (program program)))
+                               (list (file-append nfs-utils "/sbin/mount.nfs")
+                                     (file-append ntfs-3g "/sbin/mount.ntfs-3g"))))
+          fontconfig-file-system-service
+          (service avahi-service-type)
+          (udisks-service)
+          (service upower-service-type)
+          (service accountsservice-service-type)
+          (service cups-pk-helper-service-type)
+          (service colord-service-type)
+          (geoclue-service)
+          (service polkit-service-type)
+          (service elogind-service-type)
+          (service dbus-root-service-type)
+          (service ntp-service-type)
+          x11-socket-directory-service)
     (if stateless?
         (list
          (stateless-service
@@ -625,6 +644,7 @@ Run with ~sudo~.
                    (main-conf
                     '((Settings ((AutoConnect . #t)))))))
          (service wpa-supplicant-service-type)))
+    (modem-services)
     (if stateless?
         (list
          (stateless-service
@@ -635,6 +655,12 @@ Run with ~sudo~.
                      (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
+#+end_src
+***** Shared
+#+begin_src scheme
+(define (modem-services)
+  (list (service modem-manager-service-type)
+        (service usb-modeswitch-service-type)))
 #+end_src
 **** Bluetooth
 #+begin_src scheme
