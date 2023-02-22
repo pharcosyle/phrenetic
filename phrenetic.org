@@ -8882,7 +8882,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                    (#:mode . #o700)
                    (#:parent-dir-perms . ((#:mode . #o700))))))
        #:ignore (if (chrome? flavors)
-                    ;; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also it's perpetually empty. Whatever, ignore it.
+                    ;; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also the only time I've seen it not be empty is once when Gmail promted me to let it open emails and I hit accept. Whatever, lets just ignore it.
                     '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
                        (#:preds . ((#:empty-file)))))
                     #f))))
