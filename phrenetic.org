@@ -2009,6 +2009,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             emacs-new-frame
             doom
             doom-service
+            doom-ts-lang
             doom-web
             guix-pm
             nix-pm
@@ -2933,7 +2934,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((phrenetic packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
 
 (define-public doom-emacs
-  (let ((commit "0b921c2d341c6ce5ccd40800e24d24006dce954d")
+  (let ((commit "99c6949e5464746a232cbe619b359d1fa05ed8fe")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2946,7 +2947,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                (commit commit)))
          (sha256
           (base32
-           "1hygdslbk93qgwv1mp2fig9h5lzil5lrd8jwhpfbqnwjsdk7f25k"))
+           "0ssjm4bfk0x0lf34np3mhr8v32p2w0nrlnr93wgph2as6c2nry40"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/dirvish.patch")))))
@@ -5528,13 +5529,15 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 #+begin_src scheme
 (define* (doom-ts-lang lang
                        #:key
-                       tree-sitter?)
+                       tree-sitter?
+                       config)
   (append
    (list
     (doom-service
      lang
      #:modules `((#:lang
-                  (,lang ,@(if tree-sitter? '(+tree-sitter) '()))))))
+                  (,lang ,@(if tree-sitter? '(+tree-sitter) '()))))
+     #:config (or config '())))
 
    (if tree-sitter?
        (doom-tree-sitter) '())))
@@ -5900,11 +5903,6 @@ Some colors from the original Atom theme on which I based mine that might be use
        name
        #:modules '((#:lang
                     (scheme +guile)))
-       #:packages
-       ;; TODO Manual bumps, remove them when Doom bumps the module.
-       '((package! geiser :pin "e54d5e6dc659c252d10c4280f4c4d78d38623df5")
-         (package! geiser-guile :pin "24ce15de235c105daf5ecfb818200dae1c9815ee"))
-
        #:config
        '((after! scheme
                  (setq-hook! 'scheme-mode-hook indent-tabs-mode nil))
@@ -7999,6 +7997,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define* (clojure-prog #:key
                        stateless?
                        doom?
+                       doom-tree-sitter?
                        (jdk (list openjdk17 "jdk"))) ; Newest LTS release.
   (append
    (list
@@ -8016,7 +8015,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                   (#:storage . #:storage/machine))))))
 
    (if doom?
-       (doom-clojure #:stateless? stateless?) '())))
+       (doom-clojure #:stateless? stateless?
+                     #:tree-sitter? doom-tree-sitter?)
+       '())))
 #+end_src
 ****** Clojure tools :package:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
@@ -8040,14 +8041,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 ****** Doom Clojure
 #+begin_src scheme
-(define* (doom-clojure #:key stateless?)
+(define* (doom-clojure #:key
+                       stateless?
+                       tree-sitter?)
   (append
    (let ((name 'clojure))
-     (list
-      (doom-service
+     (append
+      (doom-ts-lang
        name
-       #:modules '((#:lang
-                    clojure))
+       #:tree-sitter? tree-sitter?
        #:config
        `((use-package! clojure-mode
                        :defer t
@@ -8083,11 +8085,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          (after! clj-refactor
                  (cljr-add-keybindings-with-prefix "s-M R")))) ; REVIEW temporary binding
 
-      (when stateless?
-        (doom-stateless-service
-         name
-         #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
-                    (#:storage . #:storage/persist)))))))
+      (if stateless?
+          (list
+           (doom-stateless-service
+            'clojure
+            #:state '(((#:path . ("cider-repl-history" #:doom-base #:cache))
+                       (#:storage . #:storage/persist)))))
+          '())))
 
    (doom-xml+csv)
    (doom-dash)))
