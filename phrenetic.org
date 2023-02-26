@@ -5791,7 +5791,7 @@ Some colors from the original Atom theme on which I based mine that might be use
        (biome--set-font-safe
         'doom-font
         (font-spec ;; :family ,(assoc-ref font #:font/name)
-                   ;; Work around what I suspect is a PGTK issue. It's doesn't happen in Emacs 29, remove this when its released.
+                   ;; Workaround for Emacs 28 and lower (see "Emacs now supports 'medium' fonts" in https://github.com/emacs-mirror/emacs/blob/master/etc/NEWS.29), remove when Emacs 29 is released.
                    :family ,(if (equal? (assoc-ref font #:font/weight) "Medium")
                                 (string-append (assoc-ref font #:font/name) " Medium")
                                 (assoc-ref font #:font/name))
