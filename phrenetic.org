@@ -7323,6 +7323,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 *********** WAIT [#D] Fix battery capacity output
 It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug.
 - [2023-02-18 Sat] I've upgraded to a new Waybar version (0.9.17) with some battery improvements that may fix this, wait and watch.
+- [2023-03-02 Thu] It doesn't seem to be helping, full battery reports as ~50%.
 ********** Clock
 #+begin_src scheme
 (define* (waybar-clock bar-id
@@ -7346,6 +7347,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 - TODO histogram
   - I don't understand the histogram output.
   - The histogram is "jumpy", it changes width.
+    Possibly helpful: [[https://github.com/Alexays/Waybar/wiki/FAQ#how-can-i-prevent-modules-from-changing-size-aka-fixed-width-modules-and-monospace-fonts][FAQ · Alexays/Waybar Wiki · GitHub (prevent modules from changing size)]]
 #+begin_src scheme
 (define* (waybar-cpu bar-id
                      #:key (histogram? #t))
@@ -7534,7 +7536,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (append-map (lambda (t)
                  `("-i" ,(if (string-contains t " ")
                              (quoted t) t)))
-               ignore-types)))
+               (or ignore-types '()))))
 #+end_src
 ******* Display configuration
 ******** Kanshi
@@ -7559,7 +7561,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (let ((cmd (lambda (op)
                (list (file-append brightnessctl "/bin/brightnessctl")
                      "set"
-                     (step-value step op)))))
+                     (step-pct step op)))))
     `((#:backlight/up . ,(cmd #:up))
       (#:backlight/down . ,(cmd #:down)))))
 #+end_src
@@ -7572,9 +7574,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
          (source "@DEFAULT_SOURCE@")
          (unmute (list pactl "set-sink-mute" sink "false")))
     `((#:volume/up . ,(list unmute
-                            (list pactl "set-sink-volume" sink (step-value step #:up))))
+                            (list pactl "set-sink-volume" sink (step-pct step #:up))))
       (#:volume/down . ,(list unmute
-                              (list pactl "set-sink-volume" sink (step-value step #:down))))
+                              (list pactl "set-sink-volume" sink (step-pct step #:down))))
       (#:volume/mute-unmute . ,(list pactl "set-sink-mute" sink "toggle"))
       (#:volume/mic-mute-unmute . ,(list pactl "set-source-mute" source "toggle")))))
 #+end_src
@@ -7591,7 +7593,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ******** Shared
 #+begin_src scheme
-(define (step-value n op)
+(define (step-pct n op)
   (string-append (case op
                    ((#:up) "+")
                    ((#:down) "-"))
