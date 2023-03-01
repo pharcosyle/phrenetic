@@ -485,21 +485,18 @@ Run with ~sudo~.
     (substitute-urls
      (list "https://substitutes.nonguix.org")))))
 
-(define* (public-key #:key
-                     (curve "Ed25519")
-                     q)
-  `(public-key
-    (ecc
-     (curve ,curve)
-     (q ,(string-append "#" q "#")))))
-
-(define (public-key-serialize k)
-  (call-with-output-string
-    (lambda (port)
-      (display k port))))
-
 (define nonguix-public-key
-  (public-key #:q "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98"))
+  '((#:public-key/q . "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98")))
+
+(define (public-key-serialize pk)
+  (let ((sexp `(public-key
+                (ecc
+                 (curve ,(or (assoc-ref pk #:public-key/curve)
+                             "Ed25519"))
+                 (q ,(around (assoc-ref pk #:public-key/q) "#"))))))
+    (call-with-output-string
+      (lambda (port)
+        (display sexp port)))))
 #+end_src
 **** Nix
 #+begin_src scheme
