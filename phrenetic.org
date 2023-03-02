@@ -7245,16 +7245,12 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (list
       (waybar-tray bar-id)
       (waybar-idle-inhibitor bar-id)
-      (waybar-volume bar-id
-                     #:show-percentage? default-show-percentage?)
-      (waybar-microphone bar-id
-                         #:show-percentage? default-show-percentage?)
-      (waybar-backlight bar-id
-                        #:show-percentage? default-show-percentage?)
+      (waybar-volume bar-id #:show-percentage? default-show-percentage?)
+      (waybar-microphone bar-id #:show-percentage? default-show-percentage?)
+      (waybar-backlight bar-id #:show-percentage? default-show-percentage?)
       (waybar-cpu bar-id)
       (waybar-memory bar-id)
-      (waybar-battery bar-id
-                      #:show-percentage? #t)))))
+      (waybar-battery bar-id #:show-percentage? #t)))))
 #+end_src
 ********* Modules
 #+begin_src scheme
@@ -7275,8 +7271,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ********** Backlight
 #+begin_src scheme
-(define* (waybar-backlight bar-id
-                           #:key show-percentage?)
+(define* (waybar-backlight bar-id #:key show-percentage?)
   (waybar-module
    'backlight
    bar-id
@@ -7288,8 +7283,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
 #+end_src
 ********** Battery
 #+begin_src scheme
-(define* (waybar-battery bar-id
-                         #:key show-percentage?)
+(define* (waybar-battery bar-id #:key show-percentage?)
   (waybar-module
    'battery
    bar-id
@@ -7393,8 +7387,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ********** Microphone
 #+begin_src scheme
-(define* (waybar-microphone bar-id
-                            #:key show-percentage?)
+(define* (waybar-microphone bar-id #:key show-percentage?)
   (waybar-module
    'pulseaudio#source
    bar-id
@@ -7440,8 +7433,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ********** Volume
 #+begin_src scheme
-(define* (waybar-volume bar-id
-                        #:key show-percentage?)
+(define* (waybar-volume bar-id #:key show-percentage?)
   (waybar-module
    'pulseaudio#sink
    bar-id
@@ -7457,7 +7449,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
 #+end_src
 ********** Sway
-*********** Sway window
+*********** Window
 #+begin_src scheme
 (define (waybar-sway-window bar-id)
   (waybar-module
@@ -7469,7 +7461,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (margin-right . 1em))))
    #:placement 'modules-center))
 #+end_src
-*********** Sway workspaces
+*********** Workspaces
 #+begin_src scheme
 (define* (waybar-sway-workspaces
           bar-id
@@ -7495,8 +7487,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    `((disable-scroll . #t)
      (format . {icon})
      (format-icons . ,format-icons)
-     (persistent_workspaces . ,(if persistent-workspaces
-                                   persistent-workspaces '())))
+     (persistent_workspaces . ,(or persistent-workspaces '())))
    #:style
    `(((#{#workspaces}# button)
       ((background . none)
