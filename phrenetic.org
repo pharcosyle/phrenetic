@@ -9602,41 +9602,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 :PROPERTIES:
 :meta-dir+: phrenetic
 :END:
-** Packages
-:PROPERTIES:
-:meta-dir+: packages
-:END:
-*** KMonad :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "haskell-apps.scm")
-(define-module (phrenetic packages haskell-apps)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages haskell-apps) #:select (kmonad) #:prefix haskell-apps:)
-  #:use-module ((gnu packages haskell-check) #:select (ghc-hspec hspec-discover))
-  #:use-module (phrenetic utils))
-
-(define-public kmonad
-  (let ((commit "3413f1be996142c8ef4f36e246776a6df7175979"))
-    (as-> haskell-apps:kmonad $
-      (with-git-commit $ #:upstream-version "0.4.1"
-                       #:commit commit
-                       #:hash "0mm439r5qkkpld51spbkmn0qy27sff6iw8c7mb87x73xk4z5cjxq")
-      (package
-        (inherit $)
-        (arguments
-         (substitute-keyword-arguments (package-arguments $)
-           ((#:phases phases '%standard-phases)
-            #~(modify-phases #$phases
-                (add-after 'unpack 'patch-git-revision
-                  (lambda _
-                    (substitute* "src/KMonad/Args/Cmd.hs"
-                      (("\\$\\(gitHash\\)") #$(quoted commit)))))))))
-        (inputs
-         (modify-inputs (package-inputs $)
-           (prepend ghc-hspec
-                    hspec-discover)))))))
-#+end_src
 ** Stateless
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "stateless.scm")
@@ -10676,7 +10641,7 @@ delete it when leaving the dynamic extent of this call."
     ;; #:login-manager #:lm/gdm
 
     ;; NEW package parameterization
-    #:kmonad ,(@ (phrenetic packages haskell-apps) kmonad)
+    #:kmonad ,(@ (gnu packages haskell-apps) kmonad)
     #:media-pipewire ,(@ (gnu packages linux) pipewire)
     #:sessions-swaylock-effects? #t
     #:sessions-swaylock ,(@ (gnu packages wm) swaylock)
