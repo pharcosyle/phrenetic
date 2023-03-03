@@ -1984,7 +1984,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages aws) #:select (awscli-2))
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
-  #:use-module ((phrenetic packages datomic) #:select (datomic-cli-tools))
+  #:use-module ((phrenetic packages databases) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
   #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-sans))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
@@ -8091,9 +8091,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list datomic-cli-tools))))
 #+end_src
-****** Datomic CLI tools :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/datomic.scm")
-(define-module (phrenetic packages datomic)
+****** Datomic CLI tools :package:version:upstream:
+#+begin_src scheme :tangle (meta-in-dir "packages/databases.scm")
+(define-module (phrenetic packages databases)
   #:use-module (guix build-system copy)
   #:use-module (guix download)
   #:use-module (guix gexp)
@@ -8108,14 +8108,15 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (source
      (origin
        (method url-fetch)
-       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com/tools/datomic-cli/datomic-cli-" version ".zip"))
+       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com"
+                           "/tools/datomic-cli/datomic-cli-" version ".zip"))
        (sha256
         (base32
          "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
     (build-system copy-build-system)
     (arguments
      `(#:install-plan
-       '(("." "bin" #:include-regexp ("^\\./datomic")) ; Files that start with "datomic" are the scripts. Restrict to this subset to automatically pick up any added in the future without being too inclusive about what we add to bin.
+       '(("." "bin" #:include-regexp ("^\\./datomic"))
          ("README.txt" "share/doc/datomic/"))
        #:phases
        ,#~(modify-phases %standard-phases
@@ -8126,9 +8127,14 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (native-inputs
      (list unzip))
     (home-page "https://docs.datomic.com/cloud/index.html")
-    (synopsis "CLI tools for Datomic")
-    (description synopsis)
-    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))))
+    (synopsis "Command-line tools for Datomic Cloud")
+    (description "View and Manage analytics, logs, and access control gateways
+for a Datomic Cloud instance on AWS.")
+    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))
+    (properties
+     `((release-monitoring-url
+        . "https://docs.datomic.com/cloud/releases.html")
+       (upstream-name . "datomic-cli")))))
 #+end_src
 ***** Node
 #+begin_src scheme
