@@ -1934,7 +1934,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu home-services version-control)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
-  #:use-module ((gnu packages compression) #:select (zip unzip zstd))
+  #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
@@ -2922,6 +2922,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
   #:use-module ((phrenetic packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
@@ -2959,12 +2960,14 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list git ; TODO might not be necessary after I do my Guix-straight integration.
+       (list ;; TODO Make these regular inputs and do substitutions. Follow https://discourse.doomemacs.org/t/feature-request-centralize-external-dependencies-for-guix/3688.
+             git
              ripgrep
              fd
              all-the-icons-fonts
+             zstd
 
-             ;; TODO For dirvish, putting them here temporarily. Maybe update the Guix dirvish package and upstream.
+             ;; TODO For dirvish, putting them here temporarily. Maybe update the Guix dirvish package and upstream. Follow https://github.com/alexluigit/dirvish/issues/196.
              (@ (gnu packages rust-apps) fd)
              (@ (gnu packages imagemagick) imagemagick)
              (@ (gnu packages pdf) poppler) ; TODO Readme says "or pdf-tools"?
@@ -5511,12 +5514,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-stateless-service
         name
         #:state '(((#:path . ("undo-fu-session/" #:doom-base #:cache))
-                   (#:storage . #:storage/machine)))))
-
-     (simple-service
-      (symbol-append 'doom- name '-add-zstd)
-      home-profile-service-type
-      (list zstd)))))
+                   (#:storage . #:storage/machine))))))))
 #+end_src
 ***** Languages
 #+begin_src scheme
