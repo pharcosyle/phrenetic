@@ -231,7 +231,7 @@ Run with ~sudo~.
   #:use-module ((gnu system setuid) #:select (setuid-program))
   #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde gexp) #:select (slurp-file-like))
   #:use-module (rde system services networking)
@@ -239,7 +239,7 @@ Run with ~sudo~.
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
   #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
-  #:use-module ((phrenetic packages linux) #:select (broadcom-sta))
+  #:use-module ((phrenetic packages linux) #:select (broadcom-sta-with-patch-updates))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda))
@@ -1596,7 +1596,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
 #+begin_src scheme
 (define-system-comp (apple-broadcom-wireless #:key bluetooth?)
-  (kernel-loadable-modules (cons* broadcom-sta
+  (kernel-loadable-modules (cons* (broadcom-sta-with-patch-updates broadcom-sta)
                                   (operating-system-kernel-loadable-modules os)))
   (kernel-arguments (add-or-update-kernel-argument
                      (operating-system-user-kernel-arguments os)
@@ -1607,15 +1607,14 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
              (if bluetooth?
                  (list broadcom-bt-firmware) '()))))
 #+end_src
-******* Broadcom STA :package:version:upstream:
+******* Broadcom STA :version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
 (define-module (phrenetic packages linux)
   #:use-module (guix download)
   #:use-module (guix packages)
-  #:use-module ((nongnu packages linux) #:select (broadcom-sta) #:prefix linux:)
   #:use-module (phrenetic utils))
 
-(define (with-patch-updates broadcom-sta)
+(define-public (broadcom-sta-with-patch-updates broadcom-sta)
   (package
     (inherit broadcom-sta)
     (source
@@ -1642,9 +1641,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
     (sha256
      (base32
       hash))))
-
-(define-public broadcom-sta
-  (with-patch-updates linux:broadcom-sta))
 #+end_src
 ****** Camera :upstream:
 Colors could probably be improved by adding sensor calibration files, as described on the wiki: [[https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files][Extracting the sensor calibration files · patjak/facetimehd Wiki · GitHub]]
