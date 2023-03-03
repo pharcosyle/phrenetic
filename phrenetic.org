@@ -2925,7 +2925,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((phrenetic packages all-the-icons-fonts) #:select (all-the-icons-fonts)))
+  #:use-module ((phrenetic packages font-all-the-icons) #:select (font-all-the-icons)))
 
 (define-public doom-emacs
   (let ((commit "8f6b045dfdb6d00e5a324c3f9044dce773791502")
@@ -2964,7 +2964,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              git
              ripgrep
              fd
-             all-the-icons-fonts
+             font-all-the-icons
              zstd
 
              ;; TODO For dirvish, putting them here temporarily. Maybe update the Guix dirvish package and upstream. Follow https://github.com/alexluigit/dirvish/issues/196.
@@ -3120,52 +3120,35 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (description synopsis)
       (license license:cc-by4.0))))
 #+end_src
-***** all-the-icons fonts :package:version:
+***** All the Icons :package:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "all-the-icons-fonts.scm")
+:header-args+: :tangle (meta-in-dir "font-all-the-icons.scm")
 :END:
 #+begin_src scheme
-(define-module (phrenetic packages all-the-icons-fonts)
+(define-module (phrenetic packages font-all-the-icons)
   #:use-module (guix build-system font)
-  #:use-module (guix git-download)
   #:use-module (guix packages)
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
-  #:use-module ((gnu packages fonts) #:select (font-google-material-design-icons font-awesome))
-  #:use-module (phrenetic utils))
+  #:use-module ((guix licenses) #:prefix license:)
+  #:use-module ((ice-9 match) #:select (match-lambda)))
 
-(define-public all-the-icons-fonts
-  (let ((commit "4a4d6269b8b85b0b15954f063e6ce378630d80c0")
-        (revision "0"))
+(define-public font-all-the-icons
+  (let ((p emacs-all-the-icons))
     (package
-      (name "all-the-icons-fonts")
-      (version (git-version (package-version emacs-all-the-icons) revision commit))
-      (source
-       (origin
-         (inherit (package-source emacs-all-the-icons))
-         (uri (git-reference
-               (inherit (-> emacs-all-the-icons package-source origin-uri))
-               (commit commit)))
-         (sha256
-          (base32
-           "0y1dpxv8hha8pcxssayy0gaa7jd15ad0hwpmpixg164xzjn0cnb6"))
-         (file-name (git-file-name name version))))
+      (name "font-all-the-icons")
+      (version (package-version p))
+      (source p)
       (build-system font-build-system)
-      (arguments
-       `(#:phases
-         (modify-phases %standard-phases
-           (add-before 'install 'remove-unbundled-fonts
-             (lambda _
-               (with-directory-excursion "fonts"
-                 (for-each delete-file
-                           (list "fontawesome.ttf"
-                                 "material-design-icons.ttf"))))))))
       (propagated-inputs
-       (list font-awesome
-             font-google-material-design-icons))
-      (home-page (package-home-page emacs-all-the-icons))
-      (synopsis (package-synopsis emacs-all-the-icons))
-      (description (package-description emacs-all-the-icons))
-      (license (package-license emacs-all-the-icons)))))
+       ;; If emacs-all-the-icons propagates any font packages (possibly because it's unbundling them) we want to as well.
+       (filter (match-lambda
+                 ((_ package)
+                  (equal? (package-build-system package) font-build-system)))
+               (package-propagated-inputs p)))
+      (home-page (package-home-page p))
+      (synopsis (package-synopsis p))
+      (description (package-description p))
+      (license (delete license:gpl3+ (package-license p)))))) ; The Elisp files are licensed GPL but none of the fonts are.
 #+end_src
 ***** Patches
 ****** Dirvish :version:
