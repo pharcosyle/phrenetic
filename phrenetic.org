@@ -5850,8 +5850,12 @@ Some colors from the original Atom theme on which I based mine that might be use
      'guile-add-config
      home-files-service-type
      `((".guile"
-        ,(skeleton-file ".guile"))
-       (".gdbinit"
+        ,(skeleton-file ".guile"))))
+
+    (simple-service
+     'guile-add-gdb-config
+     home-xdg-configuration-files-service-type
+     `(("gdb/gdbinit"
         ,(skeleton-file ".gdbinit"))))
 
     (when stateless?
