@@ -1690,6 +1690,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages bash) #:select (bash))
+  #:use-module ((gnu packages clojure) #:select (clojure-tools))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto))
@@ -1733,7 +1734,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages aws) #:select (awscli-2))
-  #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
@@ -7755,26 +7755,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        (doom-clojure #:stateless? stateless?
                      #:tree-sitter? doom-tree-sitter?)
        '())))
-#+end_src
-******* Clojure tools :package:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
-(define-module (phrenetic packages clojure)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages clojure) #:select (clojure-tools) #:prefix clojure:))
-
-(define (with-man-pages clojure-tools)
-  (package
-    (inherit clojure-tools)
-    (arguments
-     (substitute-keyword-arguments (package-arguments clojure-tools)
-       ((#:install-plan install-plan)
-        #~(append #$install-plan '(("clojure.1" "/share/man/man1/")
-                                   ("clj.1" "/share/man/man1/"))))))))
-
-(define-public clojure-tools
-  (with-man-pages clojure:clojure-tools))
 #+end_src
 ******* Doom Clojure
 #+begin_src scheme
