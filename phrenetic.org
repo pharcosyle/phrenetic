@@ -765,10 +765,8 @@ Run with ~sudo~.
                              (number->string tty-number))
                      (greetd-terminal-configuration
                       (inherit terminal-config)
-                      ;; This doesn't work yet, the greetd service only has configuration options for the default session not the initial session which would be better for doing auto-login (see https://man.sr.ht/~kennylevinsen/greetd/#setting-up-auto-login). Wait until it's added or upstream a patch myself.
-                      ;; (initial-session-user user)
-                      ;; (initial-session-command "default-session-start")
-                      )
+                      (initial-session-user user)
+                      (initial-session-command "default-session-start"))
                      terminal-config))
                (greetd-terminals config)))))))))
 #+end_src
