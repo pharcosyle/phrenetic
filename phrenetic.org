@@ -6123,28 +6123,6 @@ nix-channel --update
         font-google-noto
         font-microsoft-web-core-fonts))
 #+end_src
-****** Fonts :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
-(define-module (phrenetic packages fonts)
-  #:use-module (guix build-system font)
-  #:use-module (guix git-download)
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro) #:prefix fonts:)
-  #:use-module (phrenetic utils)
-  #:use-module ((ice-9 regex) #:select (regexp-substitute/global)))
-
-(define-public font-adobe-source-code-pro
-  (with-git-version
-   fonts:font-adobe-source-code-pro
-   #:version "2.038R-ro-1.058R-it-1.018R-VAR"
-   #:commit-proc (lambda (v)
-                   ;; Copied from package definition.
-                   (regexp-substitute/global
-                    #f "((R-ro)|(R-it))(-)" v
-                    'pre 1 "/" 'post))
-   #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
-#+end_src
 ***** Date/time formats
 #+begin_src scheme
 (define %date-formats
