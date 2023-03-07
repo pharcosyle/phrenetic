@@ -1985,7 +1985,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
   #:use-module ((phrenetic packages databases) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
-  #:use-module ((phrenetic packages fonts) #:select (font-adobe-source-sans))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
@@ -6319,8 +6318,11 @@ nix-channel --update
                              `((#:fonts/mono . ((#:font/name . "Source Code Pro")
                                                 (#:font/weight . "Medium")
                                                 (#:font/package . ,font-adobe-source-code-pro)))
-                               (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
-                                                          (#:font/package . ,font-adobe-source-sans))))))))
+                               ;; TODO Temporarily use DejaVu here so I can remove the Source Sans package.
+                               ;; (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
+                               ;;                            (#:font/package . ,font-adobe-source-sans)))
+                               (#:fonts/variable-pitch . ((#:font/name . "DejaVu Sans")
+                                                          (#:font/package . ,(@ (gnu packages fonts) font-dejavu)))))))))
 
 (define (font-packages-useful)
   (list font-iosevka-etoile
@@ -6349,25 +6351,6 @@ nix-channel --update
                     #f "((R-ro)|(R-it))(-)" v
                     'pre 1 "/" 'post))
    #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
-
-(define-public font-adobe-source-sans
-  (package
-    (name "font-adobe-source-sans")
-    (version "3.046")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/adobe-fonts/source-sans")
-             (commit "3.046R")))
-       (file-name (git-file-name name version))
-       (sha256
-        (base32 "01dnhyfffnlyjzyh40x2z728qpc4i0jvrcxdcjfm17zrwhmw84lw"))))
-    (build-system font-build-system)
-    (home-page "https://github.com/adobe-fonts/source-sans")
-    (synopsis "Sans serif font family for user interface environments")
-    (description "Source Sans is a set of OpenType fonts that have been designed to work well in user interface (UI) environments.")
-    (license license:silofl1.1)))
 #+end_src
 **** Date/time formats
 #+begin_src scheme
