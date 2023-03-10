@@ -2679,6 +2679,10 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
 
 (define-public emacs-pgtk
   (as-> emacs-next-pgtk $
+    ;; Giving the package a new name seems like good practice (or at least consistent with the rest of Guix) but it's not "required" for anything.
+    (package
+      (inherit $)
+      (name "emacs-pgtk"))
     (with-git-url $ "https://github.com/flatwhatson/emacs")
     ;; TODO I get native-comp errors. Why?
     ;; (with-git-commit $ #:upstream-version "28.2.50"
