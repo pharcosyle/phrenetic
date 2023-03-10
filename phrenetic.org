@@ -2673,16 +2673,29 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
 **** Emacs PGTK :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/emacs.scm")
 (define-module (phrenetic packages emacs)
+  #:use-module (guix gexp)
+  #:use-module (guix git-download)
   #:use-module (guix packages)
-  #:use-module ((gnu packages emacs) #:select (emacs emacs-next-pgtk))
+  #:use-module ((gnu packages emacs) #:select (emacs))
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module (phrenetic utils))
 
 (define-public emacs-pgtk
-  (as-> emacs-next-pgtk $
+  (as-> emacs $
     ;; Giving the package a new name seems like good practice (or at least consistent with the rest of Guix) but it's not "required" for anything.
     (package
       (inherit $)
       (name "emacs-pgtk"))
+    ;; `emacs' uses `url-fetch' but we're using git.
+    (package
+      (inherit $)
+      (source
+       (origin
+         (inherit (package-source $))
+         (method git-fetch)
+         (uri (git-reference
+               (url #f)
+               (commit #f))))))
     (with-git-url $ "https://github.com/flatwhatson/emacs")
     ;; TODO I get native-comp errors. Why?
     ;; (with-git-commit $ #:upstream-version "28.2.50"
@@ -2693,14 +2706,10 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                      #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
     (package
       (inherit $)
-      (source
-       (origin
-         (inherit (package-source $))
-         (patches
-          (-> emacs package-source origin-patches))))
-      (inputs
-       (modify-inputs (package-inputs $)
-         (delete "tree-sitter"))))))
+      (arguments
+       (substitute-keyword-arguments (package-arguments $)
+         ((#:configure-flags flags #~'())
+          #~(cons* "--with-pgtk" #$flags)))))))
 #+end_src
 *** Doom
 #+begin_src scheme
