@@ -625,7 +625,7 @@ Run with ~sudo~.
 ***** Network manager
 #+begin_src scheme
 (define-system-comp (network-manager #:key
-                                     (iwd? #t)
+                                     (wireless #:wireless/iwd)
                                      stateless?)
   (services
    (append
@@ -633,15 +633,13 @@ Run with ~sudo~.
     (list
      (service network-manager-service-type
               (network-manager-configuration
-               (shepherd-requirement (if iwd?
-                                         '(iwd)
-                                         '(wpa-supplicant)))))
-     (if iwd?
-         (service iwd-service-type
-                  (iwd-configuration
-                   (main-conf
-                    '((Settings ((AutoConnect . #t)))))))
-         (service wpa-supplicant-service-type)))
+               (shepherd-requirement (if wireless
+                                         (case wireless
+                                           ((#:wireless/wpa-supplicant) '(wpa-supplicant))
+                                           ((#:wireless/iwd) '(iwd)))
+                                         '())))))
+    (if wireless
+        (wireless-services #:wireless wireless) '())
     (modem-services)
     (if stateless?
         (list
@@ -656,6 +654,16 @@ Run with ~sudo~.
 #+end_src
 ***** Shared
 #+begin_src scheme
+(define* (wireless-services #:key wireless)
+  (case wireless
+    ((#:wireless/wpa-supplicant) (list
+                                  (service wpa-supplicant-service-type)))
+    ((#:wireless/iwd) (list
+                       (service iwd-service-type
+                                (iwd-configuration
+                                 (main-conf
+                                  '((Settings ((AutoConnect . #t)))))))))))
+
 (define (modem-services)
   (list (service modem-manager-service-type)
         (service usb-modeswitch-service-type)))
