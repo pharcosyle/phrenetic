@@ -223,7 +223,7 @@ Run with ~sudo~.
   #:use-module (gnu services shepherd)
   #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
   #:use-module (gnu services sysctl)
-  #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service screen-locker-service-type))
+  #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service-type screen-locker-configuration))
   #:use-module (gnu services virtualization)
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
@@ -317,7 +317,7 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list (service virtual-terminal-service-type)
-          (syslog-service)
+          (service syslog-service-type)
           (service static-networking-service-type
                    (list %loopback-static-networking))
           (service urandom-seed-service-type)
@@ -573,17 +573,17 @@ Run with ~sudo~.
                                      (file-append ntfs-3g "/sbin/mount.ntfs-3g"))))
           fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
           (service avahi-service-type)
-          (udisks-service)
+          (service udisks-service-type)
           (service upower-service-type)
           (service accountsservice-service-type)
           (service cups-pk-helper-service-type)
           (service colord-service-type)
-          (geoclue-service)
+          (service geoclue-service-type)
           (service polkit-service-type)
           (service elogind-service-type)
           (service dbus-root-service-type)
           (service ntp-service-type)
-          x11-socket-directory-service)
+          (service x11-socket-directory-service-type))
     (if stateless?
         (list
          (stateless-service
@@ -633,7 +633,9 @@ Run with ~sudo~.
     (list
      (service network-manager-service-type
               (network-manager-configuration
-               (iwd? iwd?)))
+               (shepherd-requirement (if iwd?
+                                         '(iwd)
+                                         '(wpa-supplicant)))))
      (if iwd?
          (service iwd-service-type
                   (iwd-configuration
@@ -670,7 +672,9 @@ Run with ~sudo~.
      (simple-service 'bluetooth-users-add-lp-group
                      accounts-service-type
                      (cons users '("lp")))
-     (bluetooth-service #:auto-enable? #t))
+     (service bluetooth-service-type
+              (bluetooth-configuration
+               (auto-enable? #t))))
     (if stateless?
         (list
          (stateless-service
@@ -797,10 +801,14 @@ Run with ~sudo~.
                            effects?
                            swaylock
                            swaylock-effects)
-  (screen-locker-service (if effects?
+  (service screen-locker-service-type
+           (screen-locker-configuration
+            "swaylock"
+            (file-append (if effects?
                              swaylock-effects
                              swaylock)
-                         "swaylock"))
+                         "/bin/swaylock")
+            #t)))
 #+end_src
 ******* Controls
 ******** Backlights
@@ -6977,7 +6985,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 #+end_src
 ******** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
-Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
+Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service-type~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
 ******* Idle managers
 - TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
 ******** Swayidle
