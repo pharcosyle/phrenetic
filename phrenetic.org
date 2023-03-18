@@ -1542,9 +1542,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                          ;; ...
                          )
                        $)
-            ;; TODO Temporary until linux 6.2 is the default
-            ;; `(,linux-libre . ,linux)
-            `(,linux-libre . ,(@ (nongnu packages linux) linux-6.2)))
+            `(,linux-libre . ,linux))
         (match $
           ((libre . nonfree)
            (if nonfree?
