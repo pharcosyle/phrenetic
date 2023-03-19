@@ -1,9 +1,13 @@
 #+TITLE: Phrenetic
 #+PROPERTY: header-args :mkdirp yes
 
-* Install
+* Phrenetic
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "phrenetic/install.scm")
+:meta-dir+: phrenetic
+:END:
+** Install
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "install.scm")
 :END:
 Run with ~sudo~.
 #+begin_src scheme
@@ -17,7 +21,7 @@ Run with ~sudo~.
   #:use-module (phrenetic utils)
   #:export (installer-package))
 #+end_src
-** Package
+*** Package
 #+begin_src scheme
 (define* (installer-package #:rest opts)
   (package
@@ -32,7 +36,7 @@ Run with ~sudo~.
               (mkdir bin)
               (symlink #$source (string-append bin "/install"))))))))
 #+end_src
-** Program
+*** Program
 #+begin_src scheme
 (define* (installer-program #:key
                             os-name
@@ -186,9 +190,8 @@ Run with ~sudo~.
                          (cmd umount-bin (string-append mount-dir mount-point))-point))
                       '#$mountables)))))))
 #+end_src
-* System
+** System
 :PROPERTIES:
-:meta-dir+: phrenetic
 :header-args+: :tangle (meta-in-dir "system.scm")
 :END:
 #+begin_src scheme
@@ -285,7 +288,7 @@ Run with ~sudo~.
 (define greetd-terminals (@@ (gnu services base) greetd-terminals))
 (define greetd-terminal-vt (@@ (gnu services base) greetd-terminal-vt))
 #+end_src
-** Create
+*** Create
 #+begin_src scheme
 (define blank-os
   (operating-system
@@ -295,7 +298,7 @@ Run with ~sudo~.
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
-** Components
+*** Components
 #+begin_src scheme
 (define-syntax-rule (system-comp os field ...)
   (operating-system
@@ -310,7 +313,7 @@ Run with ~sudo~.
          #'(define* (name os arg ...)
              (system-comp os field ...)))))))
 #+end_src
-*** Base services
+**** Base services
 #+begin_src scheme
 (define-system-comp (base-services #:key stateless?)
   (services
@@ -348,8 +351,8 @@ Run with ~sudo~.
                      ((#:path . "/usr/bin/env")
                       (#:preds . ((#:symlink-to-store)))))))))))
 #+end_src
-*** Login
-**** Classic
+**** Login
+***** Classic
 #+begin_src scheme
 (define-system-comp (classic-login #:key number-of-ttys)
   (services
@@ -366,7 +369,7 @@ Run with ~sudo~.
                                            (tty (string-append "tty" (number->string n))))))
          (iota number-of-ttys 1)))))
 #+end_src
-**** Greetd
+***** Greetd
 #+begin_src scheme
 (define-system-comp (greetd-login #:key number-of-ttys)
   (services
@@ -379,14 +382,14 @@ Run with ~sudo~.
                           (iota number-of-ttys 1)))))
           (operating-system-user-services os))))
 #+end_src
-*** Certificates
+**** Certificates
 #+begin_src scheme
 (define-system-comp (certs)
   (packages
    (cons* nss-certs
           (operating-system-packages os))))
 #+end_src
-*** Accounts
+**** Accounts
 #+begin_src scheme
 (define-system-comp (accounts #:key who)
   (services
@@ -411,7 +414,7 @@ Run with ~sudo~.
             ((#:shell/bash) (file-append bash "/bin/bash"))
             ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))
 #+end_src
-**** Service
+***** Service
 #+begin_src scheme
 (define accounts-service-type
   (service-type (name 'accounts-servce)
@@ -437,8 +440,8 @@ Run with ~sudo~.
                                                         ((_ . groups) groups)))))
                              delete-duplicates))))
 #+end_src
-*** Package management
-**** Guix
+**** Package management
+***** Guix
 #+begin_src scheme
 (define-system-comp (guix-pm #:key
                              (nonguix-substitutes? #t)
@@ -471,7 +474,7 @@ Run with ~sudo~.
                      ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/guix/"))))))
         '()))))
 #+end_src
-***** Nonguix substitutes
+****** Nonguix substitutes
 #+begin_src scheme
 (define (nonguix-substitutes-service)
   (simple-service
@@ -497,7 +500,7 @@ Run with ~sudo~.
       (lambda (port)
         (display sexp port)))))
 #+end_src
-**** Nix
+***** Nix
 #+begin_src scheme
 (define-system-comp (nix-pm #:key stateless?)
   (services
@@ -540,8 +543,8 @@ Run with ~sudo~.
                               "\n")))
                      config)))
 #+end_src
-*** Console
-**** KMonad :upstream:
+**** Console
+***** KMonad :upstream:
 #+begin_src scheme
 (define-system-comp (kmonad-tool #:key
                                  users
@@ -555,8 +558,8 @@ Run with ~sudo~.
                      (cons users '("input")))
      (udev-rules-service 'kmonad-add-udev-rules kmonad)))))
 #+end_src
-*** Desktop
-**** Base services
+**** Desktop
+***** Base services
 #+begin_src scheme
 (define-system-comp (desktop-base-services #:key stateless?)
   (services
@@ -603,8 +606,8 @@ Run with ~sudo~.
                       (#:preds . ((#:empty-dir)))))))
         '()))))
 #+end_src
-**** Media
-***** Classic
+***** Media
+****** Classic
 #+begin_src scheme
 (define-system-comp (classic-media)
   (services
@@ -613,7 +616,7 @@ Run with ~sudo~.
     (list (service pulseaudio-service-type)
           (service alsa-service-type)))))
 #+end_src
-***** Pipewire
+****** Pipewire
 #+begin_src scheme
 (define-system-comp (pipewire-media #:key pipewire)
   (services
@@ -621,8 +624,8 @@ Run with ~sudo~.
                               pipewire)
           (operating-system-user-services os))))
 #+end_src
-**** Network
-***** Network manager
+***** Network
+****** Network manager
 #+begin_src scheme
 (define-system-comp (network-manager #:key
                                      (wireless #:wireless/iwd)
@@ -652,7 +655,7 @@ Run with ~sudo~.
                      (#:mode . #o700)))))
         '()))))
 #+end_src
-***** Shared
+****** Shared
 #+begin_src scheme
 (define* (wireless-services #:key wireless)
   (case wireless
@@ -668,7 +671,7 @@ Run with ~sudo~.
   (list (service modem-manager-service-type)
         (service usb-modeswitch-service-type)))
 #+end_src
-**** Bluetooth
+***** Bluetooth
 #+begin_src scheme
 (define-system-comp (bluetooth #:key
                                users
@@ -692,9 +695,9 @@ Run with ~sudo~.
                      (#:mode . #o700)))))
         '()))))
 #+end_src
-**** Login management
-***** Login managers
-****** GDM
+***** Login management
+****** Login managers
+******* GDM
 #+begin_src scheme
 (define-system-comp (gdm #:key
                          wayland?
@@ -718,7 +721,7 @@ Run with ~sudo~.
           #:ignore `(((#:path . ,(string-append (file-system-mount-point %gdm-file-system) "/"))))))
         '()))))
 #+end_src
-***** Desktop TTY
+****** Desktop TTY
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
                                  login
@@ -778,17 +781,17 @@ Run with ~sudo~.
                      terminal-config))
                (greetd-terminals config)))))))))
 #+end_src
-**** Sessions
-***** Desktop environments
-****** GNOME
+***** Sessions
+****** Desktop environments
+******* GNOME
 #+begin_src scheme
 (define-system-comp (gnome-desktop)
   (services
    (cons* (service (without-profile-extension gnome-desktop-service-type))
           (operating-system-user-services os))))
 #+end_src
-***** Window managers
-****** Sway
+****** Window managers
+******* Sway
 #+begin_src scheme
 (define-system-comp (sway-wm #:key
                              swaylock-effects?
@@ -801,9 +804,9 @@ Run with ~sudo~.
                                    #:swaylock-effects swaylock-effects)
                  (brightnessctl-service)))))
 #+end_src
-****** Pieces
-******* Screen lockers
-******** Swaylock
+******* Pieces
+******** Screen lockers
+********* Swaylock
 #+begin_src scheme
 (define* (swaylock-service #:key
                            effects?
@@ -818,15 +821,15 @@ Run with ~sudo~.
                          "/bin/swaylock")
             #t)))
 #+end_src
-******* Controls
-******** Backlights
-********* Brightnessctl
+******** Controls
+********* Backlights
+********** Brightnessctl
 #+begin_src scheme
 (define (brightnessctl-service)
   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
-*** Host-specific
-**** Host
+**** Host-specific
+***** Host
 #+begin_src scheme
 (define-system-comp (host-info #:key
                                host-name
@@ -838,8 +841,8 @@ Run with ~sudo~.
   (locale (or locale
               (operating-system-locale os))))
 #+end_src
-**** File systems
-***** Ext4
+***** File systems
+****** Ext4
 #+begin_src scheme
 (define-system-comp (ext4 #:key
                           label
@@ -855,7 +858,7 @@ Run with ~sudo~.
             (options (alist->file-system-options (or options '()))))
           (operating-system-file-systems os))))
 #+end_src
-***** Btrfs
+****** Btrfs
 #+begin_src scheme
 (define-system-comp (btrfs #:key
                            label
@@ -886,7 +889,7 @@ Run with ~sudo~.
                        (acons "subvol" subvol $) $)
                    (alist->file-system-options $)))))
 #+end_src
-***** Tmpfs
+****** Tmpfs
 #+begin_src scheme
 (define-system-comp (tmpfs #:key
                            mount-point
@@ -904,7 +907,7 @@ Run with ~sudo~.
             (check? #f))
           (operating-system-file-systems os))))
 #+end_src
-**** Disk encryption
+***** Disk encryption
 Must succeed [[*File systems][File systems]] component.
 #+begin_src scheme
 (define* (disk-encryption os
@@ -931,8 +934,8 @@ Must succeed [[*File systems][File systems]] component.
                  fs))
            (operating-system-file-systems os))))))
 #+end_src
-**** Swap
-***** Disk-backed
+***** Swap
+****** Disk-backed
 No ~swap-space-dependencies~ are required as long as the file system on which the swap file resides is ~needed-for-boot?~ (indeed, adding them triggers a build error since no Shepherd service is created for such file systems).
 #+begin_src scheme
 (define-system-comp (swap #:key
@@ -997,7 +1000,7 @@ No ~swap-space-dependencies~ are required as long as the file system on which th
       ;; Find the swap device using the same (somewhat complex) logic as `swap-service-type' and run `mkswap' on it (if that hasn't been done already, donno how I'd check).
       ))
 #+end_src
-****** Zswap
+******* Zswap
 Works only if disk-backed swap is available, consider [[*Zram][Zram]] otherwise.
 #+begin_src scheme
 (define-system-comp (zswap #:key
@@ -1018,7 +1021,7 @@ Works only if disk-backed swap is available, consider [[*Zram][Zram]] otherwise.
                    (list compressor
                          allocator))))
 #+end_src
-***** Zram
+****** Zram
 Useful when disk-backed swap doesn't make sense (e.g. a system on a flash drive where there's no room or I/O would be slow), consider [[*Zswap][Zswap]] otherise.
 #+begin_src scheme
 (define-system-comp (zram-swap #:key
@@ -1035,7 +1038,7 @@ Useful when disk-backed swap doesn't make sense (e.g. a system on a flash drive 
                     (priority priority)))
           (operating-system-user-services os))))
 #+end_src
-**** Stateless
+***** Stateless
 Must succeed [[*File systems][File systems]] component. To be useful, the stateless service's activation must happen before that of other services that create state so including this comonent after all others is safest.
 #+begin_src scheme
 (define* (stateless os
@@ -1079,8 +1082,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 
     (stateless-guix-system $)))
 #+end_src
-***** Service
-****** Service type
+****** Service
+******* Service type
 #+begin_src scheme
 (define stateless-service-type
   (service-type
@@ -1132,7 +1135,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
               )))
    (description "Initialize a stateless system.")))
 #+end_src
-******* Boot
+******** Boot
 #+begin_src scheme
 (define (boot-gexp symlink-log-dir? log-storage-dir password-files)
   (gexps->gexp
@@ -1193,7 +1196,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   (last-change #f))))
               '#$password-files)))))
 #+end_src
-******* Activation
+******** Activation
 #+begin_src scheme
 (define (activation-gexp state-users state storage-paths)
   (gexps->gexp
@@ -1229,7 +1232,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   ""
                   '#$storage-paths))))
 #+end_src
-******* Shepherd
+******** Shepherd
 #+begin_src scheme
 (define (activate-he-shepherd-services hes)
   (cons (user-homes-shepherd-service (map (match-lambda ((user . _) user))
@@ -1280,7 +1283,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
    (modules '(((guix build utils) #:select (delete-file-recursively))
               ((ice-9 ftw) #:select (scandir))))))
 #+end_src
-******* Tool
+******** Tool
 #+begin_src scheme
 (define (system-additional-known users)
   #~(append
@@ -1375,18 +1378,18 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 ;;     (mkdir-p "/.machine/.passwords")
 ;;     ))
 #+end_src
-******* Shared
+******** Shared
 #+begin_src scheme
 (define (gexps->gexp gexps)
   #~(begin
       #$@gexps))
 #+end_src
-****** Extension helper
+******* Extension helper
 #+begin_src scheme
 (define stateless-service
   (stateless:service-fn stateless-service-type))
 #+end_src
-***** Guix system
+****** Guix system
 #+begin_src scheme
 (define* (stateless-guix-system os)
   (as-> os $
@@ -1419,7 +1422,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 
     (sudo-lectures $)))
 #+end_src
-****** Sudo lectures
+******* Sudo lectures
 #+begin_src scheme
 (define-system-comp (sudo-lectures #:key lectures?)
   (services
@@ -1440,13 +1443,13 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
         "Defaults lecture=never" "\n")
        (operating-system-sudoers-file os))))
 #+end_src
-*** Hardware-specific
-**** Bootloaders
-***** Grub
+**** Hardware-specific
+***** Bootloaders
+****** Grub
 #+begin_src scheme
 ;; ...
 #+end_src
-***** Grub EFI
+****** Grub EFI
 #+begin_src scheme
 (define-system-comp (grub-efi #:key
                               label
@@ -1507,11 +1510,11 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
     (string-append message
                    (apply string-append (repeat padding-size "#")))))
 #+end_src
-***** U-Boot
+****** U-Boot
 #+begin_src scheme
 ;; ...
 #+end_src
-**** Linux
+***** Linux
 #+begin_src scheme
 (define-system-comp (linux-kernel #:key
                                   system
@@ -1548,7 +1551,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
            (if nonfree?
                nonfree libre)))))
 #+end_src
-**** Virtualization
+***** Virtualization
 #+begin_src scheme
 (define-system-comp (virtualization #:key
                                     kvm-support?
@@ -1574,8 +1577,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                      (platforms (apply lookup-qemu-platforms platforms)))))
           '())))))
 #+end_src
-**** Console
-***** Keyboard layouts
+***** Console
+****** Keyboard layouts
 #+begin_src scheme
 (define-system-comp (console-keyboard-layouts #:key kb-layout)
   (keyboard-layout kb-layout)
@@ -1583,7 +1586,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                (inherit (operating-system-bootloader os))
                (keyboard-layout kb-layout))))
 #+end_src
-***** Fonts
+****** Fonts
 #+begin_src scheme
 (define-system-comp (console-fonts #:key
                                    number-of-ttys
@@ -1598,8 +1601,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                         (iota number-of-ttys 1)))
           (operating-system-user-services os))))
 #+end_src
-**** Vendor-specific
-***** Apple
+***** Vendor-specific
+****** Apple
 #+begin_src scheme
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
@@ -1607,7 +1610,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
       apple-facetime-camera
       apple-macbook-power-key))
 #+end_src
-****** Wireless
+******* Wireless
 I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
 #+begin_src scheme
 (define-system-comp (apple-broadcom-wireless #:key bluetooth?)
@@ -1622,7 +1625,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
              (if bluetooth?
                  (list broadcom-bt-firmware) '()))))
 #+end_src
-******* Broadcom STA :version:upstream:
+******** Broadcom STA :version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
 (define-module (phrenetic packages linux)
   #:use-module (guix download)
@@ -1657,7 +1660,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
      (base32
       hash))))
 #+end_src
-****** Camera :upstream:
+******* Camera :upstream:
 Colors could probably be improved by adding sensor calibration files, as described on the wiki: [[https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files][Extracting the sensor calibration files · patjak/facetimehd Wiki · GitHub]]
 Adapt the Nix module like I did for the kernel module and firmware:
 - [[https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/hardware/video/webcam/facetimehd.nix][nixpkgs/facetimehd.nix at master · NixOS/nixpkgs · GitHub]]
@@ -1678,7 +1681,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
                           '("facetimehd"))
           (operating-system-user-services os))))
 #+end_src
-******* Linux module :package:version:
+******** Linux module :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/facetimehd.scm")
 (define-module (phrenetic packages facetimehd)
   #:use-module (guix build-system linux-module)
@@ -1708,7 +1711,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
     (license license:gpl2)
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
-******* Firmware :package:version:
+******** Firmware :package:version:
 This is very messy, I naively ported the package from Nix. Ideally I'd rewrite it to not use ~curl~ (copy out the byte range with ~dd~ or guile / guix utils), not rely on ~system~ and use it for things like piping and appending command output (perhaps with guile's ~pipe~ / ~pipeline~ / ~redirect-port~), etc.
 #+begin_src scheme :tangle (meta-in-dir "packages/facetimehd-firmware.scm")
 (define-module (phrenetic packages facetimehd-firmware)
@@ -1785,7 +1788,7 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
     (license (license:nonfree "https://www.apple.com/legal"))
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
-****** Macbook power key
+******* Macbook power key
 Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
 #+begin_src scheme
 (define-system-comp (apple-macbook-power-key)
@@ -1797,7 +1800,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
        (inherit config)
        (handle-power-key 'suspend))))))
 #+end_src
-****** Shared
+******* Shared
 #+begin_src scheme
 (define (add-or-update-kernel-argument kargs param-name vs)
   (let ((param? (lambda (p)
@@ -1813,7 +1816,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
         (cons (string-append param-name "=" vs*)
               kargs))))
 #+end_src
-*** Shared
+**** Shared
 #+begin_src scheme
 (define (without-profile-extension st)
   (service-type
@@ -1823,8 +1826,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               (equal? (service-extension-target ext) profile-service-type))
             (service-type-extensions st)))))
 #+end_src
-** Composite components
-*** Base
+*** Composite components
+**** Base
 #+begin_src scheme
 (define* (os-base os
                   #:key
@@ -1900,7 +1903,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
               $))
         $)))
 #+end_src
-*** Macbook hardware
+**** Macbook hardware
 #+begin_src scheme
 (define* (with-macbook-hardware os
                                 #:key
@@ -1926,9 +1929,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                    #:hidpi? (assoc-ref console-output #:display/hidpi?))
     (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
-* Home
+** Home
 :PROPERTIES:
-:meta-dir+: phrenetic
 :header-args+: :tangle (meta-in-dir "home.scm")
 :END:
 #+begin_src scheme
@@ -2120,7 +2122,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                    #:commit "29f293d50d708d026abbf37b75c6d72d75b4153b"
                    #:hash "15kia2s1va14bzvyp3jm3v9wddjsyyh1g03y25c7nb11sn40ypnc"))
 #+end_src
-** Create
+*** Create
 #+begin_src scheme
 (define (create-he services)
   (let ((he (home-environment)))
@@ -2132,8 +2134,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
      (services
       (filter service? services))))) ; A convenience to allow passing a list of services with #f, <unspecified> not filtered out.
 #+end_src
-** Components
-*** Stateless
+*** Components
+**** Stateless
 - TODO probably move this to above "Virtualization" (to keep things in the same order in Home as in System). Update: probably create a "System-specific" section.
 #+begin_src scheme
 (define* (stateless #:key storage-paths)
@@ -2142,8 +2144,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (service home-stateless-service-type
              `(#:storage-paths ,storage-paths)))))
 #+end_src
-**** Service
-***** Service type
+***** Service
+****** Service type
 #+begin_src scheme
 (define home-stateless-service-type
   (service-type
@@ -2201,7 +2203,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #~(lambda (ignore)
       (map #$path-with-home-expansion ignore)))
 #+end_src
-****** Tool
+******* Tool
 #+begin_src scheme
 (define guix-home-files
   (with-imported-modules '((guix build utils))
@@ -2228,12 +2230,12 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
 ;;   (and (symbolic-link? file)
 ;;        (store-file-name? (readlink file))))
 #+end_src
-***** Extension helper
+****** Extension helper
 #+begin_src scheme
 (define home-stateless-service
   (stateless:service-fn home-stateless-service-type))
 #+end_src
-*** Shells
+**** Shells
 #+begin_src scheme
 (define* (shells #:key
                  stateless?
@@ -2331,17 +2333,17 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                     #:tree-sitter? doom-tree-sitter?)
        '())))
 #+end_src
-**** Bash
-***** Bashrc
+***** Bash
+****** Bashrc
 #+begin_src sh :tangle (meta-in-dir "bashrc")
 HISTFILE=${XDG_STATE_HOME:-$HOME/.local/var/lib}/bash/.bash_history
 #+end_src
-**** Zsh
-***** Zshrc
+***** Zsh
+****** Zshrc
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "zshrc")
 :END:
-****** Andrew Tropin's zshrc
+******* Andrew Tropin's zshrc
 - TODO trying out Andrew Tropin's zsh configuration verbatim for now. Should I also try out vanilla zshell?
 #+begin_src sh
 # Prevent freezing output on ^s, needed for various isearches
@@ -2472,13 +2474,13 @@ alias try='guix shell man-db coreutils'
 alias ka='killall'
 alias sdn='sudo shutdown'
 #+end_src
-****** History
+******* History
 - TODO use ~very-big-history~
 #+begin_src sh
 HISTSIZE=1000000
 SAVEHIST=$HISTSIZE
 #+end_src
-**** Doom shells
+***** Doom shells
 #+begin_src scheme
 (define* (doom-shells #:key
                       stateless?
@@ -2487,7 +2489,7 @@ SAVEHIST=$HISTSIZE
    (doom-ts-lang 'sh #:tree-sitter? tree-sitter?)
    (doom-eshell #:stateless? stateless?)))
 #+end_src
-***** Doom eshell
+****** Doom eshell
 #+begin_src scheme
 (define* (doom-eshell #:key stateless?)
   (let ((name 'eshell))
@@ -2509,8 +2511,8 @@ SAVEHIST=$HISTSIZE
                   ((#:path . ("eshell/z" #:doom-base #:data))
                    (#:storage . #:storage/persist))))))))
 #+end_src
-*** XDG
-**** Base directories
+**** XDG
+***** Base directories
 #+begin_src scheme
 (define* (xdg-base-directories #:key stateless?)
   (list
@@ -2528,7 +2530,7 @@ SAVEHIST=$HISTSIZE
       '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
          (#:storage . #:storage/machine)))))))
 #+end_src
-**** Trash
+***** Trash
 ~home-xdg-base-directories-service-type~ has an activation service to create the directories if they don't already exist, perhaps I should do the same thing here if only for consistency. The freedesktop specs for both don't require that the directories already exists so I don't know why we bother.
 #+begin_src scheme
 (define* (xdg-trash #:key stateless?)
@@ -2540,7 +2542,7 @@ SAVEHIST=$HISTSIZE
       '(((#:path . ("Trash/" #:xdg-base "XDG_DATA_HOME"))
          (#:storage . #:storage/machine)))))))
 #+end_src
-*** Emacs
+**** Emacs
 #+begin_src scheme
 (define* (emacs-editor #:key
                        wayland?
@@ -2583,7 +2585,7 @@ SAVEHIST=$HISTSIZE
       emacs-pgtk
       emacs))
 #+end_src
-**** Handler
+***** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
 #+begin_src scheme
 (define* (emacs-handler emacs
@@ -2659,7 +2661,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   `((#:window-prop.criteria/title . ,(string-append ".*" emacs-modal-title-tail))
     (#:window-prop/floating? . #t)))
 #+end_src
-**** XDG service
+***** XDG service
 #+begin_src scheme
 (define* (emacs-xdg-service name
                             xdg-name
@@ -2684,7 +2686,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                       `(,mime-type . ,(symbol-append file '.desktop)))
                     (or default-for '())))))))
 #+end_src
-**** Emacs PGTK :package:version:
+***** Emacs PGTK :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/emacs.scm")
 (define-module (phrenetic packages emacs)
   #:use-module (guix gexp)
@@ -2725,7 +2727,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
          ((#:configure-flags flags #~'())
           #~(cons* "--with-pgtk" #$flags)))))))
 #+end_src
-*** Doom
+**** Doom
 #+begin_src scheme
 (define* (doom #:key
                stateless?
@@ -2765,8 +2767,8 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                     (#:storage . #:storage/machine)))))
        '())))
 #+end_src
-**** Service :upstream:
-***** Service type
+***** Service :upstream:
+****** Service type
 #+begin_src scheme
 (define doom-service-type
   (service-type
@@ -2785,7 +2787,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
    (default-value #f)
    (description "Install and configure Doom.")))
 #+end_src
-****** Extend procedure
+******* Extend procedure
 #+begin_src scheme
 (define (doom-extend exts)
   (let ((field (lambda (k)
@@ -2875,7 +2877,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
       (use-modules ((ice-9 string-fun) #:select (string-replace-substring)))
       (string-replace-substring #$(elisp-serialize exprs) "(syntax " "(function ")))
 #+end_src
-****** Doom private
+******* Doom private
 #+begin_src scheme
 (define (doom-private config)
   (file-union
@@ -2895,7 +2897,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                 ,(mixed-text-file name file)))))
          (assoc-ref config #:theme-files)))))
 #+end_src
-***** Extension helpers
+****** Extension helpers
 #+begin_src scheme
 (define* (doom-service name
                        #:key
@@ -2911,7 +2913,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
      (#:config . ,config)
      (#:themes . ,themes))))
 #+end_src
-****** Stateless
+******* Stateless
 #+begin_src scheme
 (define* (doom-stateless-service name #:key state ignore)
   (home-stateless-service
@@ -2938,7 +2940,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              (doom-dir doom-base tail))
            path)))
 #+end_src
-**** Doom Emacs :package:version:
+***** Doom Emacs :package:version:
 :PROPERTIES:
 :meta-dir+: packages
 :END:
@@ -3017,9 +3019,9 @@ performance of a hand rolled config (or better).")
       (home-page "https://github.com/doomemacs/doomemacs")
       (license license:expat))))
 #+end_src
-***** WAIT Doom tests :wait_on_doom:
+****** WAIT Doom tests :wait_on_doom:
 Nonfunctional at the moment (hlissner has them commented out) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
-***** Emacs packages :package:version:
+****** Emacs packages :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
 :END:
@@ -3037,7 +3039,7 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
   #:use-module ((gnu packages compression) #:select (unzip))
   #:use-module (phrenetic utils))
 #+end_src
-****** guix-contributing
+******* guix-contributing
 - TODO maybe don't create a special "subpackage" for Guix development files and do something like this instead: [[https://github.com/abcdw/rde/commit/bcc4650768517e6264709f2164fa857b264d9190][rde: examples: abcdw: Source templates from guix package sources. · abcdw/rde...]]
 #+begin_src scheme
 (define-public emacs-guix-contributing
@@ -3062,7 +3064,7 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
     (description "See https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup")
     (license license:gpl3+)))
 #+end_src
-******* Source
+******** Source
 Tempel snippets now available under =/etc/snippets/tempel= as of [2022-08-30 Tue] and this [[https://github.com/guix-mirror/guix/commit/c4acaf412064568a546034871a9e0d3888aa7937][commit]].
 #+begin_src emacs-lisp :tangle (meta-in-dir "guix-contributing.el")
 (defvar guix-contributing-source-path "~/src/guix")
@@ -3078,7 +3080,7 @@ Tempel snippets now available under =/etc/snippets/tempel= as of [2022-08-30 Tue
 
 (provide 'guix-contributing)
 #+end_src
-******* Guix's Emacs development code
+******** Guix's Emacs development code
 Use the github mirror since the canonical repo doesn't allow shallow fetches.
 #+begin_src scheme
 (define guix-emacs-development*
@@ -3109,7 +3111,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
 (define guix-emacs-development
   (with-git-url guix-emacs-development* "https://github.com/guix-mirror/guix"))
 #+end_src
-****** tldr
+******* tldr
 #+begin_src scheme
 (define-public emacs-tldr
   (package
@@ -3126,7 +3128,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
      (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
        (prepend tldr-pages)))))
 #+end_src
-******* tldr pages
+******** tldr pages
 #+begin_src scheme
 (define tldr-pages
   (let ((commit "7ee7ed0f4afc90ef05b1dde87f6fec5b462a0394")
@@ -3150,7 +3152,7 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (description synopsis)
       (license license:cc-by4.0))))
 #+end_src
-***** All the Icons :package:
+****** All the Icons :package:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "font-all-the-icons.scm")
 :END:
@@ -3180,8 +3182,8 @@ Use the github mirror since the canonical repo doesn't allow shallow fetches.
       (description (package-description p))
       (license (delete license:gpl3+ (package-license p)))))) ; The Elisp files are licensed GPL but none of the fonts are.
 #+end_src
-***** Patches
-****** Dirvish :version:
+****** Patches
+******* Dirvish :version:
 Taken from https://github.com/doomemacs/doomemacs/pull/6760.
 #+begin_src diff :tangle (meta-in-dir "patches/dirvish.patch")
 diff --git a/modules/emacs/dired/autoload.el b/modules/emacs/dired/autoload.el
@@ -3537,9 +3539,9 @@ index 0f3b2bea1..9e20d7b9f 100644
  
    ;; PERF: reduce load on remote
 #+end_src
-***** packaging doom WIP
+****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
-****** first attempts
+******* first attempts
 Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
 #+begin_src scheme :tangle no
 (define-module (phrenetic packaging-doom-wip)
@@ -3796,7 +3798,7 @@ Had =:tangle (meta-in-dir "packaging-doom-wip-1.scm")=
 ;;     (home-page "")
 ;;     (license #f)))
 #+end_src
-****** second attempt
+******* second attempt
 Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 #+begin_src scheme :tangle no
 (define-module (phrenetic packaging-wip)
@@ -4004,9 +4006,9 @@ Had =:tangle (meta-in-dir "packaging-wip-2.scm") :comments link=
 ;;  (hashes (list "restart-emacs" "smartparens")))
 ;; (write-hashes (doom-ps))
 #+end_src
-****** active WIP
-******* clojure part
-******** clj file
+******* active WIP
+******** clojure part
+********* clj file
 I had =:tangle phrenetic/src/protostar/hickeyland.clj :comments link= for the source block options here.
 #+begin_src clojure :tangle no
 (ns protostar.hickeyland
@@ -4785,7 +4787,7 @@ I had =:tangle phrenetic/src/protostar/hickeyland.clj :comments link= for the so
 ;;   - only org (:depth 1)
 ;; - spec that both host and repo must be specified so in inheritance one isn't overridden without the other?
 #+end_src
-******** deps
+********* deps
 Had =:tangle phrenetic/deps.edn :comments link=
 #+begin_src clojure :tangle no
 {:paths ["src" "resources"]
@@ -4809,7 +4811,7 @@ Had =:tangle phrenetic/deps.edn :comments link=
                       io.github.cognitect-labs/test-runner
                       {:git/tag "v0.5.0" :git/sha "48c3c67"}}}}}
 #+end_src
-******* guix part
+******** guix part
 Had =:tangle phrenetic/lokke/ns/phrenetic/packaging-wip.clj :comments link=
 #+begin_src clojure :tangle no
 (ns phrenetic.packaging-wip
@@ -4921,13 +4923,13 @@ Had =:tangle phrenetic/lokke/ns/phrenetic/packaging-wip.clj :comments link=
              "asdf" asdf)]
        (apply func (map read-string args))))))
 #+end_src
-******* packaging runner
+******** packaging runner
 Had =:tangle (meta-in-dir "packaging-runner.scm")=
 #+begin_src scheme :tangle no
 (use-modules (lokke ns))
 (require #(phrenetic.packaging-wip))
 #+end_src
-******* test clj
+******** test clj
 Had =:tangle phrenetic/lokke/ns/phrenetic/test-clj.clj :comments link=
 #+begin_src clojure :tangle no
 (ns phrenetic.test-clj
@@ -4956,13 +4958,13 @@ Had =:tangle phrenetic/lokke/ns/phrenetic/test-clj.clj :comments link=
 (println 5)
 
 #+end_src
-******* test scm
+******** test scm
 Had =tangle (meta-in-dir "test-scm.scm")=
 #+begin_src scheme :tangle no
 (use-modules (lokke ns))
 (require #(phrenetic.test-clj))
 #+end_src
-******* elisp
+******** elisp
 Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 - [2022-09-11 Sun] nb: I removed the global lexical arg to emacs-lisp code blocks. Probably doesn't matter.
 #+begin_src emacs-lisp :tangle no
@@ -5017,8 +5019,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
 ;; (write-current-commits)
 #+end_src
-**** Doom services
-***** Core
+***** Doom services
+****** Core
 #+begin_src scheme
 (define* (doom-core #:key
                     stateless?
@@ -5035,7 +5037,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-emacs-lisp)
    (doom-markdown)))
 #+end_src
-****** General :bindings:
+******* General :bindings:
 #+begin_src scheme
 (define* (doom-general #:key
                        stateless?
@@ -5392,7 +5394,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                   ;; Maybe "C-s-o" but then I'll have to change my sexp-movement command(s). There are other bindings for jump-forward though, maybe I'll just use those.
                   "C-S-o" #'evil-jump-forward))))
 #+end_src
-****** User
+******* User
 #+begin_src scheme
 (define* (doom-user #:key email)
   (list
@@ -5401,7 +5403,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:config
     `((setq user-mail-address ,email)))))
 #+end_src
-****** Keymaps :bindings:
+******* Keymaps :bindings:
 #+begin_src scheme
 (define (doom-keymaps)
   (append
@@ -5506,7 +5508,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
    (doom-dash)))
 #+end_src
-****** Undo
+******* Undo
 #+begin_src scheme
 (define* (doom-undo #:key stateless?)
   (let ((name 'undo))
@@ -5529,7 +5531,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         #:state '(((#:path . ("undo-fu-session/" #:doom-base #:cache))
                    (#:storage . #:storage/machine))))))))
 #+end_src
-***** Languages
+****** Languages
 #+begin_src scheme
 (define* (doom-ts-lang lang
                        #:key
@@ -5553,7 +5555,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:modules `((#:tools
                  tree-sitter)))))
 #+end_src
-****** Emacs Lisp
+******* Emacs Lisp
 #+begin_src scheme
 (define (doom-emacs-lisp)
   (list
@@ -5565,14 +5567,14 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     '((after! elisp-mode
               (setq-hook! 'emacs-lisp-mode-hook indent-tabs-mode nil))))))
 #+end_src
-****** Javascript
+******* Javascript
 #+begin_src scheme
 (define* (doom-javascript #:key tree-sitter?)
   (append
    (doom-ts-lang 'javascript #:tree-sitter? tree-sitter?)
    (doom-ts-lang 'json #:tree-sitter? tree-sitter?)))
 #+end_src
-****** Markdown
+******* Markdown
 #+begin_src scheme
 (define (doom-markdown)
   (list
@@ -5581,7 +5583,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:modules `((#:lang
                  markdown)))))
 #+end_src
-****** XML and CSV
+******* XML and CSV
 #+begin_src scheme
 (define (doom-xml+csv)
   (list
@@ -5590,7 +5592,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:modules `((#:lang
                  data)))))
 #+end_src
-****** Web
+******* Web
 #+begin_src scheme
 (define* (doom-web #:key tree-sitter?)
   (append
@@ -5603,8 +5605,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
      #:modules `((#:lang
                   (rest +jq)))))))
 #+end_src
-***** Libraries
-****** Dash
+****** Libraries
+******* Dash
 #+begin_src scheme
 (define (doom-dash)
   (list
@@ -5615,7 +5617,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     #:config
     '((use-package! dash)))))
 #+end_src
-****** Transient
+******* Transient
 #+begin_src scheme
 (define* (doom-transient #:key stateless?)
   (let ((name 'transient))
@@ -5632,7 +5634,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
         #:state '(((#:path . ("transient/history" #:doom-base #:data))
                    (#:storage . #:storage/persist))))))))
 #+end_src
-**** Desktop
+***** Desktop
 #+begin_src scheme
 (define* (doom-desktop #:key
                        theme
@@ -5649,7 +5651,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                #:font-variable-pitch font-variable-pitch
                #:font-size font-size)))
 #+end_src
-***** Themes
+****** Themes
 #+begin_src scheme
 (define* (doom-themes #:key
                       theme
@@ -5671,13 +5673,13 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
        (doom-dark-theme #:name dark-theme-name
                         #:colors dark-colors))))))
 #+end_src
-****** Light
+******* Light
 #+begin_src scheme
 ;; Nothing here yet.
 (define* (doom-light-theme #:key name colors)
   `())
 #+end_src
-****** Dark
+******* Dark
 Some colors from the original Atom theme on which I based mine that might be useful:
 - ~#363b4e~
   Dark with a bluish tint. Was previously used as the line highlight color.
@@ -5777,7 +5779,7 @@ Some colors from the original Atom theme on which I based mine that might be use
         (rjsx-tag :foreground red)
         (rjsx-attr :foreground orange))))))
 #+end_src
-***** Fonts
+****** Fonts
 #+begin_src scheme
 (define* (doom-fonts #:key
                      font
@@ -5814,8 +5816,8 @@ Some colors from the original Atom theme on which I based mine that might be use
       string-downcase
       string->symbol))
 #+end_src
-*** Package management
-**** Guix
+**** Package management
+***** Guix
 #+begin_src scheme
 (define* (guix-pm #:key
                   stateless?
@@ -5865,7 +5867,7 @@ Some colors from the original Atom theme on which I based mine that might be use
    (if doom?
        (doom-guix #:stateless? stateless?) '())))
 #+end_src
-***** Guile
+****** Guile
 #+begin_src scheme
 (define* (guile-services #:key
                          stateless?
@@ -5901,7 +5903,7 @@ Some colors from the original Atom theme on which I based mine that might be use
    (if doom?
        (doom-guile #:stateless? stateless?) '())))
 #+end_src
-***** Doom Guile
+****** Doom Guile
 #+begin_src scheme
 (define* (doom-guile #:key stateless?)
   (append
@@ -5928,7 +5930,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
    (doom-transient #:stateless? stateless?)))
 #+end_src
-***** Doom Guix :bindings:
+****** Doom Guix :bindings:
 #+begin_src scheme
 (define* (doom-guix #:key stateless?)
   (append
@@ -5980,7 +5982,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
    (doom-guile #:stateless? stateless?)))
 #+end_src
-**** Nix
+***** Nix
 #+begin_src scheme
 (define* (nix-pm #:key
                  stateless?
@@ -6087,13 +6089,13 @@ Some colors from the original Atom theme on which I based mine that might be use
 
 (define %nixpkgs-unstable-url "https://nixos.org/channels/nixpkgs-unstable")
 #+end_src
-***** Source Nix profile
+****** Source Nix profile
 #+begin_src sh :tangle (meta-in-dir "source-nix-profile")
 if [ -f /run/current-system/profile/etc/profile.d/nix.sh ]; then
   . /run/current-system/profile/etc/profile.d/nix.sh
 fi
 #+end_src
-***** Doom Nix
+****** Doom Nix
 #+begin_src scheme
 (define* (doom-nix #:key
                    stateless?
@@ -6102,14 +6104,14 @@ fi
    (doom-ts-lang 'nix #:tree-sitter? tree-sitter?)
    (doom-transient #:stateless? stateless?)))
 #+end_src
-***** Setup instructions
+****** Setup instructions
 #+begin_src sh :tangle no
 nix-channel --update
 
 # nix-env --install google-chrome
 # ...
 #+end_src
-**** Shared
+***** Shared
 #+begin_src scheme
 (define stateless-ensure-profiles-gexp
   (with-imported-modules (source-module-closure
@@ -6131,8 +6133,8 @@ nix-channel --update
                (symlink profile link))))
          profiles))))
 #+end_src
-*** Console
-**** KMonad :upstream:
+**** Console
+***** KMonad :upstream:
 #+begin_src scheme
 (define* (kmonad-tool #:key
                       doom?
@@ -6171,9 +6173,9 @@ nix-channel --update
               #:log-file #$(home-shepherd-service-log-file "kmonad.log")))
     (stop #~(make-kill-destructor)))))
 #+end_src
-*** Desktop
-**** Media
-***** Pipewire
+**** Desktop
+***** Media
+****** Pipewire
 #+begin_src scheme
 (define* (pipewire-media #:key
                          stateless?
@@ -6270,7 +6272,7 @@ nix-channel --update
        (list "\n"))))
    config))
 #+end_src
-****** Wireplumber
+******* Wireplumber
 #+begin_src scheme
 (define* (wireplumber-services #:key stateless?)
   (list
@@ -6301,7 +6303,7 @@ nix-channel --update
                  (#:storage . #:storage/machine)
                  (#:mode . #o700)))))))
 #+end_src
-**** Colors
+***** Colors
 #+begin_src scheme
 (define %colors
   '((#:colors/nuclear-light . ()) ; Nothing here yet.
@@ -6319,7 +6321,7 @@ nix-channel --update
                               (#:color/violet . "#aeb9f3")
                               (#:color/cyan . "#75e0f9")))))
 #+end_src
-**** Wallpapers
+***** Wallpapers
 #+begin_src scheme
 (define %wallpapers
   `((#:wallpaper/alucard . ,(origin
@@ -6330,7 +6332,7 @@ nix-channel --update
                                 "1kjpbjxsrq6671his86z4grx7z06bkbg5025sxnmnwahibdfvhc1"))
                               (file-name "alucard.png")))))
 #+end_src
-**** Font library
+***** Font library
 #+begin_src scheme
 (define* (font-library #:key
                        stateless?
@@ -6366,7 +6368,7 @@ nix-channel --update
         font-google-noto-emoji
         font-liberation))
 #+end_src
-***** Fonts :package:version:upstream:
+****** Fonts :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
 (define-module (phrenetic packages fonts)
   #:use-module (guix build-system font)
@@ -6388,7 +6390,7 @@ nix-channel --update
                     'pre 1 "/" 'post))
    #:hash "00h4v3rmxyyaxni6nywacxvjnji2g2pi0b4js1yx0g67fvrv2gag"))
 #+end_src
-**** Date/time formats
+***** Date/time formats
 #+begin_src scheme
 (define %date-formats
   '((#:date-format/simple . "%a %b %-d")))
@@ -6396,8 +6398,8 @@ nix-channel --update
 (define %time-formats
   '((#:time-format/simple . "%-I:%M %p")))
 #+end_src
-**** XDG
-***** User directories
+***** XDG
+****** User directories
 #+begin_src scheme
 (define* (xdg-user-directories #:key
                                stateless?
@@ -6455,7 +6457,7 @@ nix-channel --update
          `(((#:path . ,(normalize (assoc-ref dirs #:download)))
             (#:storage . #:storage/machine)))))))))
 #+end_src
-**** Mesa
+***** Mesa
 #+begin_src scheme
 (define* (mesa #:key stateless?)
   (list
@@ -6465,15 +6467,15 @@ nix-channel --update
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 #+end_src
-**** D-Bus
+***** D-Bus
 #+begin_src scheme
 (define (dbus-ipc)
   (list
    (service home-dbus-service-type)))
 #+end_src
-**** Login management
-***** Login managers
-****** GDM
+***** Login management
+****** Login managers
+******* GDM
 #+begin_src scheme
 (define* (gdm #:key stateless?)
   (list
@@ -6484,7 +6486,7 @@ nix-channel --update
                  (#:storage . #:storage/machine)
                  (#:mode . #o700)))))))
 #+end_src
-***** Desktop TTY
+****** Desktop TTY
 #+begin_src scheme
 (define* (desktop-tty #:key
                       sessions
@@ -6510,9 +6512,9 @@ nix-channel --update
               (mkdir bin)
               (symlink #$source (string-append bin "/default-session-start"))))))))
 #+end_src
-**** Sessions
-***** Desktop environments
-****** GNOME
+***** Sessions
+****** Desktop environments
+******* GNOME
 #+begin_src scheme
 (define* (gnome-desktop #:key stateless?)
   (list
@@ -6541,8 +6543,8 @@ nix-channel --update
    (environment-variable-shell-definitions
     (list xdg-session-type-wayland-env-var))))
 #+end_src
-***** Window managers
-****** Sway
+****** Window managers
+******* Sway
 #+begin_src scheme
 (define* (sway-wm #:key
                   pipewire?
@@ -6614,7 +6616,7 @@ nix-channel --update
            xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
            (wayland-env-vars pipewire?)))))
 #+end_src
-******* General
+******** General
 #+begin_src scheme
 (define (sway-general)
   (append
@@ -6666,7 +6668,7 @@ nix-channel --update
 
      (floating_modifier $mod normal))))
 #+end_src
-******* Input/output
+******** Input/output
 #+begin_src scheme
 (define* (sway-input #:key
                      inputs
@@ -6726,7 +6728,7 @@ nix-channel --update
    ;;      (or outputs '()))
    ))
 #+end_src
-******* External programs
+******** External programs
 #+begin_src scheme
 (define* (sway-external-programs #:key
                                  idle-manager
@@ -6821,7 +6823,7 @@ nix-channel --update
            cmd)))
        bs))
 #+end_src
-******** Screenshot
+********* Screenshot
 #+begin_src scheme
 (define subject-output
   #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
@@ -6862,7 +6864,7 @@ nix-channel --update
               #$(file-append wl-clipboard "/bin/wl-paste")
               #$(file-append swappy "/bin/swappy")))))
 #+end_src
-******* App windows
+******** App windows
 Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
 #+begin_src scheme
 (define* (sway-app-windows #:key (props (list emacs-modal-window-props
@@ -6891,9 +6893,9 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                '())))
        props))
 #+end_src
-****** Pieces
-******* Screen lockers
-******** Swaylock
+******* Pieces
+******** Screen lockers
+********* Swaylock
 #+begin_src scheme
 (define* (swaylock-wm-piece #:key
                             colors
@@ -6989,12 +6991,12 @@ Ideally the inclusions here would be gated but that would require a flag for eve
       swaylock-effects
       swaylock))
 #+end_src
-******** WAIT [#E] Change ~swaylock-screen-locker~ to a store path
+********* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
 Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service-type~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
-******* Idle managers
+******** Idle managers
 - TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
-******** Swayidle
+********* Swayidle
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
                             session
@@ -7033,8 +7035,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    (file-append swayidle "/bin/swayidle")
    "-w"))
 #+end_src
-******* Notification daemons
-******** Mako
+******** Notification daemons
+********* Mako
 #+begin_src scheme
 (define* (mako-wm-piece #:key
                         colors
@@ -7082,8 +7084,8 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                            menu
                            (list (quoted "Notification action")))))))
 #+end_src
-******* Status bars
-******** Waybar
+******** Status bars
+********* Waybar
 #+begin_src scheme
 (define* (waybar-wm-piece #:key
                           bars
@@ -7247,7 +7249,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
       (waybar-memory bar-id)
       (waybar-battery bar-id #:show-percentage? #t)))))
 #+end_src
-********* Modules
+********** Modules
 #+begin_src scheme
 (define* (waybar-module name
                         bar-id
@@ -7264,7 +7266,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                 (,name . ,(or config '())))))
     (style-css (or style '())))))
 #+end_src
-********** Backlight
+*********** Backlight
 #+begin_src scheme
 (define* (waybar-backlight bar-id #:key show-percentage?)
   (waybar-module
@@ -7276,7 +7278,7 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
                  (if show-percentage? " {percent}" "")))
      (fomat-icons . #(🌕 🌔 🌗 🌒 🌑))))) ; TODO These aren't displaying for some reason.
 #+end_src
-********** Battery
+*********** Battery
 #+begin_src scheme
 (define* (waybar-battery bar-id #:key show-percentage?)
   (waybar-module
@@ -7309,11 +7311,11 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
      (#{#battery.full}#
       ((color . @green))))))
 #+end_src
-*********** WAIT [#D] Fix battery capacity output
+************ WAIT [#D] Fix battery capacity output
 It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug.
 - [2023-02-18 Sat] I've upgraded to a new Waybar version (0.9.17) with some battery improvements that may fix this, wait and watch.
 - [2023-03-02 Thu] It doesn't seem to be helping, full battery reports as ~50%.
-********** Clock
+*********** Clock
 #+begin_src scheme
 (define* (waybar-clock bar-id
                        #:key
@@ -7332,7 +7334,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                                "}")))
    #:placement 'modules-left))
 #+end_src
-********** CPU
+*********** CPU
 - TODO histogram
   - I don't understand the histogram output.
   - The histogram is "jumpy", it changes width.
@@ -7357,7 +7359,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        #:config
        '((format . " {usage}%")))))
 #+end_src
-********** Idle inhibitor
+*********** Idle inhibitor
 #+begin_src scheme
 (define (waybar-idle-inhibitor bar-id)
   (waybar-module
@@ -7371,7 +7373,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (tooltip-format-activated . ,tooltip-format)
        (tooltip-format-deactivated . ,tooltip-format)))))
 #+end_src
-********** Memory
+*********** Memory
 #+begin_src scheme
 (define (waybar-memory bar-id)
   (waybar-module
@@ -7380,7 +7382,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    #:config
    '((format . " {}%"))))
 #+end_src
-********** Microphone
+*********** Microphone
 #+begin_src scheme
 (define* (waybar-microphone bar-id #:key show-percentage?)
   (waybar-module
@@ -7398,7 +7400,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                                 "--tab=4")))
                       (string-append "\"" (string-join cmd) "\""))))))
 #+end_src
-********** Tray
+*********** Tray
 #+begin_src scheme
 (define (waybar-tray bar-id)
   (waybar-module
@@ -7426,7 +7428,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (margin-top . 0.2em)
        (margin-bottom . 0.2em))))))
 #+end_src
-********** Volume
+*********** Volume
 #+begin_src scheme
 (define* (waybar-volume bar-id #:key show-percentage?)
   (waybar-module
@@ -7443,8 +7445,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (tooltip-format . "{desc} is on {volume}%")
        (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
 #+end_src
-********** Sway
-*********** Window
+*********** Sway
+************ Window
 #+begin_src scheme
 (define (waybar-sway-window bar-id)
   (waybar-module
@@ -7456,7 +7458,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
        (margin-right . 1em))))
    #:placement 'modules-center))
 #+end_src
-*********** Workspaces
+************ Workspaces
 #+begin_src scheme
 (define* (waybar-sway-workspaces
           bar-id
@@ -7503,9 +7505,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       ((color . @red))))
    #:placement 'modules-left))
 #+end_src
-******* Power monitors
+******** Power monitors
 - TODO this requires ~upower~ (so ~upower-service-type~), make that dependency explicit? Meh.
-******** Poweralertd
+********* Poweralertd
 #+begin_src scheme
 (define* (poweralertd-wm-piece)
   (list
@@ -7524,8 +7526,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                              (quoted t) t)))
                (or ignore-types '()))))
 #+end_src
-******* Display configuration
-******** Kanshi
+******** Display configuration
+********* Kanshi
 - TODO this is the only wm-peice daemon with a shepherd service. Just run it in the Sway config with ~exec~ like everything else for consistency?
 #+begin_src scheme
 (define* (kanshi-wm-piece #:key
@@ -7539,9 +7541,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       ;; Not done yet.
       (or extra-config '()))))))
 #+end_src
-******* Controls
-******** Backlights
-********* Brightnessctl
+******** Controls
+********* Backlights
+********** Brightnessctl
 #+begin_src scheme
 (define* (brightnessctl-backlights #:key (step 10))
   (let ((cmd (lambda (op)
@@ -7551,8 +7553,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
     `((#:backlight/up . ,(cmd #:up))
       (#:backlight/down . ,(cmd #:down)))))
 #+end_src
-******** Volume
-********* PulseAudio
+********* Volume
+********** PulseAudio
 #+begin_src scheme
 (define* (pulseaudio-volume #:key (step 5))
   (let* ((pactl (file-append pulseaudio "/bin/pactl"))
@@ -7566,8 +7568,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       (#:volume/mute-unmute . ,(list pactl "set-sink-mute" sink "toggle"))
       (#:volume/mic-mute-unmute . ,(list pactl "set-source-mute" source "toggle")))))
 #+end_src
-******** Player
-********* Playerctl
+********* Player
+********** Playerctl
 #+begin_src scheme
 (define* (playerctl-player)
   (let ((cmd (lambda (action)
@@ -7577,7 +7579,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
       (#:player/previous . ,(cmd "previous"))
       (#:player/next . ,(cmd "next")))))
 #+end_src
-******** Shared
+********* Shared
 #+begin_src scheme
 (define (step-pct n op)
   (string-append (case op
@@ -7586,9 +7588,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                  (number->string n)
                  "%"))
 #+end_src
-******* Applets
-******** Network
-********* Network manager
+******** Applets
+********* Network
+********** Network manager
 #+begin_src scheme
 (define (network-manager-wm-applet)
   (list
@@ -7602,7 +7604,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (file-append gnome:network-manager-applet "/bin/nm-applet")
    "--indicator"))
 #+end_src
-******** Gammastep
+********* Gammastep
 #+begin_src scheme
 (define (gammastep-wm-applet)
   (list
@@ -7617,7 +7619,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (file-append gammastep "/bin/gammastep-indicator")
    "-l" "44:-123")) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
 #+end_src
-******** Udiskie
+********* Udiskie
 #+begin_src scheme
 (define (udiskie-wm-applet)
   (list
@@ -7631,7 +7633,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (file-append udiskie "/bin/udiskie")
    "--tray"))
 #+end_src
-***** Shared
+****** Shared
 #+begin_src scheme
 (define* (session-start exe
                         session-cmd
@@ -7681,7 +7683,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (if pipewire?
        '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
 #+end_src
-**** Flatpak
+***** Flatpak
 I might need to run apps specially in Wayland, with =--socket=wayland= and =--enable-features=UseOzonePlatform --ozone-platform=wayland= (if the app is based on Electron). See [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
 #+begin_src scheme
 (define* (flatpak-apps #:key
@@ -7708,7 +7710,7 @@ I might need to run apps specially in Wayland, with =--socket=wayland= and =--en
 
    (or portal-services '())))
 #+end_src
-***** Setup instructions
+****** Setup instructions
 #+begin_src sh :tangle no
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 # flatpak remote-add --user --if-not-exists flathub-beta https://flathub.org/beta-repo/flathub-beta.flatpakrepo
@@ -7717,7 +7719,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # flatpak install --user flathub-beta com.obsproject.Studio
 # ...
 #+end_src
-**** Portals
+***** Portals
 #+begin_src scheme
 (define* (portal-services #:key wayland?)
   (list
@@ -7743,7 +7745,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            (lambda (config)
              (ini-serialize config #:equal-string "="))))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
 #+end_src
-**** Shared
+***** Shared
 #+begin_src scheme
 (define* (ini-file name config
                    #:key (ini-serialize ini-serialize))
@@ -7757,7 +7759,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (if size
         (list (number->string size)) '()))))
 #+end_src
-*** Virtualization
+**** Virtualization
 #+begin_src scheme
 (define (virtualization)
   (list
@@ -7767,9 +7769,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (list ;; qemu ; QEMU is kind of a fatty, maybe don't keep it installed all the time.
           ))))
 #+end_src
-*** Programs
-**** Calendars
-***** Doom calendar
+**** Programs
+***** Calendars
+****** Doom calendar
 #+begin_src scheme
 (define* (doom-calendar-prog #:key
                              stateless?
@@ -7819,8 +7821,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 ;;                 ;;                               ("en.usa%23holiday@group.v.calendar.google.com" . ,(concat cal-dir "/holidays.org"))))
 ;;                 )))
 #+end_src
-**** Development
-***** AWS
+***** Development
+****** AWS
 #+begin_src scheme
 (define (aws-prog)
   (list
@@ -7829,7 +7831,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list awscli-2))))
 #+end_src
-****** AWS CLI 2 :package:version:upstream:
+******* AWS CLI 2 :package:version:upstream:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "packages/aws.scm")
 :END:
@@ -7906,7 +7908,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            python-pytest-cov
            python-pytest-xdist))))
 #+end_src
-******* Deps :package:version:
+******** Deps :package:version:
 #+begin_src scheme
 (define python-awscrt
   (package
@@ -7977,7 +7979,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
         (base32
          "14nz51cqlnxmgfqqilxyvjwwa5xfivdvlm0d0b1qzgcgwdm7an0f"))))))
 #+end_src
-***** Clojure
+****** Clojure
 #+begin_src scheme
 (define* (clojure-prog #:key
                        stateless?
@@ -8004,7 +8006,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                      #:tree-sitter? doom-tree-sitter?)
        '())))
 #+end_src
-****** Clojure tools :package:upstream:
+******* Clojure tools :package:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/clojure.scm")
 (define-module (phrenetic packages clojure)
   #:use-module (guix gexp)
@@ -8024,7 +8026,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 (define-public clojure-tools
   (with-man-pages clojure:clojure-tools))
 #+end_src
-****** Doom Clojure
+******* Doom Clojure
 #+begin_src scheme
 (define* (doom-clojure #:key
                        stateless?
@@ -8081,7 +8083,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (doom-xml+csv)
    (doom-dash)))
 #+end_src
-***** Datomic
+****** Datomic
 #+begin_src scheme
 (define (datomic-prog)
   (list
@@ -8090,7 +8092,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list datomic-cli-tools))))
 #+end_src
-****** Datomic CLI tools :package:version:upstream:
+******* Datomic CLI tools :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/databases.scm")
 (define-module (phrenetic packages databases)
   #:use-module (guix build-system copy)
@@ -8135,7 +8137,7 @@ for a Datomic Cloud instance on AWS.")
         . "https://docs.datomic.com/cloud/releases.html")
        (upstream-name . "datomic-cli")))))
 #+end_src
-***** Node
+****** Node
 #+begin_src scheme
 (define* (node-prog #:key
                     stateless?
@@ -8158,8 +8160,8 @@ for a Datomic Cloud instance on AWS.")
    (if doom?
        (doom-javascript #:tree-sitter? doom-tree-sitter?) '())))
 #+end_src
-**** Notes
-***** Doom org :bindings:
+***** Notes
+****** Doom org :bindings:
 #+begin_src scheme
 (define* (doom-org-prog #:key
                         (org-dir "org")
@@ -8259,8 +8261,8 @@ for a Datomic Cloud instance on AWS.")
 
    (doom-dash)))
 #+end_src
-**** File managers
-***** Doom dired
+***** File managers
+****** Doom dired
 #+begin_src scheme
 (define* (doom-dired-prog #:key
                           stateless?
@@ -8297,8 +8299,8 @@ for a Datomic Cloud instance on AWS.")
                              #:default-for '(inode/directory)))
          '()))))
 #+end_src
-**** Shell utils
-***** Direnv
+***** Shell utils
+****** Direnv
 #+begin_src scheme
 (define* (direnv-prog #:key
                       doom?
@@ -8351,7 +8353,7 @@ for a Datomic Cloud instance on AWS.")
        #:modules '((#:tools
                     direnv)))))))
 #+end_src
-****** Direnvrc
+******* Direnvrc
 #+begin_src sh :tangle (meta-in-dir "direnvrc")
 use_guixs() {
 	LOCK_FILE=channels-lock
@@ -8363,7 +8365,7 @@ use_guixs() {
 	fi
 }
 #+end_src
-****** Whitelist service
+******* Whitelist service
 #+begin_src scheme
 (define direnv-whitelist-service-type
   (service-type
@@ -8383,7 +8385,7 @@ use_guixs() {
    (default-value #f)
    (description "Whitelist for Direnv.")))
 #+end_src
-******* TOML serialization
+******** TOML serialization
 #+begin_src scheme
 (define (toml-file name config)
   (ini-file name config))
@@ -8395,14 +8397,14 @@ use_guixs() {
         (string-append "[ " $ " ]")
         (string->symbol $)))
 #+end_src
-**** SSH
+***** SSH
 #+begin_src scheme
 (define (ssh-prog)
   (list
    (service home-openssh-service-type)))
 #+end_src
-**** Text editors
-***** Nano
+***** Text editors
+****** Nano
 The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp.
 #+begin_src scheme
 ;; (define (nano-prog)
@@ -8418,8 +8420,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ;;     `(("nano/nanorc"
 ;;        ,(skeleton-file ".nanorc"))))))
 #+end_src
-**** Trash
-***** Doom trash
+***** Trash
+****** Doom trash
 #+begin_src scheme
 (define (doom-trash-prog)
   (list
@@ -8428,8 +8430,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     #:packages
     '((package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")))))
 #+end_src
-**** Version control
-***** Git
+***** Version control
+****** Git
 #+begin_src scheme
 (define* (git-prog #:key
                    stateless?
@@ -8480,7 +8482,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
    (if doom?
        (doom-git #:stateless? stateless?) '())))
 #+end_src
-****** Doom Git
+******* Doom Git
 #+begin_src scheme
 (define* (doom-git #:key stateless?)
   (append
@@ -8498,7 +8500,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 
    (doom-transient #:stateless? stateless?)))
 #+end_src
-******* Doom version control
+******** Doom version control
 #+begin_src scheme
 (define (doom-version-control)
   (list
@@ -8509,8 +8511,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                 (#:ui
                  (vc-gutter +pretty)))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
 #+end_src
-**** VPM
-***** Proton VPN CLI
+***** VPM
+****** Proton VPN CLI
 #+begin_src scheme
 (define* (protonvpn-prog #:key stateless?)
   (list
@@ -8525,7 +8527,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
       #:state '(((#:path . ".pvpn-cli/")
                  (#:storage . #:storage/machine)))))))
 #+end_src
-**** Miscellaneous programs
+***** Miscellaneous programs
 #+begin_src scheme
 (define (misc-progs)
   (list
@@ -8536,9 +8538,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
           zip
           unzip))))
 #+end_src
-*** Apps
-**** Audio
-***** PulseAudio Volume Control
+**** Apps
+***** Audio
+****** PulseAudio Volume Control
 #+begin_src scheme
 (define* (pavucontrol-app #:key
                           stateless?
@@ -8557,8 +8559,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 
    (or gtk-services '())))
 #+end_src
-**** Fonts
-***** Font Manager
+***** Fonts
+****** Font Manager
 #+begin_src scheme
 (define* (font-manager-app #:key
                            stateless?
@@ -8580,8 +8582,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 
    (or gtk-services '())))
 #+end_src
-**** Menus
-***** Doom menu
+***** Menus
+****** Doom menu
 #+begin_src scheme
 ;; Emacs already "has a menu" in the form of `completing-read', all we need is something to serve the role of application launcher.
 (define (doom-menu-app)
@@ -8611,11 +8613,11 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                               #:modal-title "App Launcher"
                               #:minibuffer? #t)))))
 #+end_src
-****** TODO [#C] Emacs =app-launcher= improvements
+******* TODO [#C] Emacs =app-launcher= improvements
 - [ ] show [[https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#extra-actions][application actions]]
 - [ ] display icons
   Issue requesting it and a possible approach: [[https://github.com/SebastienWae/app-launcher/issues/3][SebastienWae/app-launcher#3 Icons Support]]
-***** Rofi
+****** Rofi
 #+begin_src scheme
 (define* (rofi-app #:key
                    stateless?
@@ -8679,8 +8681,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
       rofi-wayland
       rofi))
 #+end_src
-**** Messaging
-***** Zoom
+***** Messaging
+****** Zoom
 Doesn't work for me at the moment. As of this writing the package is brand new so wait a while and see if there any developments/updates/fixes (though I suspect the issue(s) lie with me, I was getting errors, possibly similar ones, when I tried to install Zoom through Nix).
 #+begin_src scheme
 (define* (zoom-app #:key
@@ -8704,8 +8706,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
    (or qt-services '())))
 #+end_src
-**** Image processing
-***** GIMP
+***** Image processing
+****** GIMP
 #+begin_src scheme
 (define* (gimp-app #:key
                    stateless?
@@ -8727,8 +8729,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
    (or gtk-services '())))
 #+end_src
-**** Terminals
-***** Alacritty
+***** Terminals
+****** Alacritty
 #+begin_src scheme
 (define* (alacritty-app #:key
                         colors
@@ -8773,7 +8775,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
   (list
    (file-append alacritty "/bin/alacritty")))
 #+end_src
-***** Doom vterm
+****** Doom vterm
 Does this belong in [[*Apps][Apps]]?
 #+begin_src scheme
 (define* (doom-vterm-app #:key setup-zsh?)
@@ -8797,7 +8799,7 @@ Does this belong in [[*Apps][Apps]]?
     "vterm"
     '((+vterm/here nil)))))
 #+end_src
-****** Configure zsh for vterm
+******* Configure zsh for vterm
 - TODO Changed the org source block type to "org" from "sh" because there's a fontification error. Maybe use zsh as the babel language instead of sh/bash, if it exists?
 #+begin_src org :tangle (meta-in-dir "zsh-vterm")
 vterm_printf(){
@@ -8822,8 +8824,8 @@ vterm_prompt_end() {
 setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
-**** Web browsers
-***** Chromium
+***** Web browsers
+****** Chromium
 #+begin_src scheme
 (define* (chromium-app #:key
                        stateless?
@@ -8918,19 +8920,19 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 (define (chrome? flavors)
   (member #:google-chrome flavors))
 #+end_src
-****** Setup instructions
+******* Setup instructions
 It might be possible to configure some of these in a file (perhaps =master-preferences.json=, changing which would require modifying and thus rebuilding the chromium package). Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones, if at all.
-******* Chromium
+******** Chromium
 - Settings > Appearance > Use GTK+ theme
 - Settings > On startup, check "Continue where you left off"
 - Right-click on the Bookmarks bar and uncheck "Show bookarks bar"
-******** Ungoogled Chromium
+********* Ungoogled Chromium
 - Settings > Manage search engines, make google the default
   It might not appear under "Other Search Engines" until you search something on google.com
 - chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
-******* uBlock extension
+******** uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
-***** Firefox
+****** Firefox
 It might be possible to statically configure Firefox (or one of its relatives), check out the Icecat profiles in RDE =gnu/home-services/web-browsers.scm=.
 #+begin_src scheme
 (define* (firefox-app #:key
@@ -8964,7 +8966,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
 
    (or gtk-services '())))
 #+end_src
-***** Nyxt
+****** Nyxt
 - TODO Add ~gtk-services~ param if Nyxt uses gtk settings (font, light/dark theme).
 #+begin_src scheme
 (define* (nyxt-app #:key
@@ -8996,7 +8998,7 @@ It might be possible to statically configure Firefox (or one of its relatives), 
       #:modules '((#:lang
                    common-lisp))))))
 #+end_src
-***** Tor browser
+****** Tor browser
 Not available in Guix, install through Nix (=tor-browser-bundle-bin=).
 - TODO Add ~gtk-services~ param if Tor browser uses gtk settings (font, light/dark theme). Note that (the Nix package) seems to use use a fake Home directory under =~/.local/share/tor-browser=, notably there's a =.config/glib-2.0=, so it might not be possible (or even just advisable?) to use the global gtk settings. Screw it if so.
 #+begin_src scheme
@@ -9008,8 +9010,8 @@ Not available in Guix, install through Nix (=tor-browser-bundle-bin=).
       #:state '(((#:path . ("tor-browser/" #:xdg-base "XDG_DATA_HOME"))
                  (#:storage . #:storage/machine)))))))
 #+end_src
-**** Video
-***** VLC
+***** Video
+****** VLC
 #+begin_src scheme
 (define* (vlc-app #:key
                   stateless?
@@ -9031,8 +9033,8 @@ Not available in Guix, install through Nix (=tor-browser-bundle-bin=).
 
    (or qt-services '())))
 #+end_src
-**** Graphical toolkits
-***** GTK
+***** Graphical toolkits
+****** GTK
 It's not totally clear what parts of this are Wayland-specific or if it's necessary to put e.g. ~gtk-theme-name~ in =settings.ini= for non-Wayland (see [[https://github.com/swaywm/sway/wiki/GTK-3-settings-on-Wayland][GTK 3 settings on Wayland · swaywm/sway Wiki · GitHub]].
 #+begin_src scheme
 (define* (gtk-services #:key
@@ -9098,7 +9100,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define (quoted-symbol s)
   (-> s single-quoted string->symbol))
 #+end_src
-***** Qt
+****** Qt
 #+begin_src scheme
 (define* (qt-services #:key stateless?)
   (list
@@ -9108,7 +9110,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
       #:state '(((#:path . ("QtProject.conf" #:xdg-base "XDG_CONFIG_HOME"))
                  (#:storage . #:storage/machine)))))))
 #+end_src
-*** Work
+**** Work
 #+begin_src scheme
 (define* (work #:key
                stateless?
@@ -9138,7 +9140,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        #:state `(((#:path . ,(string-append work-dir "/"))
                   (#:storage . #:storage/persist))))))))
 #+end_src
-**** Project helpers
+***** Project helpers
 #+begin_src scheme
 (define (services-only-packages svcs)
   (services-packages filter svcs))
@@ -9152,7 +9154,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (equal? (service-kind s) home-profile-service-type)))
      svcs))
 #+end_src
-*** Shared
+**** Shared
 #+begin_src scheme
 (define* (skeleton-file file)
   (-> (default-skeletons)
@@ -9177,8 +9179,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (define very-big-history 1000000)
 #+end_src
-** Composite components
-*** System features
+*** Composite components
+**** System features
 #+begin_src scheme
 (define* (system-features #:key
                           stateless?
@@ -9241,8 +9243,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    (if virtualization?
        (virtualization) '())))
 #+end_src
-**** Sessions
-***** Sway environment
+***** Sessions
+****** Sway environment
 #+begin_src scheme
 (define* (sway-environment #:key
                            pipewire?
@@ -9351,7 +9353,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (if (member #:applet/auto-mounter (or applets '()))
          (udiskie-wm-applet) '()))))
 #+end_src
-*** Programs
+**** Programs
 #+begin_src scheme
 (define* (programs #:key
                    stateless?
@@ -9391,7 +9393,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        '()) ; Maybe have some alternatives for non-Doom here: Some file manager, trash-cli...
    (misc-progs)))
 #+end_src
-*** Apps
+**** Apps
 #+begin_src scheme
 (define* (apps #:key
                stateless?
@@ -9452,7 +9454,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      ;;          #:qt-services qt)
      )))
 #+end_src
-*** Entire
+**** Entire
 #+begin_src scheme
 (define* (he-entire #:key
                     stateless?
@@ -9599,11 +9601,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (if desktop?
            (he-apps) '())))))
 #+end_src
-* Common
-:PROPERTIES:
-:meta-dir+: phrenetic
-:END:
-** Stateless
+** Common
+*** Stateless
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "stateless.scm")
 :END:
@@ -9619,8 +9618,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             extend-proc
             tool-package))
 #+end_src
-*** Service
-**** Service extension
+**** Service
+***** Service extension
 #+begin_src scheme
 (define (service-fn service-type)
   (lambda* (name #:key state ignore)
@@ -9630,7 +9629,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      `((#:state . ,state)
        (#:ignore . ,ignore)))))
 #+end_src
-**** Extend procedure
+***** Extend procedure
 #+begin_src scheme
 (define (extend-proc config exts)
   (let ((exts* (apply merge-with append exts)))
@@ -9638,7 +9637,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (acons #:state (assoc-ref exts* #:state))
          (acons #:ignore (assoc-ref exts* #:ignore)))))
 #+end_src
-*** Tool
+**** Tool
 #+begin_src scheme
 (define* (tool-package bin-name #:rest opts)
   (package
@@ -9663,7 +9662,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (use-modules ((phrenetic build stateless) #:select (tool)))
          (apply tool '#$opts)))))
 #+end_src
-*** Build
+**** Build
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "build/stateless.scm")
 :END:
@@ -9677,7 +9676,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:export (activate
             tool))
 #+end_src
-**** Activate
+***** Activate
 #+begin_src scheme
 (define (activate state
                   backup-base-dir
@@ -9756,7 +9755,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
   (run))
 #+end_src
-**** Tool
+***** Tool
 #+begin_src scheme
 ;;;;;;;;;; TODO TEMPORRARY REMOVE ME
 ;; (define-module (phrenetic build stateless)
@@ -10043,7 +10042,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           (#:storage/persist . "/.persist"))))
 ;; (test)
 #+end_src
-**** Shared
+***** Shared
 #+begin_src scheme
 ;; TODO Just used in `activate` now
 (define (symlink-to-storage? storage-dirs)
@@ -10053,7 +10052,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (string-prefix? storage-dir (readlink file)))
               storage-dirs))))
 #+end_src
-** Input/output devices
+*** Input/output devices
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "io-devices.scm")
 :END:
@@ -10063,7 +10062,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:export (%macbook-keyboard
             %macbook-display))
 #+end_src
-*** Apple
+**** Apple
 #+begin_src scheme
 (define %macbook-keyboard
   `((#:keyboard/name . "Apple Inc. Apple Internal Keyboard / Trackpad")
@@ -10076,10 +10075,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (#:display/model . "Color LCD")
     (#:display/hidpi? . #t)))
 #+end_src
-* Modules
-:PROPERTIES:
-:meta-dir+: phrenetic
-:END:
+** Modules
 #+begin_src scheme :tangle (meta-in-dir "modules.scm")
 (define-module (phrenetic modules)
   #:use-module ((guix modules) #:select (guix-module-name?))
@@ -10092,11 +10088,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
         (('phrenetic _ ...) #t)
         (_ #f))))
 #+end_src
-* Utils
-:PROPERTIES:
-:meta-dir+: phrenetic
-:END:
-** Host
+** Utils
+*** Host
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "utils.scm")
 :END:
@@ -10116,7 +10109,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 
 (re-export-public-interface (phrenetic common utils))
 #+end_src
-**** Packages
+***** Packages
 #+begin_src scheme
 (define simple-package
   (package
@@ -10129,7 +10122,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (home-page #f)
     (license #f)))
 #+end_src
-***** Git
+****** Git
 #+begin_src scheme
 (define (with-git-url pkg url)
   (package
@@ -10187,14 +10180,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          hash))
        (file-name (git-file-name (package-name pkg) version))))))
 #+end_src
-**** Services
+***** Services
 #+begin_src scheme
 (define (remove-services-by-types services kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
 #+end_src
-** Build
+*** Build
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "build/utils.scm")
 :END:
@@ -10226,7 +10219,7 @@ delete it when leaving the dynamic extent of this call."
       (lambda ()
         (false-if-exception (delete-file-recursively tmp-dir))))))
 #+end_src
-** Common
+*** Common
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "common/utils.scm")
 :END:
@@ -10272,7 +10265,7 @@ delete it when leaving the dynamic extent of this call."
                     (resolve-interface ',mod)))
                 args))))
 #+end_src
-*** Branching
+**** Branching
 #+begin_src scheme
 (define-syntax when-let
   (syntax-rules ()
@@ -10296,7 +10289,7 @@ delete it when leaving the dynamic extent of this call."
     ((_ test then else)
      (if (not test) then else))))
 #+end_src
-*** Functions
+**** Functions
 #+begin_src scheme
 (define* (partial f #:rest args)
   (lambda* (#:rest more)
@@ -10306,7 +10299,7 @@ delete it when leaving the dynamic extent of this call."
   (lambda* (#:rest more)
     (apply f (append more args))))
 #+end_src
-**** Threading
+***** Threading
 #+begin_src scheme
 (define-syntax ->
   (syntax-rules ()
@@ -10329,7 +10322,7 @@ delete it when leaving the dynamic extent of this call."
          #'(let ((x exp))
              (as-> form name form* ...)))))))
 #+end_src
-*** Alists
+**** Alists
 #+begin_src scheme
 (define* (list->alist #:rest kvs)
   (let loop ((res '())
@@ -10393,7 +10386,7 @@ delete it when leaving the dynamic extent of this call."
           (cons k (f v))))
        alist))
 #+end_src
-*** Misc
+**** Misc
 #+begin_src scheme
 (define (around s x)
   (string-append x s x))
