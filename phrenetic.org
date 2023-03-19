@@ -220,7 +220,7 @@ Run with ~sudo~.
   #:use-module (gnu services base)
   #:use-module (gnu services dbus)
   #:use-module (gnu services desktop)
-  #:use-module (gnu services linux)
+  #:use-module ((gnu services linux) #:select (zram-device-service-type zram-device-configuration))
   #:use-module (gnu services networking)
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
@@ -234,26 +234,23 @@ Run with ~sudo~.
   #:use-module ((gnu system setuid) #:select (setuid-program))
   #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta))
-  #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module ((rde gexp) #:select (slurp-file-like))
   #:use-module (rde system services networking)
-  #:use-module (phrenetic io-devices)
   #:use-module (phrenetic modules)
-  #:use-module ((phrenetic packages broadcom) #:select (broadcom-sta-with-patch-updates))
-  #:use-module ((phrenetic packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
-  #:use-module ((phrenetic packages linux) #:select (facetimehd))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda))
-  #:use-module ((srfi srfi-1) #:select (any append-map delete-duplicates first remove iota))
+  #:use-module ((srfi srfi-1) #:select (append-map delete-duplicates first remove iota))
   #:export (blank-os
+            system-comp
+            define-system-comp
             base-services
             classic-login
             greetd-login
             certs
             accounts
             guix-pm
+            public-key-serialize
             nix-pm
             kmonad-tool
             desktop-base-services
@@ -274,14 +271,13 @@ Run with ~sudo~.
             zram-swap
             zswap
             stateless
-            linux-kernel
+            linux-libre-kernel
+            linux-with-customizations
             grub-efi
             virtualization
             console-keyboard-layouts
             console-fonts
-            macbook
-            os-base
-            with-macbook-hardware))
+            os-base))
 
 (define %random-seed-file (@@ (gnu services base) %random-seed-file))
 
@@ -444,7 +440,8 @@ Run with ~sudo~.
 ***** Guix
 #+begin_src scheme
 (define-system-comp (guix-pm #:key
-                             (nonguix-substitutes? #t)
+                             authorized-keys
+                             substitute-urls
                              stateless?)
   (services
    (append
@@ -454,12 +451,10 @@ Run with ~sudo~.
               (guix-configuration
                (authorized-keys (append
                                  %default-authorized-guix-keys
-                                 (if nonguix-substitutes?
-                                     %nonguix-authorized-keys '())))
+                                 (or authorized-keys '())))
                (substitute-urls (append
                                  %default-substitute-urls
-                                 (if nonguix-substitutes?
-                                     %nonguix-substitute-urls '())))))
+                                 (or substitute-urls '())))))
      (service log-cleanup-service-type
               (log-cleanup-configuration
                (directory "/var/log/guix/drvs"))))
@@ -493,20 +488,6 @@ Run with ~sudo~.
     (call-with-output-string
       (lambda (port)
         (display sexp port)))))
-#+end_src
-****** Nonguix substitutes
-#+begin_src scheme
-(define nonguix-public-key
-  '((#:public-key/type . #:public-key.type/ecc)
-    (#:public-key.ecc/curve . "Ed25519")
-    (#:public-key.ecc/q . "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98")))
-
-(define %nonguix-authorized-keys
-  (list (plain-file "substitutes.nonguix.org.pub"
-                    (public-key-serialize nonguix-public-key))))
-
-(define %nonguix-substitute-urls
-  (list "https://substitutes.nonguix.org"))
 #+end_src
 ***** Nix
 #+begin_src scheme
@@ -1524,40 +1505,25 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+end_src
 ***** Linux
 #+begin_src scheme
-(define-system-comp (linux-kernel #:key
-                                  system
-                                  nonfree?
-                                  linux-customization-params)
-  (kernel (let ((kernel (get-linux system nonfree?)))
-            (if linux-customization-params
-                (apply customize-linux
-                       #:linux kernel
-                       linux-customization-params)
-                kernel)))
-  (initrd (if (and nonfree?
-                   (member system '("x86_64-linux" "i686-linux")))
-              (lambda* (file-systems #:rest rest)
-                (apply microcode-initrd file-systems
-                       #:initrd (operating-system-initrd os)
-                       rest))
-              (operating-system-initrd os)))
-  (firmware
-   (append
-    (if nonfree?
-        (list linux-firmware) '())
-    (operating-system-firmware os))))
+(define-system-comp (linux-libre-kernel #:key
+                                        system
+                                        linux-customization-params)
+  (kernel (linux-with-customizations (get-linux system)
+                                     linux-customization-params)))
 
-(define (get-linux system nonfree?)
-  (as-> system $
-        (or (assoc-ref `(;; ("aarch64-linux" . (,linux-libre-arm64-generic . ,linux-arm64-generic))
-                         ;; ...
-                         )
-                       $)
-            `(,linux-libre . ,linux))
-        (match $
-          ((libre . nonfree)
-           (if nonfree?
-               nonfree libre)))))
+(define (linux-with-customizations linux params)
+  (if params
+      (apply customize-linux
+             #:linux linux
+             params)
+      linux))
+
+(define (get-linux system)
+  (or (assoc-ref `(;; ("aarch64-linux" . linux-libre-arm64-generic)
+                   ;; ...
+                   )
+                 system)
+      linux-libre))
 #+end_src
 ***** Virtualization
 #+begin_src scheme
@@ -1609,287 +1575,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                         (iota number-of-ttys 1)))
           (operating-system-user-services os))))
 #+end_src
-***** Vendor-specific
-****** Apple
-#+begin_src scheme
-(define* (apple-macbook os #:key bluetooth?)
-  (-> os
-      (apple-broadcom-wireless #:bluetooth? bluetooth?)
-      apple-facetime-camera
-      apple-macbook-power-key))
-#+end_src
-******* Wireless
-I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
-#+begin_src scheme
-(define-system-comp (apple-broadcom-wireless #:key bluetooth?)
-  (kernel-loadable-modules (cons* (broadcom-sta-with-patch-updates broadcom-sta)
-                                  (operating-system-kernel-loadable-modules os)))
-  (kernel-arguments (add-or-update-kernel-argument
-                     (operating-system-user-kernel-arguments os)
-                     "modprobe.blacklist"
-                     '("b43" "b43legacy" "ssb" "bcm43xx" "brcm80211" "brcmfmac" "brcmsmac" "bcma")))
-  (firmware (append
-             (operating-system-firmware os)
-             (if bluetooth?
-                 (list broadcom-bt-firmware) '()))))
-#+end_src
-******** Broadcom STA :version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/broadcom.scm")
-(define-module (phrenetic packages broadcom)
-  #:use-module (guix download)
-  #:use-module (guix packages)
-  #:use-module (phrenetic utils))
-
-(define-public (broadcom-sta-with-patch-updates broadcom-sta)
-  (package
-    (inherit broadcom-sta)
-    (source
-     (origin
-       (inherit (package-source broadcom-sta))
-       (patches
-        (append
-         (-> broadcom-sta package-source origin-patches)
-         (list
-          (broadcom-sta-patch "linux-5.17" "94cb803fab0cbab18a57488f4ec39cfe038c734a" "1qsllvykhs3nvjwv8d6bgsm2sc9a1lxf8yqf6fa99p60ggd253ps")
-          (broadcom-sta-patch "linux-5.18" "94cb803fab0cbab18a57488f4ec39cfe038c734a" "1img0a0vqnkmq4c21aywq2ajyigzcfhbbpg1hw9nx7cbj9hf6d0l")
-          (broadcom-sta-patch "linux-6.0" "105e8974c06bf299974d17c09c54800350cfdebe" "0rv74j5giafzl19f01yvfa5rgvsdvcimxzhks2fp44wpnxq241nb")
-          (broadcom-sta-patch "linux-6.1" "355042e2ff5933b245e804c5eaff4ec3f340e71b" "1pvx1h7iimcbfqdc13n1980ngxk9q6iyip8svn293x4h7jn472kf")
-          (broadcom-sta-patch "pedantic-fix" "105e8974c06bf299974d17c09c54800350cfdebe" "1kxmw1iyxnfwad75h981sak5qk16p81xy1f2qxss2d0v97vkfkl5"))))))))
-
-(define (broadcom-sta-patch name commit hash)
-  (origin
-    (method url-fetch)
-    (uri (string-append "https://raw.githubusercontent.com/NixOS/nixpkgs/"
-                        commit
-                        "/pkgs/os-specific/linux/broadcom-sta/"
-                        name
-                        ".patch"))
-    (sha256
-     (base32
-      hash))))
-#+end_src
-******* Camera :upstream:
-#+begin_src scheme
-(define-system-comp (apple-facetime-camera)
-  (kernel-loadable-modules (cons* facetimehd
-                                  (operating-system-kernel-loadable-modules os)))
-  (kernel-arguments (add-or-update-kernel-argument
-                     (operating-system-user-kernel-arguments os)
-                     "modprobe.blacklist"
-                     '("bdc_pci")))
-  (firmware (cons* facetimehd-firmware
-                   facetimehd-calibration
-                   (operating-system-firmware os)))
-  (services
-   (cons* (simple-service 'facetimehd
-                          kernel-module-loader-service-type
-                          '("facetimehd"))
-          (operating-system-user-services os))))
-#+end_src
-******** Linux module :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
-(define-module (phrenetic packages linux)
-  #:use-module (guix build-system linux-module)
-  #:use-module (guix git-download)
-  #:use-module (guix packages)
-  #:use-module ((guix licenses) #:prefix license:))
-
-(define-public facetimehd
-  (package
-    (name "facetimehd")
-    (version "0.5.18")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/patjak/facetimehd")
-             (commit version)))
-       (sha256
-        (base32
-         "1598pzjnbij3knvqmk2yslj26wmqiqjqgqgcw9p9jx6z7bdjvvsh"))))
-    (build-system linux-module-build-system)
-    (arguments
-     '(#:tests? #f))
-    (synopsis "Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam")
-    (description "Linux driver for the FacetimeHD webcam. According to Apple the
-following models contain a Facetime HD camera and should be compatible with this
-driver:
-@itemize
-@item iMac (21,5\", since mid 2011)
-@item iMac (27\", since mid 2011)
-@item MacBook Air (since mid 2011)
-@item MacBook Pro (15\", since early 2011)
-@item MacBook Pro (17\", since early 2011)
-@item MacBook Pro (13\", since early 2011)
-@item Thunderbolt display
-@end itemize")
-    (home-page "https://github.com/patjak/facetimehd")
-    (license license:gpl2)
-    (supported-systems '("i686-linux" "x86_64-linux"))))
-#+end_src
-******** Firmware :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/firmware.scm")
-(define-module (phrenetic packages firmware)
-  #:use-module (guix build-system copy)
-  #:use-module (guix gexp)
-  #:use-module (guix download)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages compression) #:select (gzip unzip xz))
-  #:use-module ((gnu packages cpio) #:select (cpio))
-  #:use-module ((nonguix licenses) #:prefix license:)
-  #:use-module ((nongnu packages compression) #:select (unrar)))
-
-(define-public facetimehd-firmware
-  (package
-    (name "facetimehd-firmware")
-    (version "1.43")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://updates.cdn-apple.com/2019/cert"
-             "/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1"
-             "/OSXUpd10.11.5.dmg"))
-       (sha256
-        (base32
-         "009kfk1nrrialgp69c5smzgbmd5xpvk35xmqr2fzb15h6pp33ka6"))))
-    (build-system copy-build-system)
-    (arguments
-     (list
-      #:install-plan #~'(("firmware.bin" "/lib/firmware/facetimehd/"))
-      #:phases
-      (let ((dmg-subset-size 207733123)
-            (dmg-subset-offset 204909802)
-            (firmware-size 603715)
-            (firmware-offset 81920))
-        #~(modify-phases %standard-phases
-            (add-before 'install 'extract
-              (lambda* (#:key inputs #:allow-other-keys)
-                (let ((firmware-in
-                       (string-append
-                        "System/Library/Extensions/AppleCameraInterface.kext"
-                        "/Contents/MacOS/AppleCameraInterface")))
-                  (let ((dmg-subset "dmg-subset"))
-                    (#$dump-file-chunk #$source
-                                       dmg-subset
-                                       #$dmg-subset-size
-                                       #$dmg-subset-offset)
-                    (system
-                     (string-join
-                      (list (search-input-file inputs "/bin/xz")
-                            "--decompress"
-                            "--stdout"
-                            dmg-subset
-                            "|"
-                            (search-input-file inputs "/bin/cpio")
-                            "--format=odc"
-                            "--extract"
-                            "--make-directories"
-                            (string-append "./" firmware-in)))))
-                  (let ((firmware-out "firmware.bin.gz"))
-                    (#$dump-file-chunk firmware-in
-                                       firmware-out
-                                       #$firmware-size
-                                       #$firmware-offset)
-                    (invoke
-                     (search-input-file inputs "/bin/gzip")
-                     "--decompress"
-                     (string-append firmware-out))))))))))
-    (native-inputs
-     (list cpio gzip xz))
-    (synopsis "Firmware for the FacetimeHD (Broadcom 1570) PCIe webcam")
-    (description "Firmware for the FacetimeHD webcam. See
-@uref{https://github.com/patjak/facetimehd/wiki/Get-Started#firmware-extraction,
-patjak's facetimehd wiki} for more information.")
-    (home-page "https://support.apple.com/kb/DL1877")
-    (license (license:nonfree "https://www.apple.com/legal"))
-    (supported-systems '("i686-linux" "x86_64-linux"))))
-
-(define-public facetimehd-calibration
-  (package
-    (name "facetimehd-calibration")
-    (version "5.1.5769")
-    (source
-     (origin
-       (method url-fetch/zipbomb)
-       (uri (string-append
-             "https://download.info.apple.com/Mac_OS_X"
-             "/031-30890-20150812-ea191174-4130-11e5-a125-930911ba098f"
-             "/bootcamp" version".zip"))
-       (sha256
-        (base32
-         "07jbh6d0djcvcgj5hhkkw7d6mvcl228yb8rp0a2qqw20ya72rpjf"))))
-    (build-system copy-build-system)
-    (arguments
-     (list
-      #:install-plan #~'(("." "/lib/firmware/facetimehd/"
-                          #:include-regexp ("[0-9]{4}_01XX\\.dat")))
-      #:phases
-      (let ((calibration-files
-             '(("1771_01XX.dat" 19040 1644880)
-               ("1871_01XX.dat" 19040 1606800)
-               ("1874_01XX.dat" 19040 1625840)
-               ("9112_01XX.dat" 33060 1663920))))
-        #~(modify-phases %standard-phases
-            (add-before 'install 'extract
-              (lambda* (#:key inputs #:allow-other-keys)
-                (invoke (search-input-file inputs "/bin/unrar")
-                        "x"
-                        "BootCamp/Drivers/Apple/AppleCamera64.exe")
-                (for-each (lambda (spec)
-                            (apply #$dump-file-chunk "AppleCamera.sys" spec))
-                          '#$calibration-files)))))))
-    (native-inputs
-     (list unrar unzip))
-    (synopsis "Calibration files for the FacetimeHD (Broadcom 1570) PCIe webcam")
-    (description "Calibration files for the FacetimeHD webcam. These are
-optional but make the colors look much better. See
-@uref{https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files,
-patjak's facetimehd wiki} for more information.")
-    (home-page "https://support.apple.com/kb/DL1837")
-    (license (license:nonfree "https://www.apple.com/legal"))
-    (supported-systems '("i686-linux" "x86_64-linux"))))
-
-(define dump-file-chunk
-  #~(lambda (in out count start)
-      (use-modules (rnrs io ports))
-      (call-with-output-file out
-        (lambda (out-port)
-          (put-bytevector
-           out-port
-           (call-with-input-file in
-             (lambda (in-port)
-               (seek in-port start SEEK_SET)
-               (get-bytevector-n in-port count))))))))
-#+end_src
-******* Macbook power key
-Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
-#+begin_src scheme
-(define-system-comp (apple-macbook-power-key)
-  (services
-   (modify-services (operating-system-user-services os)
-     (elogind-service-type
-      config =>
-      (elogind-configuration
-       (inherit config)
-       (handle-power-key 'suspend))))))
-#+end_src
-******* Shared
-#+begin_src scheme
-(define (add-or-update-kernel-argument kargs param-name vs)
-  (let ((param? (lambda (p)
-                  (and (string? p)
-                       (string-prefix? param-name p))))
-        (vs* (string-join vs ",")))
-    (if (any param? kargs)
-        (map (lambda (p)
-               (if (param? p)
-                   (string-append p "," vs*)
-                   p))
-             kargs)
-        (cons (string-append param-name "=" vs*)
-              kargs))))
-#+end_src
 **** Shared
 #+begin_src scheme
 (define (without-profile-extension st)
@@ -1909,6 +1594,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                   login-number-of-ttys
                   who
                   package-managers
+                  guix-authorized-keys
+                  guix-substitute-urls
                   console?
                   kmonad?
                   kmonad-users
@@ -1935,7 +1622,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
     (certs $)
     (accounts $ #:who who)
     (if (member #:pm/guix (or package-managers '()))
-        (guix-pm $ #:stateless? stateless?) $)
+        (guix-pm $ #:authorized-keys guix-authorized-keys
+                 #:substitute-urls guix-substitute-urls
+                 #:stateless? stateless?) $)
     (if (member #:pm/nix (or package-managers '()))
         (nix-pm $ #:stateless? stateless?) $)
     (if console?
@@ -1976,32 +1665,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
                        #:swaylock-effects sessions-swaylock-effects)
               $))
         $)))
-#+end_src
-**** Macbook hardware
-#+begin_src scheme
-(define* (with-macbook-hardware os
-                                #:key
-                                efi-label
-                                virtualization-kvm-users
-                                virtualization-binfmt-platforms
-                                (console-input %macbook-keyboard)
-                                (console-output %macbook-display)
-                                number-of-ttys
-                                bluetooth?
-                                stateless?)
-  (as-> os $
-    (grub-efi $ #:label efi-label
-              #:stateless? stateless?)
-    (linux-kernel $ #:system "x86_64-linux"
-                  #:nonfree? #t)
-    (virtualization $ #:kvm-support? #t
-                    #:kvm-users virtualization-kvm-users
-                    #:native-platform "x86_64"
-                    #:binfmt-platforms virtualization-binfmt-platforms)
-    (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
-    (console-fonts $ #:number-of-ttys number-of-ttys
-                   #:hidpi? (assoc-ref console-output #:display/hidpi?))
-    (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 ** Home
 :PROPERTIES:
@@ -2063,20 +1726,14 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (default-skeletons))
-  #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
-  #:use-module ((nongnu packages clojure) #:select (clj-kondo))
-  #:use-module ((nongnu packages messaging) #:select (zoom))
-  #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
-  #:use-module ((chromium chromium) #:select (chromium chromium+drm ungoogled-chromium+drm))
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages aws) #:select (awscli-2))
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
-  #:use-module ((phrenetic packages databases) #:select (datomic-cli-tools))
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
@@ -2085,6 +1742,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
   #:export (create-he
             stateless
+            home-stateless-service
             shells
             xdg-base-directories
             xdg-trash
@@ -2139,7 +1797,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             flatpak-apps
             aws-prog
             clojure-prog
-            datomic-prog
             doom-calendar-prog
             doom-org-prog
             direnv-prog
@@ -2158,7 +1815,6 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             doom-menu
             rofi-app
             rofi-menu
-            zoom-app
             gimp-app
             alacritty-app
             alacritty-terminal
@@ -2166,9 +1822,8 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             doom-vterm-terminal
             ungoogled-chromium-app
             chromium-app
-            google-chrome-app
+            chromium-wrapper
             icecat-app
-            firefox-app
             nyxt-app
             tor-browser-app
             vlc-app
@@ -6068,7 +5723,6 @@ Some colors from the original Atom theme on which I based mine that might be use
                  doom-tree-sitter?
                  login-shell
                  (channels `((,%nixpkgs-unstable-url . "nixpkgs")))
-                 allow-unfree?
                  nixpkgs-config-settings
                  nixpkgs-config-expressions)
   (append
@@ -6109,9 +5763,7 @@ Some colors from the original Atom theme on which I based mine that might be use
      home-xdg-configuration-files-service-type
      `(("nixpkgs/config.nix"
         ,(nixpkgs-config-file "nixpkgs-config.nix"
-                              (append
-                               `((allowUnfree . ,allow-unfree?))
-                               nixpkgs-config-settings)
+                              nixpkgs-config-settings
                               nixpkgs-config-expressions)))))
 
    (if stateless?
@@ -8074,7 +7726,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
      home-profile-service-type
      (list clojure-tools
            jdk
-           clj-kondo))
+           (@ (nongnu packages clojure) clj-kondo))) ; TODO Update with respect to nonphrenetic.
 
     (when stateless?
       (home-stateless-service
@@ -8163,60 +7815,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 
    (doom-xml+csv)
    (doom-dash)))
-#+end_src
-****** Datomic
-#+begin_src scheme
-(define (datomic-prog)
-  (list
-   (simple-service
-    'datomic-add-packages
-    home-profile-service-type
-    (list datomic-cli-tools))))
-#+end_src
-******* Datomic CLI tools :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/databases.scm")
-(define-module (phrenetic packages databases)
-  #:use-module (guix build-system copy)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages compression) #:select (unzip))
-  #:use-module ((nonguix licenses) #:prefix license:))
-
-(define-public datomic-cli-tools
-  (package
-    (name "datomic-cli-tools")
-    (version "1.0.91")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com"
-                           "/tools/datomic-cli/datomic-cli-" version ".zip"))
-       (sha256
-        (base32
-         "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
-    (build-system copy-build-system)
-    (arguments
-     `(#:install-plan
-       '(("." "bin" #:include-regexp ("^\\./datomic"))
-         ("README.txt" "share/doc/datomic/"))
-       #:phases
-       ,#~(modify-phases %standard-phases
-            (add-after 'install 'make-scripts-executable
-              (lambda _
-                (for-each (lambda (f) (chmod f #o555))
-                          (find-files (string-append #$output "/bin"))))))))
-    (native-inputs
-     (list unzip))
-    (home-page "https://docs.datomic.com/cloud/index.html")
-    (synopsis "Command-line tools for Datomic Cloud")
-    (description "View and Manage analytics, logs, and access control gateways
-for a Datomic Cloud instance on AWS.")
-    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))
-    (properties
-     `((release-monitoring-url
-        . "https://docs.datomic.com/cloud/releases.html")
-       (upstream-name . "datomic-cli")))))
 #+end_src
 ****** Node
 #+begin_src scheme
@@ -8762,31 +8360,6 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
       rofi-wayland
       rofi))
 #+end_src
-***** Messaging
-****** Zoom
-Doesn't work for me at the moment. As of this writing the package is brand new so wait a while and see if there any developments/updates/fixes (though I suspect the issue(s) lie with me, I was getting errors, possibly similar ones, when I tried to install Zoom through Nix).
-#+begin_src scheme
-(define* (zoom-app #:key
-                   stateless?
-                   qt-services)
-  (append
-   (list
-    (simple-service
-     'zoom-add-packages
-     home-profile-service-type
-     (list zoom))
-
-    ;; (when stateless?
-    ;;   (home-stateless-service
-    ;;    'zoom
-    ;;    #:state '(((#:path . ("zoom/" #:xdg-base "XDG_CONFIG_HOME"))
-    ;;               (#:storage . #:storage/machine))
-    ;;              ((#:path . ("zoom/" #:xdg-base "XDG_DATA_HOME"))
-    ;;               (#:storage . #:storage/machine)))))
-    )
-
-   (or qt-services '())))
-#+end_src
 ***** Image processing
 ****** GIMP
 #+begin_src scheme
@@ -8915,18 +8488,13 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                                  pipewire?
                                  theme
                                  gtk-services
-                                 drm?
-                                 (ungoogled-chromium ungoogled-chromium)
-                                 (ungoogled-chromium+drm ungoogled-chromium+drm))
+                                 (ungoogled-chromium ungoogled-chromium))
   (append
    (list
     (simple-service
      'ungoogled-chromium-add-packages
      home-profile-service-type
-     (list (chromium-wrapper (if drm?
-                                 ungoogled-chromium+drm
-                                 ungoogled-chromium)
-                             wayland? pipewire? theme)
+     (list (chromium-wrapper ungoogled-chromium wayland? pipewire? theme)
            ublock-origin/chromium))
 
     (when stateless?
@@ -8942,79 +8510,6 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                   (#:storage . #:storage/machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))))))
-
-   (or gtk-services '())))
-#+end_src
-******* Chromium
-#+begin_src scheme
-(define* (chromium-app #:key
-                       stateless?
-                       wayland?
-                       pipewire?
-                       theme
-                       gtk-services
-                       drm?
-                       (chromium chromium)
-                       (chromium+drm chromium+drm))
-  (append
-   (list
-    (simple-service
-     'chromium-add-packages
-     home-profile-service-type
-     (list (chromium-wrapper (if drm?
-                                 chromium+drm
-                                 chromium)
-                             wayland? pipewire? theme)
-           ublock-origin/chromium))
-
-    (when stateless?
-      (home-stateless-service
-       'chromium
-       #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ".pki/nssdb/")
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))))))
-
-   (or gtk-services '())))
-#+end_src
-******* Google Chrome
-#+begin_src scheme
-(define* (google-chrome-app #:key
-                            stateless?
-                            wayland?
-                            pipewire?
-                            theme
-                            gtk-services
-                            (google-chrome google-chrome))
-  (append
-   (list
-    (simple-service
-     'google-chrome-add-packages
-     home-profile-service-type
-     (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
-
-    (when stateless?
-      (home-stateless-service
-       'google-chrome
-       #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ".pki/nssdb/")
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700)))))
-       ;; It's weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also the only time I've seen it not be empty is once when Gmail promted me to let it open emails and I hit accept. Whatever, lets just ignore it.
-       #:ignore '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
-                   (#:preds . ((#:empty-file))))))))
 
    (or gtk-services '())))
 #+end_src
@@ -9086,39 +8581,6 @@ It might be possible to statically configure Icecat/Firefox, check out the Iceca
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
                  ((#:path . ".mozilla/icecat")
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))
-                 ((#:path . ".mozilla/extensions")
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))))))
-
-   (or gtk-services '())))
-#+end_src
-******* Firefox
-#+begin_src scheme
-(define* (firefox-app #:key
-                      stateless?
-                      wayland?
-                      gtk-services)
-  (append
-   (list
-    (simple-service
-     'firefox-add-packages
-     home-profile-service-type
-     (list (if wayland?
-               firefox/wayland
-               firefox)))
-
-    (when stateless?
-      (home-stateless-service
-       'firefox
-       #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))
-                 ((#:path . ".mozilla/firefox")
                   (#:storage . #:storage/machine)
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))
@@ -9352,6 +8814,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                           doom?
                           doom-flags
                           package-managers
+                          nix-nixpkgs-config-settings
                           console?
                           kmonad?
                           kmonad
@@ -9375,7 +8838,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                #:doom? doom?
                #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                #:login-shell login-shell
-               #:allow-unfree? #t)
+               #:nixpkgs-config-settings nix-nixpkgs-config-settings)
        '())
    (if console?
        (if kmonad?
@@ -9558,6 +9021,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Apps
 #+begin_src scheme
+;; TODO Update with respect to nonphrenetic.
+(use-modules ((nonphrenetic home) #:select (zoom-app google-chrome-app firefox-app)))
+
 (define* (apps #:key
                stateless?
                pipewire?
@@ -9632,6 +9098,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     doom-flags
                     doom-ui?
                     package-managers
+                    nix-nixpkgs-config-settings
                     console?
                     kmonad?
                     kmonad
@@ -9670,6 +9137,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                #:doom? doom?
                                #:doom-flags doom-flags
                                #:package-managers package-managers
+                               #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
                                #:console? console?
                                #:kmonad? kmonad?
                                #:kmonad kmonad
@@ -10215,29 +9683,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (string-prefix? storage-dir (readlink file)))
               storage-dirs))))
 #+end_src
-*** Input/output devices
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "io-devices.scm")
-:END:
-#+begin_src scheme
-(define-module (phrenetic io-devices)
-  #:use-module (gnu system keyboard)
-  #:export (%macbook-keyboard
-            %macbook-display))
-#+end_src
-**** Apple
-#+begin_src scheme
-(define %macbook-keyboard
-  `((#:keyboard/name . "Apple Inc. Apple Internal Keyboard / Trackpad")
-    (#:keyboard/vendor-id . 1452)
-    (#:keyboard/product-id . 610)
-    (#:keyboard/layout . ,(keyboard-layout "us" #:model "macbook78"))))
-
-(define %macbook-display
-  '((#:display/make . "Apple Computer Inc")
-    (#:display/model . "Color LCD")
-    (#:display/hidpi? . #t)))
-#+end_src
 ** Modules
 #+begin_src scheme :tangle (meta-in-dir "modules.scm")
 (define-module (phrenetic modules)
@@ -10564,17 +10009,644 @@ delete it when leaving the dynamic extent of this call."
 (define MiB (expt 2 20))
 (define GiB (expt 2 30))
 #+end_src
+* Nonphrenetic
+:PROPERTIES:
+:meta-dir+: nonphrenetic
+:END:
+** System
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "system.scm")
+:END:
+#+begin_src scheme
+(define-module (nonphrenetic system)
+  #:use-module (guix gexp)
+  #:use-module (gnu services)
+  #:use-module ((gnu services desktop) #:select (elogind-service-type elogind-configuration))
+  #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
+  #:use-module (gnu system)
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta))
+  #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
+  #:use-module (phrenetic system)
+  #:use-module (phrenetic utils)
+  #:use-module (nonphrenetic io-devices)
+  #:use-module ((nonphrenetic packages broadcom) #:select (broadcom-sta-with-patch-updates))
+  #:use-module ((nonphrenetic packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
+  #:use-module ((nonphrenetic packages linux) #:select (facetimehd))
+  #:use-module ((srfi srfi-1) #:select (any))
+  #:export (%nonguix-authorized-keys
+            %nonguix-substitute-urls
+            linux-kernel
+            apple-macbook
+            with-macbook-hardware))
+#+end_src
+*** Components
+**** Package management
+***** Guix
+****** Nonguix substitutes
+#+begin_src scheme
+(define nonguix-public-key
+  '((#:public-key/type . #:public-key.type/ecc)
+    (#:public-key.ecc/curve . "Ed25519")
+    (#:public-key.ecc/q . "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98")))
+
+(define %nonguix-authorized-keys
+  (list (plain-file "substitutes.nonguix.org.pub"
+                    (public-key-serialize nonguix-public-key))))
+
+(define %nonguix-substitute-urls
+  (list "https://substitutes.nonguix.org"))
+#+end_src
+**** Hardware-specific
+***** Linux
+#+begin_src scheme
+(define-system-comp (linux-kernel #:key
+                                  system
+                                  linux-customization-params)
+  (kernel (linux-with-customizations (get-linux system)
+                                     linux-customization-params))
+  (initrd (if (member system '("x86_64-linux" "i686-linux"))
+              (lambda* (file-systems #:rest rest)
+                (apply microcode-initrd file-systems
+                       #:initrd (operating-system-initrd os)
+                       rest))
+              (operating-system-initrd os)))
+  (firmware (append
+             (operating-system-firmware os)
+             (list linux-firmware))))
+
+(define (get-linux system)
+  (or (assoc-ref `(;; ("aarch64-linux" . linux-arm64-generic)
+                   ;; ...
+                   )
+                 system)
+      linux))
+#+end_src
+***** Vendor-specific
+****** Apple
+#+begin_src scheme
+(define* (apple-macbook os #:key bluetooth?)
+  (-> os
+      (apple-broadcom-wireless #:bluetooth? bluetooth?)
+      apple-facetime-camera
+      apple-macbook-power-key))
+#+end_src
+******* Wireless
+I'm not sure if this requires the nonfree linux kernel and/or if the blacklist refers to kernel modules not present in =linux-libre=.
+#+begin_src scheme
+(define-system-comp (apple-broadcom-wireless #:key bluetooth?)
+  (kernel-loadable-modules (cons* (broadcom-sta-with-patch-updates broadcom-sta)
+                                  (operating-system-kernel-loadable-modules os)))
+  (kernel-arguments (add-or-update-kernel-argument
+                     (operating-system-user-kernel-arguments os)
+                     "modprobe.blacklist"
+                     '("b43" "b43legacy" "ssb" "bcm43xx" "brcm80211" "brcmfmac" "brcmsmac" "bcma")))
+  (firmware (append
+             (operating-system-firmware os)
+             (if bluetooth?
+                 (list broadcom-bt-firmware) '()))))
+#+end_src
+******** Broadcom STA :version:upstream:
+#+begin_src scheme :tangle (meta-in-dir "packages/broadcom.scm")
+(define-module (nonphrenetic packages broadcom)
+  #:use-module (guix download)
+  #:use-module (guix packages)
+  #:use-module (phrenetic utils))
+
+(define-public (broadcom-sta-with-patch-updates broadcom-sta)
+  (package
+    (inherit broadcom-sta)
+    (source
+     (origin
+       (inherit (package-source broadcom-sta))
+       (patches
+        (append
+         (-> broadcom-sta package-source origin-patches)
+         (list
+          (broadcom-sta-patch "linux-5.17" "94cb803fab0cbab18a57488f4ec39cfe038c734a" "1qsllvykhs3nvjwv8d6bgsm2sc9a1lxf8yqf6fa99p60ggd253ps")
+          (broadcom-sta-patch "linux-5.18" "94cb803fab0cbab18a57488f4ec39cfe038c734a" "1img0a0vqnkmq4c21aywq2ajyigzcfhbbpg1hw9nx7cbj9hf6d0l")
+          (broadcom-sta-patch "linux-6.0" "105e8974c06bf299974d17c09c54800350cfdebe" "0rv74j5giafzl19f01yvfa5rgvsdvcimxzhks2fp44wpnxq241nb")
+          (broadcom-sta-patch "linux-6.1" "355042e2ff5933b245e804c5eaff4ec3f340e71b" "1pvx1h7iimcbfqdc13n1980ngxk9q6iyip8svn293x4h7jn472kf")
+          (broadcom-sta-patch "pedantic-fix" "105e8974c06bf299974d17c09c54800350cfdebe" "1kxmw1iyxnfwad75h981sak5qk16p81xy1f2qxss2d0v97vkfkl5"))))))))
+
+(define (broadcom-sta-patch name commit hash)
+  (origin
+    (method url-fetch)
+    (uri (string-append "https://raw.githubusercontent.com/NixOS/nixpkgs/"
+                        commit
+                        "/pkgs/os-specific/linux/broadcom-sta/"
+                        name
+                        ".patch"))
+    (sha256
+     (base32
+      hash))))
+#+end_src
+******* Camera :upstream:
+#+begin_src scheme
+(define-system-comp (apple-facetime-camera)
+  (kernel-loadable-modules (cons* facetimehd
+                                  (operating-system-kernel-loadable-modules os)))
+  (kernel-arguments (add-or-update-kernel-argument
+                     (operating-system-user-kernel-arguments os)
+                     "modprobe.blacklist"
+                     '("bdc_pci")))
+  (firmware (cons* facetimehd-firmware
+                   facetimehd-calibration
+                   (operating-system-firmware os)))
+  (services
+   (cons* (simple-service 'facetimehd
+                          kernel-module-loader-service-type
+                          '("facetimehd"))
+          (operating-system-user-services os))))
+#+end_src
+******** Linux module :package:version:
+#+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
+(define-module (nonphrenetic packages linux)
+  #:use-module (guix build-system linux-module)
+  #:use-module (guix git-download)
+  #:use-module (guix packages)
+  #:use-module ((guix licenses) #:prefix license:))
+
+(define-public facetimehd
+  (package
+    (name "facetimehd")
+    (version "0.5.18")
+    (source
+     (origin
+       (method git-fetch)
+       (uri (git-reference
+             (url "https://github.com/patjak/facetimehd")
+             (commit version)))
+       (sha256
+        (base32
+         "1598pzjnbij3knvqmk2yslj26wmqiqjqgqgcw9p9jx6z7bdjvvsh"))))
+    (build-system linux-module-build-system)
+    (arguments
+     '(#:tests? #f))
+    (synopsis "Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description "Linux driver for the FacetimeHD webcam. According to Apple the
+following models contain a Facetime HD camera and should be compatible with this
+driver:
+@itemize
+@item iMac (21,5\", since mid 2011)
+@item iMac (27\", since mid 2011)
+@item MacBook Air (since mid 2011)
+@item MacBook Pro (15\", since early 2011)
+@item MacBook Pro (17\", since early 2011)
+@item MacBook Pro (13\", since early 2011)
+@item Thunderbolt display
+@end itemize")
+    (home-page "https://github.com/patjak/facetimehd")
+    (license license:gpl2)
+    (supported-systems '("i686-linux" "x86_64-linux"))))
+#+end_src
+******** Firmware :package:version:
+#+begin_src scheme :tangle (meta-in-dir "packages/firmware.scm")
+(define-module (nonphrenetic packages firmware)
+  #:use-module (guix build-system copy)
+  #:use-module (guix gexp)
+  #:use-module (guix download)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages compression) #:select (gzip unzip xz))
+  #:use-module ((gnu packages cpio) #:select (cpio))
+  #:use-module ((nonguix licenses) #:prefix license:)
+  #:use-module ((nongnu packages compression) #:select (unrar)))
+
+(define-public facetimehd-firmware
+  (package
+    (name "facetimehd-firmware")
+    (version "1.43")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append
+             "https://updates.cdn-apple.com/2019/cert"
+             "/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1"
+             "/OSXUpd10.11.5.dmg"))
+       (sha256
+        (base32
+         "009kfk1nrrialgp69c5smzgbmd5xpvk35xmqr2fzb15h6pp33ka6"))))
+    (build-system copy-build-system)
+    (arguments
+     (list
+      #:install-plan #~'(("firmware.bin" "/lib/firmware/facetimehd/"))
+      #:phases
+      (let ((dmg-subset-size 207733123)
+            (dmg-subset-offset 204909802)
+            (firmware-size 603715)
+            (firmware-offset 81920))
+        #~(modify-phases %standard-phases
+            (add-before 'install 'extract
+              (lambda* (#:key inputs #:allow-other-keys)
+                (let ((firmware-in
+                       (string-append
+                        "System/Library/Extensions/AppleCameraInterface.kext"
+                        "/Contents/MacOS/AppleCameraInterface")))
+                  (let ((dmg-subset "dmg-subset"))
+                    (#$dump-file-chunk #$source
+                                       dmg-subset
+                                       #$dmg-subset-size
+                                       #$dmg-subset-offset)
+                    (system
+                     (string-join
+                      (list (search-input-file inputs "/bin/xz")
+                            "--decompress"
+                            "--stdout"
+                            dmg-subset
+                            "|"
+                            (search-input-file inputs "/bin/cpio")
+                            "--format=odc"
+                            "--extract"
+                            "--make-directories"
+                            (string-append "./" firmware-in)))))
+                  (let ((firmware-out "firmware.bin.gz"))
+                    (#$dump-file-chunk firmware-in
+                                       firmware-out
+                                       #$firmware-size
+                                       #$firmware-offset)
+                    (invoke
+                     (search-input-file inputs "/bin/gzip")
+                     "--decompress"
+                     (string-append firmware-out))))))))))
+    (native-inputs
+     (list cpio gzip xz))
+    (synopsis "Firmware for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description "Firmware for the FacetimeHD webcam. See
+@uref{https://github.com/patjak/facetimehd/wiki/Get-Started#firmware-extraction,
+patjak's facetimehd wiki} for more information.")
+    (home-page "https://support.apple.com/kb/DL1877")
+    (license (license:nonfree "https://www.apple.com/legal"))
+    (supported-systems '("i686-linux" "x86_64-linux"))))
+
+(define-public facetimehd-calibration
+  (package
+    (name "facetimehd-calibration")
+    (version "5.1.5769")
+    (source
+     (origin
+       (method url-fetch/zipbomb)
+       (uri (string-append
+             "https://download.info.apple.com/Mac_OS_X"
+             "/031-30890-20150812-ea191174-4130-11e5-a125-930911ba098f"
+             "/bootcamp" version".zip"))
+       (sha256
+        (base32
+         "07jbh6d0djcvcgj5hhkkw7d6mvcl228yb8rp0a2qqw20ya72rpjf"))))
+    (build-system copy-build-system)
+    (arguments
+     (list
+      #:install-plan #~'(("." "/lib/firmware/facetimehd/"
+                          #:include-regexp ("[0-9]{4}_01XX\\.dat")))
+      #:phases
+      (let ((calibration-files
+             '(("1771_01XX.dat" 19040 1644880)
+               ("1871_01XX.dat" 19040 1606800)
+               ("1874_01XX.dat" 19040 1625840)
+               ("9112_01XX.dat" 33060 1663920))))
+        #~(modify-phases %standard-phases
+            (add-before 'install 'extract
+              (lambda* (#:key inputs #:allow-other-keys)
+                (invoke (search-input-file inputs "/bin/unrar")
+                        "x"
+                        "BootCamp/Drivers/Apple/AppleCamera64.exe")
+                (for-each (lambda (spec)
+                            (apply #$dump-file-chunk "AppleCamera.sys" spec))
+                          '#$calibration-files)))))))
+    (native-inputs
+     (list unrar unzip))
+    (synopsis "Calibration files for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description "Calibration files for the FacetimeHD webcam. These are
+optional but make the colors look much better. See
+@uref{https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files,
+patjak's facetimehd wiki} for more information.")
+    (home-page "https://support.apple.com/kb/DL1837")
+    (license (license:nonfree "https://www.apple.com/legal"))
+    (supported-systems '("i686-linux" "x86_64-linux"))))
+
+(define dump-file-chunk
+  #~(lambda (in out count start)
+      (use-modules (rnrs io ports))
+      (call-with-output-file out
+        (lambda (out-port)
+          (put-bytevector
+           out-port
+           (call-with-input-file in
+             (lambda (in-port)
+               (seek in-port start SEEK_SET)
+               (get-bytevector-n in-port count))))))))
+#+end_src
+******* Macbook power key
+Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
+#+begin_src scheme
+(define-system-comp (apple-macbook-power-key)
+  (services
+   (modify-services (operating-system-user-services os)
+     (elogind-service-type
+      config =>
+      (elogind-configuration
+       (inherit config)
+       (handle-power-key 'suspend))))))
+#+end_src
+******* Shared
+#+begin_src scheme
+(define (add-or-update-kernel-argument kargs param-name vs)
+  (let ((param? (lambda (p)
+                  (and (string? p)
+                       (string-prefix? param-name p))))
+        (vs* (string-join vs ",")))
+    (if (any param? kargs)
+        (map (lambda (p)
+               (if (param? p)
+                   (string-append p "," vs*)
+                   p))
+             kargs)
+        (cons (string-append param-name "=" vs*)
+              kargs))))
+#+end_src
+*** Composite components
+**** Macbook hardware
+#+begin_src scheme
+(define* (with-macbook-hardware os
+                                #:key
+                                efi-label
+                                virtualization-kvm-users
+                                virtualization-binfmt-platforms
+                                (console-input %macbook-keyboard)
+                                (console-output %macbook-display)
+                                number-of-ttys
+                                bluetooth?
+                                stateless?)
+  (as-> os $
+    (grub-efi $ #:label efi-label
+              #:stateless? stateless?)
+    (linux-kernel $ #:system "x86_64-linux")
+    (virtualization $ #:kvm-support? #t
+                    #:kvm-users virtualization-kvm-users
+                    #:native-platform "x86_64"
+                    #:binfmt-platforms virtualization-binfmt-platforms)
+    (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
+    (console-fonts $ #:number-of-ttys number-of-ttys
+                   #:hidpi? (assoc-ref console-output #:display/hidpi?))
+    (apple-macbook $ #:bluetooth? bluetooth?)))
+#+end_src
+** Home
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "home.scm")
+:END:
+#+begin_src scheme
+(define-module (nonphrenetic home)
+  #:use-module (gnu home services)
+  #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
+  #:use-module (gnu services)
+  #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
+  #:use-module ((nongnu packages messaging) #:select (zoom))
+  #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
+  #:use-module ((chromium chromium) #:select (chromium chromium+drm))
+  #:use-module (phrenetic home)
+  #:use-module (phrenetic utils)
+  #:use-module ((nonphrenetic packages databases) #:select (datomic-cli-tools))
+  #:export (%nixpkgs-allow-unfree
+            datomic-prog
+            zoom-app
+            chromium-app
+            google-chrome-app
+            firefox-app))
+#+end_src
+*** Components
+**** Package management
+***** Nix
+#+begin_src scheme
+(define %nixpkgs-allow-unfree
+  '((allowUnfree . #t)))
+#+end_src
+**** Programs
+***** Development
+****** Datomic
+#+begin_src scheme
+(define (datomic-prog)
+  (list
+   (simple-service
+    'datomic-add-packages
+    home-profile-service-type
+    (list datomic-cli-tools))))
+#+end_src
+******* Datomic CLI tools :package:version:upstream:
+#+begin_src scheme :tangle (meta-in-dir "packages/databases.scm")
+(define-module (nonphrenetic packages databases)
+  #:use-module (guix build-system copy)
+  #:use-module (guix download)
+  #:use-module (guix gexp)
+  #:use-module (guix packages)
+  #:use-module ((gnu packages compression) #:select (unzip))
+  #:use-module ((nonguix licenses) #:prefix license:))
+
+(define-public datomic-cli-tools
+  (package
+    (name "datomic-cli-tools")
+    (version "1.0.91")
+    (source
+     (origin
+       (method url-fetch)
+       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com"
+                           "/tools/datomic-cli/datomic-cli-" version ".zip"))
+       (sha256
+        (base32
+         "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
+    (build-system copy-build-system)
+    (arguments
+     `(#:install-plan
+       '(("." "bin" #:include-regexp ("^\\./datomic"))
+         ("README.txt" "share/doc/datomic/"))
+       #:phases
+       ,#~(modify-phases %standard-phases
+            (add-after 'install 'make-scripts-executable
+              (lambda _
+                (for-each (lambda (f) (chmod f #o555))
+                          (find-files (string-append #$output "/bin"))))))))
+    (native-inputs
+     (list unzip))
+    (home-page "https://docs.datomic.com/cloud/index.html")
+    (synopsis "Command-line tools for Datomic Cloud")
+    (description "View and Manage analytics, logs, and access control gateways
+for a Datomic Cloud instance on AWS.")
+    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))
+    (properties
+     `((release-monitoring-url
+        . "https://docs.datomic.com/cloud/releases.html")
+       (upstream-name . "datomic-cli")))))
+#+end_src
+**** Apps
+***** Messaging
+****** Zoom
+Doesn't work for me at the moment. As of this writing the package is brand new so wait a while and see if there any developments/updates/fixes (though I suspect the issue(s) lie with me, I was getting errors, possibly similar ones, when I tried to install Zoom through Nix).
+#+begin_src scheme
+(define* (zoom-app #:key
+                   stateless?
+                   qt-services)
+  (append
+   (list
+    (simple-service
+     'zoom-add-packages
+     home-profile-service-type
+     (list zoom))
+
+    ;; (when stateless?
+    ;;   (home-stateless-service
+    ;;    'zoom
+    ;;    #:state '(((#:path . ("zoom/" #:xdg-base "XDG_CONFIG_HOME"))
+    ;;               (#:storage . #:storage/machine))
+    ;;              ((#:path . ("zoom/" #:xdg-base "XDG_DATA_HOME"))
+    ;;               (#:storage . #:storage/machine)))))
+    )
+
+   (or qt-services '())))
+#+end_src
+***** Web browsers
+****** Chromium
+******* Chromium
+#+begin_src scheme
+(define* (chromium-app #:key
+                       stateless?
+                       wayland?
+                       pipewire?
+                       theme
+                       gtk-services
+                       drm?
+                       (chromium chromium)
+                       (chromium+drm chromium+drm))
+  (append
+   (list
+    (simple-service
+     'chromium-add-packages
+     home-profile-service-type
+     (list (chromium-wrapper (if drm?
+                                 chromium+drm
+                                 chromium)
+                             wayland? pipewire? theme)
+           ublock-origin/chromium))
+
+    (when stateless?
+      (home-stateless-service
+       'chromium
+       #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ".pki/nssdb/")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+
+   (or gtk-services '())))
+#+end_src
+******* Google Chrome
+#+begin_src scheme
+(define* (google-chrome-app #:key
+                            stateless?
+                            wayland?
+                            pipewire?
+                            theme
+                            gtk-services
+                            (google-chrome google-chrome))
+  (append
+   (list
+    (simple-service
+     'google-chrome-add-packages
+     home-profile-service-type
+     (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
+
+    (when stateless?
+      (home-stateless-service
+       'google-chrome
+       #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ".pki/nssdb/")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700)))))
+       ;; It's weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also the only time I've seen it not be empty is once when Gmail promted me to let it open emails and I hit accept. Whatever, lets just ignore it.
+       #:ignore '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
+                   (#:preds . ((#:empty-file))))))))
+
+   (or gtk-services '())))
+#+end_src
+****** Mozilla
+******* Firefox
+#+begin_src scheme
+(define* (firefox-app #:key
+                      stateless?
+                      wayland?
+                      gtk-services)
+  (append
+   (list
+    (simple-service
+     'firefox-add-packages
+     home-profile-service-type
+     (list (if wayland?
+               firefox/wayland
+               firefox)))
+
+    (when stateless?
+      (home-stateless-service
+       'firefox
+       #:state '(((#:path . ("mozilla/firefox/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/firefox")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/extensions")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+
+   (or gtk-services '())))
+#+end_src
+** Common
+*** Input/output devices
+:PROPERTIES:
+:header-args+: :tangle (meta-in-dir "io-devices.scm")
+:END:
+#+begin_src scheme
+(define-module (nonphrenetic io-devices)
+  #:use-module (gnu system keyboard)
+  #:export (%macbook-keyboard
+            %macbook-display))
+#+end_src
+**** Apple
+#+begin_src scheme
+(define %macbook-keyboard
+  `((#:keyboard/name . "Apple Inc. Apple Internal Keyboard / Trackpad")
+    (#:keyboard/vendor-id . 1452)
+    (#:keyboard/product-id . 610)
+    (#:keyboard/layout . ,(keyboard-layout "us" #:model "macbook78"))))
+
+(define %macbook-display
+  '((#:display/make . "Apple Computer Inc")
+    (#:display/model . "Color LCD")
+    (#:display/hidpi? . #t)))
+#+end_src
+
 * Configurations
 :PROPERTIES:
 :meta-dir+: configs
 :END:
 #+begin_src scheme :tangle (meta-in-dir "core.scm")
 (define-module (configs core)
-  #:use-module ((phrenetic home) #:prefix he:)
-  #:use-module (phrenetic install)
-  #:use-module (phrenetic io-devices)
-  #:use-module ((phrenetic system) #:prefix os:)
+  #:use-module ((phrenetic home) #:select (create-he he-entire))
+  #:use-module ((phrenetic install) #:select (installer-package))
+  #:use-module ((phrenetic system) #:select (blank-os btrfs disk-encryption host-info os-base stateless swap tmpfs zswap))
   #:use-module (phrenetic utils)
+  #:use-module ((nonphrenetic io-devices) #:select (%macbook-display %macbook-keyboard))
+  #:use-module ((nonphrenetic home) #:select (%nixpkgs-allow-unfree))
+  #:use-module ((nonphrenetic system) #:select (%nonguix-authorized-keys %nonguix-substitute-urls with-macbook-hardware))
   #:use-module ((ice-9 match) #:select (match-lambda))
   #:use-module ((srfi srfi-1) #:select (delete-duplicates))
   #:export (system
@@ -10590,8 +10662,8 @@ delete it when leaving the dynamic extent of this call."
         (number-of-ttys 6)
         (bluetooth? #t)
         (stateless? #t))
-    (as-> os:blank-os $
-      (os-base $ #:who `(((#:name . ,primary-name)
+    (as-> blank-os $
+      (base-os $ #:who `(((#:name . ,primary-name)
                           (#:comment . "Krzysztof Baranowski")
                           (#:shell . ,primary-he-shell)
                           (#:admin? . #t))
@@ -10603,6 +10675,8 @@ delete it when leaving the dynamic extent of this call."
                           (#:comment . "Mellon")
                           (#:shell . ,guest-he-shell)))
                #:login-number-of-ttys number-of-ttys
+               #:guix-authorized-keys %nonguix-authorized-keys
+               #:guix-substitute-urls %nonguix-substitute-urls
                #:kmonad? #t
                #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                (,aux-name . ,aux-he-kmonad?)
@@ -10619,56 +10693,56 @@ delete it when leaving the dynamic extent of this call."
                                (apply append)
                                delete-duplicates)
                #:stateless? stateless?)
-      (os:host-info $ #:host-name "frostfire"
-                    #:timezone "America/Los_Angeles")
-      (os:tmpfs $ #:mount-point "/"
-                ;; TODO trying without at the moment
-                ;; #:size (let ((virtual-memory (+ physical-memory swap-size)))
-                ;;          (/ virtual-memory 2))
-                )
+      (host-info $ #:host-name "frostfire"
+                 #:timezone "America/Los_Angeles")
+      (tmpfs $ #:mount-point "/"
+             ;; TODO trying without at the moment
+             ;; #:size (let ((virtual-memory (+ physical-memory swap-size)))
+             ;;          (/ virtual-memory 2))
+             )
       (case filesystem
         ;; ((#:filesystem/ext4)
-        ;;  (os:ext4 $ #:label root-label
+        ;;  (ext4 $ #:label root-label
         ;;           #:mount-point "/"))
         ((#:filesystem/btrfs)
-         (os:btrfs $ #:label root-label
-                   #:mounts (map (match-lambda
-                                   ((subvol . mount-point)
-                                    `((#:mount-point . ,mount-point)
-                                      (#:subvol . ,subvol))))
-                                 mountables))))
+         (btrfs $ #:label root-label
+                #:mounts (map (match-lambda
+                                ((subvol . mount-point)
+                                 `((#:mount-point . ,mount-point)
+                                   (#:subvol . ,subvol))))
+                              mountables))))
       (if disk-encryption?
-          (os:disk-encryption $ #:device-uuid luks-uuid
-                              #:mount-points (case filesystem
-                                               ;; ((#:filesystem/ext4)
-                                               ;;  ...)
-                                               ((#:filesystem/btrfs)
-                                                (map (match-lambda ((_ . mount-point) mount-point))
-                                                     mountables))))
+          (disk-encryption $ #:device-uuid luks-uuid
+                           #:mount-points (case filesystem
+                                            ;; ((#:filesystem/ext4)
+                                            ;;  ...)
+                                            ((#:filesystem/btrfs)
+                                             (map (match-lambda ((_ . mount-point) mount-point))
+                                                  mountables))))
           $)
-      (os:swap $ #:file? #t
-               #:file-size swap-size
-               #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
-               #:stateless? stateless?)
-      ;; (os:zswap $)
+      (swap $ #:file? #t
+            #:file-size swap-size
+            #:file-no-cow? (equal? filesystem #:filesystem/btrfs)
+            #:stateless? stateless?)
+      ;; (zswap $)
       (if stateless?
-          (os:stateless $ #:storage-paths %stateless-storage-paths
-                        #:hes `((,primary-name . ,(primary-he))
-                                (,aux-name . ,(aux-he))
-                                (,guest-name . ,(guest-he)))
-                        #:state-users (list primary-name)
-                        #:password-users (list primary-name
-                                               aux-name
-                                               guest-name))
+          (stateless $ #:storage-paths %stateless-storage-paths
+                     #:hes `((,primary-name . ,(primary-he))
+                             (,aux-name . ,(aux-he))
+                             (,guest-name . ,(guest-he)))
+                     #:state-users (list primary-name)
+                     #:password-users (list primary-name
+                                            aux-name
+                                            guest-name))
           $)
-      (os:with-macbook-hardware $ #:efi-label efi-label
-                                #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
-                                                                            (,aux-name . ,aux-he-virtualization?)
-                                                                            (,guest-name . ,guest-he-virtualization?)))
-                                ;; #:virtualization-binfmt-platforms '("aarch64")
-                                #:number-of-ttys number-of-ttys
-                                #:bluetooth? bluetooth?
-                                #:stateless? stateless?))))
+      (with-macbook-hardware $ #:efi-label efi-label
+                             #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
+                                                                         (,aux-name . ,aux-he-virtualization?)
+                                                                         (,guest-name . ,guest-he-virtualization?)))
+                             ;; #:virtualization-binfmt-platforms '("aarch64")
+                             #:number-of-ttys number-of-ttys
+                             #:bluetooth? bluetooth?
+                             #:stateless? stateless?))))
 
 (define physical-memory (* 16 GiB))
 ;; TODO trying without at the moment
@@ -10682,8 +10756,8 @@ delete it when leaving the dynamic extent of this call."
 
 
 
-(define* (os-base os #:rest opts)
-  (apply os:os-base
+(define* (base-os os #:rest opts)
+  (apply os-base
          os
          (append opts
                  (os+he-shared-opts))))
@@ -10695,9 +10769,9 @@ delete it when leaving the dynamic extent of this call."
 
 (define (primary-he)
   (let ((stateless? #t))
-    (he:create-he
+    (create-he
      (apply
-      he:he-entire
+      he-entire
       ;; TODO
       #:stateless-storage-paths '((#:storage/machine . "/.machine")
                                   (#:storage/persist . "/.persist"))
@@ -10720,9 +10794,9 @@ delete it when leaving the dynamic extent of this call."
 
 
 (define (aux-he)
-  (he:create-he
+  (create-he
    (apply
-    he:he-entire
+    he-entire
     ;; TODO
     #:stateless-storage-paths '((#:storage/machine . "/home/pcoulson/.machine")
                                 (#:storage/persist . "/home/pcoulson/.persist"))
@@ -10742,9 +10816,9 @@ delete it when leaving the dynamic extent of this call."
 
 
 (define (guest-he)
-  (he:create-he
+  (create-he
    (apply
-    he:he-entire
+    he-entire
     ;; TODO
     #:stateless-storage-paths '((#:storage/machine . "/home/mellon/.machine")
                                 (#:storage/persist . "/home/mellon/.persist"))
@@ -10773,6 +10847,7 @@ delete it when leaving the dynamic extent of this call."
   (append
    (os+he-shared-opts)
    `(#:stateless? #t
+     #:nix-nixpkgs-config-settings ,%nixpkgs-allow-unfree
      #:doom? ,doom?
      #:doom-flags ,(acons #:doom/icons? #t doom-flags)
      #:doom-ui? #t
