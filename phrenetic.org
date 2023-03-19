@@ -10410,10 +10410,10 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 * Configurations
 :PROPERTIES:
-:meta-dir+: phrenetic
+:meta-dir+: configs
 :END:
-#+begin_src scheme :tangle (meta-in-dir "configs.scm")
-(define-module (phrenetic configs)
+#+begin_src scheme :tangle (meta-in-dir "core.scm")
+(define-module (configs core)
   #:use-module ((phrenetic home) #:prefix he:)
   #:use-module (phrenetic install)
   #:use-module (phrenetic io-devices)
@@ -10710,12 +10710,12 @@ delete it when leaving the dynamic extent of this call."
 #+end_src
 ** Machines
 :PROPERTIES:
-:meta-dir+: configs
+:meta-dir+: machines
 :END:
 *** Frostfire
 #+begin_src scheme :tangle (meta-in-dir "frostfire.scm")
-(define-module (phrenetic configs frostfire)
-  #:use-module (phrenetic configs)
+(define-module (configs machines frostfire)
+  #:use-module (configs core)
   #:re-export (system
                installer
                primary-he
