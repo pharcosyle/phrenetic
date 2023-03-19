@@ -450,12 +450,19 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list
-     (service guix-service-type)
+     (service guix-service-type
+              (guix-configuration
+               (authorized-keys (append
+                                 %default-authorized-guix-keys
+                                 (if nonguix-substitutes?
+                                     %nonguix-authorized-keys '())))
+               (substitute-urls (append
+                                 %default-substitute-urls
+                                 (if nonguix-substitutes?
+                                     %nonguix-substitute-urls '())))))
      (service log-cleanup-service-type
               (log-cleanup-configuration
                (directory "/var/log/guix/drvs"))))
-    (if nonguix-substitutes?
-        (list (nonguix-substitutes-service)) '())
     ;; TODO Should these (at least e.g. "/var/guix") be in Stateless > Guix System? Update: or in both places?
     (if stateless?
         (list
@@ -473,32 +480,33 @@ Run with ~sudo~.
                       (#:preds . ((#:symlink-to-store))))
                      ((#:path . ,(string-append (user-account-home-directory %root-account) "/.cache/guix/"))))))
         '()))))
-#+end_src
-****** Nonguix substitutes
-#+begin_src scheme
-(define (nonguix-substitutes-service)
-  (simple-service
-   'nonguix-substitutes
-   guix-service-type
-   (guix-extension
-    (authorized-keys
-     (list (plain-file "substitutes.nonguix.org.pub"
-                       (public-key-serialize nonguix-public-key))))
-    (substitute-urls
-     (list "https://substitutes.nonguix.org")))))
-
-(define nonguix-public-key
-  '((#:public-key/q . "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98")))
 
 (define (public-key-serialize pk)
   (let ((sexp `(public-key
-                (ecc
-                 (curve ,(or (assoc-ref pk #:public-key/curve)
-                             "Ed25519"))
-                 (q ,(around (assoc-ref pk #:public-key/q) "#"))))))
+                ,(case (assoc-ref pk #:public-key/type)
+                   ((#:public-key.type/ecc)
+                    `(ecc
+                      (curve ,(assoc-ref pk #:public-key.ecc/curve))
+                      (q ,(around (assoc-ref pk #:public-key.ecc/q) "#"))))
+                   ;; ...
+                   ))))
     (call-with-output-string
       (lambda (port)
         (display sexp port)))))
+#+end_src
+****** Nonguix substitutes
+#+begin_src scheme
+(define nonguix-public-key
+  '((#:public-key/type . #:public-key.type/ecc)
+    (#:public-key.ecc/curve . "Ed25519")
+    (#:public-key.ecc/q . "C1FD53E5D4CE971933EC50C9F307AE2171A2D3B52C804642A7A35F84F3A4EA98")))
+
+(define %nonguix-authorized-keys
+  (list (plain-file "substitutes.nonguix.org.pub"
+                    (public-key-serialize nonguix-public-key))))
+
+(define %nonguix-substitute-urls
+  (list "https://substitutes.nonguix.org"))
 #+end_src
 ***** Nix
 #+begin_src scheme
