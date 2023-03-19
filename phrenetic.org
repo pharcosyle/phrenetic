@@ -6069,7 +6069,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                  login-shell
                  (channels `((,%nixpkgs-unstable-url . "nixpkgs")))
                  allow-unfree?
-                 extra-nixpkgs-config)
+                 nixpkgs-config-settings
+                 nixpkgs-config-expressions)
   (append
    (list
     (simple-service
@@ -6108,8 +6109,10 @@ Some colors from the original Atom theme on which I based mine that might be use
      home-xdg-configuration-files-service-type
      `(("nixpkgs/config.nix"
         ,(nixpkgs-config-file "nixpkgs-config.nix"
-                              `((allowUnfree . ,allow-unfree?))
-                              extra-nixpkgs-config)))))
+                              (append
+                               `((allowUnfree . ,allow-unfree?))
+                               nixpkgs-config-settings)
+                              nixpkgs-config-expressions)))))
 
    (if stateless?
        (let ((nix-profile ".nix-profile")
@@ -6147,7 +6150,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                  (list channel " " name "\n")))
               entries))
 
-(define (nixpkgs-config-file name settings more)
+(define (nixpkgs-config-file name settings expressions)
   (apply mixed-text-file name
          (append
           (list "{" "\n")
@@ -6161,8 +6164,8 @@ Some colors from the original Atom theme on which I based mine that might be use
                                  (v v))
                                ";" "\n")))
                       settings)
-          (if more
-              (list more) '())
+          (if expressions
+              (list expressions) '())
           (list "}" "\n"))))
 
 (define %nixpkgs-unstable-url "https://nixos.org/channels/nixpkgs-unstable")
