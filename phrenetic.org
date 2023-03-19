@@ -1962,6 +1962,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
+  #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
@@ -2090,6 +2091,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             doom-vterm-app
             doom-vterm-terminal
             chromium-app
+            icecat-app
             firefox-app
             nyxt-app
             tor-browser-app
@@ -8932,8 +8934,44 @@ It might be possible to configure some of these in a file (perhaps =master-prefe
 - chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
 ******** uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
-****** Firefox
-It might be possible to statically configure Firefox (or one of its relatives), check out the Icecat profiles in RDE =gnu/home-services/web-browsers.scm=.
+****** Mozilla
+It might be possible to statically configure Icecat/Firefox, check out the Icecat profiles in RDE [[https://github.com/abcdw/rde/blob/793c0c667d556c33d4554fd585c2512d4d912f0f/src/gnu/home-services/web-browsers.scm][web-browsers.scm]].
+******* Icecat
+#+begin_src scheme
+(define* (icecat-app #:key
+                     stateless?
+                     wayland?
+                     gtk-services)
+  (append
+   (list
+    (simple-service
+     'icecat-add-packages
+     home-profile-service-type
+     ;; No `icecat/wayland' package exists, write one.
+     ;; (list (if wayland?
+     ;;           icecat/wayland
+     ;;           icecat))
+     (list icecat))
+
+    (when stateless?
+      (home-stateless-service
+       'icecat
+       #:state '(((#:path . ("mozilla/icecat/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/icecat")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))
+                 ((#:path . ".mozilla/extensions")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+
+   (or gtk-services '())))
+#+end_src
+******* Firefox
 #+begin_src scheme
 (define* (firefox-app #:key
                       stateless?
