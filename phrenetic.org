@@ -1998,7 +1998,7 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
   #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
-  #:use-module ((chromium chromium) #:select (chromium+drm))
+  #:use-module ((chromium chromium) #:select (chromium chromium+drm ungoogled-chromium+drm))
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic packages aws) #:select (awscli-2))
   #:use-module ((phrenetic packages clojure) #:select (clojure-tools))
@@ -2090,7 +2090,9 @@ Make the power key suspend instead of power off. It's part of the keyboard on Ma
             alacritty-terminal
             doom-vterm-app
             doom-vterm-terminal
+            ungoogled-chromium-app
             chromium-app
+            google-chrome-app
             icecat-app
             firefox-app
             nyxt-app
@@ -8828,6 +8830,45 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+end_src
 ***** Web browsers
 ****** Chromium
+******* Ungoogled Chromium
+#+begin_src scheme
+(define* (ungoogled-chromium-app #:key
+                                 stateless?
+                                 wayland?
+                                 pipewire?
+                                 theme
+                                 gtk-services
+                                 drm?
+                                 (ungoogled-chromium ungoogled-chromium)
+                                 (ungoogled-chromium+drm ungoogled-chromium+drm))
+  (append
+   (list
+    (simple-service
+     'ungoogled-chromium-add-packages
+     home-profile-service-type
+     (list (chromium-wrapper (if drm?
+                                 ungoogled-chromium+drm
+                                 ungoogled-chromium)
+                             wayland? pipewire? theme)
+           ublock-origin/chromium))
+
+    (when stateless?
+      (home-stateless-service
+       'ungoogled-chromium
+       #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ".pki/nssdb/")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+
+   (or gtk-services '())))
+#+end_src
+******* Chromium
 #+begin_src scheme
 (define* (chromium-app #:key
                        stateless?
@@ -8835,59 +8876,73 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                        pipewire?
                        theme
                        gtk-services
-                       (flavors '(#:google-chrome))
-                       (google-chrome google-chrome))
+                       drm?
+                       (chromium chromium)
+                       (chromium+drm chromium+drm))
   (append
    (list
     (simple-service
      'chromium-add-packages
      home-profile-service-type
-     (let ((wrapper (lambda (package)
-                      (chromium-wrapper package wayland? pipewire? theme))))
-       (append
-        (if (chromium? flavors)
-            (append
-             (if (member #:ungoogled-chromium flavors)
-                 (list (wrapper ungoogled-chromium)) '())
-             (if (member #:chromium flavors)
-                 (list (wrapper chromium+drm)) '())
-             (list ublock-origin/chromium))
-            '())
-        (if (chrome? flavors)
-            (list (wrapper google-chrome)) '()))))
+     (list (chromium-wrapper (if drm?
+                                 chromium+drm
+                                 chromium)
+                             wayland? pipewire? theme)
+           ublock-origin/chromium))
 
     (when stateless?
       (home-stateless-service
        'chromium
-       #:state (append
-                (if (chromium? flavors)
-                    '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:storage . #:storage/machine)
-                       (#:mode . #o700))
-                      ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:storage . #:storage/machine)
-                       (#:mode . #o700)))
-                    '())
-                (if (chrome? flavors)
-                    '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
-                       (#:storage . #:storage/machine)
-                       (#:mode . #o700))
-                      ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
-                       (#:storage . #:storage/machine)
-                       (#:mode . #o700)))
-                    '())
-                '(((#:path . ".pki/nssdb/")
-                   (#:storage . #:storage/machine)
-                   (#:mode . #o700)
-                   (#:parent-dir-perms . ((#:mode . #o700))))))
-       #:ignore (if (chrome? flavors)
-                    ;; Weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also the only time I've seen it not be empty is once when Gmail promted me to let it open emails and I hit accept. Whatever, lets just ignore it.
-                    '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
-                       (#:preds . ((#:empty-file)))))
-                    #f))))
+       #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ".pki/nssdb/")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700))))))))
 
    (or gtk-services '())))
+#+end_src
+******* Google Chrome
+#+begin_src scheme
+(define* (google-chrome-app #:key
+                            stateless?
+                            wayland?
+                            pipewire?
+                            theme
+                            gtk-services
+                            (google-chrome google-chrome))
+  (append
+   (list
+    (simple-service
+     'google-chrome-add-packages
+     home-profile-service-type
+     (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
 
+    (when stateless?
+      (home-stateless-service
+       'google-chrome
+       #:state '(((#:path . ("google-chrome/" #:xdg-base "XDG_CACHE_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ("google-chrome/" #:xdg-base "XDG_CONFIG_HOME"))
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700))
+                 ((#:path . ".pki/nssdb/")
+                  (#:storage . #:storage/machine)
+                  (#:mode . #o700)
+                  (#:parent-dir-perms . ((#:mode . #o700)))))
+       ;; It's weird that Chrome creates this, it's not even in one of the recognized locations (https://wiki.archlinux.org/title/XDG_MIME_Applications#mimeapps.list). Also the only time I've seen it not be empty is once when Gmail promted me to let it open emails and I hit accept. Whatever, lets just ignore it.
+       #:ignore '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
+                   (#:preds . ((#:empty-file))))))))
+
+   (or gtk-services '())))
+#+end_src
+******* Shared
+#+begin_src scheme
 (define (chromium-wrapper package wayland? pipewire? theme)
   ;; (let ((flags (append
   ;;               (if wayland?
@@ -8914,25 +8969,18 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   ;;         ;; Not done yet. This is where I'd add the command line args to a package wrapper like e.g. `ungoogled-chromium/wayland' does.
   ;;         ))
   package)
-
-(define (chromium? flavors)
-  (or (member #:ungoogled-chromium flavors)
-      (member #:chromium flavors)))
-
-(define (chrome? flavors)
-  (member #:google-chrome flavors))
 #+end_src
-******* Setup instructions
+******** Setup instructions
 It might be possible to configure some of these in a file (perhaps =master-preferences.json=, changing which would require modifying and thus rebuilding the chromium package). Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones, if at all.
-******** Chromium
+********* Chromium
 - Settings > Appearance > Use GTK+ theme
 - Settings > On startup, check "Continue where you left off"
 - Right-click on the Bookmarks bar and uncheck "Show bookarks bar"
-********* Ungoogled Chromium
+********** Ungoogled Chromium
 - Settings > Manage search engines, make google the default
   It might not appear under "Other Search Engines" until you search something on google.com
 - chrome://settings/cookies > uncheck "Clear cookies and site data when you close all windows"
-******** uBlock extension
+********* uBlock extension
 chrome://extensions > uBlock Origin > Details > Allow in Incognito
 ****** Mozilla
 It might be possible to statically configure Icecat/Firefox, check out the Icecat profiles in RDE [[https://github.com/abcdw/rde/blob/793c0c667d556c33d4554fd585c2512d4d912f0f/src/gnu/home-services/web-browsers.scm][web-browsers.scm]].
@@ -9476,12 +9524,12 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                          ;; #:setup-zsh? (member #:shell/zsh interactive-shells)
                          )
          '())
-     (chromium-app #:stateless? stateless?
-                   #:wayland? wayland?
-                   #:pipewire? pipewire?
-                   #:theme theme
-                   #:gtk-services gtk
-                   #:google-chrome google-chrome)
+     (google-chrome-app #:stateless? stateless?
+                        #:wayland? wayland?
+                        #:pipewire? pipewire?
+                        #:theme theme
+                        #:gtk-services gtk
+                        #:google-chrome google-chrome)
      ;; (firefox-app #:stateless? stateless?
      ;;              #:wayland? wayland?
      ;;              #:gtk-services gtk)
