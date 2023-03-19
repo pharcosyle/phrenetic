@@ -10373,12 +10373,12 @@ patjak's facetimehd wiki} for more information.")
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module (gnu services)
   #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
+  #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module ((chromium chromium) #:select (chromium chromium+drm))
   #:use-module (phrenetic home)
   #:use-module (phrenetic utils)
-  #:use-module ((nonphrenetic packages databases) #:select (datomic-cli-tools))
   #:export (%nixpkgs-allow-unfree
             datomic-prog
             zoom-app
@@ -10576,51 +10576,6 @@ characters defined as symbols in the Unicode Standard.")
     'datomic-add-packages
     home-profile-service-type
     (list datomic-cli-tools))))
-#+end_src
-******* Datomic CLI tools :package:version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/databases.scm")
-(define-module (nonphrenetic packages databases)
-  #:use-module (guix build-system copy)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages compression) #:select (unzip))
-  #:use-module ((nonguix licenses) #:prefix license:))
-
-(define-public datomic-cli-tools
-  (package
-    (name "datomic-cli-tools")
-    (version "1.0.91")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append "https://datomic-releases-1fc2183a.s3.amazonaws.com"
-                           "/tools/datomic-cli/datomic-cli-" version ".zip"))
-       (sha256
-        (base32
-         "1xicmbsig8f1p5r9rxkhndi0f9l9w421zf49rbx44yc6v0db523b"))))
-    (build-system copy-build-system)
-    (arguments
-     `(#:install-plan
-       '(("." "bin" #:include-regexp ("^\\./datomic"))
-         ("README.txt" "share/doc/datomic/"))
-       #:phases
-       ,#~(modify-phases %standard-phases
-            (add-after 'install 'make-scripts-executable
-              (lambda _
-                (for-each (lambda (f) (chmod f #o555))
-                          (find-files (string-append #$output "/bin"))))))))
-    (native-inputs
-     (list unzip))
-    (home-page "https://docs.datomic.com/cloud/index.html")
-    (synopsis "Command-line tools for Datomic Cloud")
-    (description "View and Manage analytics, logs, and access control gateways
-for a Datomic Cloud instance on AWS.")
-    (license (license:nonfree "https://www.datomic.com/cloud-eula.html"))
-    (properties
-     `((release-monitoring-url
-        . "https://docs.datomic.com/cloud/releases.html")
-       (upstream-name . "datomic-cli")))))
 #+end_src
 **** Apps
 ***** Messaging
