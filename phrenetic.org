@@ -240,9 +240,9 @@ Run with ~sudo~.
   #:use-module (rde system services networking)
   #:use-module (phrenetic io-devices)
   #:use-module (phrenetic modules)
-  #:use-module ((phrenetic packages facetimehd) #:select (facetimehd))
-  #:use-module ((phrenetic packages facetimehd-firmware) #:select (facetimehd-firmware))
-  #:use-module ((phrenetic packages linux) #:select (broadcom-sta-with-patch-updates))
+  #:use-module ((phrenetic packages broadcom) #:select (broadcom-sta-with-patch-updates))
+  #:use-module ((phrenetic packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
+  #:use-module ((phrenetic packages linux) #:select (facetimehd))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda))
@@ -1626,8 +1626,8 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                  (list broadcom-bt-firmware) '()))))
 #+end_src
 ******** Broadcom STA :version:upstream:
-#+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
-(define-module (phrenetic packages linux)
+#+begin_src scheme :tangle (meta-in-dir "packages/broadcom.scm")
+(define-module (phrenetic packages broadcom)
   #:use-module (guix download)
   #:use-module (guix packages)
   #:use-module (phrenetic utils))
@@ -1661,10 +1661,6 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
       hash))))
 #+end_src
 ******* Camera :upstream:
-Colors could probably be improved by adding sensor calibration files, as described on the wiki: [[https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files][Extracting the sensor calibration files · patjak/facetimehd Wiki · GitHub]]
-Adapt the Nix module like I did for the kernel module and firmware:
-- [[https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/hardware/video/webcam/facetimehd.nix][nixpkgs/facetimehd.nix at master · NixOS/nixpkgs · GitHub]]
-- [[https://github.com/NixOS/nixpkgs/blob/master/pkgs/os-specific/linux/firmware/facetimehd-calibration/default.nix][nixpkgs/default.nix at master · NixOS/nixpkgs · GitHub]]
 #+begin_src scheme
 (define-system-comp (apple-facetime-camera)
   (kernel-loadable-modules (cons* facetimehd
@@ -1674,6 +1670,7 @@ Adapt the Nix module like I did for the kernel module and firmware:
                      "modprobe.blacklist"
                      '("bdc_pci")))
   (firmware (cons* facetimehd-firmware
+                   facetimehd-calibration
                    (operating-system-firmware os)))
   (services
    (cons* (simple-service 'facetimehd
@@ -1682,8 +1679,8 @@ Adapt the Nix module like I did for the kernel module and firmware:
           (operating-system-user-services os))))
 #+end_src
 ******** Linux module :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/facetimehd.scm")
-(define-module (phrenetic packages facetimehd)
+#+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
+(define-module (phrenetic packages linux)
   #:use-module (guix build-system linux-module)
   #:use-module (guix git-download)
   #:use-module (guix packages)
@@ -1706,24 +1703,33 @@ Adapt the Nix module like I did for the kernel module and firmware:
     (arguments
      '(#:tests? #f))
     (synopsis "Linux driver for the FacetimeHD (Broadcom 1570) PCIe webcam")
-    (description synopsis)
+    (description "Linux driver for the FacetimeHD webcam. According to Apple the
+following models contain a Facetime HD camera and should be compatible with this
+driver:
+@itemize
+@item iMac (21,5\", since mid 2011)
+@item iMac (27\", since mid 2011)
+@item MacBook Air (since mid 2011)
+@item MacBook Pro (15\", since early 2011)
+@item MacBook Pro (17\", since early 2011)
+@item MacBook Pro (13\", since early 2011)
+@item Thunderbolt display
+@end itemize")
     (home-page "https://github.com/patjak/facetimehd")
     (license license:gpl2)
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
 ******** Firmware :package:version:
-This is very messy, I naively ported the package from Nix. Ideally I'd rewrite it to not use ~curl~ (copy out the byte range with ~dd~ or guile / guix utils), not rely on ~system~ and use it for things like piping and appending command output (perhaps with guile's ~pipe~ / ~pipeline~ / ~redirect-port~), etc.
-#+begin_src scheme :tangle (meta-in-dir "packages/facetimehd-firmware.scm")
-(define-module (phrenetic packages facetimehd-firmware)
-  #:use-module (guix build-system trivial)
+#+begin_src scheme :tangle (meta-in-dir "packages/firmware.scm")
+(define-module (phrenetic packages firmware)
+  #:use-module (guix build-system copy)
   #:use-module (guix gexp)
   #:use-module (guix download)
   #:use-module (guix packages)
-  #:use-module ((gnu packages base) #:select (coreutils))
-  #:use-module ((gnu packages compression) #:select (gzip xz))
+  #:use-module ((gnu packages compression) #:select (gzip unzip xz))
   #:use-module ((gnu packages cpio) #:select (cpio))
-  #:use-module ((gnu packages curl) #:select (curl))
-  #:use-module ((nonguix licenses) #:prefix license:))
+  #:use-module ((nonguix licenses) #:prefix license:)
+  #:use-module ((nongnu packages compression) #:select (unrar)))
 
 (define-public facetimehd-firmware
   (package
@@ -1732,61 +1738,121 @@ This is very messy, I naively ported the package from Nix. Ideally I'd rewrite i
     (source
      (origin
        (method url-fetch)
-       (uri "https://updates.cdn-apple.com/2019/cert/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1/OSXUpd10.11.5.dmg")
+       (uri (string-append
+             "https://updates.cdn-apple.com/2019/cert"
+             "/041-88431-20191011-e7ee7d98-2878-4cd9-bc0a-d98b3a1e24b1"
+             "/OSXUpd10.11.5.dmg"))
        (sha256
         (base32
          "009kfk1nrrialgp69c5smzgbmd5xpvk35xmqr2fzb15h6pp33ka6"))))
-    (build-system trivial-build-system)
+    (build-system copy-build-system)
     (arguments
-     `(#:builder
-       ,(with-imported-modules '((guix build utils))
-          #~(begin
-              (use-modules ((guix build utils) #:select (invoke mkdir-p search-input-file)))
-
-              (define (exe name)
-                (search-input-file %build-inputs (string-append "/bin/" name)))
-
-              (let ((source "source")
-                    (firmware-in "./System/Library/Extensions/AppleCameraInterface.kext/Contents/MacOS/AppleCameraInterface")
-                    (firmware-out "firmware.bin"))
-                (let ((offset 204909802)
-                      (size 207733123))
-                  (invoke (exe "curl")
-                          "--range" (string-append
-                                     (number->string offset) "-" (number->string size))
-                          "--output" source
-                          (string-append "file://" #$source)))
-                (system
-                 (string-join
-                  (list (exe "xz") "--decompress" "--stdout" source
-                        "|"
-                        (exe "cpio") "--format=odc" "--extract" "--make-directories" firmware-in)))
-                (let ((offset 81920)
-                      (size 603715))
-                  (invoke (exe "dd")
-                          (string-append "if=" firmware-in)
-                          (string-append "of=" firmware-out ".gz")
-                          (string-append "skip=" (number->string offset))
-                          (string-append "count=" (number->string size))
-                          "bs=1"))
-                (let ((firmware-dir (string-append #$output "/lib/firmware/facetimehd")))
-                  (mkdir-p firmware-dir)
-                  (system
-                   (string-join
-                    (list (exe "gunzip") "--stdout" (string-append firmware-out ".gz")
-                          ">"
-                          (string-append firmware-dir "/" firmware-out))))))))))
+     (list
+      #:install-plan #~'(("firmware.bin" "/lib/firmware/facetimehd/"))
+      #:phases
+      (let ((dmg-subset-size 207733123)
+            (dmg-subset-offset 204909802)
+            (firmware-size 603715)
+            (firmware-offset 81920))
+        #~(modify-phases %standard-phases
+            (add-before 'install 'extract
+              (lambda* (#:key inputs #:allow-other-keys)
+                (let ((firmware-in
+                       (string-append
+                        "System/Library/Extensions/AppleCameraInterface.kext"
+                        "/Contents/MacOS/AppleCameraInterface")))
+                  (let ((dmg-subset "dmg-subset"))
+                    (#$dump-file-chunk #$source
+                                       dmg-subset
+                                       #$dmg-subset-size
+                                       #$dmg-subset-offset)
+                    (system
+                     (string-join
+                      (list (search-input-file inputs "/bin/xz")
+                            "--decompress"
+                            "--stdout"
+                            dmg-subset
+                            "|"
+                            (search-input-file inputs "/bin/cpio")
+                            "--format=odc"
+                            "--extract"
+                            "--make-directories"
+                            (string-append "./" firmware-in)))))
+                  (let ((firmware-out "firmware.bin.gz"))
+                    (#$dump-file-chunk firmware-in
+                                       firmware-out
+                                       #$firmware-size
+                                       #$firmware-offset)
+                    (invoke
+                     (search-input-file inputs "/bin/gzip")
+                     "--decompress"
+                     (string-append firmware-out))))))))))
     (native-inputs
-     (list coreutils
-           cpio
-           curl
-           gzip
-           xz))
-    (synopsis "FacetimeHD firmware")
-    (description synopsis)
-    (home-page "https://github.com/patjak/facetimehd-firmware")
+     (list cpio gzip xz))
+    (synopsis "Firmware for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description "Firmware for the FacetimeHD webcam. See
+@uref{https://github.com/patjak/facetimehd/wiki/Get-Started#firmware-extraction,
+patjak's facetimehd wiki} for more information.")
+    (home-page "https://support.apple.com/kb/DL1877")
     (license (license:nonfree "https://www.apple.com/legal"))
     (supported-systems '("i686-linux" "x86_64-linux"))))
+
+(define-public facetimehd-calibration
+  (package
+    (name "facetimehd-calibration")
+    (version "5.1.5769")
+    (source
+     (origin
+       (method url-fetch/zipbomb)
+       (uri (string-append
+             "https://download.info.apple.com/Mac_OS_X"
+             "/031-30890-20150812-ea191174-4130-11e5-a125-930911ba098f"
+             "/bootcamp" version".zip"))
+       (sha256
+        (base32
+         "07jbh6d0djcvcgj5hhkkw7d6mvcl228yb8rp0a2qqw20ya72rpjf"))))
+    (build-system copy-build-system)
+    (arguments
+     (list
+      #:install-plan #~'(("." "/lib/firmware/facetimehd/"
+                          #:include-regexp ("[0-9]{4}_01XX\\.dat")))
+      #:phases
+      (let ((calibration-files
+             '(("1771_01XX.dat" 19040 1644880)
+               ("1871_01XX.dat" 19040 1606800)
+               ("1874_01XX.dat" 19040 1625840)
+               ("9112_01XX.dat" 33060 1663920))))
+        #~(modify-phases %standard-phases
+            (add-before 'install 'extract
+              (lambda* (#:key inputs #:allow-other-keys)
+                (invoke (search-input-file inputs "/bin/unrar")
+                        "x"
+                        "BootCamp/Drivers/Apple/AppleCamera64.exe")
+                (for-each (lambda (spec)
+                            (apply #$dump-file-chunk "AppleCamera.sys" spec))
+                          '#$calibration-files)))))))
+    (native-inputs
+     (list unrar unzip))
+    (synopsis "Calibration files for the FacetimeHD (Broadcom 1570) PCIe webcam")
+    (description "Calibration files for the FacetimeHD webcam. These are
+optional but make the colors look much better. See
+@uref{https://github.com/patjak/facetimehd/wiki/Extracting-the-sensor-calibration-files,
+patjak's facetimehd wiki} for more information.")
+    (home-page "https://support.apple.com/kb/DL1837")
+    (license (license:nonfree "https://www.apple.com/legal"))
+    (supported-systems '("i686-linux" "x86_64-linux"))))
+
+(define dump-file-chunk
+  #~(lambda (in out count start)
+      (use-modules (rnrs io ports))
+      (call-with-output-file out
+        (lambda (out-port)
+          (put-bytevector
+           out-port
+           (call-with-input-file in
+             (lambda (in-port)
+               (seek in-port start SEEK_SET)
+               (get-bytevector-n in-port count))))))))
 #+end_src
 ******* Macbook power key
 Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
