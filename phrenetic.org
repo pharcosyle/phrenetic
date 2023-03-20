@@ -10155,7 +10155,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
      (base32
       hash))))
 #+end_src
-******* Camera :upstream:
+******* Camera
 #+begin_src scheme
 (define-system-comp (apple-facetime-camera)
   (kernel-loadable-modules (cons* facetimehd
@@ -10173,7 +10173,7 @@ I'm not sure if this requires the nonfree linux kernel and/or if the blacklist r
                           '("facetimehd"))
           (operating-system-user-services os))))
 #+end_src
-******** Linux module :package:version:
+******** Linux module :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/linux.scm")
 (define-module (nonphrenetic packages linux)
   #:use-module (guix build-system linux-module)
@@ -10214,7 +10214,7 @@ driver:
     (license license:gpl2)
     (supported-systems '("i686-linux" "x86_64-linux"))))
 #+end_src
-******** Firmware :package:version:
+******** Firmware :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/firmware.scm")
 (define-module (nonphrenetic packages firmware)
   #:use-module (guix build-system copy)
