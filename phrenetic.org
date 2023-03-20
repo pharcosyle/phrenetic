@@ -572,7 +572,9 @@ Run with ~sudo~.
           (service colord-service-type)
           (service geoclue-service-type)
           (service polkit-service-type)
-          (service elogind-service-type)
+          (service elogind-service-type
+                   (elogind-configuration
+                    (handle-power-key 'suspend))) ; A better default I think than `poweroff'.
           (service dbus-root-service-type)
           (service ntp-service-type)
           (service x11-socket-directory-service-type))
@@ -10021,7 +10023,6 @@ delete it when leaving the dynamic extent of this call."
 (define-module (nonphrenetic system)
   #:use-module (guix gexp)
   #:use-module (gnu services)
-  #:use-module ((gnu services desktop) #:select (elogind-service-type elogind-configuration))
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module (gnu system)
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta))
@@ -10087,8 +10088,7 @@ delete it when leaving the dynamic extent of this call."
 (define* (apple-macbook os #:key bluetooth?)
   (-> os
       (apple-broadcom-wireless #:bluetooth? bluetooth?)
-      apple-facetime-camera
-      apple-macbook-power-key))
+      apple-facetime-camera))
 #+end_src
 ******* Wireless
 #+begin_src scheme
@@ -10347,18 +10347,6 @@ patjak's facetimehd wiki} for more information.")
              (lambda (in-port)
                (seek in-port start SEEK_SET)
                (get-bytevector-n in-port count))))))))
-#+end_src
-******* Macbook power key
-Make the power key suspend instead of power off. It's part of the keyboard on MacBooks and too easy to press by accident. This is also the behavior on macOS.
-#+begin_src scheme
-(define-system-comp (apple-macbook-power-key)
-  (services
-   (modify-services (operating-system-user-services os)
-     (elogind-service-type
-      config =>
-      (elogind-configuration
-       (inherit config)
-       (handle-power-key 'suspend))))))
 #+end_src
 ******* Shared
 #+begin_src scheme
