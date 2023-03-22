@@ -2486,8 +2486,6 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
          'doom
          #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))
-                   ((#:path . ("doom/logs/" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
@@ -2499,6 +2497,8 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                    ((#:path . ("profiles.@.el" #:doom-base #:cache))
                     (#:storage . #:storage/machine))
                    ((#:path . ("@/" #:doom-base #:data))
+                    (#:storage . #:storage/machine))
+                   ((#:path . ("logs/" #:doom-base #:state))
                     (#:storage . #:storage/machine)))))
        '())))
 #+end_src
@@ -2668,7 +2668,8 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                "doom/"
                (case base
                  ((#:cache) "cache")
-                 ((#:data) "etc"))
+                 ((#:data) "etc")
+                 ((#:state) "state"))
                "/" subpath)
              #:xdg-base "XDG_STATE_HOME"))))
     (apply (lambda* (tail #:key doom-base)
@@ -2692,7 +2693,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((phrenetic packages font-all-the-icons) #:select (font-all-the-icons)))
 
 (define-public doom-emacs
-  (let ((commit "b66ad7703134d8a91e8ae1fab84af3bb90fcca03")
+  (let ((commit "3ce89731b6c13eab8f0edc57cebbacd93cac69f3")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2705,7 +2706,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                (commit commit)))
          (sha256
           (base32
-           "0vggq2k12pqmnx3y2x9809f3p8xd8yj4xwn8lrysivn8yqf1gb4n"))
+           "1vlmf6m98c7a0rd0xzi92xj4qd18xpkc4jx2abx6j6jj4a275ga3"))
          (file-name (git-file-name name version))
          (patches
           (list (local-file "patches/dirvish.patch")))))
@@ -5254,11 +5255,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                    undo))
       #:config
       '((after! undo-fu
-                (setq undo-fu-ignore-keyboard-quit t))
-
-        ;; (after! undo-tree
-        ;;   (setq undo-tree-visualizer-timestamps t))
-        ))
+                (setq undo-fu-ignore-keyboard-quit t))))
 
      (when stateless?
        (doom-stateless-service
