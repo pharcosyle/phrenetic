@@ -5539,7 +5539,15 @@ Some colors from the original Atom theme on which I based mine that might be use
                                      'normal)))
        (biome--set-font-safe
         'doom-variable-pitch-font
-        (font-spec :family ,(assoc-ref font-variable-pitch #:font/name))))))
+        (font-spec :family ,(assoc-ref font-variable-pitch #:font/name)))))
+
+    (simple-service
+     'doom-fonts-add-font-packages
+     home-profile-service-type
+     (map (lambda (font)
+            (assoc-ref font #:font/package))
+          (list font
+                font-variable-pitch))))
 
    (doom-dash)))
 
@@ -5547,6 +5555,13 @@ Some colors from the original Atom theme on which I based mine that might be use
   (-> weight
       string-downcase
       string->symbol))
+
+(define* (adobe-source-code-pro #:key (font-adobe-source-code-pro font-adobe-source-code-pro))
+  `((#:font/name . "Source Code Pro")
+    (#:font/weight . "Medium")
+    (#:font/package . ,font-adobe-source-code-pro)))
+
+(define %adobe-source-code-pro (adobe-source-code-pro))
 #+end_src
 **** Package management
 ***** Guix
@@ -6086,9 +6101,9 @@ nix-channel --update
 (define %fontsets
   `((#:fontset/titanium . ,(lambda* (;; TODO parameterize with font packages
                                      )
-                             `((#:fonts/mono . ((#:font/name . "Source Code Pro")
-                                                (#:font/weight . "Medium")
-                                                (#:font/package . ,font-adobe-source-code-pro)))
+                             `(;; TODO temporary
+                               (#:fonts/mono . ((#:font/name . "DejaVu Sans Mono")
+                                                (#:font/package . ,(@ (gnu packages fonts) font-dejavu))))
                                ;; TODO Temporarily use DejaVu here so I can remove the Source Sans package.
                                ;; (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
                                ;;                            (#:font/package . ,font-adobe-source-sans)))
@@ -9184,7 +9199,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                        (doom-desktop #:theme theme
                                      #:light-colors light-colors
                                      #:dark-colors dark-colors
-                                     #:font (assoc-ref fonts #:fonts/mono)
+                                     #:font %adobe-source-code-pro
                                      #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch)
                                      #:font-size base-font-size)
                        '()))
