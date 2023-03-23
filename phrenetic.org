@@ -1694,7 +1694,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
-  #:use-module ((gnu packages fonts) #:select (font-awesome font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka-etoile font-liberation))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -6098,23 +6098,32 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
+;; TODO Nonguix/nonphrenetic requires shouldn't be in phrenetic.
+(use-modules ((nongnu packages fonts) #:select (font-microsoft-web-core-fonts)))
+(use-modules ((nonphrenetic packages fonts) #:select (font-apple-sf-pro
+                                                      font-apple-sf-compact
+                                                      font-apple-sf-mono
+                                                      font-apple-sf-arabic
+                                                      font-apple-new-york
+                                                      font-apple-color-emoji
+                                                      font-apple-symbols)))
+
 (define %fontsets
   `((#:fontset/titanium . ,(lambda* (;; TODO parameterize with font packages
                                      )
-                             `(;; TODO temporary
-                               (#:fonts/mono . ((#:font/name . "DejaVu Sans Mono")
-                                                (#:font/package . ,(@ (gnu packages fonts) font-dejavu))))
-                               ;; TODO Temporarily use DejaVu here so I can remove the Source Sans package.
-                               ;; (#:fonts/variable-pitch . ((#:font/name . "Source Sans 3")
-                               ;;                            (#:font/package . ,font-adobe-source-sans)))
-                               (#:fonts/variable-pitch . ((#:font/name . "DejaVu Sans")
-                                                          (#:font/package . ,(@ (gnu packages fonts) font-dejavu)))))))))
+                             `((#:fonts/mono . ((#:font/name . "SF Mono")
+                                                (#:font/package . ,font-apple-sf-mono)))
+                               (#:fonts/variable-pitch . ((#:font/name . "SF Pro")
+                                                          (#:font/package . ,font-apple-sf-pro))))))))
 
 (define (font-packages-useful)
-  (list font-iosevka-etoile
+  (list font-apple-new-york
+        font-apple-color-emoji
+        font-apple-sf-compact
+        font-apple-sf-arabic
+        font-apple-symbols
         font-google-noto
-        font-google-noto-emoji
-        font-liberation))
+        font-microsoft-web-core-fonts))
 #+end_src
 ****** Fonts :package:version:upstream:
 #+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
@@ -6861,11 +6870,6 @@ Does this also mean I won't have to add Swaylock at the system level (as a ~scre
    modules
 
    (list
-    (simple-service
-     'waybar-add-font-package
-     home-profile-service-type
-     (list font-awesome))
-
     (simple-service
      'waybar-reload-config-on-change
      home-run-on-change-service-type
