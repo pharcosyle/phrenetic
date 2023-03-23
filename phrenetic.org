@@ -6084,7 +6084,8 @@ nix-channel --update
                  (#:storage . #:storage/machine)))))))
 
 (define %fontsets
-  `((#:fontset/titanium . ,(lambda* (#:key font-adobe-source-code-pro)
+  `((#:fontset/titanium . ,(lambda* (;; TODO parameterize with font packages
+                                     )
                              `((#:fonts/mono . ((#:font/name . "Source Code Pro")
                                                 (#:font/weight . "Medium")
                                                 (#:font/package . ,font-adobe-source-code-pro)))
@@ -9108,9 +9109,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (light-colors (assoc-ref %colors #:colors/nuclear-light))
                     (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
                     (colors dark-colors)
-                    font-adobe-source-code-pro
                     (fonts ((assoc-ref %fontsets #:fontset/titanium)
-                            #:font-adobe-source-code-pro font-adobe-source-code-pro))
+                            ;; ...
+                            ))
                     (base-font-size 10)
                     (portal-services (portal-services #:wayland? wayland?))
                     connection-manager
@@ -11029,7 +11030,6 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (phrenetic packages emacs) emacs-pgtk)
-     #:font-adobe-source-code-pro ,(@ (phrenetic packages fonts) font-adobe-source-code-pro)
      #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
      #:apps-google-chrome ,(@ (nongnu packages chrome) google-chrome-stable))))
 
