@@ -6097,14 +6097,14 @@ nix-channel --update
                  (#:storage . #:storage/machine)))))))
 
 ;; TODO Nonguix/nonphrenetic requires shouldn't be in phrenetic.
-(use-modules ((nongnu packages fonts) #:select (font-microsoft-web-core-fonts)))
-(use-modules ((nonphrenetic packages fonts) #:select (font-apple-sf-pro
-                                                      font-apple-sf-compact
-                                                      font-apple-sf-mono
-                                                      font-apple-sf-arabic
-                                                      font-apple-new-york
-                                                      font-apple-color-emoji
-                                                      font-apple-symbols)))
+(use-modules ((nongnu packages fonts) #:select (font-apple-sf-pro
+                                                font-apple-sf-compact
+                                                font-apple-sf-mono
+                                                font-apple-sf-arabic
+                                                font-apple-new-york
+                                                font-apple-color-emoji
+                                                font-apple-symbols
+                                                font-microsoft-web-core-fonts)))
 
 (define %fontsets
   `((#:fontset/titanium . ,(lambda* (;; TODO parameterize with font packages
@@ -10164,179 +10164,6 @@ delete it when leaving the dynamic extent of this call."
 #+begin_src scheme
 (define %nixpkgs-allow-unfree
   '((allowUnfree . #t)))
-#+end_src
-**** Desktop
-***** Font library
-****** Fonts :package:version:upstream:
-******* Apple
-#+begin_src scheme :tangle (meta-in-dir "packages/fonts.scm")
-(define-module (nonphrenetic packages fonts)
-  #:use-module (guix build-system font)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages compression) #:select (p7zip))
-  #:use-module ((nonguix licenses) #:prefix license:)
-  #:use-module ((ice-9 string-fun) #:select (string-replace-substring)))
-
-(define* (apple-font #:key
-                     font-name
-                     archive-timestamp
-                     version
-                     file
-                     hash
-                     synopsis
-                     description)
-  (package
-    (name (string-append "font-apple-"
-                         (string-replace-substring
-                          (string-downcase font-name)
-                          " " "-")))
-    (version version)
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             ;; Download link is unversioned, use a stable snapshot.
-             "https://web.archive.org/web/" archive-timestamp "/"
-             "https://devimages-cdn.apple.com/design/resources/download/"
-             file ".dmg"))
-       (sha256
-        (base32 hash))))
-    (build-system font-build-system)
-    (arguments
-     (list
-      #:phases
-      #~(modify-phases %standard-phases
-          (replace 'unpack
-            (lambda* (#:key source inputs #:allow-other-keys)
-              (let ((7z-exe (search-input-file inputs "/bin/7z")))
-                (invoke 7z-exe "x" source)
-                (invoke 7z-exe "x" (car (find-files "." "\\.pkg$")))
-                (invoke 7z-exe "x" "Payload~")))))))
-    (native-inputs (list p7zip))
-    (home-page "https://developer.apple.com/fonts")
-    (synopsis (string-append font-name " typeface by Apple Inc."))
-    (description description)
-    (license
-     (license:nonfree
-      "https://www.apple.com"
-      "Specific license information is embedded in the font files."))))
-
-(define-public font-apple-sf-pro
-  (apple-font
-   #:font-name "SF Pro"
-   #:archive-timestamp "20230314181806"
-   #:file "SF-Pro"
-   #:version "18.0d12e2"
-   #:hash "0z3cbaq9dk8dagjh3wy20cl2j48lqdn9q67lbqmrrkckiahr1xw3"
-   #:description "This neutral, flexible, sans-serif typeface is the system font
-for iOS, iPad OS, macOS and tvOS. SF Pro features nine weights, variable optical
-sizes for optimal legibility, four widths, and includes a rounded variant. SF
-Pro supports over 150 languages across Latin, Greek, and Cyrillic scripts."))
-
-(define-public font-apple-sf-compact
-  (apple-font
-   #:font-name "SF Compact"
-   #:archive-timestamp "20230314181806"
-   #:file "SF-Compact"
-   #:version "18.0d12e2"
-   #:hash "04sq98pldn9q1a1npl6b64karc2228zgjj4xvi6icjzvn5viqrfj"
-   #:description "Sharing many features with SF Pro, SF Compact features an
-efficient, compact design that is optimized for small sizes and narrow columns.
-SF Compact is the system font for watchOS and includes a rounded variant."))
-
-(define-public font-apple-sf-mono
-  (apple-font
-   #:font-name "SF Mono"
-   #:archive-timestamp "20230314181806"
-   #:file "SF-Mono"
-   #:version "18.0d12e2"
-   #:hash "0fdcras7y7cvym6ahhgn7ih3yfkkhr9s6h5b6wcaw5svrmi6vbxb"
-   #:description "This monospaced variant of San Francisco enables alignment
-between rows and columns of text, and is used in coding environments like Xcode.
-SF Mono features six weights and supports Latin, Greek, and Cyrillic scripts."))
-
-(define-public font-apple-sf-arabic
-  (apple-font
-   #:font-name "SF Arabic"
-   #:archive-timestamp "20230314181806"
-   #:file "SF-Arabic"
-   #:version "18.0d12e2"
-   #:hash "0habrwbdsffkg2dnnawna8w93psc2n383hyzvsxn3a5n7ai63mp2"
-   #:description "A contemporary interpretation of the Naskh style with a
-rational and flexible design, this extension of San Francisco is the Arabic
-system font on Apple platforms. Like San Francisco, SF Arabic features nine
-weights, variable optical sizes that automatically adjust spacing and contrast
-based on the point size, and includes a rounded variant."))
-
-(define-public font-apple-new-york
-  (apple-font
-   #:font-name "New York"
-   #:archive-timestamp "20230314181806"
-   #:file "NY"
-   #:version "17.0d5e1"
-   #:hash "1q0b741qiwv5305sm3scd9z2m91gdyaqzr4bd2z54rvy734j1q0y"
-   #:description "A companion to San Francisco, this serif typeface is based on
-essential aspects of historical type styles. New York features six weights,
-supports Latin, Greek and Cyrillic scripts, and features variable optical sizes
-allowing it to perform as a traditional reading face at small sizes and a
-graphic display face at larger sizes."))
-
-;; At the time of this writing, `sf-symbols' is just `sf-pro' and `sf-compact'
-;; together plus one extra file, SFSymbolsFallback.otf. This package is
-;; probably of limited use on non-macOS but we'll include it for completeness
-;; and in case the situation changes in the future.
-(define-public font-apple-sf-symbols
-  (apple-font
-   #:font-name "SF Symbols"
-   #:archive-timestamp "20230223022248"
-   #:file "SF-Symbols-4"
-   #:version "4"
-   #:hash "1jy85rfbw8hq4rjx01x4rhpr7rqibqr7arl2zw7cl25kgv76d6s7"
-   #:description "With over 4,400 symbols, SF Symbols is a library of
-iconography designed to integrate seamlessly with San Francisco, the system font
-for Apple platforms. Symbols come in nine weights and three scales, and
-automatically align with text labels."))
-
-(define-public font-apple-color-emoji
-  (package
-    (name "font-apple-color-emoji")
-    (version "18.0d4e1")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://github.com/pharcosyle/apple-fonts"
-             "/releases/download"
-             "/Apple-Color-Emoji-" version "/Apple.Color.Emoji.ttc"))
-       (sha256
-        (base32 "06i1ady7b2g1i2hl3f8yxn64g2i82c2ni9vdw25gpdqdj28vyqw3"))))
-    (build-system font-build-system)
-    (home-page "https://www.apple.com")
-    (synopsis "Apple Color Emoji typeface by Apple Inc.")
-    (description "Color and black-and-white Apple emoji fonts.")
-    (license (license:nonfree "https://www.apple.com"))))
-
-(define-public font-apple-symbols
-  (package
-    (name "font-apple-symbols")
-    (version "12.0d3e10")
-    (source
-     (origin
-       (method url-fetch)
-       (uri (string-append
-             "https://github.com/pharcosyle/apple-fonts"
-             "/releases/download"
-             "/Apple-Symbols-" version "/Apple.Symbols.ttf"))
-       (sha256
-        (base32 "0lv1rjgv0mh41v3j83a1f2zzv4qksgag1n76r6nz8bb0yvcb1n9j"))))
-    (build-system font-build-system)
-    (home-page "https://www.apple.com")
-    (synopsis "Apple Symbols typeface by Apple Inc.")
-    (description "An Apple system font intended to provide coverage for
-characters defined as symbols in the Unicode Standard.")
-    (license (license:nonfree "https://www.apple.com"))))
 #+end_src
 **** Programs
 ***** Development
