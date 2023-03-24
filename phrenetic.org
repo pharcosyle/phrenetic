@@ -2723,11 +2723,12 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list ;; TODO Make these regular inputs and do substitutions. Follow https://discourse.doomemacs.org/t/feature-request-centralize-external-dependencies-for-guix/3688.
+       (list font-all-the-icons
+
+             ;; TODO Make these regular inputs and do substitutions. Follow https://discourse.doomemacs.org/t/feature-request-centralize-external-dependencies-for-guix/3688.
              git
              ripgrep
              fd
-             font-all-the-icons
              zstd
 
              ;; TODO For magit
