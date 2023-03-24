@@ -1577,13 +1577,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+end_src
 **** Shared
 #+begin_src scheme
-(define (without-profile-extension st)
-  (service-type
-   (inherit st)
-   (extensions
-    (remove (lambda (ext)
-              (equal? (service-extension-target ext) profile-service-type))
-            (service-type-extensions st)))))
+(define without-profile-extension
+  (rpartial without-extensions profile-service-type))
 #+end_src
 *** Composite components
 **** Base
@@ -1693,7 +1688,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages clojure) #:select (clojure-tools))
   #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -1737,6 +1732,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((phrenetic packages doom-emacs) #:select (doom-emacs))
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
+  #:use-module ((sxml simple) #:select (sxml->xml))
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
   #:use-module ((ice-9 string-fun) #:select (string-replace-substring))
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
@@ -1761,8 +1757,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             %colors
             %wallpapers
             font-library
-            %fontsets
-            font-packages-useful
+            %fonts
             %date-formats
             %time-formats
             xdg-user-directories
@@ -6082,14 +6077,32 @@ nix-channel --update
 #+begin_src scheme
 (define* (font-library #:key
                        stateless?
-                       packages)
+                       font-sans
+                       font-serif
+                       font-mono
+                       extra-fonts)
   (list
-   (service home-fontconfig-service-type)
+   (service (as-> home-fontconfig-service-type $
+              (without-extensions $ home-xdg-configuration-files-service-type)
+              (service-type
+               (inherit $)
+               (extensions
+                (cons* (service-extension
+                        home-xdg-configuration-files-service-type
+                        (partial add-fontconfig-config font-sans font-serif font-mono))
+                       (service-type-extensions $))))))
 
    (simple-service
     'fonts-add-packages
     home-profile-service-type
-    packages)
+    (append
+     (map (lambda (font)
+            (assoc-ref font #:font/package))
+          (append
+           (list font-sans
+                 font-serif
+                 font-mono)
+           extra-fonts))))
 
    (when stateless?
      (home-stateless-service
@@ -6097,32 +6110,46 @@ nix-channel --update
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
-;; TODO Nonguix/nonphrenetic requires shouldn't be in phrenetic.
-(use-modules ((nongnu packages fonts) #:select (font-apple-sf-pro
-                                                font-apple-sf-compact
-                                                font-apple-sf-mono
-                                                font-apple-sf-arabic
-                                                font-apple-new-york
-                                                font-apple-color-emoji
-                                                font-apple-symbols
-                                                font-microsoft-web-core-fonts)))
+(define (add-fontconfig-config font-sans font-serif font-mono dirs)
+  `(("fontconfig/fonts.conf"
+     ,(apply mixed-text-file
+             "fonts.conf"
+             (list "<?xml version='1.0'?>" "\n"
+                   "<!DOCTYPE fontconfig SYSTEM 'fonts.dtd'>" "\n"
+                   (sxml-serialize
+                    `(fontconfig
+                      ,@(map (lambda (dir)
+                               `(dir ,dir))
+                             dirs)
+                      ,@(map (match-lambda
+                               ((family . name)
+                                `(alias
+                                  (family ,family)
+                                  (prefer
+                                   (family ,name)))))
+                             `(("sans-serif" . ,(assoc-ref font-sans #:font/name))
+                               ("serif" . ,(assoc-ref font-serif #:font/name))
+                               ("monospace" . ,(assoc-ref font-mono #:font/name)))))))))))
 
-(define %fontsets
-  `((#:fontset/titanium . ,(lambda* (;; TODO parameterize with font packages
-                                     )
-                             `((#:fonts/mono . ((#:font/name . "SF Mono")
-                                                (#:font/package . ,font-apple-sf-mono)))
-                               (#:fonts/variable-pitch . ((#:font/name . "SF Pro")
-                                                          (#:font/package . ,font-apple-sf-pro))))))))
+(define (sxml-serialize tree)
+  (call-with-output-string
+    (lambda (port)
+      (sxml->xml tree port)))) ; It'd be nice if this pretty-printed or if I added some code that did.
 
-(define (font-packages-useful)
-  (list font-apple-new-york
-        font-apple-color-emoji
-        font-apple-sf-compact
-        font-apple-sf-arabic
-        font-apple-symbols
-        font-google-noto
-        font-microsoft-web-core-fonts))
+;; TODO These should really each be a function to parameterize the packages.
+(define %fonts
+  `((#:fonts/iosevka-aile . ((#:font/name . "Iosevka Aile")
+                             (#:font/package . ,font-iosevka-aile)))
+    (#:fonts/iosevka-etoile . ((#:font/name . "Iosevka Etoile")
+                               (#:font/package . ,font-iosevka-etoile)))
+    (#:fonts/iosevka . ((#:font/name . "Iosevka")
+                        (#:font/package . ,font-iosevka)))
+    (#:fonts/liberation . ((#:font/package . ,font-liberation)))
+    (#:fonts/gnu-unifont . ((#:font/name . "Unifont")
+                            (#:font/package . ,font-gnu-unifont)))
+    (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
+    (#:fonts/google-noto-emoji . ((#:font/name . "Noto Emoji")
+                                  (#:font/package . ,font-google-noto)))))
 #+end_src
 ***** Date/time formats
 #+begin_src scheme
@@ -8858,7 +8885,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            portal-services
                            colors
                            (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
-                           fonts
+                           font-variable-pitch
                            base-font-size
                            (date-format (assoc-ref %date-formats #:date-format/simple))
                            (time-format (assoc-ref %time-formats #:time-format/simple))
@@ -8918,7 +8945,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (#:emacs-interface . ,emacs-interface)))
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
-                        #:font (assoc-ref fonts #:fonts/variable-pitch)
+                        #:font font-variable-pitch
                         #:date-format date-format
                         #:time-format time-format
                         #:effects? swaylock-effects?
@@ -8928,7 +8955,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
      ;;                    #:swayidle swayidle)
      (mako-wm-piece #:colors colors
-                    #:font (assoc-ref fonts #:fonts/variable-pitch)
+                    #:font font-variable-pitch
                     #:font-size base-font-size)
      (let ((bar-id 'main))
        (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
@@ -8938,7 +8965,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                          (map (lambda (o)
                                                                 (assoc-ref outputs #:display/ephemeral-name)))))))
                         #:colors colors
-                        #:font (assoc-ref fonts #:fonts/variable-pitch)
+                        #:font font-variable-pitch
                         #:modules (waybar-modules #:bar-id bar-id
                                                   #:session session
                                                   #:date-format date-format
@@ -9007,14 +9034,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                doom-ui?
                theme
                colors
-               fonts
+               font-variable-pitch
+               font-mono
                base-font-size
                wayland?
                google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
-                           #:font (assoc-ref fonts #:fonts/variable-pitch)
-                           #:font-monospace (assoc-ref fonts #:fonts/mono)
+                           #:font font-variable-pitch
+                           #:font-monospace font-mono
                            #:font-size base-font-size))
         ;; (qt (qt-services #:stateless? stateless?))
         )
@@ -9028,14 +9056,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (rofi-app #:stateless? stateless?
                    #:wayland? wayland?
                    #:colors colors
-                   #:font (assoc-ref fonts #:fonts/variable-pitch)
+                   #:font font-variable-pitch
                    #:font-size base-font-size))
      ;; (zoom-app #:stateless? stateless?
      ;;           #:qt-services qt)
      ;; (gimp-app #:stateless? stateless?
      ;;           #:gtk-services gtk)
      (alacritty-app #:colors colors
-                    #:font (assoc-ref fonts #:fonts/mono)
+                    #:font font-mono
                     #:font-size base-font-size)
      (if doom-ui?
          (doom-vterm-app #:setup-zsh? #t
@@ -9061,6 +9089,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 **** Entire
 #+begin_src scheme
+;; TODO Update with respect to nonphrenetic.
+(use-modules ((nonphrenetic home) #:select (%fonts) #:prefix nonphrenetic:))
+
 (define* (he-entire #:key
                     stateless?
                     stateless-storage-paths
@@ -9085,9 +9116,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (light-colors (assoc-ref %colors #:colors/nuclear-light))
                     (dark-colors (assoc-ref %colors #:colors/nuclear-dark))
                     (colors dark-colors)
-                    (fonts ((assoc-ref %fontsets #:fontset/titanium)
-                            ;; ...
-                            ))
+                    (font-sans (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-pro))
+                    (font-serif (assoc-ref nonphrenetic:%fonts #:fonts/apple-new-york))
+                    (font-mono (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-mono))
+                    (font-variable-pitch font-sans)
                     (base-font-size 10)
                     (portal-services (portal-services #:wayland? wayland?))
                     connection-manager
@@ -9132,7 +9164,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                                     #:outputs sessions-outputs
                                                                     #:portal-services portal-services
                                                                     #:colors colors
-                                                                    #:fonts fonts
+                                                                    #:font-variable-pitch font-variable-pitch
                                                                     #:base-font-size base-font-size
                                                                     #:emacs-interface emacs-interface
                                                                     #:swaylock-effects? sessions-swaylock-effects?
@@ -9161,18 +9193,22 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                      #:light-colors light-colors
                                      #:dark-colors dark-colors
                                      #:font %adobe-source-code-pro
-                                     #:font-variable-pitch (assoc-ref fonts #:fonts/variable-pitch)
+                                     #:font-variable-pitch font-variable-pitch
                                      #:font-size base-font-size)
                        '()))
                   '())
               (if desktop?
                   (append
                    (font-library #:stateless? stateless?
-                                 #:packages (append
-                                             (map (lambda (font)
-                                                    (assoc-ref font #:font/package))
-                                                  fonts)
-                                             (font-packages-useful)))
+                                 #:font-sans font-sans
+                                 #:font-serif font-serif
+                                 #:font-mono font-mono
+                                 #:extra-fonts (list (assoc-ref %fonts #:fonts/google-noto)
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-color-emoji)
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-compact)
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-arabic)
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-symbols)
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/microsoft-web-core)))
                    (xdg-user-directories #:stateless? stateless?)
                    (mesa #:stateless? stateless?)
                    (flatpak-apps #:stateless? stateless?
@@ -9198,7 +9234,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    #:doom-ui? doom-ui?
                    #:theme theme
                    #:colors colors
-                   #:fonts fonts
+                   #:font-variable-pitch font-variable-pitch
+                   #:font-mono font-mono
                    #:base-font-size base-font-size
                    #:wayland? wayland?
                    #:google-chrome apps-google-chrome))))
@@ -9682,14 +9719,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   #:use-module (guix build-system trivial)
   #:use-module (guix git-download)
   #:use-module (guix packages)
-  #:use-module ((gnu services) #:select (service-kind))
+  #:use-module (gnu services)
   #:use-module (phrenetic common utils)
   #:use-module ((srfi srfi-1) #:select (remove))
   #:export (simple-package
             with-git-url
             with-git-version
             with-git-commit
-            remove-services-by-types))
+            remove-services-by-types
+            without-extensions))
 
 (re-export-public-interface (phrenetic common utils))
 #+end_src
@@ -9770,6 +9808,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
+
+(define* (without-extensions st #:rest exts)
+  (service-type
+   (inherit st)
+   (extensions
+    (remove (lambda (candidate)
+              (member (service-extension-target candidate) exts))
+            (service-type-extensions st)))))
 #+end_src
 *** Build
 :PROPERTIES:
@@ -10147,12 +10193,14 @@ delete it when leaving the dynamic extent of this call."
   #:use-module (gnu services)
   #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
   #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
+  #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols font-microsoft-web-core-fonts))
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
   #:use-module ((chromium chromium) #:select (chromium chromium+drm))
   #:use-module (phrenetic home)
   #:use-module (phrenetic utils)
   #:export (%nixpkgs-allow-unfree
+            %fonts
             datomic-prog
             zoom-app
             chromium-app
@@ -10165,6 +10213,27 @@ delete it when leaving the dynamic extent of this call."
 #+begin_src scheme
 (define %nixpkgs-allow-unfree
   '((allowUnfree . #t)))
+#+end_src
+**** Desktop
+***** Font library
+#+begin_src scheme
+;; TODO These should really each be a function to parameterize the packages.
+(define %fonts
+  `((#:fonts/apple-sf-pro . ((#:font/name . "SF Pro")
+                             (#:font/package . ,font-apple-sf-pro)))
+    (#:fonts/apple-sf-compact . ((#:font/name . "SF Compact")
+                                 (#:font/package . ,font-apple-sf-compact)))
+    (#:fonts/apple-sf-mono . ((#:font/name . "SF Mono")
+                              (#:font/package . ,font-apple-sf-mono)))
+    (#:fonts/apple-sf-arabic . ((#:font/name . "SF Arabic")
+                                (#:font/package . ,font-apple-sf-arabic)))
+    (#:fonts/apple-new-york . ((#:font/name . "New York")
+                               (#:font/package . ,font-apple-new-york)))
+    (#:fonts/apple-color-emoji . ((#:font/name . "Apple Color Emoji")
+                                  (#:font/package . ,font-apple-color-emoji)))
+    (#:fonts/apple-symbols . ((#:font/name . "Apple Symbols")
+                              (#:font/package . ,font-apple-symbols)))
+    (#:fonts/microsoft-web-core . ((#:font/package . ,font-microsoft-web-core-fonts)))))
 #+end_src
 **** Programs
 ***** Development
