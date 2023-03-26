@@ -8676,7 +8676,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
    (simple-service
     'gtk-add-packages
     home-profile-service-type
-    (list arc-theme
+    (list ;; arc-theme ; TODO Remove temporarily, it requires frequent rebuilds and I'm probably going to be changing it anyway. Also commented "gtk-theme" setting below.
           ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
           hicolor-icon-theme ; Andrew Tropin indicates (in abcdw/rde@3a8ea85f) that this is needed for network manager applet icons.
           adwaita-icon-theme
@@ -8694,10 +8694,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        ,(dconf-db
          "dconf-user"
          `((org/gnome/desktop/interface
-            ((gtk-theme . ,(quoted-symbol
-                            (case theme
-                              ((#:theme/light) "Arc")
-                              ((#:theme/dark) "Arc-Dark"))))
+            (;; (gtk-theme . ,(quoted-symbol
+             ;;                (case theme
+             ;;                  ((#:theme/light) "Arc")
+             ;;                  ((#:theme/dark) "Arc-Dark"))))
              (font-name . ,(quoted-symbol
                             (pango-font-description font font-size)))
              (monospace-font-name . ,(quoted-symbol
