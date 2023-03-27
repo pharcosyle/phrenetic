@@ -1858,7 +1858,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
      (inherit he)
      (essential-services (remove-services-by-types
                           (home-environment-essential-services he)
-                          (list home-fontconfig-service-type)))
+                          home-fontconfig-service-type))
      (services
       (filter service? services))))) ; A convenience to allow passing a list of services with #f, <unspecified> not filtered out.
 #+end_src
@@ -7916,7 +7916,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             ;; org-ellipsis "…"
 
                             org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the "indentation" is retained.
-                            ;; Disable source block frings. Getting it to look good would require:
+                            ;; Disable source block fringes. Getting it to look good would require:
                             ;; - disabling line numbers
                             ;; - disabling `org-startup-indented'
                             ;; - setting some `internal-border-width'
@@ -9805,7 +9805,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ***** Services
 #+begin_src scheme
-(define (remove-services-by-types services kinds)
+(define* (remove-services-by-types services #:rest kinds)
   (remove (lambda (s)
             (member (service-kind s) kinds))
           services))
