@@ -8771,20 +8771,24 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ***** Project helpers
 #+begin_src scheme
-(define (services-only-packages svcs)
-  (services-packages filter svcs))
+(define (services-change-packages f svcs)
+  (map (lambda (s)
+         (and (service? s) ; Only here because I allow home components with #f not filtered out, see `create-he'.
+              (service (f (service-kind s) home-profile-service-type)
+                       (service-value s))))
+       svcs))
 
-(define (services-sans-packages svcs)
-  (services-packages remove svcs))
+(define services-only-packages
+  (partial services-change-packages only-extensions))
 
-(define (services-packages f svcs)
-  (f (lambda (s)
-       (and (service? s)
-            (equal? (service-kind s) home-profile-service-type)))
-     svcs))
+(define services-sans-packages
+  (partial services-change-packages without-extensions))
 #+end_src
 **** Shared
 #+begin_src scheme
+(define without-profile-extension
+  (rpartial without-extensions home-profile-service-type))
+
 (define* (skeleton-file file)
   (-> (default-skeletons)
       (assoc-ref file)
@@ -9728,6 +9732,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             with-git-version
             with-git-commit
             remove-services-by-types
+            only-extensions
             without-extensions))
 
 (re-export-public-interface (phrenetic common utils))
@@ -9810,13 +9815,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (member (service-kind s) kinds))
           services))
 
-(define* (without-extensions st #:rest exts)
+(define* (change-extensions f st #:rest exts)
   (service-type
    (inherit st)
    (extensions
-    (remove (lambda (candidate)
-              (member (service-extension-target candidate) exts))
-            (service-type-extensions st)))))
+    (f (lambda (candidate)
+         (member (service-extension-target candidate) exts))
+       (service-type-extensions st)))))
+
+(define only-extensions
+  (partial change-extensions filter))
+
+(define without-extensions
+  (partial change-extensions remove))
 #+end_src
 *** Build
 :PROPERTIES:
