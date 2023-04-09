@@ -2367,8 +2367,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                                                       #$emacs-modal-title-tail))
                               (width . ,(or #$modal-width 100))
                               (height . ,(or #$modal-height 20))
-                              ;; (alpha-background . 90) ; Emacs 29 feature, add this in when it's released.
-                              )
+                              (alpha-background . 90))
                             '())
                       ,@(if #$minibuffer?
                             '((minibuffer . only)) '())))
@@ -2421,43 +2420,20 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
 ***** Emacs PGTK :package:version:
 #+begin_src scheme :tangle (meta-in-dir "packages/emacs.scm")
 (define-module (phrenetic packages emacs)
-  #:use-module (guix gexp)
-  #:use-module (guix git-download)
   #:use-module (guix packages)
-  #:use-module ((gnu packages emacs) #:select (emacs))
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
+  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
   #:use-module (phrenetic utils))
 
 (define-public emacs-pgtk
-  (as-> emacs $
-    ;; Giving the package a new name seems like good practice (or at least consistent with the rest of Guix) but it's not "required" for anything.
+  (as-> emacs-next-pgtk $
+    ;; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that. Not "required" for anything.
     (package
       (inherit $)
       (name "emacs-pgtk"))
-    ;; `emacs' uses `url-fetch' but we're using git.
-    (package
-      (inherit $)
-      (source
-       (origin
-         (inherit (package-source $))
-         (method git-fetch)
-         (uri (git-reference
-               (url #f)
-               (commit #f))))))
-    (with-git-url $ "https://github.com/flatwhatson/emacs")
-    ;; TODO I get native-comp errors. Why?
-    ;; (with-git-commit $ #:upstream-version "28.2.50"
-    ;;                  #:commit "91394b03a1de09b5908a4fdfd9411feed8ec2c18"
-    ;;                  #:hash "1v6xib9mpcdnnssbb06kj9pb4vbpzsppcq6lvdjd3rkcdzd221cw")
-    (with-git-commit $ #:upstream-version "28.1.91"
-                     #:commit "031a3a803b1658c2ea2ccda76d46a99dc810eec2"
-                     #:hash "1vhycsbvmfzihk84xjkcm7psyhw0ir64p4vh0hfmhxvw1xy0sbqs")
-    (package
-      (inherit $)
-      (arguments
-       (substitute-keyword-arguments (package-arguments $)
-         ((#:configure-flags flags #~'())
-          #~(cons* "--with-pgtk" #$flags)))))))
+    (with-git-url $ "https://github.com/emacs-mirror/emacs") ; Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
+    (with-git-commit $ #:upstream-version "29.0.60"
+                     #:commit "82d0b6c64eaaa5d7de2bb0653cec60fabada5643"
+                     #:hash "0fysgadaac1np78mvkmcs16y6ygqqh8sijbzici29yb7n8gdmjk7")))
 #+end_src
 **** Doom
 #+begin_src scheme
@@ -2485,7 +2461,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                     (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))
-                   ((#:path . ("doom/profile-load.28.elc" #:xdg-base "XDG_STATE_HOME"))
+                   ((#:path . ("doom/profile-load.29.elc" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))))
         (doom-stateless-service
          'doom
@@ -4857,6 +4833,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          ;; I'd like to have this on but in the Doom code it says it's more efficient not to.
          ;; (setq-default cursor-in-non-selected-windows t)
 
+         (pixel-scroll-precision-mode)
+
          (after! bookmark
                  (setq bookmark-save-flag 1))
 
@@ -5527,11 +5505,7 @@ Some colors from the original Atom theme on which I based mine that might be use
 
        (biome--set-font-safe
         'doom-font
-        (font-spec ;; :family ,(assoc-ref font #:font/name)
-                   ;; Workaround for Emacs 28 and lower (see "Emacs now supports 'medium' fonts" in https://github.com/emacs-mirror/emacs/blob/master/etc/NEWS.29), remove when Emacs 29 is released.
-                   :family ,(if (equal? (assoc-ref font #:font/weight) "Medium")
-                                (string-append (assoc-ref font #:font/name) " Medium")
-                                (assoc-ref font #:font/name))
+        (font-spec :family ,(assoc-ref font #:font/name)
                    :size ,(+ font-size 2)
                    :weight ',(if-let ((weight (assoc-ref font #:font/weight)))
                                      (font-weight->emacs-face-weight weight)
