@@ -1869,7 +1869,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   (append
    (list
     (service home-stateless-service-type
-             `(#:storage-paths ,storage-paths)))))
+             `(#:storage-paths ,storage-paths)))
+   (stateless-guix-home)))
 #+end_src
 ***** Service
 ****** Service type
@@ -1900,12 +1901,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
           ;;                             guix-home-files))))
           ))
    (compose identity)
-   (extend (lambda (config exts)
-             (stateless:extend-proc
-              config
-              (cons '((#:ignore . (((#:path . ".guix-home")
-                                    (#:preds . ((#:symlink-to-store)))))))
-                    exts))))
+   (extend stateless:extend-proc)
    (description "Initialize a stateless home.")))
 
 (define homedir-gexp #~(getenv "HOME"))
@@ -1961,6 +1957,21 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+begin_src scheme
 (define home-stateless-service
   (stateless:service-fn home-stateless-service-type))
+#+end_src
+***** Guix home
+#+begin_src scheme
+(define (stateless-guix-home)
+  (list
+   (home-stateless-service
+    'guix-home
+    #:state
+    `(((#:path . ,(list (assoc-ref log-home #:path)
+                        #:xdg-base
+                        (assoc-ref log-home #:xdg-base)))
+       (#:storage . #:storage/machine)))
+    #:ignore
+    '(((#:path . ".guix-home")
+       (#:preds . ((#:symlink-to-store))))))))
 #+end_src
 **** Shells
 #+begin_src scheme
@@ -2063,7 +2074,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 ***** Bash
 ****** Bashrc
 #+begin_src sh :tangle (meta-in-dir "bashrc")
-HISTFILE=${XDG_STATE_HOME:-$HOME/.local/var/lib}/bash/.bash_history
+HISTFILE=${XDG_STATE_HOME:-$HOME/.local/state}/bash/.bash_history
 #+end_src
 ***** Zsh
 ****** Zshrc
@@ -2153,7 +2164,7 @@ WORDCHARS=""
 # Configure history
 # HISTSIZE=5000
 # SAVEHIST=$HISTSIZE
-HISTFILE=${XDG_STATE_HOME:-$HOME/.local/var/lib}/zsh/.zhistory
+HISTFILE=${XDG_STATE_HOME:-$HOME/.local/state}/zsh/.zhistory
 
 #setopt incappendhistory # Save history to shared file, but not read
 setopt sharehistory     # Share history across shell sessions
@@ -2241,7 +2252,7 @@ SAVEHIST=$HISTSIZE
 **** XDG
 ***** Base directories
 #+begin_src scheme
-(define* (xdg-base-directories #:key stateless?)
+(define* (xdg-base-directories)
   (list
    ;; Allowing parameterization not done. I'm unlikely to want to change any of these dirs and I'm lazy.
    ;; (simple-service
@@ -2249,13 +2260,7 @@ SAVEHIST=$HISTSIZE
    ;;  home-xdg-base-directories-service-type
    ;;  (xdg-base-directories-configuration
    ;;   ...))
-
-   (when stateless?
-     (home-stateless-service
-      'xdg-base-directories
-      #:state
-      '(((#:path . (#:xdg-base "XDG_LOG_HOME"))
-         (#:storage . #:storage/machine)))))))
+   ))
 #+end_src
 ***** Trash
 ~home-xdg-base-directories-service-type~ has an activation service to create the directories if they don't already exist, perhaps I should do the same thing here if only for consistency. The freedesktop specs for both don't require that the directories already exists so I don't know why we bother.
@@ -7406,7 +7411,8 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                          "exec" #$session-cmd "$@"
                          (string-join
                           (list ">"
-                                (string-append "${XDG_LOG_HOME:-$HOME/.local/var/log}" "/" #$log-file)))
+                                (string-append
+                                 "$" #$(assoc-ref log-home #:xdg-base) "/" #$(assoc-ref log-home #:path) "/" #$log-file)))
                          "2>&1"))))))
     (arguments
      `(#:builder
@@ -8803,11 +8809,17 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                    (equal? (car a) (car b))))
             (apply append $))))))
 
+(define log-home
+  '((#:path . "log")
+    (#:xdg-base . "XDG_STATE_HOME")))
+
 (define (home-shepherd-service-log-file file)
   #~(string-append
-     (or (getenv "XDG_LOG_HOME")
-         (string-append (getenv "HOME") "/.local/var/log"))
-     "/" #$file))
+     (getenv #$(assoc-ref log-home #:xdg-base))
+     "/"
+     #$(assoc-ref log-home #:path)
+     "/"
+     #$file))
 
 (define very-big-history 1000000)
 #+end_src
@@ -9181,7 +9193,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                       #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
                       #:login-shell login-shell
                       #:interactive-shells interactive-shells)
-              (xdg-base-directories #:stateless? stateless?)
+              (xdg-base-directories)
               (xdg-trash #:stateless? stateless?)
               (emacs-editor #:wayland? wayland?
                             #:emacs-pgtk emacs-pgtk)
