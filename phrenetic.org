@@ -1714,7 +1714,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages virtualization) #:select (qemu))
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
-  #:use-module ((gnu packages wm) #:select (mako swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -1723,7 +1723,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu system shadow) #:select (default-skeletons))
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
-  #:use-module ((rde packages) #:select ((sway-latest . sway)))
   #:use-module ((rde packages web-browsers) #:select ((nyxt-next . nyxt)))
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
@@ -6330,7 +6329,6 @@ nix-channel --update
     (service
      home-sway-service-type
      (home-sway-configuration
-      (package sway) ; Remove this when I'm not using RDE's `sway-latest` any more (at the time of this writing, RDE has version 1.7 which Guix only has on core-updates).
       (config
        (append
         `((xwayland ,(if xwayland? 'enable 'disable))
