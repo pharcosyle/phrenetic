@@ -7869,13 +7869,13 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                               org-priority-lowest ?E
                               org-priority-default ?C
                               org-priority-faces
-                              (-map (-lambda ((priority color))
+                              (-map (-lambda ((priority . color))
                                              (cons priority (doom-color color)))
-                                    '((?A red)
-                                      (?B orange)
-                                      (?C blue)
-                                      (?D yellow)
-                                      (?E green)))))
+                                    '((?A . red)
+                                      (?B . orange)
+                                      (?C . yellow)
+                                      (?D . magenta)
+                                      (?E . cyan)))))
 
           (after! ob
                   (setq org-babel-noweb-error-all-langs t)))
@@ -7899,11 +7899,20 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             ;; - disabling `org-startup-indented'
                             ;; - setting some `internal-border-width'
                             org-modern-block-fringe nil
-                            ;; org-modern-priority nil ; Different faces for priorities aren't supported so disable this. Maybe use `org-fancy-priorities'.
                             org-modern-todo-faces
                             (-map (-lambda ((kw . face))
                                            `(,kw :inverse-video t :inherit ,face))
-                                  org-todo-keyword-faces))
+                                  org-todo-keyword-faces)
+                            org-modern-priority
+                            '((?A . "🔥") ; ❢
+                              (?B . "⚠") ; ⚑
+                              (?C . "●")
+                              (?D . "◆")
+                              (?E . "■"))
+                            org-modern-priority-faces
+                            (-map (-lambda ((priority . color))
+                                           `(,priority :foreground ,color))
+                                  org-priority-faces))
 
                       (when (not line-spacing)
                         (setq org-modern-label-border 0.3)) ; Chosen arbitrarily. Looks good.
