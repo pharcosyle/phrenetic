@@ -7855,6 +7855,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
        #:packages
        (if pretty?
            '((package! org-modern :pin "04ee69abdf928df18f50a48bf465d140c8876d85")
+             (package! org-modern-indent
+                       :recipe (:host github
+                                :repo "jdtsmith/org-modern-indent")
+                       :pin "c5a50f302dc1053d5b498e0ea2bc0ee233e8e1b8")
              (package! org-appear :pin "eb9f9db40aa529fe4b977235d86494b115281d17"))
            '())
 
@@ -7893,13 +7897,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             org-pretty-entities t
                             ;; org-ellipsis "…"
 
-                            org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the "indentation" is retained.
-                            ;; Disable source block fringes. Getting it to look good would require:
-                            ;; - disabling line numbers
-                            ;; - disabling `org-startup-indented'
-                            ;; - setting some `internal-border-width'
-                            org-modern-block-fringe nil
                             org-modern-star '("◉" "○" "▶" "▷" "♣" "♠" "★" "✲" "✸")
+                            org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
                             org-modern-todo-faces
                             (-map (-lambda ((kw . face))
                                            `(,kw :inverse-video t :inherit ,face))
@@ -7918,8 +7917,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       (when (not line-spacing)
                         (setq org-modern-label-border 0.3)) ; Chosen arbitrarily. Looks good.
 
+                      (custom-set-faces! '(org-modern-bracket-line :inherit org-block-begin-line)
+                                         '(org-block :background unspecified)) ; Get rid of any special org block background, we have the block bracket to delineate blocks. The Doom themes base in particular sets a background.
+
                       (global-org-modern-mode)
-                      (add-hook! 'org-mode-hook #'org-appear-mode)))
+                      (add-hook! 'org-mode-hook #'org-appear-mode)
+                      (add-hook! 'org-mode-hook :depth 90 #'org-modern-indent-mode))) ; The readme example sets the depth this way, I don't know why.
             '())))
 
       (when stateless?
