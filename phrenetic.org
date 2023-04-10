@@ -7897,7 +7897,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             org-pretty-entities t
                             ;; org-ellipsis "…"
 
-                            org-modern-star '("◉" "○" "▶" "▷" "♣" "♠" "★" "✲" "✸")
+                            org-modern-star '("◉" "○" "▶" "▷" "♣" "♠" "✲" "✸")
                             org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
                             org-modern-todo-faces
                             (-map (-lambda ((kw . face))
@@ -7917,8 +7917,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                       (when (not line-spacing)
                         (setq org-modern-label-border 0.3)) ; Chosen arbitrarily. Looks good.
 
+                      ;; TODO These should maybe be in my theme(s).
                       (custom-set-faces! '(org-modern-bracket-line :inherit org-block-begin-line)
-                                         '(org-block :background unspecified)) ; Get rid of any special org block background, we have the block bracket to delineate blocks. The Doom themes base in particular sets a background.
+                                         '(org-block :background unspecified)) ; Get rid of any special org block background, we have the block bracket to delineate them. The Doom themes base in particular sets a background.
 
                       (global-org-modern-mode)
                       (add-hook! 'org-mode-hook #'org-appear-mode)
