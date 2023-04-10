@@ -4814,7 +4814,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
 
       #:packages
       '((package! expand-region :pin "b70feaa644310dc2d599dc277cd20a1f2b6446ac")
-        (package! tldr :pin "2b5d53571bd30b75d4f5a642aa129055803a6bfb")
+        (package! tldr :pin "1b09d2032491d3904bd7ee9bf5ba7c7503db6593")
         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
 
         ;; TODO TEMPORARY add this to play around with it.
@@ -5322,7 +5322,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-service
     'dash
     #:packages
-    '((package! dash :pin "3df46d7d9fe74f52a661565888e4d31fd760f0df"))
+    '((package! dash :pin "c30c6bea49b79d966c92ce606fea53dea647b959"))
     #:config
     '((use-package! dash)))))
 #+end_src
@@ -5663,7 +5663,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                    :recipe (:fork
                             (:host nil
                              :repo "https://git.savannah.gnu.org/git/guix/emacs-guix.git"))
-                   :pin "cf5b7a402ea503c3dcda85a86b9a6c6dd01896e0")
+                   :pin "a85f070c18b915ec50f12cf5375b7a32830d66f9")
          (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
          (package! guix-packaging ; REVIEW trying out
                    :recipe (:host github
@@ -7854,7 +7854,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     (org +journal)))
        #:packages
        (if pretty?
-           '((package! org-modern :pin "a489757471929235af1d80631ee7a91acc554429")
+           '((package! org-modern :pin "04ee69abdf928df18f50a48bf465d140c8876d85")
              (package! org-appear :pin "eb9f9db40aa529fe4b977235d86494b115281d17"))
            '())
 
