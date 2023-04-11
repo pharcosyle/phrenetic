@@ -7928,6 +7928,9 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
               (use-package! org-modern-indent
                             :hook (org-mode . org-modern-indent-mode)
                             :config
+                            ;; Square brackets instead of rounded.
+                            (setq org-modern-indent-begin (propertize "┌" 'face 'org-modern-bracket-line)
+                                  org-modern-indent-end (propertize "└" 'face 'org-modern-bracket-line))
                             ;; TODO These should maybe be in my theme(s).
                             (custom-set-faces! '(org-modern-bracket-line :inherit org-block-begin-line)
                                                '(org-block :background unspecified)))) ; Get rid of any special org block background, we have the block bracket to delineate them. The Doom themes base in particular sets a background.
