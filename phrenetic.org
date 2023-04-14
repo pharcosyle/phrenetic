@@ -1702,7 +1702,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select ((node-lts . node))) ; At the time of this writing, node-lts is a newer version than node.
-  #:use-module ((gnu packages package-management) #:select (flatpak nix))
+  #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
   #:use-module ((gnu packages qt) #:select (qtwayland-5))
   #:use-module ((gnu packages rust-apps) #:select (swayhide))
@@ -2738,7 +2738,6 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
 #+begin_src scheme
 (define-module (phrenetic packages emacs-xyz)
   #:use-module (guix build-system copy)
-  #:use-module (guix build-system emacs)
   #:use-module (guix download)
   #:use-module (guix gexp)
   #:use-module (guix git-download)
@@ -2746,80 +2745,7 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
-  #:use-module ((gnu packages compression) #:select (unzip))
   #:use-module (phrenetic utils))
-#+end_src
-******* guix-contributing
-- TODO maybe don't create a special "subpackage" for Guix development files and do something like this instead: [[https://github.com/abcdw/rde/commit/bcc4650768517e6264709f2164fa857b264d9190][rde: examples: abcdw: Source templates from guix package sources. · abcdw/rde...]]
-#+begin_src scheme
-(define-public emacs-guix-contributing
-  (package
-    (name "emacs-guix-contributing")
-    (version "0")
-    (source
-     (local-file "guix-contributing.el"))
-    (build-system emacs-build-system)
-    (arguments
-     '(#:phases
-       (modify-phases %standard-phases
-         (add-after 'unpack 'patch-guix-source-path
-           (lambda* (#:key inputs #:allow-other-keys)
-             (make-file-writable "guix-contributing.el")
-             (emacs-substitute-variables "guix-contributing.el"
-               ("guix-contributing-source-path" (search-input-directory inputs "share/guix-emacs-development"))))))))
-    (inputs
-     (list guix-emacs-development))
-    (home-page #f)
-    (synopsis "Some Emacs integration to assist in contributing to Guix")
-    (description "See https://guix.gnu.org/manual/en/guix.html#The-Perfect-Setup")
-    (license license:gpl3+)))
-#+end_src
-******** Source
-Tempel snippets now available under =/etc/snippets/tempel= as of [2022-08-30 Tue] and this [[https://github.com/guix-mirror/guix/commit/c4acaf412064568a546034871a9e0d3888aa7937][commit]].
-#+begin_src emacs-lisp :tangle (meta-in-dir "guix-contributing.el")
-(defvar guix-contributing-source-path "~/src/guix")
-
-(with-eval-after-load 'yasnippet
-  (add-to-list 'yas-snippet-dirs (concat guix-contributing-source-path "/etc/snippets/yas")))
-
-(load-file (concat guix-contributing-source-path "/etc/copyright.el"))
-
-(when (and user-full-name
-           user-mail-address)
-  (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address)))
-
-(provide 'guix-contributing)
-#+end_src
-******** Guix's Emacs development code
-Use the github mirror since the canonical repo doesn't allow shallow fetches.
-#+begin_src scheme
-(define guix-emacs-development*
-  (let ((commit "bf0389a3806509650b7a8425973ac5aac722901a")
-        (revision "0"))
-    (package
-      (name "guix-emacs-development")
-      (version (git-version "1.3.0" revision commit))
-      (source
-       (origin
-         (method git-fetch)
-         (uri (git-reference
-               (url "https://git.savannah.gnu.org/git/guix.git")
-               (commit commit)))
-         (sha256
-          (base32
-           "0x4mpw017q4l14aimlyzxxa68jz2rn6zb8m8l7s791fkkdn2paja"))))
-      (build-system copy-build-system)
-      (arguments
-       `(#:install-plan
-         '(("etc/copyright.el" "share/guix-emacs-development/etc/copyright.el")
-           ("etc/snippets" "share/guix-emacs-development/etc/snippets"))))
-      (home-page #f)
-      (synopsis #f)
-      (description #f)
-      (license #f))))
-
-(define guix-emacs-development
-  (with-git-url guix-emacs-development* "https://github.com/guix-mirror/guix"))
 #+end_src
 ******* tldr
 #+begin_src scheme
@@ -5686,13 +5612,28 @@ Some colors from the original Atom theme on which I based mine that might be use
          (after! guix-pcomplete
                  (fmakunbound 'pcomplete/guix)) ; Don't use pcompletion, it doesn't work (I get an error: "Unknown # object: #~") plus my completions are already good (maybe even better than what it provides).
 
-         ;; TODO once I'm done packaging Doom figure out how to enable this
-         ;; (use-package! guix-contributing)
-
          (use-package! guix-packaging
                        :defer t
                        :init
-                       (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))))
+                       (setq guix-packaging--data-dir (concat doom-cache-dir "guix-packaging")))
+
+         ;; TODO Figure out how to do this with a gexp, e.g.:
+         ;; #$(file-append guix-package "/etc")
+         ;; and remove the inner safety `when'.
+         (let ((guix-etc-dir (concat "/gnu/store/01q67ynhr3pw3gnl8pz7d8mm844hgfd5-guix-1.4.0-4.01fd830-checkout" "/etc")))
+           (when (file-directory-p guix-etc-dir)
+             (after! yasnippet
+                     (add-to-list 'yas-snippet-dirs (concat guix-etc-dir "/snippets/yas")))
+             (after! tempel
+                     (unless (listp 'tempel-path)
+                       (setq tempel-path (list tempel-path)))
+                     (add-to-list 'tempel-path (concat guix-etc-dir "/snippets/tempel/*")))
+
+             (load-file (concat guix-etc-dir "/copyright.el"))))
+
+         (when (and user-full-name
+                    user-mail-address)
+           (setq copyright-names-regexp (format "%s <%s>" user-full-name user-mail-address)))))
 
       (when stateless?
         (doom-stateless-service
