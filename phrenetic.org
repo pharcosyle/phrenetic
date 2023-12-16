@@ -1830,18 +1830,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             applications
             he-entire))
 
-;; TODO Remove once this is the default in RDE (or Guix).
-(define sway
-  (with-git-version sway
-                    #:version "1.8.1"
-                    #:hash "1y7brfrsjnm9gksijgnr6zxqiqvn06mdiwsk5j87ggmxazxd66av"))
-
-(define waybar
-  (with-git-commit waybar
-                   #:upstream-version "0.9.17"
-                   #:commit "ea38eec2afd249481df737cc38e055974f83967c"
-                   #:hash "0yjizixq0divcxkz2ha6s642iiwsi5wbh81sad9bch7nhxmard8g"))
-
 ;; TODO put this in my upcoming "bumps" section in configuration. Also upstream it.
 (define poweralertd
   (with-git-commit poweralertd
