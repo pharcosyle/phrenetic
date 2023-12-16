@@ -1701,7 +1701,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages java) #:select (openjdk17))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
-  #:use-module ((gnu packages node) #:select ((node-lts . node))) ; At the time of this writing, node-lts is a newer version than node.
+  #:use-module ((gnu packages node) #:select ((node-lts . node))) ; At the time of this writing, node-lts is a newer version than node. ; TODO Maybe get rid of this notice and renaming
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
   #:use-module ((gnu packages qt) #:select (qtwayland-5))
@@ -2461,7 +2461,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                     (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))
-                   ((#:path . ("doom/profile-load.29.elc" #:xdg-base "XDG_STATE_HOME"))
+                   ((#:path . ("doom/profile-load.29.elc" #:xdg-base "XDG_STATE_HOME")) ; TODO use emacs version here? guix.utils.version-major.
                     (#:storage . #:storage/machine))))
         (doom-stateless-service
          'doom
@@ -6674,6 +6674,13 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 ********* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
 According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
 Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service-type~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
+- [2023-05-18 Thu] new developments
+  - [[https://github.com/guix-mirror/guix/commit/146bae39791363d03ab3a9b70159cd79594c2248][gnu: swaylock: Add linux-pam to inputs. · guix-mirror/guix@146bae3 · GitHub]]
+  - possibly problems currently? See the second half of [[https://lists.gnu.org/archive/html/guix-devel/2023-05/msg00256.html][Enabling PAM support or not only..]]
+  - [2023-06-04 Sun]
+     [[https://github.com/abcdw/rde/commit/c7e5497b867836ec5f4ca9f33c390304df28a930][rde: swaylock: Use swaylock from home profile instead of suid one. · abcdw/rd...]]
+     [[https://github.com/abcdw/rde/commit/c19a86c78f043277fed7b08862fca248d5ba1896][rde: swaylock: Use new screen-locker-configuration record format. · abcdw/rde...]]
+  - [2023-07-29 Sat]nb: [[https://github.com/daviwil/dotfiles/commit/be326ed285abceca4c571976fda5f0e1efae0bfb][this]] is what daviwil does
 ******** Idle managers
 - TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
 ********* Swayidle
