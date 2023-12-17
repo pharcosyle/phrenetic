@@ -4709,7 +4709,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (default +bindings +smartparens)))
 
       #:packages
-      '((package! expand-region :pin "b70feaa644310dc2d599dc277cd20a1f2b6446ac")
+      '((package! expand-region :pin "9e3f86c02c5e2ab6f0d95da8a34045b54f6166d1")
         (package! tldr :pin "1b09d2032491d3904bd7ee9bf5ba7c7503db6593")
         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
 
@@ -5218,7 +5218,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-service
     'dash
     #:packages
-    '((package! dash :pin "c30c6bea49b79d966c92ce606fea53dea647b959"))
+    '((package! dash :pin "6db80c711ce947f6c6fa11e5c2257fff2c79d139"))
     #:config
     '((use-package! dash)))))
 #+end_src
@@ -5559,7 +5559,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                    :recipe (:fork
                             (:host nil
                              :repo "https://git.savannah.gnu.org/git/guix/emacs-guix.git"))
-                   :pin "a85f070c18b915ec50f12cf5375b7a32830d66f9")
+                   :pin "455272c5cc72ed4ba5bad13c669f024f51479a58")
          (package! build-farm :pin "5c268a3c235ace0d79ef1ec82c440120317e06f5") ; REVIEW trying out
          (package! guix-packaging ; REVIEW trying out
                    :recipe (:host github
@@ -5791,7 +5791,7 @@ nix-channel --update
       #:packages '((package! kbd-mode
                              :recipe (:host github
                                       :repo "kmonad/kbd-mode")
-                             :pin "96178a43d3c9ea3167362513fe4c3fdeb7074e9f"))))))
+                             :pin "b9048e928ac403c8a1cf09b4fec75776dc4ecf4f"))))))
 
 (define* (kmonad-shepherd-service #:key
                                   kbd
@@ -7772,12 +7772,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     (org +journal)))
        #:packages
        (if pretty?
-           '((package! org-modern :pin "04ee69abdf928df18f50a48bf465d140c8876d85")
+           '((package! org-modern :pin "418b1adeec936e42abe1e3151633951055909ea4")
              (package! org-modern-indent
                        :recipe (:host github
                                 :repo "jdtsmith/org-modern-indent")
-                       :pin "c5a50f302dc1053d5b498e0ea2bc0ee233e8e1b8")
-             (package! org-appear :pin "eb9f9db40aa529fe4b977235d86494b115281d17"))
+                       :pin "7c07c47cc5d4dbb29934c10ad39912f858b9e649")
+             (package! org-appear :pin "81eba5d7a5b74cdb1bad091d85667e836f16b997"))
            '())
 
        #:config
@@ -8031,7 +8031,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
    (doom-service
     'trash
     #:packages
-    '((package! trashed :pin "ddf5830730544435a068f2dc9ac75a81ea69df1d")))))
+    '((package! trashed :pin "52a52a363ce53855790e7a59aed6976eec18c9ea")))))
 #+end_src
 ***** Version control
 ****** Git
