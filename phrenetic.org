@@ -2633,7 +2633,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((gnu packages compression) #:select (zstd))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((phrenetic packages font-all-the-icons) #:select (font-all-the-icons)))
+  #:use-module ((phrenetic packages font-symbols-nerd-mono) #:select (font-symbols-nerd-mono)))
 
 (define-public doom-emacs
   (let ((commit "03d692f129633e3bf0bd100d91b3ebf3f77db6d1")
@@ -2689,7 +2689,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list font-all-the-icons
+       (list font-symbols-nerd-mono
 
              ;; TODO Make these regular inputs and do substitutions. Follow https://discourse.doomemacs.org/t/feature-request-centralize-external-dependencies-for-guix/3688.
              git
@@ -2779,35 +2779,39 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
       (description synopsis)
       (license license:cc-by4.0))))
 #+end_src
-****** All the Icons :package:
+****** Symbols Nerd Mono :package:version:
 :PROPERTIES:
-:header-args+: :tangle (meta-in-dir "font-all-the-icons.scm")
+:header-args+: :tangle (meta-in-dir "font-symbols-nerd-mono.scm")
 :END:
 #+begin_src scheme
-(define-module (phrenetic packages font-all-the-icons)
+(define-module (phrenetic packages font-symbols-nerd-mono)
   #:use-module (guix build-system font)
   #:use-module (guix packages)
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-all-the-icons))
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module ((ice-9 match) #:select (match-lambda)))
+  #:use-module ((gnu packages emacs-xyz) #:select (emacs-nerd-icons))
+  #:use-module (phrenetic utils))
 
-(define-public font-all-the-icons
-  (let ((p emacs-all-the-icons))
-    (package
-      (name "font-all-the-icons")
-      (version (package-version p))
-      (source p)
-      (build-system font-build-system)
-      (propagated-inputs
-       ;; If emacs-all-the-icons propagates any font packages (possibly because it's unbundling them) we want to as well.
-       (filter (match-lambda
-                 ((_ package)
-                  (equal? (package-build-system package) font-build-system)))
-               (package-propagated-inputs p)))
-      (home-page (package-home-page p))
-      (synopsis (package-synopsis p))
-      (description (package-description p))
-      (license (delete license:gpl3+ (package-license p)))))) ; The Elisp files are licensed GPL but none of the fonts are.
+(define-public font-symbols-nerd-mono
+  ;; Use the same version/commit as Doom. ; TODO Grab it automatically somehow? Does that even make sense given that the hash would change too?
+  (with-git-commit
+   (let ((p emacs-nerd-icons))
+     (package
+       (name "font-symbols-nerd-mono")
+       (version (package-version p))
+       (source (package-source p))
+       (build-system font-build-system)
+       ;; At the time of this writing, `emacs-nerd-icons' only has one font file and the Guix package doesn't install it (cf. `emacs-all-the-icons'). If there are more font files in the future and/or some of them are unbundled propagated inputs then pass those through like this:
+       ;; (propagated-inputs
+       ;;  (filter (match-lambda
+       ;;            ((_ package)
+       ;;             (equal? (package-build-system package) font-build-system)))
+       ;;          (package-propagated-inputs p)))
+       (home-page (package-home-page p))
+       (synopsis (package-synopsis p))
+       (description (package-description p))
+       (license (package-license p))))
+   #:upstream-version "0.1.0"
+   #:commit "e109d09b95706bb93c821b1229ca09cf00195690"
+   #:hash "1g1srk8pwwxns0ldq85sll1640xy1cx4yy4lgb249qa366wy3q6b"))
 #+end_src
 ****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
