@@ -1687,7 +1687,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages clojure) #:select (clojure-tools))
   #:use-module ((gnu packages curl) #:select (curl))
-  #:use-module ((gnu packages emacs) #:select (emacs (emacs-next-pgtk . emacs-pgtk))) ; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that.
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
@@ -2404,24 +2404,6 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
       (default (map (lambda (mime-type)
                       `(,mime-type . ,(symbol-append file '.desktop)))
                     (or default-for '())))))))
-#+end_src
-***** Emacs PGTK :package:version:
-#+begin_src scheme :tangle (meta-in-dir "packages/emacs.scm")
-(define-module (phrenetic packages emacs)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages emacs) #:select (emacs-next-pgtk))
-  #:use-module (phrenetic utils))
-
-(define-public emacs-pgtk
-  (as-> emacs-next-pgtk $
-    ;; Presumably emacs-next-pgtk will become emacs-pgtk once Emacs 29 comes out. Preemptively name it that. Not "required" for anything.
-    (package
-      (inherit $)
-      (name "emacs-pgtk"))
-    (with-git-url $ "https://github.com/emacs-mirror/emacs") ; Use the github mirror since the canonical repo (https://git.savannah.gnu.org/git/emacs.git) doesn't allow shallow fetches.
-    (with-git-commit $ #:upstream-version "29.0.90"
-                     #:commit "864a4dc236395e441aafd23b9cbca099afdc5324"
-                     #:hash "0gsnikwl15n0vw03ibsczzlswza1d3qncyj15xdh3mxdmg0hl52b")))
 #+end_src
 **** Doom
 #+begin_src scheme
@@ -10585,7 +10567,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                       %macbook-display))
 
      ;; NEW package parameterization
-     #:emacs-pgtk ,(@ (phrenetic packages emacs) emacs-pgtk)
+     #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
      #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
      #:apps-google-chrome ,(@ (nongnu packages chrome) google-chrome-stable))))
 
