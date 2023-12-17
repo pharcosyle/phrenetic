@@ -2737,18 +2737,18 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
 ******** tldr pages
 #+begin_src scheme
 (define tldr-pages
-  (let ((commit "7ee7ed0f4afc90ef05b1dde87f6fec5b462a0394")
+  (let ((commit "3afa95bee1bef0b5a4622fe432dffcb05d9ddae0")
         (revision "0"))
     (package
       (name "tldr-pages")
-      (version (git-version "1.5b" revision commit))
+      (version (git-version "2.1" revision commit))
       (source
        (origin
          (method url-fetch/zipbomb)
          (uri (string-append "https://raw.githubusercontent.com/tldr-pages/tldr-pages.github.io/" commit "/assets/tldr.zip"))
          (sha256
           (base32
-           "0a09ycfrxiaxv0hzjrkwi56l0ga5d7ydrlclmk4vd6ndb242vhgr"))))
+           "0c5b9a1zrvwq2ryawp5083xmng9c62yxvjhjz0nf2256v325avss"))))
       (build-system copy-build-system)
       (arguments
        `(#:install-plan
