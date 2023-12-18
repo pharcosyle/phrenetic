@@ -2709,7 +2709,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              ;; - https://github.com/alexluigit/dirvish/blob/main/docs/CUSTOMIZING.org
              ;; - https://github.com/alexluigit/dirvish/issues/85
              ;; (@ (gnu packages video) ffmpegthumbnailer) ; TODO Too expensive to build on core-updates.
-             ;; (@ (gnu packages video) mediainfo) ; TODO Broken on core-updates.
+             (@ (gnu packages video) mediainfo)
              (@ (gnu packages base) tar)
              (@ (gnu packages compression) unzip)))
       (outputs '("out" "bin"))
@@ -6130,7 +6130,7 @@ nix-channel --update
 
 (define (sway-screenshot)
   `((bindsym $mod+grave exec ,shot-output)
-    ;; (bindsym $mod+Control+grave exec ,swappy-clipboard) ; TODO Broken on core-updates.
+    (bindsym $mod+Control+grave exec ,swappy-clipboard)
     (bindsym $mod+Shift+grave exec ,shot-window-or-selection)))
 
 
@@ -9771,7 +9771,7 @@ delete it when leaving the dynamic extent of this call."
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
                     #:binfmt-platforms virtualization-binfmt-platforms)
-    ;; (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout)) ; TODO Broken on core-updates.
+    (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
     (console-fonts $ #:number-of-ttys number-of-ttys
                    #:hidpi? (assoc-ref console-output #:display/hidpi?))
     (apple-macbook $ #:bluetooth? bluetooth?)))
