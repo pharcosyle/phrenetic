@@ -2708,7 +2708,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              ;; TODO epubs. See:
              ;; - https://github.com/alexluigit/dirvish/blob/main/docs/CUSTOMIZING.org
              ;; - https://github.com/alexluigit/dirvish/issues/85
-             ;; (@ (gnu packages video) ffmpegthumbnailer) ; TODO Too expensive to build on core-updates.
+             (@ (gnu packages video) ffmpegthumbnailer)
              (@ (gnu packages video) mediainfo)
              (@ (gnu packages base) tar)
              (@ (gnu packages compression) unzip)))
@@ -7828,11 +7828,10 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                            gtk-services)
   (append
    (list
-    ;; TODO Too expensive to build on core-updates.
-    ;; (simple-service
-    ;;  'font-manager-add-packages
-    ;;  home-profile-service-type
-    ;;  (list fontmanager))
+    (simple-service
+     'font-manager-add-packages
+     home-profile-service-type
+     (list fontmanager))
 
     (when stateless?
       (home-stateless-service
