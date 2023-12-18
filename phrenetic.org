@@ -8191,13 +8191,13 @@ It might be possible to statically configure Icecat/Firefox, check out the Iceca
           ;; gst-plugins-ugly
           ))
 
-   ;; (when stateless?
-   ;;   (home-stateless-service
-   ;;    'nyxt
-   ;;    #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
-   ;;               (#:storage . #:storage/machine))
-   ;;              ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
-   ;;               (#:storage . #:storage/machine)))))
+   (when stateless?
+     (home-stateless-service
+      'nyxt
+      #:state '(((#:path . ("nyxt/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:storage . #:storage/machine))
+                ((#:path . ("webkitgtk/" #:xdg-base "XDG_DATA_HOME"))
+                 (#:storage . #:storage/machine)))))
 
    (when doom?
      (doom-service
