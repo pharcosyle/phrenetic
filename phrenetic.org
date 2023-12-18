@@ -1697,6 +1697,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
+  #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
@@ -8184,12 +8185,11 @@ It might be possible to statically configure Icecat/Firefox, check out the Iceca
     'nyxt-add-packages
     home-profile-service-type
     (list nyxt
-          ;; gst-libav
-          ;; gst-plugins-bad
-          ;; gst-plugins-base
-          ;; gst-plugins-good
-          ;; gst-plugins-ugly
-          ))
+          gst-libav
+          gst-plugins-base
+          gst-plugins-good
+          gst-plugins-bad
+          gst-plugins-ugly))
 
    (when stateless?
      (home-stateless-service
