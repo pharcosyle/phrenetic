@@ -803,12 +803,13 @@ Run with ~sudo~.
                            swaylock-effects)
   (service screen-locker-service-type
            (screen-locker-configuration
-            "swaylock"
-            (file-append (if effects?
-                             swaylock-effects
-                             swaylock)
-                         "/bin/swaylock")
-            #t)))
+            (name "swaylock")
+            (program (file-append (if effects?
+                                      swaylock-effects
+                                      swaylock)
+                                  "/bin/swaylock"))
+            (allow-empty-password? #t)
+            (using-setuid? #f))))
 #+end_src
 ******** Controls
 ********* Backlights
@@ -6291,11 +6292,10 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                  effects?
                                  swaylock
                                  swaylock-effects)
-  (let (;; (swaylock-bin (file-append (get-swaylock #:effects? effects?
-        ;;                                          #:swaylock swaylock
-        ;;                                          #:swaylock-effects swaylock-effects)
-        ;;                            "/bin/swaylock"))
-        (swaylock-bin "/run/setuid-programs/swaylock"))
+  (let ((swaylock-bin (file-append (get-swaylock #:effects? effects?
+                                                 #:swaylock swaylock
+                                                 #:swaylock-effects swaylock-effects)
+                                   "/bin/swaylock")))
     `((#:screen-locker/lock . ,(list swaylock-bin))
       (#:screen-locker/lock-immediately . ,(list
                                             swaylock-bin
@@ -6309,16 +6309,6 @@ Ideally the inclusions here would be gated but that would require a flag for eve
       swaylock-effects
       swaylock))
 #+end_src
-********* WAIT [#E] Change ~swaylock-screen-locker~ to a store path
-According to Andrew Tropin this can happen once [[https://issues.guix.gnu.org/53468][{RFC PATCH} gnu: linux-pam: Change path to unix_chkpwd helper]] is merged (currently it's only on =core-updates=).
-Does this also mean I won't have to add Swaylock at the system level (as a ~screen-locker-service-type~) as well? I likely won't have to figure it out myself, just see what happens in RDE after the fix is merged.
-- [2023-05-18 Thu] new developments
-  - [[https://github.com/guix-mirror/guix/commit/146bae39791363d03ab3a9b70159cd79594c2248][gnu: swaylock: Add linux-pam to inputs. · guix-mirror/guix@146bae3 · GitHub]]
-  - possibly problems currently? See the second half of [[https://lists.gnu.org/archive/html/guix-devel/2023-05/msg00256.html][Enabling PAM support or not only..]]
-  - [2023-06-04 Sun]
-     [[https://github.com/abcdw/rde/commit/c7e5497b867836ec5f4ca9f33c390304df28a930][rde: swaylock: Use swaylock from home profile instead of suid one. · abcdw/rd...]]
-     [[https://github.com/abcdw/rde/commit/c19a86c78f043277fed7b08862fca248d5ba1896][rde: swaylock: Use new screen-locker-configuration record format. · abcdw/rde...]]
-  - [2023-07-29 Sat]nb: [[https://github.com/daviwil/dotfiles/commit/be326ed285abceca4c571976fda5f0e1efae0bfb][this]] is what daviwil does
 ******** Idle managers
 - TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
 ********* Swayidle
