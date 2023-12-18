@@ -7979,8 +7979,8 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
      (config
       (append
        `((window . ((padding . ((x . 5)
-                                (y . 5)))))
-         (background_opacity . 0.75)) ; Change this to window.opacity when Guix updates Alacritty version (to 1.10.0 or above).
+                                (y . 5)))
+                    (opacity . 0.75))))
        (if font
            `((font . ((normal . ,(append
                                   `((family . ,(assoc-ref font #:font/name)))
