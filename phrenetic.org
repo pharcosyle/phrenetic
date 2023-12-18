@@ -6077,10 +6077,10 @@ nix-channel --update
                   `((bindsym $mod+Control+Shift+Return exec ,@backup-terminal))
                   '())
             (bindsym $mod+Shift+d exec ,@app-launcher)
-            ;; (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
-            ;;                                          (list
-            ;;                                           (file-append elogind "/bin/loginctl")
-            ;;                                           "lock-session")))
+            (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
+                                                     (list
+                                                      (file-append elogind "/bin/loginctl")
+                                                      "lock-session")))
             (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-interface #:emacs/program))
             (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
@@ -8527,10 +8527,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                    (doom-vterm-terminal (assoc-ref emacs-interface #:emacs/handler))
                                    (alacritty-terminal)))
                 (#:backup-terminal . ,(if doom-ui?
-                                          ;; Alacritty not working since upgrading to Sway 1.8 (not necessarily the cause of the problem), use Foot for now.
-                                          ;; (alacritty-terminal)
-                                          (list
-                                           (file-append (@ (gnu packages terminals) foot) "/bin/foot"))
+                                          (alacritty-terminal)
                                           #f))
                 (#:emacs-interface . ,emacs-interface)))
      (swaylock-wm-piece #:colors colors
@@ -8541,9 +8538,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         #:effects? swaylock-effects?
                         #:swaylock swaylock
                         #:swaylock-effects swaylock-effects)
-     ;; (swayidle-wm-piece #:session session
-     ;;                    #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
-     ;;                    #:swayidle swayidle)
+     (swayidle-wm-piece #:session session
+                        #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
+                        #:swayidle swayidle)
      (mako-wm-piece #:colors colors
                     #:font font-variable-pitch
                     #:font-size base-font-size)
