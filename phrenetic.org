@@ -765,8 +765,9 @@ Run with ~sudo~.
                              (number->string tty-number))
                      (greetd-terminal-configuration
                       (inherit terminal-config)
-                      (initial-session-user user)
-                      (initial-session-command "default-session-start"))
+                      ;; (initial-session-user user)
+                      ;; (initial-session-command "default-session-start")
+                      )
                      terminal-config))
                (greetd-terminals config)))))))))
 #+end_src
@@ -1250,7 +1251,11 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 (define (user-homes-shepherd-service users)
   (shepherd-service
    (provision '(stateless-user-homes))
-   (requirement '(user-homes))
+   ;; (requirement '(user-homes))
+   ;; Originally requirement was user-homes, but for recently it stopped
+   ;; working, seems like it was executed too early and didn't work, so
+   ;; we switched to term-tty1.
+   (requirement '(term-tty1))
    (one-shot? #t)
    (start (with-imported-modules '((guix build utils)) ; Donno if `with-imported-modules' is necessary. Most of the Shepherd services in Guix (that are defined this way, i.e. with a lambda gexp) don't have it but a few do and it doesn't seem to hurt anything.
             #~(lambda ()
