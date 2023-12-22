@@ -6991,7 +6991,6 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   ;; Copied from RDE: I don't know what all of these do. For some explanation see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland and https://wiki.archlinux.org/title/Wayland#GUI_libraries.
   (append
    '(("SDL_VIDEODRIVER" . "wayland")
-     ("MOZ_ENABLE_WAYLAND" . "1") ; The nongnu `firefox-wayland' package sets this in a program wrapper so it's probably not necessary unless I'm using some other Mozilla thing (e.g. `icecat') and even then it'd be better to add it to a wrapper.
      ("CLUTTER_BACKEND" . "wayland")
      ("ELM_ENGINE" . "wayland_egl")
      ("ECORE_EVAS_ENGINE" . "wayland-egl")
@@ -8148,17 +8147,12 @@ It might be possible to statically configure Icecat/Firefox, check out the Iceca
 #+begin_src scheme
 (define* (icecat-app #:key
                      stateless?
-                     wayland?
                      gtk-services)
   (append
    (list
     (simple-service
      'icecat-add-packages
      home-profile-service-type
-     ;; No `icecat/wayland' package exists, write one.
-     ;; (list (if wayland?
-     ;;           icecat/wayland
-     ;;           icecat))
      (list icecat))
 
     (when stateless?
@@ -8669,7 +8663,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         #:gtk-services gtk
                         #:google-chrome google-chrome)
      ;; (firefox-app #:stateless? stateless?
-     ;;              #:wayland? wayland?
      ;;              #:gtk-services gtk)
      (nyxt-app #:stateless? stateless?
                #:doom? doom?)
@@ -9793,7 +9786,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
   #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols font-microsoft-web-core-fonts))
   #:use-module ((nongnu packages messaging) #:select (zoom))
-  #:use-module ((nongnu packages mozilla) #:select (firefox firefox/wayland))
+  #:use-module ((nongnu packages mozilla) #:select (firefox))
   #:use-module ((chromium chromium) #:select (chromium chromium+drm))
   #:use-module (phrenetic home)
   #:use-module (phrenetic utils)
@@ -9950,16 +9943,13 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 #+begin_src scheme
 (define* (firefox-app #:key
                       stateless?
-                      wayland?
                       gtk-services)
   (append
    (list
     (simple-service
      'firefox-add-packages
      home-profile-service-type
-     (list (if wayland?
-               firefox/wayland
-               firefox)))
+     (list firefox))
 
     (when stateless?
       (home-stateless-service
