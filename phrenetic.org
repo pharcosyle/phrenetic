@@ -8075,6 +8075,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                                  pipewire?
                                  theme
                                  gtk-services
+                                 qt-services
                                  (ungoogled-chromium ungoogled-chromium))
   (append
    (list
@@ -8098,7 +8099,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))))))
 
-   (or gtk-services '())))
+   (or gtk-services '())
+   (or qt-services '())))
 #+end_src
 ******* Shared
 #+begin_src scheme
@@ -8661,6 +8663,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         #:pipewire? pipewire?
                         #:theme theme
                         #:gtk-services gtk
+                        ;; #:qt-services qt
                         #:google-chrome google-chrome)
      ;; (firefox-app #:stateless? stateless?
      ;;              #:gtk-services gtk)
@@ -9873,6 +9876,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                        pipewire?
                        theme
                        gtk-services
+                       qt-services
                        drm?
                        (chromium chromium)
                        (chromium+drm chromium+drm))
@@ -9901,7 +9905,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                   (#:mode . #o700)
                   (#:parent-dir-perms . ((#:mode . #o700))))))))
 
-   (or gtk-services '())))
+   (or gtk-services '())
+   (or qt-services '())))
 #+end_src
 ******* Google Chrome
 #+begin_src scheme
@@ -9911,6 +9916,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                             pipewire?
                             theme
                             gtk-services
+                            qt-services
                             (google-chrome google-chrome))
   (append
    (list
@@ -9936,7 +9942,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
        #:ignore '(((#:path . ("mimeapps.list" #:xdg-base "XDG_DATA_HOME"))
                    (#:preds . ((#:empty-file))))))))
 
-   (or gtk-services '())))
+   (or gtk-services '())
+   (or qt-services '())))
 #+end_src
 ****** Mozilla
 ******* Firefox
