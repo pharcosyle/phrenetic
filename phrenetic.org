@@ -292,7 +292,8 @@ Run with ~sudo~.
     (bootloader (bootloader-configuration
                  (bootloader #f)))
     (services '())
-    (file-systems %base-file-systems)))
+    (file-systems %base-file-systems)
+    (firmware '())))
 #+end_src
 *** Components
 #+begin_src scheme
@@ -567,7 +568,7 @@ Run with ~sudo~.
           (service avahi-service-type)
           (service udisks-service-type)
           (service upower-service-type)
-          (service accountsservice-service-type)
+          ;; (service accountsservice-service-type)
           (service cups-pk-helper-service-type)
           (service colord-service-type)
           (service geoclue-service-type)
@@ -2714,7 +2715,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              ;; TODO epubs. See:
              ;; - https://github.com/alexluigit/dirvish/blob/main/docs/CUSTOMIZING.org
              ;; - https://github.com/alexluigit/dirvish/issues/85
-             (@ (gnu packages video) ffmpegthumbnailer)
+             ;; (@ (gnu packages video) ffmpegthumbnailer)
              (@ (gnu packages video) mediainfo)
              (@ (gnu packages base) tar)
              (@ (gnu packages compression) unzip)))
@@ -5888,7 +5889,7 @@ nix-channel --update
      'sway-add-packages
      home-profile-service-type
      (list (sway-start-package pipewire?)
-           qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
+           ;; qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
            swayhide)) ; TODO Copied from RDE. I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
     (service
@@ -6072,7 +6073,7 @@ nix-channel --update
               (append
                (list idle-manager
                      (assoc-ref notifier #:notifier/daemon)
-                     (assoc-ref status-bar #:status-bar/command)
+                     ;; (assoc-ref status-bar #:status-bar/command)
                      power-monitor)
                applets)))
 
@@ -6091,7 +6092,7 @@ nix-channel --update
             (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
           (sway-notifications notifier)
-          (sway-status-bar status-bar)
+          ;; (sway-status-bar status-bar)
           (sway-screenshot)
           (sway-backlights)
           (sway-volume)
@@ -7833,10 +7834,10 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
                            gtk-services)
   (append
    (list
-    (simple-service
-     'font-manager-add-packages
-     home-profile-service-type
-     (list fontmanager))
+    ;; (simple-service
+    ;;  'font-manager-add-packages
+    ;;  home-profile-service-type
+    ;;  (list fontmanager))
 
     (when stateless?
       (home-stateless-service
@@ -8185,7 +8186,7 @@ It might be possible to statically configure Icecat/Firefox, check out the Iceca
    (simple-service
     'nyxt-add-packages
     home-profile-service-type
-    (list nyxt
+    (list ;; nyxt
           gst-libav
           gst-plugins-base
           gst-plugins-good
@@ -8490,7 +8491,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            (menu (if doom-ui?
                                      (doom-menu (assoc-ref emacs-interface #:emacs/handler))
                                      (rofi-menu #:wayland? #t)))
-                           (applets '(#:applet/connection-manager
+                           (applets '(;; #:applet/connection-manager
                                       ;; #:applet/color-temperature
                                       ;; #:applet/auto-mounter
                                       )))
@@ -8509,7 +8510,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               `((#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
-                (#:status-bar . ,(waybar-status-bar))
+                ;; (#:status-bar . ,(waybar-status-bar))
                 (#:power-monitor . ,(poweralertd-monitor))
                 (#:applets . ,(append
                                (if (and (member #:applet/connection-manager (or applets '()))
@@ -8544,19 +8545,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (mako-wm-piece #:colors colors
                     #:font font-variable-pitch
                     #:font-size base-font-size)
-     (let ((bar-id 'main))
-       (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
-                                  (#:not-outputs . ,(->> outputs
-                                                         (filter (lambda (o)
-                                                                   (assoc-ref outputs #:display/no-status-bar?)))
-                                                         (map (lambda (o)
-                                                                (assoc-ref outputs #:display/ephemeral-name)))))))
-                        #:colors colors
-                        #:font font-variable-pitch
-                        #:modules (waybar-modules #:bar-id bar-id
-                                                  #:session session
-                                                  #:date-format date-format
-                                                  #:time-format time-format)))
+     ;; (let ((bar-id 'main))
+     ;;   (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
+     ;;                              (#:not-outputs . ,(->> outputs
+     ;;                                                     (filter (lambda (o)
+     ;;                                                               (assoc-ref outputs #:display/no-status-bar?)))
+     ;;                                                     (map (lambda (o)
+     ;;                                                            (assoc-ref outputs #:display/ephemeral-name)))))))
+     ;;                    #:colors colors
+     ;;                    #:font font-variable-pitch
+     ;;                    #:modules (waybar-modules #:bar-id bar-id
+     ;;                                              #:session session
+     ;;                                              #:date-format date-format
+     ;;                                              #:time-format time-format)))
      (poweralertd-wm-piece)
      ;; (kanshi-wm-piece #:outputs outputs)
      (if (and (member #:applet/connection-manager (or applets '()))
@@ -9920,10 +9921,10 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                             (google-chrome google-chrome))
   (append
    (list
-    (simple-service
-     'google-chrome-add-packages
-     home-profile-service-type
-     (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
+    ;; (simple-service
+    ;;  'google-chrome-add-packages
+    ;;  home-profile-service-type
+    ;;  (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
 
     (when stateless?
       (home-stateless-service
