@@ -5874,6 +5874,7 @@ nix-channel --update
 ******* Sway
 #+begin_src scheme
 (define* (sway-wm #:key
+                  sway
                   pipewire?
                   doom?
                   portal-services
@@ -5888,13 +5889,15 @@ nix-channel --update
     (simple-service
      'sway-add-packages
      home-profile-service-type
-     (list (sway-start-package #:pipewire? pipewire?)
+     (list (sway-start-package #:sway sway
+                               #:pipewire? pipewire?)
            ;; qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
            swayhide)) ; TODO Copied from RDE. I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
     (service
      home-sway-service-type
      (home-sway-configuration
+      (package sway)
       (config
        (append
         `((xwayland ,(if xwayland? 'enable 'disable))
@@ -5927,13 +5930,18 @@ nix-channel --update
 
    (or portal-services '())))
 
-(define* (sway-start #:key pipewire?)
-  (file-append (sway-start-package #:pipewire? pipewire?)
+(define* (sway-start #:key
+                     sway
+                     pipewire?)
+  (file-append (sway-start-package #:sway sway
+                                   #:pipewire? pipewire?)
                "/bin/" sway-start-exe))
 
 (define sway-start-exe "sway-start")
 
-(define* (sway-start-package #:key pipewire?)
+(define* (sway-start-package #:key
+                             sway
+                             pipewire?)
   (session-start
    sway-start-exe
    (file-append sway "/bin/sway")
@@ -6058,6 +6066,7 @@ nix-channel --update
 ******** External programs
 #+begin_src scheme
 (define* (sway-external-programs #:key
+                                 sway
                                  idle-manager
                                  screen-locker
                                  notifier
@@ -6094,7 +6103,7 @@ nix-channel --update
 
           (sway-notifications notifier)
           ;; (sway-status-bar status-bar)
-          (sway-screenshot)
+          (sway-screenshot #:sway sway)
           (sway-backlights)
           (sway-volume)
           (sway-player))))
@@ -6136,10 +6145,10 @@ nix-channel --update
        ("XF86AudioPrev" . ,(assoc-ref player #:player/previous))
        ("XF86AudioNext" . ,(assoc-ref player #:player/next))))))
 
-(define (sway-screenshot)
-  `((bindsym $mod+grave exec ,shot-output)
+(define* (sway-screenshot #:key sway)
+  `((bindsym $mod+grave exec ,(shot-output #:sway sway))
     (bindsym $mod+Control+grave exec ,swappy-clipboard)
-    (bindsym $mod+Shift+grave exec ,shot-window-or-selection)))
+    (bindsym $mod+Shift+grave exec ,(shot-window-or-selection #:sway sway))))
 
 
 (define (bindsym-controls bs)
@@ -6152,12 +6161,12 @@ nix-channel --update
 #+end_src
 ********* Screenshot
 #+begin_src scheme
-(define subject-output
+(define* (subject-output #:key sway)
   #~(format #f "~a -t get_outputs | ~a -r '.[] | select(.focused) | .name'"
             #$(file-append sway "/bin/swaymsg")
             #$(file-append jq "/bin/jq")))
 
-(define subject-window-or-selection
+(define* (subject-window-or-selection #:key sway)
   #~(format #f "~a -t get_tree | ~a -r '.. | select(.pid? and .visible?) \
 | .rect | \"\\(.x),\\(.y) \\(.width)x\\(.height)\"' | ~a -b ~a -B ~a"
             #$(file-append sway "/bin/swaymsg")
@@ -6177,11 +6186,11 @@ nix-channel --update
               #$file
               #$(file-append wl-clipboard "/bin/wl-copy")))))
 
-(define shot-output
-  (shot-script "output" #:output subject-output))
+(define* (shot-output #:key sway)
+  (shot-script "output" #:output (subject-output #:sway sway)))
 
-(define shot-window-or-selection
-  (shot-script "window-or-selection" #:geom subject-window-or-selection))
+(define* (shot-window-or-selection #:key sway)
+  (shot-script "window-or-selection" #:geom (subject-window-or-selection #:sway sway)))
 
 (define swappy-clipboard
   (program-file
@@ -6323,6 +6332,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
                             session
+                            sway
                             screen-locker
                             (lock-timeout 600)
                             extra-config
@@ -8468,6 +8478,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 ****** Sway environment
 #+begin_src scheme
 (define* (sway-environment #:key
+                           sway
                            pipewire?
                            connection-manager
                            doom?
@@ -8498,7 +8509,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                       )))
   (let ((session #:session/sway))
     (append
-     (sway-wm #:pipewire? pipewire?
+     (sway-wm #:sway sway
+              #:pipewire? pipewire?
               #:doom? doom?
               #:portal-services portal-services
               #:input `((#:inputs . ,inputs)
@@ -8508,7 +8520,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
               #:output `((#:outputs . ,outputs)
                          (#:default-bg-image . ,wallpaper))
               #:external-programs
-              `((#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
+              `((#:sway . ,sway)
+                (#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 ;; (#:status-bar . ,(waybar-status-bar))
@@ -8541,6 +8554,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         #:swaylock swaylock
                         #:swaylock-effects swaylock-effects)
      (swayidle-wm-piece #:session session
+                        #:sway sway
                         #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
                         #:swayidle swayidle)
      (mako-wm-piece #:colors colors
@@ -8743,9 +8757,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                #:pipewire media-pipewire
                                #:login-manager login-manager
                                #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                          (#:session/sway . ,(sway-start #:pipewire? pipewire?)))
+                                                          (#:session/sway . ,(sway-start #:sway sway
+                                                                                         #:pipewire? pipewire?)))
                                #:sessions sessions
-                               #:sway-environment (sway-environment #:pipewire? pipewire?
+                               #:sway-environment (sway-environment #:sway sway
+                                                                    #:pipewire? pipewire?
                                                                     #:connection-manager connection-manager
                                                                     #:doom? doom?
                                                                     #:doom-ui? doom-ui?
