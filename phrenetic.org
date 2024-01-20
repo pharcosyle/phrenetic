@@ -5888,7 +5888,7 @@ nix-channel --update
     (simple-service
      'sway-add-packages
      home-profile-service-type
-     (list (sway-start-package pipewire?)
+     (list (sway-start-package #:pipewire? pipewire?)
            ;; qtwayland-5 ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
            swayhide)) ; TODO Copied from RDE. I'm pretty sure this isn't required for anything. I'm keeping it around for now so I can try it out, though.
 
@@ -5927,12 +5927,13 @@ nix-channel --update
 
    (or portal-services '())))
 
-(define (sway-start pipewire?)
-  (file-append (sway-start-package pipewire?) "/bin/" sway-start-exe))
+(define* (sway-start #:key pipewire?)
+  (file-append (sway-start-package #:pipewire? pipewire?)
+               "/bin/" sway-start-exe))
 
 (define sway-start-exe "sway-start")
 
-(define (sway-start-package pipewire?)
+(define* (sway-start-package #:key pipewire?)
   (session-start
    sway-start-exe
    (file-append sway "/bin/sway")
@@ -8742,7 +8743,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                #:pipewire media-pipewire
                                #:login-manager login-manager
                                #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                          (#:session/sway . ,(sway-start pipewire?)))
+                                                          (#:session/sway . ,(sway-start #:pipewire? pipewire?)))
                                #:sessions sessions
                                #:sway-environment (sway-environment #:pipewire? pipewire?
                                                                     #:connection-manager connection-manager
