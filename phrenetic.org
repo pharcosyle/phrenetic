@@ -200,13 +200,17 @@ Run with ~sudo~.
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix store) #:select (%default-substitute-urls))
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
+  #:use-module ((gnu packages admin) #:select (seatd))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
+  #:use-module ((gnu packages freedesktop) #:select (basu elogind))
+  #:use-module ((gnu packages gnome) #:select ((network-manager . gnome:network-manager)))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
   #:use-module ((gnu packages linux) #:select (alsa-utils brightnessctl crda customize-linux e2fsprogs fuse kbd linux-libre lvm2 ntfs-3g pipewire util-linux))
@@ -572,9 +576,6 @@ Run with ~sudo~.
           (service colord-service-type)
           (service geoclue-service-type)
           (service polkit-service-type)
-          (service elogind-service-type
-                   (elogind-configuration
-                    (handle-power-key 'suspend))) ; A better default I think than `poweroff'.
           (service dbus-root-service-type)
           (service ntp-service-type)
           (service x11-socket-directory-service-type))
@@ -627,6 +628,7 @@ Run with ~sudo~.
     (list
      (service network-manager-service-type
               (network-manager-configuration
+               (network-manager (network-manager-no-logind-using-upower gnome:network-manager))
                (shepherd-requirement (if wireless
                                          (case wireless
                                            ((#:wireless/wpa-supplicant) '(wpa-supplicant))
@@ -645,6 +647,25 @@ Run with ~sudo~.
                      (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
+
+;; TODO this requires ~upower~ (so ~upower-service-type~), make that dependency explicit?
+;; TODO network-manager is an input to network-manager-applet so I need to parameterize it and add this modified network-manager package there too.
+(define (network-manager-no-logind-using-upower network-manager)
+  (let ((base network-manager))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(let* ((flags #$configure-flags)
+                   (flags (cons* "-Dsuspend_resume=upower"
+                                 (delete "-Dsuspend_resume=elogind" flags)))
+                   (flags (cons* "-Dsession_tracking=no"
+                                 (delete "-Dsession_tracking=elogind" flags))))
+              flags))))
+      (propagated-inputs
+       (modify-inputs (package-propagated-inputs base)
+         (delete elogind))))))
 #+end_src
 ****** Shared
 #+begin_src scheme
@@ -685,6 +706,43 @@ Run with ~sudo~.
                      (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
+#+end_src
+***** Seat management
+****** Elogind
+#+begin_src scheme
+(define-system-comp (elogind-seats)
+  (services
+   (cons* (service elogind-service-type)
+          (operating-system-user-services os))))
+#+end_src
+****** Seatd
+#+begin_src scheme
+(define-system-comp (seatd-seats #:key users)
+  (services
+   (append
+    (operating-system-user-services os)
+    (let ((group "seat"))
+      (list
+       (service seatd-service-type
+                (seatd-configuration
+                 (seatd (seatd-no-elogind seatd))
+                 (group group)))
+       (simple-service 'seatd-users-add-socket-group
+                       accounts-service-type
+                       (cons users (list group))))))))
+
+(define (seatd-no-elogind seatd)
+  (let ((base seatd))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(cons* "-Dlibseat-logind=disabled"
+                   (delete "-Dlibseat-logind=elogind" #$configure-flags)))))
+      (propagated-inputs
+       (modify-inputs (package-propagated-inputs base)
+         (delete elogind))))))
 #+end_src
 ***** Login management
 ****** Login managers
@@ -817,7 +875,22 @@ Run with ~sudo~.
 ********** Brightnessctl
 #+begin_src scheme
 (define (brightnessctl-service)
-  (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
+  (udev-rules-service 'brightnessctl-add-udev-rules (brightnessctl-using-basu brightnessctl)))
+
+;; TODO Duplicated
+(define (brightnessctl-using-basu brightnessctl)
+  (let ((base brightnessctl))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(cons "--dbus-provider=basu"
+                  (delete "--dbus-provider=elogind" #$configure-flags)))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (prepend basu)
+         (delete elogind))))))
 #+end_src
 **** Host-specific
 ***** Host
@@ -1610,6 +1683,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   login-manager
                   auto-login?
                   auto-login-user
+                  seat-manager
+                  seat-users
                   sessions
                   sessions-swaylock-effects?
                   sessions-swaylock
@@ -1650,6 +1725,11 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
               (bluetooth $ #:users bluetooth-users
                          #:stateless? stateless?)
               $)
+          (if seat-manager
+              (case seat-manager
+                ((#:seats/elogind) (elogind-seats $))
+                ((#:seats/seatd) (seatd-seats $ #:users seat-users)))
+              $)
           (if login-manager
               (case login-manager
                 ((#:lm/gdm) (gdm $ #:auto-login? auto-login?
@@ -1677,6 +1757,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (guix gexp)
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
+  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services desktop)
@@ -1687,6 +1768,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
+  #:use-module ((gnu packages admin) #:select (libseat))
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip))
@@ -1696,7 +1778,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
-  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (basu desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
@@ -1722,7 +1804,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram wlroots))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -1836,7 +1918,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             programs
             applications
             he-entire))
-
 #+end_src
 *** Create
 #+begin_src scheme
@@ -2302,9 +2383,27 @@ SAVEHIST=$HISTSIZE
                     wayland?
                     emacs
                     emacs-pgtk)
-  (if wayland?
-      emacs-pgtk
-      emacs))
+  (emacs-no-logind (if wayland?
+                       emacs-pgtk
+                       emacs)))
+
+;; TODO As far as I can tell, Emacs only needs systemd/elogind for socket activation stuff which doesn't exist in Shepherd. Thus I'm not gating this as pure-seatd-only and try to upstream it.
+(define (emacs-no-logind emacs)
+  (let ((base emacs))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:phases phases #~%standard-phases)
+          #~(modify-phases #$phases
+              ;; I would just delete the 'enable-elogind' phase but it has that deleting-configure-file bit in it. Let's exercise an overabundance of caution and retain that.
+              (add-after 'enable-elogind 'disable-elogind
+                (lambda _
+                  (substitute* "configure.ac"
+                    (("libelogind") "libsystemd"))))))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (delete elogind))))))
 #+end_src
 ***** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
@@ -5480,12 +5579,14 @@ nix-channel --update
 (define* (pipewire-media #:key
                          stateless?
                          dbus?
+                         seat-manager
                          pipewire)
   (append
    (pipewire-services #:stateless? stateless?
                       #:dbus? dbus?
                       #:pipewire pipewire)
-   (wireplumber-services #:stateless? stateless?)))
+   (wireplumber-services #:stateless? stateless?
+                         #:seat-manager seat-manager)))
 
 (define* (pipewire-services #:key
                             stateless?
@@ -5573,35 +5674,55 @@ nix-channel --update
    config))
 #+end_src
 ******* Wireplumber
+Seatd not (yet?) supported. At the time of this writing this only prevents bluetooth seat monitoring. See:
+- [[https://pipewire.pages.freedesktop.org/wireplumber/daemon/configuration/features.html][Well-known features — WirePlumber documentation]]
+- [[https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/208][Add support for seatd as an alternative to systemd|elogind? (#208) · Issues ·...]]
 #+begin_src scheme
-(define* (wireplumber-services #:key stateless?)
-  (list
-   (simple-service
-    'wireplumber-add-packages
-    home-profile-service-type
-    (list wireplumber))
-
-   (simple-service
-    'wireplumber-add-shepherd-daemon
-    home-shepherd-service-type
+(define* (wireplumber-services #:key
+                               stateless?
+                               seat-manager)
+  (let ((wireplumber (case seat-manager
+                       ((#:seats/elogind) wireplumber)
+                       ((#:seats/seatd) (wireplumber-no-elogind wireplumber)))))
     (list
-     (shepherd-service
-      (provision '(wireplumber pipewire-media-session))
-      (requirement '(pipewire))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append wireplumber "/bin/wireplumber"))
-                #:log-file #$(home-shepherd-service-log-file "wireplumber.log")
-                #:environment-variables
-                (append (list #$disable-rtkit-env-var)
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor)))))
+     (simple-service
+      'wireplumber-add-packages
+      home-profile-service-type
+      (list wireplumber))
 
-   (when stateless?
-     (home-stateless-service
-      'wireplumber
-      #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
-                 (#:storage . #:storage/machine)
-                 (#:mode . #o700)))))))
+     (simple-service
+      'wireplumber-add-shepherd-daemon
+      home-shepherd-service-type
+      (list
+       (shepherd-service
+        (provision '(wireplumber pipewire-media-session))
+        (requirement '(pipewire))
+        (start #~(make-forkexec-constructor
+                  (list #$(file-append wireplumber "/bin/wireplumber"))
+                  #:log-file #$(home-shepherd-service-log-file "wireplumber.log")
+                  #:environment-variables
+                  (append (list #$disable-rtkit-env-var)
+                          (default-environment-variables))))
+        (stop  #~(make-kill-destructor)))))
+
+     (when stateless?
+       (home-stateless-service
+        'wireplumber
+        #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
+                   (#:storage . #:storage/machine)
+                   (#:mode . #o700))))))))
+
+(define (wireplumber-no-elogind wireplumber)
+  (let ((base wireplumber))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+           #~(cons "-Delogind=disabled" #$configure-flags))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (delete elogind))))))
 #+end_src
 ***** Colors
 #+begin_src scheme
@@ -6087,10 +6208,7 @@ nix-channel --update
                   `((bindsym $mod+Control+Shift+Return exec ,@backup-terminal))
                   '())
             (bindsym $mod+Shift+d exec ,@app-launcher)
-            (bindsym $mod+Control+Shift+l exec ,@(or screen-locker
-                                                     (list
-                                                      (file-append elogind "/bin/loginctl")
-                                                      "lock-session")))
+            (bindsym $mod+Control+Shift+l exec ,@screen-locker)
             (bindsym $mod+Shift+y exec ,@(assoc-ref emacs-interface #:emacs/program))
             (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
@@ -6334,13 +6452,14 @@ Ideally the inclusions here would be gated but that would require a flag for eve
    (service
     home-swayidle-service-type
     (home-swayidle-configuration
-     (swayidle swayidle)
+     (swayidle (swayidle-no-logind swayidle))
      (config
       (append
        (if screen-locker
            (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
-             `((lock ,lock-cmd-quoted)
-               (before-sleep ,lock-cmd-quoted)
+             ;; TODO These two won't work with seatd (or rather, without elogind), see notes.
+             `(;(lock ,lock-cmd-quoted)
+               ;(before-sleep ,lock-cmd-quoted)
                (timeout ,lock-timeout ,lock-cmd-quoted)))
            '())
        (or extra-config '())))))
@@ -6358,8 +6477,20 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 
 (define* (swayidle-idle-manager #:key swayidle)
   (list
-   (file-append swayidle "/bin/swayidle")
+   (file-append (swayidle-no-logind swayidle) "/bin/swayidle")
    "-w"))
+
+(define (swayidle-no-logind swayidle)
+  (let ((base swayidle))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(delete "-Dlogind-provider=elogind" #$configure-flags))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (delete elogind))))))
 #+end_src
 ******** Notification daemons
 ********* Mako
@@ -6835,17 +6966,26 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (simple-service
     'poweralertd-add-packages
     home-profile-service-type
-    (list poweralertd))))
+    (list (poweralertd-using-basu poweralertd)))))
 
 (define* (poweralertd-monitor #:key (ignore-types '("line power")))
   (append
    (list
-    (file-append poweralertd "/bin/poweralertd")
+    (file-append (poweralertd-using-basu poweralertd) "/bin/poweralertd")
     "-s")
    (append-map (lambda (t)
                  `("-i" ,(if (string-contains t " ")
                              (quoted t) t)))
                (or ignore-types '()))))
+
+(define (poweralertd-using-basu poweralertd)
+  (let ((base poweralertd))
+    (package
+      (inherit base)
+      (inputs
+       (modify-inputs (package-inputs base)
+         (prepend basu)
+         (delete elogind))))))
 #+end_src
 ******** Display configuration
 ********* Kanshi
@@ -6868,11 +7008,26 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+begin_src scheme
 (define* (brightnessctl-backlights #:key (step 10))
   (let ((cmd (lambda (op)
-               (list (file-append brightnessctl "/bin/brightnessctl")
+               (list (file-append (brightnessctl-using-basu brightnessctl) "/bin/brightnessctl")
                      "set"
                      (step-pct step op)))))
     `((#:backlight/up . ,(cmd #:up))
       (#:backlight/down . ,(cmd #:down)))))
+
+;; TODO Duplicated
+(define (brightnessctl-using-basu brightnessctl)
+  (let ((base brightnessctl))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(cons "--dbus-provider=basu"
+                  (delete "--dbus-provider=elogind" #$configure-flags)))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (prepend basu)
+         (delete elogind))))))
 #+end_src
 ********* Volume
 ********** PulseAudio
@@ -7049,7 +7204,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list xdg-desktop-portal
           (if wayland?
-              xdg-desktop-portal-wlr
+              (xdg-desktop-portal-wlr-using-basu xdg-desktop-portal-wlr)
               xdg-desktop-portal-gtk)))
 
    (when wayland?
@@ -7065,6 +7220,20 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            #:ini-serialize
            (lambda (config)
              (ini-serialize config #:equal-string "="))))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
+
+(define (xdg-desktop-portal-wlr-using-basu xdg-desktop-portal-wlr)
+  (let ((base xdg-desktop-portal-wlr))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(cons "-Dsd-bus-provider=basu"
+                  (delete "-Dsd-bus-provider=libelogind" #$configure-flags)))))
+      (inputs
+       (modify-inputs (package-inputs base)
+         (prepend basu)
+         (delete elogind))))))
 #+end_src
 ***** Shared
 #+begin_src scheme
@@ -8419,6 +8588,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                           desktop?
                           pipewire?
                           pipewire
+                          seat-manager
                           login-manager
                           desktop-tty-start-cmds
                           sessions
@@ -8450,6 +8620,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           (if pipewire?
               (pipewire-media #:stateless? stateless?
                               #:dbus? dbus?
+                              #:seat-manager seat-manager
                               #:pipewire pipewire)
               '())
           (if dbus?
@@ -8577,6 +8748,29 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (gammastep-wm-applet) '())
      (if (member #:applet/auto-mounter (or applets '()))
          (udiskie-wm-applet) '()))))
+#+end_src
+****** Shared
+#+begin_src scheme
+(define (wlroots-no-elogind wlroots)
+  (let ((base wlroots))
+    (package
+      (inherit base)
+      (propagated-inputs
+       (modify-inputs (package-propagated-inputs base)
+         (replace "libseat" (libseat-no-elogind libseat)))))))
+
+(define (libseat-no-elogind libseat)
+  (let ((base libseat))
+    (package
+      (inherit base)
+      (arguments
+       (substitute-keyword-arguments (package-arguments base)
+         ((#:configure-flags configure-flags  #~'())
+          #~(cons "-Dlibseat-logind=disabled"
+                  (delete "-Dlibseat-logind=elogind" #$configure-flags)))))
+      (propagated-inputs
+       (modify-inputs (package-propagated-inputs base)
+         (delete elogind))))))
 #+end_src
 **** Programs
 #+begin_src scheme
@@ -8719,6 +8913,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (base-font-size 10)
                     (portal-services (portal-services #:wayland? wayland?))
                     connection-manager
+                    seat-manager
                     login-manager
                     sessions
                     sessions-inputs
@@ -8735,41 +8930,45 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (let ((he-base
            (lambda ()
              (append
-              (system-features #:stateless? stateless?
-                               #:stateless-storage-paths stateless-storage-paths
-                               #:login-shell login-shell
-                               #:doom? doom?
-                               #:doom-flags doom-flags
-                               #:package-managers package-managers
-                               #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
-                               #:console? console?
-                               #:kmonad? kmonad?
-                               #:kmonad kmonad
-                               #:desktop? desktop?
-                               #:pipewire? pipewire?
-                               #:pipewire media-pipewire
-                               #:login-manager login-manager
-                               #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                          (#:session/sway . ,(sway-start #:sway sway
-                                                                                         #:pipewire? pipewire?)))
-                               #:sessions sessions
-                               #:sway-environment (sway-environment #:sway sway
-                                                                    #:pipewire? pipewire?
-                                                                    #:connection-manager connection-manager
-                                                                    #:doom? doom?
-                                                                    #:doom-ui? doom-ui?
-                                                                    #:inputs sessions-inputs
-                                                                    #:outputs sessions-outputs
-                                                                    #:portal-services portal-services
-                                                                    #:colors colors
-                                                                    #:font-variable-pitch font-variable-pitch
-                                                                    #:base-font-size base-font-size
-                                                                    #:emacs-interface emacs-interface
-                                                                    #:swaylock-effects? sessions-swaylock-effects?
-                                                                    #:swaylock sessions-swaylock
-                                                                    #:swaylock-effects sessions-swaylock-effects
-                                                                    #:swayidle sessions-swayidle)
-                               #:virtualization? virtualization?)
+              (let ((sway (case seat-manager
+                            ((#:seats/elogind) sway)
+                            ((#:seats/seatd) (sway-no-elogind sway)))))
+                (system-features #:stateless? stateless?
+                                 #:stateless-storage-paths stateless-storage-paths
+                                 #:login-shell login-shell
+                                 #:doom? doom?
+                                 #:doom-flags doom-flags
+                                 #:package-managers package-managers
+                                 #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
+                                 #:console? console?
+                                 #:kmonad? kmonad?
+                                 #:kmonad kmonad
+                                 #:desktop? desktop?
+                                 #:pipewire? pipewire?
+                                 #:pipewire media-pipewire
+                                 #:seat-manager seat-manager
+                                 #:login-manager login-manager
+                                 #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                            (#:session/sway . ,(sway-start #:sway sway
+                                                                                           #:pipewire? pipewire?)))
+                                 #:sessions sessions
+                                 #:sway-environment (sway-environment #:sway sway
+                                                                      #:pipewire? pipewire?
+                                                                      #:connection-manager connection-manager
+                                                                      #:doom? doom?
+                                                                      #:doom-ui? doom-ui?
+                                                                      #:inputs sessions-inputs
+                                                                      #:outputs sessions-outputs
+                                                                      #:portal-services portal-services
+                                                                      #:colors colors
+                                                                      #:font-variable-pitch font-variable-pitch
+                                                                      #:base-font-size base-font-size
+                                                                      #:emacs-interface emacs-interface
+                                                                      #:swaylock-effects? sessions-swaylock-effects?
+                                                                      #:swaylock sessions-swaylock
+                                                                      #:swaylock-effects sessions-swaylock-effects
+                                                                      #:swayidle sessions-swayidle)
+                                 #:virtualization? virtualization?))
               (shells #:stateless? stateless?
                       #:doom? doom?
                       #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
@@ -8842,6 +9041,14 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (he-programs)
        (if desktop?
            (he-apps) '())))))
+
+(define (sway-no-elogind sway)
+  (let ((base sway))
+    (package
+      (inherit base)
+      (inputs
+       (modify-inputs (package-inputs base)
+         (replace "wlroots" (wlroots-no-elogind wlroots)))))))
 #+end_src
 ** Common
 *** Stateless
@@ -10063,6 +10270,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                ;; #:bluetooth-users (list primary-name
                ;;                         aux-name
                ;;                         guest-name)
+               #:seat-users (list primary-name
+                                  aux-name
+                                  guest-name)
                #:auto-login? disk-encryption?
                #:auto-login-user primary-name
                #:sessions (->> (list primary-he-sessions
@@ -10247,6 +10457,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     #:desktop? #t
     #:media #:media/pipewire
     #:connection-manager #:cm/network-manager
+    #:seat-manager #:seats/seatd
     ;; #:login-manager #:lm/gdm
 
     ;; NEW package parameterization
