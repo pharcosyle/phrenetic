@@ -9098,7 +9098,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module (gnu system)
   #:use-module ((nongnu packages firmware) #:select (facetimehd-calibration facetimehd-firmware nouveau-firmware))
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta facetimehd))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware linux-xanmod-version linux-xanmod-revision linux-xanmod-source broadcom-bt-firmware broadcom-sta facetimehd))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module (phrenetic system)
   #:use-module (phrenetic utils)
@@ -9109,6 +9109,8 @@ delete it when leaving the dynamic extent of this call."
             linux-kernel
             apple-macbook
             with-macbook-hardware))
+
+(define make-linux-xanmod (@@ (nongnu packages linux) make-linux-xanmod))
 #+end_src
 *** Components
 **** Package management
@@ -9132,8 +9134,12 @@ delete it when leaving the dynamic extent of this call."
 #+begin_src scheme
 (define-system-comp (linux-kernel #:key
                                   system
+                                  xanmod?
+                                  xanmod-config-version
                                   linux-customization-params)
-  (kernel (linux-with-customizations (get-linux system)
+  (kernel (linux-with-customizations (get-linux #:system system
+                                                #:xanmod? xanmod?
+                                                #:xanmod-config-version xanmod-config-version)
                                      linux-customization-params))
   (initrd (if (member system '("x86_64-linux" "i686-linux"))
               (lambda* (file-systems #:rest rest)
@@ -9145,12 +9151,22 @@ delete it when leaving the dynamic extent of this call."
              (operating-system-firmware os)
              (list linux-firmware))))
 
-(define (get-linux system)
+(define* (get-linux #:key
+                    system
+                    xanmod?
+                    xanmod-config-version)
   (or (assoc-ref `(;; ("aarch64-linux" . linux-arm64-generic)
                    ;; ...
                    )
                  system)
-      linux))
+      (if xanmod?
+          (make-linux-xanmod linux-xanmod-version
+                             linux-xanmod-revision
+                             linux-xanmod-source
+                             #:xanmod-defconfig
+                             (string-append "config_x86-64-v"
+                                            xanmod-config-version))
+          linux)))
 #+end_src
 ***** Vendor-specific
 ****** Apple
@@ -9223,6 +9239,8 @@ Only for Tesla-Kepler chipsets, see [[https://nouveau.freedesktop.org/FeatureMat
 (define* (with-macbook-hardware os
                                 #:key
                                 efi-label
+                                xanmod?
+                                (xanmod-config-version "3")
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
                                 (console-input %macbook-keyboard)
@@ -9233,7 +9251,9 @@ Only for Tesla-Kepler chipsets, see [[https://nouveau.freedesktop.org/FeatureMat
   (as-> os $
     (grub-efi $ #:label efi-label
               #:stateless? stateless?)
-    (linux-kernel $ #:system "x86_64-linux")
+    (linux-kernel $ #:system "x86_64-linux"
+                    #:xanmod? xanmod?
+                    #:xanmod-config-version xanmod-config-version)
     (virtualization $ #:kvm-support? #t
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
@@ -9601,6 +9621,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                             guest-name))
           $)
       (with-macbook-hardware $ #:efi-label efi-label
+                             ;; #:xanmod? #t
                              #:virtualization-kvm-users (feature-users `((,primary-name . ,primary-he-virtualization?)
                                                                          (,aux-name . ,aux-he-virtualization?)
                                                                          (,guest-name . ,guest-he-virtualization?)))
