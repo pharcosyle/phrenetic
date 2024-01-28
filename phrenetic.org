@@ -1811,7 +1811,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
-  #:use-module ((gnu system shadow) #:select (default-skeletons))
+  #:use-module ((gnu system shadow) #:select (%default-dotguile %default-gdbinit %default-nanorc))
   #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
@@ -5271,13 +5271,13 @@ Some colors from the original Atom theme on which I based mine that might be use
      'guile-add-config
      home-files-service-type
      `((".guile"
-        ,(skeleton-file ".guile"))))
+        ,%default-dotguile)))
 
     (simple-service
      'guile-add-gdb-config
      home-xdg-configuration-files-service-type
      `(("gdb/gdbinit"
-        ,(skeleton-file ".gdbinit"))))
+        ,%default-gdbinit)))
 
     (when stateless?
       (home-stateless-service
@@ -7829,7 +7829,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
 ;;     'nano-add-config
 ;;     home-xdg-configuration-files-service-type
 ;;     `(("nano/nanorc"
-;;        ,(skeleton-file ".nanorc"))))))
+;;        ,%default-nanorc)))))
 #+end_src
 ***** Trash
 ****** Doom trash
@@ -8512,11 +8512,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+begin_src scheme
 (define without-profile-extension
   (rpartial without-extensions home-profile-service-type))
-
-(define* (skeleton-file file)
-  (-> (default-skeletons)
-      (assoc-ref file)
-      car))
 
 (define home-multi-xdg-configuration-files-service-type
   (service-type
