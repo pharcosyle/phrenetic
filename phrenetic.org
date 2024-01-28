@@ -9921,7 +9921,7 @@ delete it when leaving the dynamic extent of this call."
 ******* Camera
 #+begin_src scheme
 (define-system-comp (apple-facetime-camera)
-  (kernel-loadable-modules (cons* facetimehd
+  (kernel-loadable-modules (cons* facetimehd-fixed
                                   (operating-system-kernel-loadable-modules os)))
   (kernel-arguments (add-or-update-kernel-argument
                      (operating-system-user-kernel-arguments os)
@@ -9935,6 +9935,32 @@ delete it when leaving the dynamic extent of this call."
                           kernel-module-loader-service-type
                           '("facetimehd"))
           (operating-system-user-services os))))
+
+;; TODO Upstream this fix, or the correction in a hopefully forthcoming upstream facetimehd version, to Nonguix.
+(use-modules (guix packages)
+             (guix download))
+(define facetimehd-fixed
+  (let ((base facetimehd))
+    (package
+      (inherit base)
+      (source
+       (origin
+         (inherit (package-source base))
+         (patches
+          (append
+           (-> base package-source origin-patches)
+           (list
+            ;; From https://github.com/patjak/facetimehd/pull/289
+            (origin
+              (method url-fetch)
+              (uri (string-append
+                    "https://github.com/patjak/facetimehd/commit/"
+                    "67bf8a73ed02c723d0177aaa7f85040f8991526f.patch"))
+              (file-name (string-append (package-name base)
+                                        "-linux-6.7-fix.patch"))
+              (sha256
+               (base32
+                "1nynqprd79k5sc1hw60yz2sif6744ykp23xzyrmzcz8gsj1z3g2w")))))))))))
 #+end_src
 ******* Shared
 #+begin_src scheme
