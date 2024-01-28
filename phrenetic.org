@@ -1764,6 +1764,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu home services fontutils)
   #:use-module (gnu home services shells)
   #:use-module (gnu home services shepherd)
+  #:use-module (gnu home services sound)
   #:use-module (gnu home services ssh)
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services terminals)
@@ -1918,6 +1919,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             programs
             applications
             he-entire))
+
+(define home-pipewire-asoundrc (@@ (gnu home services sound) home-pipewire-asoundrc))
 #+end_src
 *** Create
 #+begin_src scheme
@@ -5628,11 +5631,8 @@ nix-channel --update
     'pipewire-add-alsa-config
     home-xdg-configuration-files-service-type
     `(("alsa/asoundrc"
-       ,(asoundrc-file "asoundrc"
-                       `((includes (,(file-append pipewire "/share/alsa/alsa.conf.d/50-pipewire.conf")
-                                    ,(file-append pipewire "/share/alsa/alsa.conf.d/99-pipewire-default.conf")))
-                         (pcm_type.pipewire ((lib ,(file-append pipewire "/lib/alsa-lib/libasound_module_pcm_pipewire.so"))))
-                         (ctl_type.pipewire ((lib ,(file-append pipewire "/lib/alsa-lib/libasound_module_ctl_pipewire.so")))))))))
+       ,(home-pipewire-asoundrc (home-pipewire-configuration
+                                 (pipewire pipewire))))))
 
    (when stateless?
      (home-stateless-service
@@ -5643,35 +5643,6 @@ nix-channel --update
 
 (define disable-rtkit-env-var
   "DISABLE_RTKIT=1")
-
-(define (asoundrc-file name config)
-  (apply mixed-text-file name (asoundrc-serialize config)))
-
-(define (asoundrc-serialize config)
-  (append-map
-   (match-lambda
-     ((section entries)
-      (append
-       (match section
-         ('includes (append-map (lambda (file)
-                                  (list "<" file ">" "\n"))
-                                entries))
-         (section (let ((format-component
-                         (lambda (c)
-                           (if (symbol? c)
-                               (symbol->string c)
-                               c))))
-                    (append
-                     (list (format-component section) " {" "\n")
-                     (append-map (lambda (entry)
-                                   (append
-                                    (list "  ")
-                                    (interpose (map format-component entry) " ")
-                                    (list "\n")))
-                                 entries)
-                     (list "}" "\n")))))
-       (list "\n"))))
-   config))
 #+end_src
 ******* Wireplumber
 Seatd not (yet?) supported. At the time of this writing this only prevents bluetooth seat monitoring. See:
