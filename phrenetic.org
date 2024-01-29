@@ -2736,7 +2736,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module ((phrenetic packages font-symbols-nerd-mono) #:select (font-symbols-nerd-mono)))
 
 (define-public doom-emacs
-  (let ((commit "03d692f129633e3bf0bd100d91b3ebf3f77db6d1")
+  (let ((commit "f0ad161643c05842ca41bcb5daadcf7a7db98983")
         (revision "0"))
     (package
       (name "doom-emacs")
@@ -2749,7 +2749,7 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                (commit commit)))
          (sha256
           (base32
-           "0p6f481237ddiib8lxvl5qndyfhz9ribxwzz6ns0n6lkzzlh7m1x"))
+           "14jp2g7m3jl0f0ms3367lmi05rfhdc59qaa705nmw7xqrdivz8rd"))
          (file-name (git-file-name name version))
          ;; (patches
          ;;  (list
@@ -2768,12 +2768,12 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
              ;; (method url-fetch)
              (method (@ (guix download) url-fetch))
              (uri (string-append
-                   "https://github.com/hpfr/doomemacs/commit/"
-                   "a87cebdcc0da709fc49844167b382de7a6d1494c.patch"))
+                   "https://github.com/pharcosyle/doomemacs/commit/"
+                   "7ae2e75c63c534be9e41a3fb3758389e95b663d5.patch"))
              (file-name (string-append name "-dirvish.patch"))
              (sha256
               (base32
-               "0n7wwbs7wzw8jjbnyi14fsm58sym5ah93gfm9zf8cgjmp0xn1b2x")))))))
+               "1b8655zwvhicd7azmamw63dqfpfbqdyfd62f6a83508b61iwdkcl")))))))
       (build-system copy-build-system) ; TODO LICENSE file gets installed to a "share/" folder, not hurting anything but maybe remove. More generally perhaps check to see what other changes there might be between a simple checkout of the repo and what copy-build-system does.
       (arguments
        (list
@@ -2910,8 +2910,8 @@ Nonfunctional at the moment (hlissner has them commented out) but once they're w
        (description (package-description p))
        (license (package-license p))))
    #:upstream-version "0.1.0"
-   #:commit "e109d09b95706bb93c821b1229ca09cf00195690"
-   #:hash "1g1srk8pwwxns0ldq85sll1640xy1cx4yy4lgb249qa366wy3q6b"))
+   #:commit "c6a4acf19454b415cba1c43daf4bfca8fccdd9ba"
+   #:hash "1pnlp54f0c2wgc65p932xyk71lyw361x17w71fnxgp72j1a3y6dz"))
 #+end_src
 ****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
