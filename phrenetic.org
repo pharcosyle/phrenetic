@@ -5951,9 +5951,9 @@ Seatd not (yet?) supported. At the time of this writing this only prevents bluet
   (session-start
    gnome-start-exe
    (file-append gnome-session "/bin/gnome-session")
-   "gnome.log"
-   (environment-variable-shell-definitions
-    (list xdg-session-type-wayland-env-var))))
+   #:log-file "gnome.log"
+   #:pre-start (environment-variable-shell-definitions
+                (list xdg-session-type-wayland-env-var))))
 #+end_src
 ****** Window managers
 ******* Sway
@@ -6030,11 +6030,11 @@ Seatd not (yet?) supported. At the time of this writing this only prevents bluet
   (session-start
    sway-start-exe
    (file-append sway "/bin/sway")
-   "sway.log"
-   (environment-variable-shell-definitions
-    (cons* (xdg-current-desktop-env-var "sway")
-           xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
-           (wayland-env-vars pipewire?)))))
+   #:log-file "sway.log"
+   #:pre-start (environment-variable-shell-definitions
+                (cons* (xdg-current-desktop-env-var "sway")
+                       xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
+                       (wayland-env-vars pipewire?)))))
 #+end_src
 ******** General
 #+begin_src scheme
@@ -7084,8 +7084,10 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+begin_src scheme
 (define* (session-start exe
                         session-cmd
+                        #:key
                         log-file
-                        #:optional pre-start)
+                        session-args
+                        pre-start)
   (package
     (inherit simple-package)
     (name (string-append "session-" exe))
@@ -7095,7 +7097,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                     (list
                      #~(string-join
                         (list
-                         "exec" #$session-cmd "$@"
+                         "exec" #$session-cmd #$@(or session-args '()) "$@"
                          (string-join
                           (list ">"
                                 (string-append
