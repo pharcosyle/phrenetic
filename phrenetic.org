@@ -6031,7 +6031,6 @@ Seatd not (yet?) supported. At the time of this writing this only prevents bluet
    sway-start-exe
    (file-append sway "/bin/sway")
    #:log-file "sway.log"
-   #:session-args '("--unsupported-gpu") ; TODO Gate this behind an nvidia flag.
    #:pre-start (environment-variable-shell-definitions
                 (cons* (xdg-current-desktop-env-var "sway")
                        xdg-session-type-wayland-env-var ; Seems to be set even without this but relying on that might be a brittle, see https://www.reddit.com/r/swaywm/comments/skdt2b/comment/hvk8m8o
@@ -9828,7 +9827,6 @@ delete it when leaving the dynamic extent of this call."
   #:use-module (gnu system)
   #:use-module ((nongnu packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware linux-xanmod-version linux-xanmod-revision linux-xanmod-source broadcom-bt-firmware broadcom-sta facetimehd))
-  #:use-module (nongnu services nvidia)
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module (phrenetic system)
   #:use-module (phrenetic utils)
@@ -9838,7 +9836,6 @@ delete it when leaving the dynamic extent of this call."
             %nonguix-substitute-urls
             linux-kernel
             apple-macbook
-            nvidia-graphics
             with-macbook-hardware))
 
 (define make-linux-xanmod (@@ (nongnu packages linux) make-linux-xanmod))
@@ -9965,18 +9962,7 @@ delete it when leaving the dynamic extent of this call."
                (base32
                 "1nynqprd79k5sc1hw60yz2sif6744ykp23xzyrmzcz8gsj1z3g2w")))))))))))
 #+end_src
-****** Nvidia
-#+begin_src scheme
-(define-system-comp (nvidia-graphics)
-  (kernel-arguments (add-or-update-kernel-argument
-                     (operating-system-user-kernel-arguments os)
-                     "modprobe.blacklist"
-                     '("nouveau")))
-  (services
-   (cons* (service nvidia-service-type)
-          (operating-system-user-services os))))
-#+end_src
-****** Shared
+******* Shared
 #+begin_src scheme
 (define (add-or-update-kernel-argument kargs param-name vs)
   (let ((param? (lambda (p)
@@ -10020,8 +10006,7 @@ delete it when leaving the dynamic extent of this call."
     (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
     (console-fonts $ #:number-of-ttys number-of-ttys
                    #:hidpi? (assoc-ref console-output #:display/hidpi?))
-    (apple-macbook $ #:bluetooth? bluetooth?)
-    (nvidia-graphics $))) ; TODO Gate this behind an nvidia flag.
+    (apple-macbook $ #:bluetooth? bluetooth?)))
 #+end_src
 ** Home
 :PROPERTIES:
