@@ -9826,7 +9826,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module (gnu system)
   #:use-module ((nongnu packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
-  #:use-module ((nongnu packages linux) #:select (linux linux-firmware linux-xanmod-version linux-xanmod-revision linux-xanmod-source broadcom-bt-firmware broadcom-sta facetimehd))
+  #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta facetimehd))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module (phrenetic system)
   #:use-module (phrenetic utils)
@@ -9837,8 +9837,6 @@ delete it when leaving the dynamic extent of this call."
             linux-kernel
             apple-macbook
             with-macbook-hardware))
-
-(define make-linux-xanmod (@@ (nongnu packages linux) make-linux-xanmod))
 #+end_src
 *** Components
 **** Package management
@@ -9862,12 +9860,8 @@ delete it when leaving the dynamic extent of this call."
 #+begin_src scheme
 (define-system-comp (linux-kernel #:key
                                   system
-                                  xanmod?
-                                  xanmod-config-version
                                   linux-customization-params)
-  (kernel (linux-with-customizations (get-linux #:system system
-                                                #:xanmod? xanmod?
-                                                #:xanmod-config-version xanmod-config-version)
+  (kernel (linux-with-customizations (get-linux system)
                                      linux-customization-params))
   (initrd (if (member system '("x86_64-linux" "i686-linux"))
               (lambda* (file-systems #:rest rest)
@@ -9879,22 +9873,12 @@ delete it when leaving the dynamic extent of this call."
              (operating-system-firmware os)
              (list linux-firmware))))
 
-(define* (get-linux #:key
-                    system
-                    xanmod?
-                    (xanmod-config-version "1"))
+(define (get-linux system)
   (or (assoc-ref `(;; ("aarch64-linux" . linux-arm64-generic)
                    ;; ...
                    )
                  system)
-      (if xanmod?
-          (make-linux-xanmod linux-xanmod-version
-                             linux-xanmod-revision
-                             linux-xanmod-source
-                             #:xanmod-defconfig
-                             (string-append "config_x86-64-v"
-                                            xanmod-config-version))
-          linux)))
+      linux))
 #+end_src
 ***** Vendor-specific
 ****** Apple
@@ -9958,8 +9942,6 @@ delete it when leaving the dynamic extent of this call."
 (define* (with-macbook-hardware os
                                 #:key
                                 efi-label
-                                xanmod?
-                                xanmod-config-version
                                 virtualization-kvm-users
                                 virtualization-binfmt-platforms
                                 (console-input %macbook-keyboard)
@@ -9970,9 +9952,7 @@ delete it when leaving the dynamic extent of this call."
   (as-> os $
     (grub-efi $ #:label efi-label
               #:stateless? stateless?)
-    (linux-kernel $ #:system "x86_64-linux"
-                    #:xanmod? #t ; TODO This should be a parameter.
-                    #:xanmod-config-version "3") ; TODO This should be a parameter.
+    (linux-kernel $ #:system "x86_64-linux")
     (virtualization $ #:kvm-support? #t
                     #:kvm-users virtualization-kvm-users
                     #:native-platform "x86_64"
