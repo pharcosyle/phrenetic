@@ -2734,9 +2734,10 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
   #:use-module (guix packages)
   #:use-module ((guix licenses) #:prefix license:)
   #:use-module ((gnu packages compression) #:select (zstd))
+  #:use-module ((gnu packages fonts) #:select (font-symbols-nerd-mono))
   #:use-module ((gnu packages rust-apps) #:select (fd ripgrep))
   #:use-module ((gnu packages version-control) #:select (git))
-  #:use-module ((phrenetic packages font-symbols-nerd-mono) #:select (font-symbols-nerd-mono)))
+  #:use-module (phrenetic utils))
 
 (define-public doom-emacs
   (let ((commit "f0ad161643c05842ca41bcb5daadcf7a7db98983")
@@ -2792,7 +2793,12 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                 (symlink (string-append #$output "/bin")
                          (string-append #$output:bin "/bin")))))))
       (propagated-inputs
-       (list font-symbols-nerd-mono
+       (list ;; Use the same version/commit as Doom.
+             (with-git-commit
+              font-symbols-nerd-mono
+              #:upstream-version "0.1.0"
+              #:commit "c6a4acf19454b415cba1c43daf4bfca8fccdd9ba"
+              #:hash "1pnlp54f0c2wgc65p932xyk71lyw361x17w71fnxgp72j1a3y6dz")
 
              ;; TODO Make these regular inputs and do substitutions. Follow https://discourse.doomemacs.org/t/feature-request-centralize-external-dependencies-for-guix/3688.
              git
@@ -2825,40 +2831,6 @@ performance of a hand rolled config (or better).")
 #+end_src
 ****** WAIT Doom tests :wait_on_doom:
 Nonfunctional at the moment (hlissner has them commented out) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
-****** Symbols Nerd Mono :package:version:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "font-symbols-nerd-mono.scm")
-:END:
-#+begin_src scheme
-(define-module (phrenetic packages font-symbols-nerd-mono)
-  #:use-module (guix build-system font)
-  #:use-module (guix packages)
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-nerd-icons))
-  #:use-module (phrenetic utils))
-
-(define-public font-symbols-nerd-mono
-  ;; Use the same version/commit as Doom. ; TODO Grab it automatically somehow? Does that even make sense given that the hash would change too?
-  (with-git-commit
-   (let ((p emacs-nerd-icons))
-     (package
-       (name "font-symbols-nerd-mono")
-       (version (package-version p))
-       (source (package-source p))
-       (build-system font-build-system)
-       ;; At the time of this writing, `emacs-nerd-icons' only has one font file and the Guix package doesn't install it (cf. `emacs-all-the-icons'). If there are more font files in the future and/or some of them are unbundled propagated inputs then pass those through like this:
-       ;; (propagated-inputs
-       ;;  (filter (match-lambda
-       ;;            ((_ package)
-       ;;             (equal? (package-build-system package) font-build-system)))
-       ;;          (package-propagated-inputs p)))
-       (home-page (package-home-page p))
-       (synopsis (package-synopsis p))
-       (description (package-description p))
-       (license (package-license p))))
-   #:upstream-version "0.1.0"
-   #:commit "c6a4acf19454b415cba1c43daf4bfca8fccdd9ba"
-   #:hash "1pnlp54f0c2wgc65p932xyk71lyw361x17w71fnxgp72j1a3y6dz"))
-#+end_src
 ****** packaging doom WIP
 Extremely WIP, basically just a scratchpad
 ******* first attempts
