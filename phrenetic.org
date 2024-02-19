@@ -2825,63 +2825,6 @@ performance of a hand rolled config (or better).")
 #+end_src
 ****** WAIT Doom tests :wait_on_doom:
 Nonfunctional at the moment (hlissner has them commented out) but once they're working determine if they make sense to run during packaging (if they can find places where my patches, substitutions, etc. can mess stuff up). I'm concerned they'll take too long to run or require network access (to download Straight dependencies). Make sure there aren't any side effect files that end up getting installed.
-****** Emacs packages :package:version:
-:PROPERTIES:
-:header-args+: :tangle (meta-in-dir "emacs-xyz.scm")
-:END:
-#+begin_src scheme
-(define-module (phrenetic packages emacs-xyz)
-  #:use-module (guix build-system copy)
-  #:use-module (guix download)
-  #:use-module (guix gexp)
-  #:use-module (guix git-download)
-  #:use-module (guix packages)
-  #:use-module ((guix licenses) #:prefix license:)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
-  #:use-module ((gnu packages emacs-xyz) #:select (emacs-tldr) #:prefix emacs-xyz:)
-  #:use-module (phrenetic utils))
-#+end_src
-******* tldr
-#+begin_src scheme
-(define-public emacs-tldr
-  (package
-    (inherit emacs-xyz:emacs-tldr)
-    (arguments
-     (substitute-keyword-arguments (package-arguments emacs-xyz:emacs-tldr)
-       ((#:phases phases '%standard-phases)
-        #~(modify-phases #$phases
-            (add-after 'unpack 'patch-tldr-directory-path
-              (lambda* (#:key inputs #:allow-other-keys)
-                (emacs-substitute-variables "tldr.el"
-                  ("tldr-directory-path" (search-input-directory inputs "share/tldr-pages")))))))))
-    (inputs
-     (modify-inputs (package-inputs emacs-xyz:emacs-tldr)
-       (prepend tldr-pages)))))
-#+end_src
-******** tldr pages
-#+begin_src scheme
-(define tldr-pages
-  (let ((commit "3afa95bee1bef0b5a4622fe432dffcb05d9ddae0")
-        (revision "0"))
-    (package
-      (name "tldr-pages")
-      (version (git-version "2.1" revision commit))
-      (source
-       (origin
-         (method url-fetch/zipbomb)
-         (uri (string-append "https://raw.githubusercontent.com/tldr-pages/tldr-pages.github.io/" commit "/assets/tldr.zip"))
-         (sha256
-          (base32
-           "0c5b9a1zrvwq2ryawp5083xmng9c62yxvjhjz0nf2256v325avss"))))
-      (build-system copy-build-system)
-      (arguments
-       `(#:install-plan
-         '(("." "share/tldr-pages/"))))
-      (home-page "https://tldr.sh")
-      (synopsis "A collection of community-maintained help pages for command-line tools")
-      (description synopsis)
-      (license license:cc-by4.0))))
-#+end_src
 ****** Symbols Nerd Mono :package:version:
 :PROPERTIES:
 :header-args+: :tangle (meta-in-dir "font-symbols-nerd-mono.scm")
