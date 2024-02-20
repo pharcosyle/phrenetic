@@ -2386,27 +2386,9 @@ SAVEHIST=$HISTSIZE
                     wayland?
                     emacs
                     emacs-pgtk)
-  (emacs-no-logind (if wayland?
-                       emacs-pgtk
-                       emacs)))
-
-;; TODO As far as I can tell, Emacs only needs systemd/elogind for socket activation stuff which doesn't exist in Shepherd. Thus I'm not gating this as pure-seatd-only and try to upstream it.
-(define (emacs-no-logind emacs)
-  (let ((base emacs))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:phases phases #~%standard-phases)
-          #~(modify-phases #$phases
-              ;; I would just delete the 'enable-elogind' phase but it has that deleting-configure-file bit in it. Let's exercise an overabundance of caution and retain that.
-              (add-after 'enable-elogind 'disable-elogind
-                (lambda _
-                  (substitute* "configure.ac"
-                    (("libelogind") "libsystemd"))))))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (delete elogind))))))
+  (if wayland?
+      emacs-pgtk
+      emacs))
 #+end_src
 ***** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
