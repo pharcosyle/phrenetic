@@ -200,17 +200,15 @@ Run with ~sudo~.
   #:use-module (guix gexp)
   #:use-module (guix packages)
   #:use-module ((guix store) #:select (%default-substitute-urls))
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
-  #:use-module ((gnu packages admin) #:select (seatd))
+  #:use-module ((gnu packages admin) #:select (seatd-no-logind))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
-  #:use-module ((gnu packages freedesktop) #:select (basu elogind))
-  #:use-module ((gnu packages gnome) #:select ((network-manager . gnome:network-manager)))
+  #:use-module ((gnu packages gnome) #:select (network-manager-no-logind))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
   #:use-module ((gnu packages linux) #:select (alsa-utils brightnessctl crda customize-linux e2fsprogs fuse kbd linux-libre lvm2 ntfs-3g pipewire util-linux))
@@ -628,7 +626,7 @@ Run with ~sudo~.
     (list
      (service network-manager-service-type
               (network-manager-configuration
-               (network-manager (network-manager-no-logind-using-upower gnome:network-manager))
+               (network-manager network-manager-no-logind)
                (shepherd-requirement (if wireless
                                          (case wireless
                                            ((#:wireless/wpa-supplicant) '(wpa-supplicant))
@@ -647,25 +645,6 @@ Run with ~sudo~.
                      (#:storage . #:storage/machine)
                      (#:mode . #o700)))))
         '()))))
-
-;; TODO this requires ~upower~ (so ~upower-service-type~), make that dependency explicit?
-;; TODO network-manager is an input to network-manager-applet so I need to parameterize it and add this modified network-manager package there too.
-(define (network-manager-no-logind-using-upower network-manager)
-  (let ((base network-manager))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(let* ((flags #$configure-flags)
-                   (flags (cons* "-Dsuspend_resume=upower"
-                                 (delete "-Dsuspend_resume=elogind" flags)))
-                   (flags (cons* "-Dsession_tracking=no"
-                                 (delete "-Dsession_tracking=elogind" flags))))
-              flags))))
-      (propagated-inputs
-       (modify-inputs (package-propagated-inputs base)
-         (delete elogind))))))
 #+end_src
 ****** Shared
 #+begin_src scheme
@@ -725,24 +704,11 @@ Run with ~sudo~.
       (list
        (service seatd-service-type
                 (seatd-configuration
-                 (seatd (seatd-no-elogind seatd))
+                 (seatd seatd-no-logind)
                  (group group)))
        (simple-service 'seatd-users-add-socket-group
                        accounts-service-type
                        (cons users (list group))))))))
-
-(define (seatd-no-elogind seatd)
-  (let ((base seatd))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(cons* "-Dlibseat-logind=disabled"
-                   (delete "-Dlibseat-logind=elogind" #$configure-flags)))))
-      (propagated-inputs
-       (modify-inputs (package-propagated-inputs base)
-         (delete elogind))))))
 #+end_src
 ***** Login management
 ****** Login managers
@@ -875,22 +841,7 @@ Run with ~sudo~.
 ********** Brightnessctl
 #+begin_src scheme
 (define (brightnessctl-service)
-  (udev-rules-service 'brightnessctl-add-udev-rules (brightnessctl-using-basu brightnessctl)))
-
-;; TODO Duplicated
-(define (brightnessctl-using-basu brightnessctl)
-  (let ((base brightnessctl))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(cons "--dbus-provider=basu"
-                  (delete "--dbus-provider=elogind" #$configure-flags)))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (prepend basu)
-         (delete elogind))))))
+  (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
 #+end_src
 **** Host-specific
 ***** Host
@@ -1757,7 +1708,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (guix gexp)
   #:use-module ((guix modules) #:select (source-module-closure))
   #:use-module (guix packages)
-  #:use-module ((guix utils) #:select (substitute-keyword-arguments))
   #:use-module (gnu home)
   #:use-module (gnu home services)
   #:use-module (gnu home services desktop)
@@ -1769,7 +1719,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu home services xdg)
   #:use-module (gnu home-services terminals)
   #:use-module (gnu home-services version-control)
-  #:use-module ((gnu packages admin) #:select (libseat))
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
   #:use-module ((gnu packages compression) #:select (zip unzip))
@@ -1780,7 +1729,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager))
-  #:use-module ((gnu packages freedesktop) #:select (basu desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
@@ -1790,7 +1739,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk17))
-  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber))
+  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber-no-logind))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select ((node-lts . node))) ; At the time of this writing, node-lts is a newer version than node. ; TODO Maybe get rid of this notice and renaming
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
@@ -1807,7 +1756,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram wlroots))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle-no-logind swaylock swaylock-effects waybar waybar-cpu-histogram))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -5446,7 +5395,7 @@ Seatd not (yet?) supported. At the time of this writing this only prevents bluet
                                seat-manager)
   (let ((wireplumber (case seat-manager
                        ((#:seats/elogind) wireplumber)
-                       ((#:seats/seatd) (wireplumber-no-elogind wireplumber)))))
+                       ((#:seats/seatd) wireplumber-no-logind))))
     (list
      (simple-service
       'wireplumber-add-packages
@@ -5474,18 +5423,6 @@ Seatd not (yet?) supported. At the time of this writing this only prevents bluet
         #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
                    (#:storage . #:storage/machine)
                    (#:mode . #o700))))))))
-
-(define (wireplumber-no-elogind wireplumber)
-  (let ((base wireplumber))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-           #~(cons "-Delogind=disabled" #$configure-flags))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (delete elogind))))))
 #+end_src
 ***** Colors
 #+begin_src scheme
@@ -6215,7 +6152,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
    (service
     home-swayidle-service-type
     (home-swayidle-configuration
-     (swayidle (swayidle-no-logind swayidle))
+     (swayidle swayidle)
      (config
       (append
        (if screen-locker
@@ -6240,20 +6177,8 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 
 (define* (swayidle-idle-manager #:key swayidle)
   (list
-   (file-append (swayidle-no-logind swayidle) "/bin/swayidle")
+   (file-append swayidle "/bin/swayidle")
    "-w"))
-
-(define (swayidle-no-logind swayidle)
-  (let ((base swayidle))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(delete "-Dlogind-provider=elogind" #$configure-flags))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (delete elogind))))))
 #+end_src
 ******** Notification daemons
 ********* Mako
@@ -6729,26 +6654,17 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    (simple-service
     'poweralertd-add-packages
     home-profile-service-type
-    (list (poweralertd-using-basu poweralertd)))))
+    (list poweralertd))))
 
 (define* (poweralertd-monitor #:key (ignore-types '("line power")))
   (append
    (list
-    (file-append (poweralertd-using-basu poweralertd) "/bin/poweralertd")
+    (file-append poweralertd "/bin/poweralertd")
     "-s")
    (append-map (lambda (t)
                  `("-i" ,(if (string-contains t " ")
                              (quoted t) t)))
                (or ignore-types '()))))
-
-(define (poweralertd-using-basu poweralertd)
-  (let ((base poweralertd))
-    (package
-      (inherit base)
-      (inputs
-       (modify-inputs (package-inputs base)
-         (prepend basu)
-         (delete elogind))))))
 #+end_src
 ******** Display configuration
 ********* Kanshi
@@ -6771,26 +6687,11 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+begin_src scheme
 (define* (brightnessctl-backlights #:key (step 10))
   (let ((cmd (lambda (op)
-               (list (file-append (brightnessctl-using-basu brightnessctl) "/bin/brightnessctl")
+               (list (file-append brightnessctl "/bin/brightnessctl")
                      "set"
                      (step-pct step op)))))
     `((#:backlight/up . ,(cmd #:up))
       (#:backlight/down . ,(cmd #:down)))))
-
-;; TODO Duplicated
-(define (brightnessctl-using-basu brightnessctl)
-  (let ((base brightnessctl))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(cons "--dbus-provider=basu"
-                  (delete "--dbus-provider=elogind" #$configure-flags)))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (prepend basu)
-         (delete elogind))))))
 #+end_src
 ********* Volume
 ********** PulseAudio
@@ -6969,7 +6870,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     home-profile-service-type
     (list xdg-desktop-portal
           (if wayland?
-              (xdg-desktop-portal-wlr-using-basu xdg-desktop-portal-wlr)
+              xdg-desktop-portal-wlr
               xdg-desktop-portal-gtk)))
 
    (when wayland?
@@ -6985,20 +6886,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
            #:ini-serialize
            (lambda (config)
              (ini-serialize config #:equal-string "="))))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
-
-(define (xdg-desktop-portal-wlr-using-basu xdg-desktop-portal-wlr)
-  (let ((base xdg-desktop-portal-wlr))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(cons "-Dsd-bus-provider=basu"
-                  (delete "-Dsd-bus-provider=libelogind" #$configure-flags)))))
-      (inputs
-       (modify-inputs (package-inputs base)
-         (prepend basu)
-         (delete elogind))))))
 #+end_src
 ***** Shared
 #+begin_src scheme
@@ -8363,26 +8250,15 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ****** Shared
 #+begin_src scheme
-(define (wlroots-no-elogind wlroots)
+(use-modules ((gnu packages admin) #:select (libseat-no-logind))
+             ((gnu packages wm) #:select (wlroots)))
+(define wlroots-no-logind
   (let ((base wlroots))
     (package
       (inherit base)
       (propagated-inputs
        (modify-inputs (package-propagated-inputs base)
-         (replace "libseat" (libseat-no-elogind libseat)))))))
-
-(define (libseat-no-elogind libseat)
-  (let ((base libseat))
-    (package
-      (inherit base)
-      (arguments
-       (substitute-keyword-arguments (package-arguments base)
-         ((#:configure-flags configure-flags  #~'())
-          #~(cons "-Dlibseat-logind=disabled"
-                  (delete "-Dlibseat-logind=elogind" #$configure-flags)))))
-      (propagated-inputs
-       (modify-inputs (package-propagated-inputs base)
-         (delete elogind))))))
+         (replace "libseat" libseat-no-logind))))))
 #+end_src
 **** Programs
 #+begin_src scheme
@@ -8544,7 +8420,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
              (append
               (let ((sway (case seat-manager
                             ((#:seats/elogind) sway)
-                            ((#:seats/seatd) (sway-no-elogind sway)))))
+                            ((#:seats/seatd) (sway-no-logind sway)))))
                 (system-features #:stateless? stateless?
                                  #:stateless-storage-paths stateless-storage-paths
                                  #:login-shell login-shell
@@ -8654,13 +8530,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (if desktop?
            (he-apps) '())))))
 
-(define (sway-no-elogind sway)
+(define (sway-no-logind sway)
   (let ((base sway))
     (package
       (inherit base)
       (inputs
        (modify-inputs (package-inputs base)
-         (replace "wlroots" (wlroots-no-elogind wlroots)))))))
+         (replace "wlroots" wlroots-no-logind))))))
 #+end_src
 ** Common
 *** Stateless
@@ -10057,7 +9933,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
-     #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
+     #:sessions-swayidle ,(@ (gnu packages wm) swayidle-no-logind)
      #:apps-google-chrome ,(@ (nongnu packages chrome) google-chrome-stable))))
 
 
