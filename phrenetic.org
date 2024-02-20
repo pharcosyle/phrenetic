@@ -1868,8 +1868,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             programs
             applications
             he-entire))
-
-(define home-pipewire-asoundrc (@@ (gnu home services sound) home-pipewire-asoundrc))
 #+end_src
 *** Create
 #+begin_src scheme
@@ -5319,106 +5317,37 @@ nix-channel --update
 **** Desktop
 ***** Media
 ****** Pipewire
+Wireplumber does not (yet?) support seatd. At the time of this writing this only prevents bluetooth seat monitoring. See:
+- [[https://pipewire.pages.freedesktop.org/wireplumber/daemon/configuration/features.html][Well-known features — WirePlumber documentation]]
+- [[https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/208][Add support for seatd as an alternative to systemd|elogind? (#208) · Issues ·...]]
 #+begin_src scheme
 (define* (pipewire-media #:key
                          stateless?
                          seat-manager
-                         pipewire)
-  (append
-   (pipewire-services #:stateless? stateless?
-                      #:pipewire pipewire)
-   (wireplumber-services #:stateless? stateless?
-                         #:seat-manager seat-manager)))
-
-(define* (pipewire-services #:key
-                            stateless?
-                            pipewire)
+                         pipewire
+                         (pipewire-pulse? #t))
   (list
-   (simple-service
-    'pipewire-add-packages
-    home-profile-service-type
-    (list pipewire))
+   (service home-pipewire-service-type
+            (home-pipewire-configuration
+             (pipewire pipewire)
+             (wireplumber (case seat-manager
+                            ((#:seats/elogind) wireplumber)
+                            ((#:seats/seatd) wireplumber-no-logind)))
+             (enable-pulseaudio? pipewire-pulse?)))
 
-   (simple-service
-    'pipewire-add-shepherd-daemons
-    home-shepherd-service-type
-    (list
-     (shepherd-service
-      (provision '(pipewire))
-      (requirement '(dbus))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire "/bin/pipewire"))
-                #:log-file #$(home-shepherd-service-log-file "pipewire.log")
-                #:environment-variables
-                (append (list #$disable-rtkit-env-var)
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor)))
-     (shepherd-service
-      (provision '(pipewire-pulse pulseaudio))
-      (requirement '(pipewire pipewire-media-session))
-      (start #~(make-forkexec-constructor
-                (list #$(file-append pipewire "/bin/pipewire-pulse"))
-                #:log-file #$(home-shepherd-service-log-file "pipewire-pulse.log")
-                #:environment-variables
-                (append (list #$disable-rtkit-env-var)
-                        (default-environment-variables))))
-      (stop  #~(make-kill-destructor)))))
-
-   (simple-service
-    'pipewire-add-alsa-config
-    home-xdg-configuration-files-service-type
-    `(("alsa/asoundrc"
-       ,(home-pipewire-asoundrc (home-pipewire-configuration
-                                 (pipewire pipewire))))))
+   (when (and stateless? pipewire-pulse?)
+     (home-stateless-service
+      'pipewire-pulse
+      #:state '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
+                 (#:storage . #:storage/machine)
+                 (#:parent-dir-perms . ((#:mode . #o700)))))))
 
    (when stateless?
      (home-stateless-service
-      'pipewire
-      #:state '(((#:path . ("pulse/cookie" #:xdg-base "XDG_CONFIG_HOME"))
+      'wireplumber
+      #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
                  (#:storage . #:storage/machine)
-                 (#:parent-dir-perms . ((#:mode . #o700)))))))))
-
-(define disable-rtkit-env-var
-  "DISABLE_RTKIT=1")
-#+end_src
-******* Wireplumber
-Seatd not (yet?) supported. At the time of this writing this only prevents bluetooth seat monitoring. See:
-- [[https://pipewire.pages.freedesktop.org/wireplumber/daemon/configuration/features.html][Well-known features — WirePlumber documentation]]
-- [[https://gitlab.freedesktop.org/pipewire/wireplumber/-/issues/208][Add support for seatd as an alternative to systemd|elogind? (#208) · Issues ·...]]
-#+begin_src scheme
-(define* (wireplumber-services #:key
-                               stateless?
-                               seat-manager)
-  (let ((wireplumber (case seat-manager
-                       ((#:seats/elogind) wireplumber)
-                       ((#:seats/seatd) wireplumber-no-logind))))
-    (list
-     (simple-service
-      'wireplumber-add-packages
-      home-profile-service-type
-      (list wireplumber))
-
-     (simple-service
-      'wireplumber-add-shepherd-daemon
-      home-shepherd-service-type
-      (list
-       (shepherd-service
-        (provision '(wireplumber pipewire-media-session))
-        (requirement '(pipewire))
-        (start #~(make-forkexec-constructor
-                  (list #$(file-append wireplumber "/bin/wireplumber"))
-                  #:log-file #$(home-shepherd-service-log-file "wireplumber.log")
-                  #:environment-variables
-                  (append (list #$disable-rtkit-env-var)
-                          (default-environment-variables))))
-        (stop  #~(make-kill-destructor)))))
-
-     (when stateless?
-       (home-stateless-service
-        'wireplumber
-        #:state '(((#:path . ("wireplumber/" #:xdg-base "XDG_STATE_HOME"))
-                   (#:storage . #:storage/machine)
-                   (#:mode . #o700))))))))
+                 (#:mode . #o700)))))))
 #+end_src
 ***** Colors
 #+begin_src scheme
