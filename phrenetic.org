@@ -5322,19 +5322,16 @@ nix-channel --update
 #+begin_src scheme
 (define* (pipewire-media #:key
                          stateless?
-                         dbus?
                          seat-manager
                          pipewire)
   (append
    (pipewire-services #:stateless? stateless?
-                      #:dbus? dbus?
                       #:pipewire pipewire)
    (wireplumber-services #:stateless? stateless?
                          #:seat-manager seat-manager)))
 
 (define* (pipewire-services #:key
                             stateless?
-                            dbus?
                             pipewire)
   (list
    (simple-service
@@ -5348,8 +5345,7 @@ nix-channel --update
     (list
      (shepherd-service
       (provision '(pipewire))
-      (requirement (if dbus?
-                       '(dbus) '()))
+      (requirement '(dbus))
       (start #~(make-forkexec-constructor
                 (list #$(file-append pipewire "/bin/pipewire"))
                 #:log-file #$(home-shepherd-service-log-file "pipewire.log")
@@ -8114,25 +8110,22 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
            '())
        '())
    (if desktop?
-       (let ((dbus? (not login-manager)))
-         (append
-          (if pipewire?
-              (pipewire-media #:stateless? stateless?
-                              #:dbus? dbus?
-                              #:seat-manager seat-manager
-                              #:pipewire pipewire)
-              '())
-          (if dbus?
-              (dbus-ipc) '())
-          (if login-manager
-              (case login-manager
-                ((#:lm/gdm) (gdm #:stateless? stateless?)))
-              (desktop-tty #:sessions sessions
-                           #:start-cmds desktop-tty-start-cmds))
-          (if (member #:session/gnome (or sessions '()))
-              (gnome-desktop #:stateless? stateless?) '())
-          (if (member #:session/sway (or sessions '()))
-              sway-environment '())))
+       (append
+        (if pipewire?
+            (pipewire-media #:stateless? stateless?
+                            #:seat-manager seat-manager
+                            #:pipewire pipewire)
+            '())
+        (dbus-ipc)
+        (if login-manager
+            (case login-manager
+              ((#:lm/gdm) (gdm #:stateless? stateless?)))
+            (desktop-tty #:sessions sessions
+                         #:start-cmds desktop-tty-start-cmds))
+        (if (member #:session/gnome (or sessions '()))
+            (gnome-desktop #:stateless? stateless?) '())
+        (if (member #:session/sway (or sessions '()))
+            sway-environment '()))
        '())
    (if virtualization?
        (virtualization) '())))
