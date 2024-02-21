@@ -1736,7 +1736,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
-  #:use-module ((gnu packages java) #:select (openjdk17))
+  #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber-no-logind))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select ((node-lts . node)))
@@ -6903,7 +6903,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                        stateless?
                        doom?
                        doom-tree-sitter?
-                       (jdk (list openjdk17 "jdk"))) ; Newest LTS release.
+                       (jdk (list openjdk-lts "jdk")))
   (append
    (list
     (simple-service
