@@ -211,7 +211,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages gnome) #:select (network-manager-no-logind))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
-  #:use-module ((gnu packages linux) #:select (alsa-utils brightnessctl crda customize-linux e2fsprogs fuse kbd linux-libre lvm2 ntfs-3g pipewire util-linux))
+  #:use-module ((gnu packages linux) #:select (brightnessctl crda customize-linux e2fsprogs kbd linux-libre ntfs-3g pipewire util-linux))
   #:use-module ((gnu packages nfs) #:select (nfs-utils))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects))
@@ -324,9 +324,7 @@ Run with ~sudo~.
           (service urandom-seed-service-type)
           (service nscd-service-type)
           (service rottlog-service-type)
-          (service udev-service-type
-                   (udev-configuration
-                    (rules (list lvm2 fuse alsa-utils crda))))
+          (service udev-service-type)
           (service sysctl-service-type)
           (service special-files-service-type
                    `(("/bin/sh" ,(file-append bash "/bin/sh"))
@@ -576,7 +574,7 @@ Run with ~sudo~.
           (service polkit-service-type)
           (service dbus-root-service-type)
           (service ntp-service-type)
-          (service x11-socket-directory-service-type))
+          (service x11-socket-directory-service-type)) ; TODO Gate this, only necessary for wayland with xwayland. In fact, determine if it's necessary at all or, ideally, if something equivalent can be done at the user level.
     (if stateless?
         (list
          (stateless-service
@@ -649,14 +647,18 @@ Run with ~sudo~.
 ****** Shared
 #+begin_src scheme
 (define* (wireless-services #:key wireless)
-  (case wireless
-    ((#:wireless/wpa-supplicant) (list
-                                  (service wpa-supplicant-service-type)))
-    ((#:wireless/iwd) (list
-                       (service iwd-service-type
-                                (iwd-configuration
-                                 (main-conf
-                                  '((Settings ((AutoConnect . #t)))))))))))
+  (append
+   (case wireless
+     ((#:wireless/wpa-supplicant) (list
+                                   (service wpa-supplicant-service-type)))
+     ((#:wireless/iwd) (list
+                        (service iwd-service-type
+                                 (iwd-configuration
+                                  (main-conf
+                                   '((Settings ((AutoConnect . #t))))))))))
+   (list
+    (udev-rules-service 'crda-add-udev-rules
+                        crda))))
 
 (define (modem-services)
   (list (service modem-manager-service-type)
