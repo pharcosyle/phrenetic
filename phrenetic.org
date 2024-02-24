@@ -5412,6 +5412,8 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
       #:state '(((#:path . ("fontconfig/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 
+;; TODO Probably give up on fonts stuff and get rid of all of this code? If not there's some useful fonts conf examples at https://gitlab.archlinux.org/archlinux/packaging/packages/noto-fonts and less useful, more complex, ones in the google noto fedora package
+;; TODO do I not have a font for chinese/japanese/korean installed? I don't remember if Apple fonts cover it and I don't see a file with CJK in the name in the google-noto fonts package. Installing noto-cjk is an option.
 (define (add-fontconfig-config font-sans font-serif font-mono dirs)
   `(("fontconfig/fonts.conf"
      ,(apply mixed-text-file
@@ -5451,7 +5453,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                             (#:font/package . ,font-gnu-unifont)))
     (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
     (#:fonts/google-noto-emoji . ((#:font/name . "Noto Emoji")
-                                  (#:font/package . ,font-google-noto)))))
+                                  (#:font/package . ,font-google-noto-emoji)))))
 #+end_src
 ***** Date/time formats
 #+begin_src scheme
