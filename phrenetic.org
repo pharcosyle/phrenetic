@@ -8092,7 +8092,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            (menu (if doom-ui?
                                      (doom-menu (assoc-ref emacs-interface #:emacs/handler))
                                      (rofi-menu #:wayland? #t)))
-                           (applets '(#:applet/connection-manager
+                           (applets '(;; #:applet/connection-manager
                                       ;; #:applet/color-temperature
                                       ;; #:applet/auto-mounter
                                       )))
