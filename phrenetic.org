@@ -1723,7 +1723,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
-  #:use-module ((gnu packages fontutils) #:select (fontmanager))
+  #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
@@ -7437,7 +7437,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     (simple-service
      'font-manager-add-packages
      home-profile-service-type
-     (list fontmanager))
+     (list fontmanager-no-googlefonts))
 
     (when stateless?
       (home-stateless-service
