@@ -399,8 +399,7 @@ Run with ~sudo~.
    (name name)
    (comment (or comment ""))
    (group "users")
-   (supplementary-groups (append '("netdev" "audio" "video")
-                                 (if admin? '("wheel") '())))
+   (supplementary-groups (if admin? '("wheel") '()))
    (shell (case shell
             ((#:shell/bash) (file-append bash "/bin/bash"))
             ((#:shell/zsh) (file-append zsh "/bin/zsh"))))))
