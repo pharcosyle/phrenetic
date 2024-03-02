@@ -1740,7 +1740,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
   #:use-module ((gnu packages python-web) #:select (awscli-2))
-  #:use-module ((gnu packages qt) #:select (qtwayland-5))
+  #:use-module ((gnu packages qt) #:select (qtwayland qtwayland-5))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages shellutils) #:select (direnv))
   #:use-module ((gnu packages terminals) #:select (alacritty))
@@ -5626,8 +5626,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
      'sway-add-packages
      home-profile-service-type
      (list (sway-start-package #:sway sway
-                               #:pipewire? pipewire?)
-           qtwayland-5)) ; Copied from RDE. I don't know what this is for. It seems like a build, not runtime, dependency; however, before moving this package to the Sway config Andrew Tropin had it in home-services/gnupg.scm I think because it's necessary for `pinentry-qt'. Also, the Sway wiki says "To enable Wayland support, you might need a package, such as qtwayland5..." (see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-wayland#qt5).
+                               #:pipewire? pipewire?)))
 
     (service
      home-sway-service-type
@@ -7915,8 +7914,19 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 #+end_src
 ****** Qt
 #+begin_src scheme
-(define* (qt-services #:key stateless?)
+(define* (qt-services #:key
+                      stateless?
+                      wayland?)
   (list
+   (simple-service
+    'qt-add-packages
+    home-profile-service-type
+    (if wayland?
+        ;; Don't install qtwayland 6 for now since Guix doesn't allow multiple versions of a package in a profile (see https://issues.guix.gnu.org/65508). This is fine for the time being since most QT apps, at least in Guix, use QT 5.
+        (list ;; qtwayland
+              qtwayland-5)
+        '()))
+
    (when stateless?
      (home-stateless-service
       'qt
@@ -8246,7 +8256,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            #:font font-variable-pitch
                            #:font-monospace font-mono
                            #:font-size base-font-size))
-        ;; (qt (qt-services #:stateless? stateless?))
+        ;; (qt (qt-services #:stateless? stateless?
+        ;;                  #:wayland? wayland?))
         )
     (append
      (pavucontrol-app #:stateless? stateless?
