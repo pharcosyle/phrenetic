@@ -815,6 +815,7 @@ Run with ~sudo~.
 ******* Sway
 #+begin_src scheme
 (define-system-comp (sway-wm #:key
+                             users
                              swaylock-effects?
                              swaylock
                              swaylock-effects)
@@ -822,8 +823,8 @@ Run with ~sudo~.
    (append (operating-system-user-services os)
            (list (swaylock-service #:effects? swaylock-effects?
                                    #:swaylock swaylock
-                                   #:swaylock-effects swaylock-effects)
-                 (brightnessctl-service)))))
+                                   #:swaylock-effects swaylock-effects))
+           (brightnessctl-services #:users users))))
 #+end_src
 ******* Pieces
 ******** Screen lockers
@@ -847,8 +848,12 @@ Run with ~sudo~.
 ********* Backlights
 ********** Brightnessctl
 #+begin_src scheme
-(define (brightnessctl-service)
-  (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl))
+(define* (brightnessctl-services #:key users)
+  (list
+   (simple-service 'brightnessctl-users-add-groups
+                   accounts-service-type
+                   (cons users '("video" "input")))
+   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl)))
 #+end_src
 **** Host-specific
 ***** Host
@@ -1645,6 +1650,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   sessions-swaylock-effects?
                   sessions-swaylock
                   sessions-swaylock-effects
+                  sway-users
                   stateless?)
   (as-> os $
     (base-services $ #:stateless? stateless?)
@@ -1697,7 +1703,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
           (if (member #:session/gnome (or sessions '()))
               (gnome-desktop $) $)
           (if (member #:session/sway (or sessions '()))
-              (sway-wm $ #:swaylock-effects? sessions-swaylock-effects?
+              (sway-wm $ #:users sway-users
+                       #:swaylock-effects? sessions-swaylock-effects?
                        #:swaylock sessions-swaylock
                        #:swaylock-effects sessions-swaylock-effects)
               $))
@@ -9713,6 +9720,10 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                      guest-he-sessions)
                                (apply append)
                                delete-duplicates)
+               #:sway-users (session-users #:session/sway
+                                           `((,primary-name . ,primary-he-sessions)
+                                             (,aux-name . ,aux-he-sessions)
+                                             (,guest-name . ,guest-he-sessions)))
                #:stateless? stateless?)
       (host-info $ #:host-name "frostfire"
                  #:timezone "America/Los_Angeles")
@@ -9773,6 +9784,13 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 (define (feature-users flags)
   (->> flags
        (filter (match-lambda ((_ . enable?) enable?)))
+       (map (match-lambda ((user . _) user)))))
+
+(define (session-users session user-sessions)
+  (->> user-sessions
+       (filter (match-lambda
+                 ((_ . sessions)
+                  (member session sessions))))
        (map (match-lambda ((user . _) user)))))
 
 
