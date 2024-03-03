@@ -536,11 +536,14 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (list
-     (simple-service 'kmonad-users-add-groups
-                     accounts-service-type
-                     (cons users '("input")))
-     (udev-rules-service 'kmonad-add-udev-rules kmonad)))))
+    (let ((groups '("input")))
+      (list
+       (simple-service 'kmonad-users-add-groups
+                       accounts-service-type
+                       (cons users groups))
+       (udev-rules-service 'kmonad-add-udev-rules
+                           kmonad
+                           #:groups groups))))))
 #+end_src
 **** Desktop
 ***** Base services
@@ -849,11 +852,14 @@ Run with ~sudo~.
 ********** Brightnessctl
 #+begin_src scheme
 (define* (brightnessctl-services #:key users)
-  (list
-   (simple-service 'brightnessctl-users-add-groups
-                   accounts-service-type
-                   (cons users '("video" "input")))
-   (udev-rules-service 'brightnessctl-add-udev-rules brightnessctl)))
+  (let ((groups '("video" "input")))
+    (list
+     (simple-service 'brightnessctl-users-add-groups
+                     accounts-service-type
+                     (cons users groups))
+     (udev-rules-service 'brightnessctl-add-udev-rules
+                         brightnessctl
+                         #:groups groups))))
 #+end_src
 **** Host-specific
 ***** Host
