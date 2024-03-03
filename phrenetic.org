@@ -548,7 +548,9 @@ Run with ~sudo~.
 **** Desktop
 ***** Base services
 #+begin_src scheme
-(define-system-comp (desktop-base-services #:key stateless?)
+(define-system-comp (desktop-base-services #:key
+                                           avahi-users
+                                           stateless?)
   (services
    (append
     (operating-system-user-services os)
@@ -562,7 +564,6 @@ Run with ~sudo~.
                                (list (file-append nfs-utils "/sbin/mount.nfs")
                                      (file-append ntfs-3g "/sbin/mount.ntfs-3g"))))
           fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
-          (service avahi-service-type)
           (service udisks-service-type)
           (service upower-service-type)
           (service accountsservice-service-type)
@@ -573,6 +574,7 @@ Run with ~sudo~.
           (service dbus-root-service-type)
           (service ntp-service-type)
           (service x11-socket-directory-service-type)) ; TODO Gate this, only necessary for wayland with xwayland. In fact, determine if it's necessary at all or, ideally, if something equivalent can be done at the user level.
+    (avahi-services #:users avahi-users)
     (if stateless?
         (list
          (stateless-service
@@ -591,6 +593,13 @@ Run with ~sudo~.
           #:ignore `(((#:path . ,(string-append (file-system-mount-point %fontconfig-file-system) "/"))
                       (#:preds . ((#:empty-dir)))))))
         '()))))
+
+(define* (avahi-services #:key users)
+  (list
+   (service avahi-service-type)
+   (simple-service 'avahi-users-add-groups
+                   accounts-service-type
+                   (cons users '("netdev")))))
 #+end_src
 ***** Media
 ****** Classic
@@ -615,6 +624,7 @@ Run with ~sudo~.
 #+begin_src scheme
 (define-system-comp (network-manager #:key
                                      (wireless #:wireless/iwd)
+                                     wireless-users
                                      stateless?)
   (services
    (append
@@ -630,6 +640,7 @@ Run with ~sudo~.
                                          '())))))
     (if wireless
         (wireless-services #:wireless wireless
+                           #:users wireless-users
                            #:stateless? stateless?)
         '())
     (modem-services)
@@ -648,25 +659,39 @@ Run with ~sudo~.
 #+begin_src scheme
 (define* (wireless-services #:key
                             wireless
+                            users
                             stateless?)
   (append
    (case wireless
      ((#:wireless/wpa-supplicant) (list
                                    (service wpa-supplicant-service-type)))
-     ((#:wireless/iwd) (list
-                        (service iwd-service-type
-                                 (iwd-configuration
-                                  (main-conf
-                                   '((Settings ((AutoConnect . #t)))))))
-                        (when stateless?
-                          (stateless-service
-                           'iwd
-                           #:state '(((#:path . "/var/lib/iwd")
-                                      (#:storage . #:storage/machine)
-                                      (#:mode . #o700))))))))
+     ((#:wireless/iwd) (iwd-services #:users users
+                                     #:stateless? stateless?)))
    (list
     (udev-rules-service 'crda-add-udev-rules
                         crda))))
+
+(define* (iwd-services #:key
+                       users
+                       stateless?)
+  (append
+   (list
+    (service iwd-service-type
+             (iwd-configuration
+              (main-conf
+               '((Settings ((AutoConnect . #t)))))
+              (users-group group)))
+    (simple-service 'iwd-users-add-groups
+                    accounts-service-type
+                    (cons users '("netdev"))))
+   (if stateless?
+       (list
+        (stateless-service
+         'iwd
+         #:state '(((#:path . "/var/lib/iwd")
+                    (#:storage . #:storage/machine)
+                    (#:mode . #o700)))))
+       '())))
 
 (define (modem-services)
   (list (service modem-manager-service-type)
@@ -1642,9 +1667,11 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   kmonad-users
                   kmonad
                   desktop?
+                  avahi-users
                   media
                   media-pipewire
                   connection-manager
+                  wireless-users
                   bluetooth?
                   bluetooth-users
                   login-manager
@@ -1679,7 +1706,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
         $)
     (if desktop?
         (as-> $ $
-          (desktop-base-services $ #:stateless? stateless?)
+          (desktop-base-services $ #:avahi-users avahi-users
+                                 #:stateless? stateless?)
           (if media
               (case media
                 ((#:media/classic) (classic-media $))
@@ -1687,7 +1715,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
               $)
           (if connection-manager
               (case connection-manager
-                ((#:cm/network-manager) (network-manager $ #:stateless? stateless?)))
+                ((#:cm/network-manager) (network-manager $ #:wireless-users wireless-users
+                                                         #:stateless? stateless?)))
               $)
           (if bluetooth?
               (bluetooth $ #:users bluetooth-users
@@ -9712,6 +9741,12 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                #:kmonad-users (feature-users `((,primary-name . ,primary-he-kmonad?)
                                                (,aux-name . ,aux-he-kmonad?)
                                                (,guest-name . ,guest-he-kmonad?)))
+               #:avahi-users (list primary-name
+                                   aux-name
+                                   guest-name)
+               #:wireless-users (list primary-name
+                                      aux-name
+                                      guest-name)
                ;; #:bluetooth? bluetooth?
                ;; #:bluetooth-users (list primary-name
                ;;                         aux-name
