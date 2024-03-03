@@ -595,11 +595,17 @@ Run with ~sudo~.
         '()))))
 
 (define* (avahi-services #:key users)
-  (list
-   (service avahi-service-type)
-   (simple-service 'avahi-users-add-groups
-                   accounts-service-type
-                   (cons users '("netdev")))))
+  (let ((group "avahi-users"))
+    (list
+     (service avahi-service-type
+              (avahi-configuration
+               (dbus-privileged-group group)))
+     (simple-service 'avahi-groups
+                     account-service-type
+                     (list (user-group (name group) (system? #t))))
+     (simple-service 'avahi-users-add-groups
+                     accounts-service-type
+                     (cons users (list group))))))
 #+end_src
 ***** Media
 ****** Classic
@@ -675,15 +681,19 @@ Run with ~sudo~.
                        users
                        stateless?)
   (append
-   (list
-    (service iwd-service-type
-             (iwd-configuration
-              (main-conf
-               '((Settings ((AutoConnect . #t)))))
-              (users-group group)))
-    (simple-service 'iwd-users-add-groups
-                    accounts-service-type
-                    (cons users '("netdev"))))
+   (let ((group "iwd-users"))
+     (list
+      (service iwd-service-type
+               (iwd-configuration
+                (main-conf
+                 '((Settings ((AutoConnect . #t)))))
+                (dbus-users-group group)))
+      (simple-service 'iwd-groups
+                      account-service-type
+                      (list (user-group (name group) (system? #t))))
+      (simple-service 'iwd-users-add-groups
+                      accounts-service-type
+                      (cons users (list group)))))
    (if stateless?
        (list
         (stateless-service
