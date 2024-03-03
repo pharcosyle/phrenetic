@@ -537,7 +537,7 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list
-     (simple-service 'kmonad-users-add-input-group
+     (simple-service 'kmonad-users-add-groups
                      accounts-service-type
                      (cons users '("input")))
      (udev-rules-service 'kmonad-add-udev-rules kmonad)))))
@@ -678,7 +678,7 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list
-     (simple-service 'bluetooth-users-add-lp-group
+     (simple-service 'bluetooth-users-add-groups
                      accounts-service-type
                      (cons users '("lp")))
      (service bluetooth-service-type
@@ -713,7 +713,7 @@ Run with ~sudo~.
                 (seatd-configuration
                  (seatd seatd-no-logind)
                  (group group)))
-       (simple-service 'seatd-users-add-socket-group
+       (simple-service 'seatd-users-add-groups
                        accounts-service-type
                        (cons users (list group))))))))
 #+end_src
@@ -1572,7 +1572,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
     (operating-system-user-services os)
     (if kvm-support?
         (list
-         (simple-service 'virtualization-users-add-kvm-group
+         (simple-service 'virtualization-users-add-groups
                          accounts-service-type
                          (cons kvm-users '("kvm"))))
         '())
