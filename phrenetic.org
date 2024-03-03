@@ -626,7 +626,9 @@ Run with ~sudo~.
                                            ((#:wireless/iwd) '(iwd)))
                                          '())))))
     (if wireless
-        (wireless-services #:wireless wireless) '())
+        (wireless-services #:wireless wireless
+                           #:stateless? stateless?)
+        '())
     (modem-services)
     (if stateless?
         (list
@@ -641,7 +643,9 @@ Run with ~sudo~.
 #+end_src
 ****** Shared
 #+begin_src scheme
-(define* (wireless-services #:key wireless)
+(define* (wireless-services #:key
+                            wireless
+                            stateless?)
   (append
    (case wireless
      ((#:wireless/wpa-supplicant) (list
@@ -650,7 +654,13 @@ Run with ~sudo~.
                         (service iwd-service-type
                                  (iwd-configuration
                                   (main-conf
-                                   '((Settings ((AutoConnect . #t))))))))))
+                                   '((Settings ((AutoConnect . #t)))))))
+                        (when stateless?
+                          (stateless-service
+                           'iwd
+                           #:state '(((#:path . "/var/lib/iwd")
+                                      (#:storage . #:storage/machine)
+                                      (#:mode . #o700))))))))
    (list
     (udev-rules-service 'crda-add-udev-rules
                         crda))))
