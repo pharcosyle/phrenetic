@@ -6961,8 +6961,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                               (-lambda ((sym f))
                                        (put sym 'safe-local-variable f)))
                        :config
-                       (setq cider-repl-history-size ,very-big-history
-                             cider-print-options '(("length" 100)))) ; TODO Upstream this fix. Also re-evaluate if it's necessary?
+                       (setq cider-repl-history-size ,very-big-history))
 
          ;; REVIEW make sure this is still working after nesting in `after!'
          (after! cider-repl
