@@ -536,7 +536,7 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (let ((groups '("input")))
+    (let ((groups '("uinput" "input")))
       (list
        (simple-service 'kmonad-users-add-groups
                        accounts-service-type
@@ -887,7 +887,8 @@ Run with ~sudo~.
 ********** Brightnessctl
 #+begin_src scheme
 (define* (brightnessctl-services #:key users)
-  (let ((groups '("video" "input")))
+  (let ((groups '("backlight-brightness"
+                  "leds-brightness")))
     (list
      (simple-service 'brightnessctl-users-add-groups
                      accounts-service-type
