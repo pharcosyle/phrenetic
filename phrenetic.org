@@ -1782,7 +1782,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages clojure) #:select (clojure-tools))
   #:use-module ((gnu packages curl) #:select (curl))
-  #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-no-logind emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
@@ -2390,9 +2390,9 @@ SAVEHIST=$HISTSIZE
                     wayland?
                     emacs
                     emacs-pgtk)
-  (if wayland?
-      emacs-pgtk
-      emacs))
+  (emacs-no-logind (if wayland?
+                       emacs-pgtk
+                       emacs)))
 #+end_src
 ***** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
