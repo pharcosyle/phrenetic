@@ -7925,7 +7925,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
           hicolor-icon-theme ; Andrew Tropin indicates (in abcdw/rde@3a8ea85f) that this is needed for network manager applet icons.
           adwaita-icon-theme
           ;; papirus-icon-theme ; TODO Remove for now, it massively increases guix build time. Why? Update: the situation may be better now: https://github.com/guix-mirror/guix/commit/aed385e18ec7b68a0bc1bb4b173aeadc9cd97245
-          gnome-themes-extra))
+          ;; gnome-themes-extra ; TODO Remove for now so I can avoid building its GTK 2 dependency.
+          ))
 
    (simple-service
     'gtk-settings-and-dconf
