@@ -206,7 +206,6 @@ Run with ~sudo~.
   #:use-module ((gnu packages admin) #:select (seatd-no-logind))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
-  #:use-module ((gnu packages certs) #:select (nss-certs))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages gnome) #:select (network-manager-no-logind))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
@@ -248,7 +247,6 @@ Run with ~sudo~.
             base-services
             classic-login
             greetd-login
-            certs
             accounts
             guix-pm
             public-key-serialize
@@ -372,13 +370,6 @@ Run with ~sudo~.
                              (terminal-vt (number->string n))))
                           (iota number-of-ttys 1)))))
           (operating-system-user-services os))))
-#+end_src
-**** Certificates
-#+begin_src scheme
-(define-system-comp (certs)
-  (packages
-   (cons* nss-certs
-          (operating-system-packages os))))
 #+end_src
 **** Accounts
 #+begin_src scheme
@@ -1700,7 +1691,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
     (case login
       ((#:login/classic) (classic-login $ #:number-of-ttys login-number-of-ttys))
       ((#:login/greetd) (greetd-login $ #:number-of-ttys login-number-of-ttys)))
-    (certs $)
     (accounts $ #:who who)
     (if (member #:pm/guix (or package-managers '()))
         (guix-pm $ #:authorized-keys guix-authorized-keys
