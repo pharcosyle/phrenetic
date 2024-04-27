@@ -5464,6 +5464,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 
 ;; TODO Probably give up on fonts stuff and get rid of all of this code? If not there's some useful fonts conf examples at https://gitlab.archlinux.org/archlinux/packaging/packages/noto-fonts and less useful, more complex, ones in the google noto fedora package
 ;; TODO do I not have a font for chinese/japanese/korean installed? I don't remember if Apple fonts cover it and I don't see a file with CJK in the name in the google-noto fonts package. Installing noto-cjk is an option.
+;; TODO [2024-05-26 Sun] There's presets in the fontconfig package, share/fontconfig/conf.avail and etc/fonts/conf.d. Consider them?
 (define (add-fontconfig-config font-sans font-serif font-mono dirs)
   `(("fontconfig/fonts.conf"
      ,(apply mixed-text-file
@@ -5677,6 +5678,9 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
     (simple-service
      'sway-add-packages
      home-profile-service-type
+     ;; TODO [2024-06-16 Sun] RDE added `dconf' here because "It's needed to persist setting for gtk apps.", see https://github.com/abcdw/rde/commit/13c528ad6e2602284a77ab141391be0573778297
+     ;; - does it belong here or in gtk-services?
+     ;;   Possibly Andrew Tropin would have put it in his home-gtk3-service-type or feature-gtk3 if it weren't sway or wayland-specific
      (list (sway-start-package #:sway sway
                                #:pipewire? pipewire?)))
 
@@ -6203,6 +6207,11 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 #+end_src
 ******** Status bars
 ********* Waybar
+- TODO [2023-12-16 Sat] waybar updated
+  I was using 0.9.17, blind-updated to the newest in Guix at this time (0.9.20), and now it's at 0.9.24. So update to 0.9.24 and probably review all the changes since 0.9.17.
+  - there's also ~waybar-experimental~ now
+    I think I looked at it and decided I didn't want it. Though there might be new experimental features now.
+  - maybe check out the Nix package
 #+begin_src scheme
 (define* (waybar-wm-piece #:key
                           bars
@@ -6427,6 +6436,7 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug.
 - [2023-02-18 Sat] I've upgraded to a new Waybar version (0.9.17) with some battery improvements that may fix this, wait and watch.
 - [2023-03-02 Thu] It doesn't seem to be helping, full battery reports as ~50%.
+- [2024-05-17 Fri] Maybe it's fixed in 0.9.18?: [[https://github.com/Alexays/Waybar/pull/1937/commits/120cba0f5e897d85cf634400442db5e083408fd2][Alexays/Waybar#1937 fix: battery time remaining by cyrinux]]
 *********** Clock
 #+begin_src scheme
 (define* (waybar-clock bar-id
@@ -7752,6 +7762,10 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
    (or qt-services '())))
 #+end_src
 ******* Shared
+- TODO chromium-wrapper
+  - "Not done yet" bit at the bottom.
+  - [2024-06-16 Sun] an alternative to consider: =chromium-flags.conf= / =chrome-flags.conf=
+    See [[https://wiki.archlinux.org/title/chromium][Chromium - ArchWiki (2.3 Making flags persistent)]].
 #+begin_src scheme
 (define (chromium-wrapper package wayland? pipewire? theme)
   ;; (let ((flags (append
@@ -10034,6 +10048,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                aux-he
                guest-he))
 #+end_src
+- [2024-04-27 Sat] TODO: consider [[https://git.savannah.gnu.org/cgit/guix.git/commit/?id=be14d41d9be3ef91d11ab24780855682c432cac9][new ~guix-for-channels~ procedure]]
 **** Channels
 #+begin_src scheme :tangle (meta-in-dir "frostfire-channels")
 ;; TODO Do local channels better.
