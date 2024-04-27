@@ -210,7 +210,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages gnome) #:select (network-manager-no-logind))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
-  #:use-module ((gnu packages linux) #:select (brightnessctl crda customize-linux e2fsprogs kbd linux-libre ntfs-3g pipewire util-linux))
+  #:use-module ((gnu packages linux) #:select (brightnessctl crda customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
   #:use-module ((gnu packages nfs) #:select (nfs-utils))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages wm) #:select (swaylock swaylock-effects))
@@ -547,12 +547,9 @@ Run with ~sudo~.
     (list (simple-service 'mtp udev-service-type (list libmtp))
           (service sane-service-type)
           polkit-wheel-service
-          (simple-service 'mount-setuid-helpers setuid-program-service-type
-                          (map (lambda (program)
-                                 (setuid-program
-                                  (program program)))
-                               (list (file-append nfs-utils "/sbin/mount.nfs")
-                                     (file-append ntfs-3g "/sbin/mount.ntfs-3g"))))
+          (simple-service 'nfs-mount-setuid setuid-program-service-type
+                          (list (setuid-program
+                                 (program (file-append nfs-utils "/sbin/mount.nfs")))))
           fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
           (service udisks-service-type)
           (service upower-service-type)
