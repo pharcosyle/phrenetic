@@ -6771,7 +6771,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                         (list
                          "exec" #$session-cmd #$@(or session-args '()) "$@"
                          (string-join
-                          (list ">"
+                          (list ">>"
                                 (string-append
                                  "$" #$(assoc-ref log-home #:xdg-base) "/" #$(assoc-ref log-home #:path) "/" #$log-file)))
                          "2>&1"))))))
