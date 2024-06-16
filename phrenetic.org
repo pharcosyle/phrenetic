@@ -7728,6 +7728,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 #+begin_src scheme
 (define* (ungoogled-chromium-app #:key
                                  stateless?
+                                 toolkits
                                  wayland?
                                  pipewire?
                                  theme
@@ -7739,6 +7740,7 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
     (simple-service
      'ungoogled-chromium-add-packages
      home-profile-service-type
+     ;; At the time of writing, ungoogled-chromium doesn't offer GTK 4 or QT 6 so just ignore the toolkits option.
      (list (chromium-wrapper ungoogled-chromium wayland? pipewire? theme)
            ublock-origin/chromium))
 
@@ -7765,8 +7767,11 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
   - [2024-06-16 Sun] an alternative to consider: =chromium-flags.conf= / =chrome-flags.conf=
     See [[https://wiki.archlinux.org/title/chromium][Chromium - ArchWiki (2.3 Making flags persistent)]].
 #+begin_src scheme
-(define (chromium-wrapper package wayland? pipewire? theme)
+(define* (chromium-wrapper package wayland? pipewire? theme
+                           #:key gtk4?)
   ;; (let ((flags (append
+  ;;               (if gtk4?
+  ;;                   '((#:switches . '("--gtk-version=4"))) '())
   ;;               (if wayland?
   ;;                   '((#:switches . '("--ozone-platform-hint=auto"))) '())
   ;;               (if pipewire?
@@ -7795,7 +7800,8 @@ PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 ******** Setup instructions
 It might be possible to configure some of these in a file (perhaps =master-preferences.json=, changing which would require modifying and thus rebuilding the chromium package). Ungoogled Chromium -specific features might not be configurable the same way as Chromium ones, if at all.
 ********* Chromium
-- Settings > Appearance > Use GTK+ theme
+- Settings > Appearance > Use GTK/QT theme
+  Depending on which toolkit(s) are available and preferred.
 - Settings > On startup, check "Continue where you left off"
 - Right-click on the Bookmarks bar and uncheck "Show bookarks bar"
 ********** Ungoogled Chromium
@@ -8314,7 +8320,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                font-mono
                base-font-size
                wayland?
-               google-chrome)
+               make-google-chrome)
   (let ((gtk (gtk-services #:stateless? stateless?
                            #:theme theme
                            #:font font-variable-pitch
@@ -8349,12 +8355,13 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                          )
          '())
      (google-chrome-app #:stateless? stateless?
+                        #:toolkits '(#:chromium.toolkit/gtk4)
                         #:wayland? wayland?
                         #:pipewire? pipewire?
                         #:theme theme
                         #:gtk-services gtk
                         ;; #:qt-services qt
-                        #:google-chrome google-chrome)
+                        #:make-google-chrome make-google-chrome)
      ;; (firefox-app #:stateless? stateless?
      ;;              #:gtk-services gtk)
      ;; (nyxt-app #:stateless? stateless?
@@ -8412,7 +8419,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     virtualization?
                     email
                     projects
-                    apps-google-chrome)
+                    apps-make-google-chrome)
   (let ((pipewire? (equal? media #:media/pipewire)))
     (let ((he-base
            (lambda ()
@@ -8522,7 +8529,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    #:font-mono font-mono
                    #:base-font-size base-font-size
                    #:wayland? wayland?
-                   #:google-chrome apps-google-chrome))))
+                   #:make-google-chrome apps-make-google-chrome))))
       (append
        (he-base)
        (he-programs)
@@ -9490,7 +9497,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module (gnu home services)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module (gnu services)
-  #:use-module ((nongnu packages chrome) #:select ((google-chrome-stable . google-chrome)))
+  #:use-module ((nongnu packages chrome) #:select ((make-google-chrome-stable . make-google-chrome)))
   #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
   #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols font-microsoft-web-core-fonts))
   #:use-module ((nongnu packages messaging) #:select (zoom))
@@ -9577,6 +9584,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 #+begin_src scheme
 (define* (chromium-app #:key
                        stateless?
+                       toolkits
                        wayland?
                        pipewire?
                        theme
@@ -9590,6 +9598,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     (simple-service
      'chromium-add-packages
      home-profile-service-type
+     ;; Chromium inherits from ungoogled-chromium and at the time of writing, ungoogled-chromium doesn't offer GTK 4 or QT 6 so just ignore the toolkits option.
      (list (chromium-wrapper (if drm?
                                  chromium+drm
                                  chromium)
@@ -9617,18 +9626,28 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 #+begin_src scheme
 (define* (google-chrome-app #:key
                             stateless?
+                            toolkits
                             wayland?
                             pipewire?
                             theme
                             gtk-services
                             qt-services
-                            (google-chrome google-chrome))
+                            (make-google-chrome make-google-chrome))
   (append
    (list
     (simple-service
      'google-chrome-add-packages
      home-profile-service-type
-     (list (chromium-wrapper google-chrome wayland? pipewire? theme)))
+     (list (chromium-wrapper (make-google-chrome
+                              #:toolkits (map (lambda (toolkit)
+                                                (case toolkit
+                                                  ((#:chromium.toolkit/gtk3) 'gtk3)
+                                                  ((#:chromium.toolkit/gtk4) 'gtk4)
+                                                  ((#:chromium.toolkit/qt5) 'qt5)
+                                                  ((#:chromium.toolkit/qt6) 'qt6)))
+                                              toolkits))
+                             wayland? pipewire? theme
+                             #:gtk4? (member #:chromium.toolkit/gtk4 toolkits))))
 
     (when stateless?
       (home-stateless-service
@@ -9951,7 +9970,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
      #:sessions-swayidle ,(@ (gnu packages wm) swayidle-no-logind)
-     #:apps-google-chrome ,(@ (nongnu packages chrome) google-chrome-stable))))
+     #:apps-make-google-chrome ,(@ (nongnu packages chrome) make-google-chrome-stable))))
 
 
 
