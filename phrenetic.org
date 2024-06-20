@@ -1785,7 +1785,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber-no-logind))
   #:use-module ((gnu packages music) #:select (playerctl))
-  #:use-module ((gnu packages node) #:select ((node-lts . node)))
+  #:use-module ((gnu packages node) #:select (node-lts))
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
   #:use-module ((gnu packages python-web) #:select (awscli-2))
@@ -7047,7 +7047,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
     (simple-service
      'node-add-packages
      home-profile-service-type
-     (list node))
+     (list node-lts))
 
     ;; (when stateless?
     ;;   (home-stateless-service
