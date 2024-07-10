@@ -2504,16 +2504,19 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
          #:state '(((#:path . ("doom/straight/" #:xdg-base "XDG_STATE_HOME"))
                     (#:storage . #:storage/machine))
                    ((#:path . ("doom/profile-load.el" #:xdg-base "XDG_STATE_HOME"))
-                    (#:storage . #:storage/machine))
-                   ((#:path . ("doom/profile-load.29.elc" #:xdg-base "XDG_STATE_HOME")) ; TODO use emacs version here? guix.utils.version-major.
                     (#:storage . #:storage/machine))))
         (doom-stateless-service
          'doom
          #:state '(((#:path . ("eln/" #:doom-base #:cache))
                     (#:storage . #:storage/machine))
+                   ;; This is a temp directory for eln compilation and could probably just be ignored and not stored at all but let's be safe.
+                   ((#:path . ("comp/" #:doom-base #:cache))
+                    (#:storage . #:storage/machine))
                    ((#:path . ("profiles.@.el" #:doom-base #:cache))
                     (#:storage . #:storage/machine))
                    ((#:path . ("@/" #:doom-base #:data))
+                    (#:storage . #:storage/machine))
+                   ((#:path . ("sync" #:doom-base #:data))
                     (#:storage . #:storage/machine))
                    ((#:path . ("logs/" #:doom-base #:state))
                     (#:storage . #:storage/machine)))))
@@ -4216,7 +4219,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          doom-dashboard
          (emoji +unicode)
          hl-todo
-         hydra
          indent-guides
          ;; (ligatures +extra)
          modeline
@@ -4253,9 +4255,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          lookup
          (pass +auth)
          pdf
-         prodigy
-         rgb
-         taskrunner)
+         prodigy)
 
         (#:config
          (default +bindings +smartparens)))
@@ -4438,6 +4438,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                      ((#:path . ("scratch/" #:doom-base #:data))
                       (#:storage . #:storage/persist))
 
+                     ((#:path . ("projects" #:doom-base #:data))
+                      (#:storage . #:storage/persist))
                      ((#:path . ("projectile.projects" #:doom-base #:cache))
                       (#:storage . #:storage/persist))
                      ((#:path . ("projectile.cache" #:doom-base #:cache))
@@ -7405,15 +7407,23 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
   (append
    (doom-version-control)
 
-   (list
-    (doom-service
-     'git
-     #:modules '((#:tools
-                  (magit +forge)))
-     #:config
-     '((after! magit
-               (setq git-commit-style-convention-checks '(non-empty-second-line))
-               (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     "))))))
+   (let ((name 'git))
+     (list
+      (doom-service
+       name
+       #:modules '((#:tools
+                    (magit +forge)))
+       #:config
+       '((after! magit
+                 (setq git-commit-style-convention-checks '(non-empty-second-line))
+                 (setq magit-revision-show-gravatars '("^Author:     " . "^Commit:     ")))))
+
+      (when stateless?
+        (doom-stateless-service
+         name
+         #:state '(((#:path . ("forge/forge-database.sqlite" #:doom-base #:data))
+                    ;; TODO Not sure this should necessarily be :persist and not :machine, can't be bothered to figure it out right now so let's be safe.
+                    (#:storage . #:storage/persist)))))))
 
    (doom-transient #:stateless? stateless?)))
 #+end_src
@@ -7426,7 +7436,7 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     #:modules '((#:emacs
                  vc)
                 (#:ui
-                 (vc-gutter +pretty)))))) ; I tried `+diff-hl' but it was kind of buggy so wait on this. See https://github.com/doomemacs/doomemacs/commit/27a448b0.
+                 (vc-gutter +pretty))))))
 #+end_src
 ***** VPN
 ****** Proton VPN CLI
