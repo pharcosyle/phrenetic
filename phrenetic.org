@@ -6668,7 +6668,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
   (let ((cmd (lambda (op)
                (list (file-append brightnessctl "/bin/brightnessctl")
                      "set"
-                     (step-pct step op)))))
+                     (step-pct step op #:suffix)))))
     `((#:backlight/up . ,(cmd #:up))
       (#:backlight/down . ,(cmd #:down)))))
 #+end_src
@@ -6681,9 +6681,9 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
          (source "@DEFAULT_SOURCE@")
          (unmute (list pactl "set-sink-mute" sink "false")))
     `((#:volume/up . ,(list unmute
-                            (list pactl "set-sink-volume" sink (step-pct step #:up))))
+                            (list pactl "set-sink-volume" sink (step-pct step #:up #:prefix))))
       (#:volume/down . ,(list unmute
-                              (list pactl "set-sink-volume" sink (step-pct step #:down))))
+                              (list pactl "set-sink-volume" sink (step-pct step #:down #:prefix))))
       (#:volume/mute-unmute . ,(list pactl "set-sink-mute" sink "toggle"))
       (#:volume/mic-mute-unmute . ,(list pactl "set-source-mute" source "toggle")))))
 #+end_src
@@ -6700,12 +6700,14 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 #+end_src
 ********* Shared
 #+begin_src scheme
-(define (step-pct n op)
-  (string-append (case op
-                   ((#:up) "+")
-                   ((#:down) "-"))
-                 (number->string n)
-                 "%"))
+(define (step-pct n op fix)
+  (let ((percent (string-append (number->string n) "%"))
+        (sign (case op
+                ((#:up) "+")
+                ((#:down) "-"))))
+    (case fix
+      ((#:prefix) (string-append sign percent))
+      ((#:suffix) (string-append percent sign)))))
 #+end_src
 ******** Applets
 ********* Network
