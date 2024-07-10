@@ -4211,7 +4211,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
       name
       #:modules
       `((#:completion
-         (company ,@(if childframe? '(+childframe) '()))
+         (corfu ,@(if icons? '(+icons) '())
+                +orderless
+                +dabbrev)
+         ;; (company ,@(if childframe? '(+childframe) '()))
          (vertico ,@(if icons? '(+icons) '())))
 
         (#:ui
@@ -4472,10 +4475,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
     (map! :leader
           "s-," (lookup-key doom-leader-map (kbd "<")))
 
-    (after! company
-            (map! :map company-active-map
-                  "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
-                  "s-]" #'company-show-location))
+    ;; (after! company
+    ;;         (map! :map company-active-map
+    ;;               "s-[" #'company-show-doc-buffer ; Currently opens Help, it would be better if I made it use Helpful.
+    ;;               "s-]" #'company-show-location))
 
     (after! evil-org
             (map! :map evil-org-mode-map
