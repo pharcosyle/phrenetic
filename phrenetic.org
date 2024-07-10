@@ -723,7 +723,9 @@ Run with ~sudo~.
 #+begin_src scheme
 (define-system-comp (elogind-seats)
   (services
-   (cons* (service elogind-service-type)
+   (cons* (service elogind-service-type
+                   (elogind-configuration
+                    (handle-power-key 'suspend))) ; A better default I think than `poweroff'.
           (operating-system-user-services os))))
 #+end_src
 ****** Seatd
