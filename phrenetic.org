@@ -4265,7 +4265,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (default +bindings +smartparens)))
 
       #:packages
-      '((package! expand-region :pin "9e3f86c02c5e2ab6f0d95da8a34045b54f6166d1")
+      '((package! expand-region :pin "e8f4e0fe9c9a80a6a26e2b438502aba9a799d580")
         (package! tldr :pin "1b09d2032491d3904bd7ee9bf5ba7c7503db6593")
         ;; (package! 0x0 :pin "63cd5eccc85e527f28e1acc89502a53245000428") ; TODO `elisp-serialize' makes the `0x0' into `#{0x0}#'.
 
@@ -4776,7 +4776,7 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
    (doom-service
     'dash
     #:packages
-    '((package! dash :pin "6db80c711ce947f6c6fa11e5c2257fff2c79d139"))
+    '((package! dash :pin "1de9dcb83eacfb162b6d9a118a4770b1281bcd84"))
     #:config
     '((use-package! dash)))))
 #+end_src
@@ -7092,12 +7092,12 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                     (org +journal)))
        #:packages
        (if pretty?
-           '((package! org-modern :pin "418b1adeec936e42abe1e3151633951055909ea4")
+           '((package! org-modern :pin "bf2cec740dcf41fe8b4cc1ecc537c4fc4c7e9403")
              (package! org-modern-indent
                        :recipe (:host github
                                 :repo "jdtsmith/org-modern-indent")
-                       :pin "7c07c47cc5d4dbb29934c10ad39912f858b9e649")
-             (package! org-appear :pin "81eba5d7a5b74cdb1bad091d85667e836f16b997"))
+                       :pin "f2b859bc53107b2a1027b76dbf4aaebf14c03433")
+             (package! org-appear :pin "32ee50f8fdfa449bbc235617549c1bccb503cb09"))
            '())
 
        #:config
@@ -7144,7 +7144,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             (org-mode . org-modern-mode)
                             (org-agenda-finalize . org-modern-agenda)
                             :config
-                            (setq org-modern-star '("◉" "▶" "✸" "○" "▷" "✲" "♠" "♣" "♦" "◉")
+                            (setq org-modern-star 'replace
+                                  org-modern-replace-stars '("◉" "▶" "✸" "○" "▷" "✲" "♠" "♣" "♦" "◉")
                                   org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
                                   org-modern-todo-faces
                                   (-map (-lambda ((kw . face))
@@ -7167,10 +7168,10 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             :hook (org-mode . org-modern-indent-mode)
                             :config
                             ;; Square brackets instead of rounded.
-                            (setq org-modern-indent-begin (propertize "┌" 'face 'org-modern-bracket-line)
-                                  org-modern-indent-end (propertize "└" 'face 'org-modern-bracket-line))
+                            (setq org-modern-indent-begin (propertize "┌" 'face 'org-modern-indent-bracket-line)
+                                  org-modern-indent-end (propertize "└" 'face 'org-modern-indent-bracket-line))
                             ;; TODO These should maybe be in my theme(s).
-                            (custom-set-faces! '(org-modern-bracket-line :inherit org-block-begin-line)
+                            (custom-set-faces! '(org-modern-indent-bracket-line :inherit org-block-begin-line)
                                                '(org-block :background unspecified)))) ; Get rid of any special org block background, we have the block bracket to delineate them. The Doom themes base in particular sets a background.
             '())))
 
