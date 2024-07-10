@@ -203,11 +203,9 @@ Run with ~sudo~.
   #:use-module (gnu bootloader)
   #:use-module (gnu bootloader grub)
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
-  #:use-module ((gnu packages admin) #:select (seatd-no-logind))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
-  #:use-module ((gnu packages gnome) #:select (network-manager-no-logind))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
   #:use-module ((gnu packages linux) #:select (brightnessctl crda customize-linux e2fsprogs kbd linux-libre pipewire util-linux))
@@ -625,7 +623,6 @@ Run with ~sudo~.
     (list
      (service network-manager-service-type
               (network-manager-configuration
-               (network-manager network-manager-no-logind)
                (shepherd-requirement (if wireless
                                          (case wireless
                                            ((#:wireless/wpa-supplicant) '(wpa-supplicant))
@@ -738,7 +735,6 @@ Run with ~sudo~.
       (list
        (service seatd-service-type
                 (seatd-configuration
-                 (seatd seatd-no-logind)
                  (group group)))
        (simple-service 'seatd-users-add-groups
                        accounts-service-type
@@ -1677,7 +1673,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   login-manager
                   auto-login?
                   auto-login-user
-                  seat-manager
+                  (seat-manager #:seats/seatd)
                   seat-users
                   sessions
                   sessions-swaylock-effects?
@@ -1771,7 +1767,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages clojure) #:select (clojure-tools))
   #:use-module ((gnu packages curl) #:select (curl))
-  #:use-module ((gnu packages emacs) #:select (emacs emacs-no-logind emacs-pgtk))
+  #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
@@ -1785,7 +1781,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
-  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber-no-logind))
+  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select (node-lts))
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
@@ -1802,7 +1798,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako sway swayidle-no-logind swaylock swaylock-effects waybar waybar-cpu-histogram))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -2379,9 +2375,9 @@ SAVEHIST=$HISTSIZE
                     wayland?
                     emacs
                     emacs-pgtk)
-  (emacs-no-logind (if wayland?
-                       emacs-pgtk
-                       emacs)))
+  (if wayland?
+      emacs-pgtk
+      emacs))
 #+end_src
 ***** Handler
 A similar package and possibly useful reference: [[https://github.com/alphapapa/yequake][GitHub - alphapapa/yequake: Drop-down Emacs frames, like Yakuake]]
@@ -5369,16 +5365,12 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 #+begin_src scheme
 (define* (pipewire-media #:key
                          stateless?
-                         seat-manager
                          pipewire
                          (pipewire-pulse? #t))
   (list
    (service home-pipewire-service-type
             (home-pipewire-configuration
              (pipewire pipewire)
-             (wireplumber (case seat-manager
-                            ((#:seats/elogind) wireplumber)
-                            ((#:seats/seatd) wireplumber-no-logind)))
              (enable-pulseaudio? pipewire-pulse?)))
 
    (when (and stateless? pipewire-pulse?)
@@ -8096,7 +8088,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                           desktop?
                           pipewire?
                           pipewire
-                          seat-manager
                           login-manager
                           desktop-tty-start-cmds
                           sessions
@@ -8126,7 +8117,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (append
         (if pipewire?
             (pipewire-media #:stateless? stateless?
-                            #:seat-manager seat-manager
                             #:pipewire pipewire)
             '())
         (dbus-ipc)
@@ -8253,18 +8243,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
          (gammastep-wm-applet) '())
      (if (member #:applet/auto-mounter (or applets '()))
          (udiskie-wm-applet) '()))))
-#+end_src
-****** Shared
-#+begin_src scheme
-(use-modules ((gnu packages admin) #:select (libseat-no-logind))
-             ((gnu packages wm) #:select (wlroots)))
-(define wlroots-no-logind
-  (let ((base wlroots))
-    (package
-      (inherit base)
-      (propagated-inputs
-       (modify-inputs (package-propagated-inputs base)
-         (replace "libseat" libseat-no-logind))))))
 #+end_src
 **** Programs
 #+begin_src scheme
@@ -8409,7 +8387,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (base-font-size 10)
                     (portal-services (portal-services #:wayland? wayland?))
                     connection-manager
-                    seat-manager
                     login-manager
                     sessions
                     sessions-inputs
@@ -8426,45 +8403,41 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (let ((he-base
            (lambda ()
              (append
-              (let ((sway (case seat-manager
-                            ((#:seats/elogind) sway)
-                            ((#:seats/seatd) (sway-no-logind sway)))))
-                (system-features #:stateless? stateless?
-                                 #:stateless-storage-paths stateless-storage-paths
-                                 #:login-shell login-shell
-                                 #:doom? doom?
-                                 #:doom-flags doom-flags
-                                 #:package-managers package-managers
-                                 #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
-                                 #:console? console?
-                                 #:kmonad? kmonad?
-                                 #:kmonad kmonad
-                                 #:desktop? desktop?
-                                 #:pipewire? pipewire?
-                                 #:pipewire media-pipewire
-                                 #:seat-manager seat-manager
-                                 #:login-manager login-manager
-                                 #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                            (#:session/sway . ,(sway-start #:sway sway
-                                                                                           #:pipewire? pipewire?)))
-                                 #:sessions sessions
-                                 #:sway-environment (sway-environment #:sway sway
-                                                                      #:pipewire? pipewire?
-                                                                      #:connection-manager connection-manager
-                                                                      #:doom? doom?
-                                                                      #:doom-ui? doom-ui?
-                                                                      #:inputs sessions-inputs
-                                                                      #:outputs sessions-outputs
-                                                                      #:portal-services portal-services
-                                                                      #:colors colors
-                                                                      #:font-variable-pitch font-variable-pitch
-                                                                      #:base-font-size base-font-size
-                                                                      #:emacs-interface emacs-interface
-                                                                      #:swaylock-effects? sessions-swaylock-effects?
-                                                                      #:swaylock sessions-swaylock
-                                                                      #:swaylock-effects sessions-swaylock-effects
-                                                                      #:swayidle sessions-swayidle)
-                                 #:virtualization? virtualization?))
+              (system-features #:stateless? stateless?
+                               #:stateless-storage-paths stateless-storage-paths
+                               #:login-shell login-shell
+                               #:doom? doom?
+                               #:doom-flags doom-flags
+                               #:package-managers package-managers
+                               #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
+                               #:console? console?
+                               #:kmonad? kmonad?
+                               #:kmonad kmonad
+                               #:desktop? desktop?
+                               #:pipewire? pipewire?
+                               #:pipewire media-pipewire
+                               #:login-manager login-manager
+                               #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                          (#:session/sway . ,(sway-start #:sway sway
+                                                                                         #:pipewire? pipewire?)))
+                               #:sessions sessions
+                               #:sway-environment (sway-environment #:sway sway
+                                                                    #:pipewire? pipewire?
+                                                                    #:connection-manager connection-manager
+                                                                    #:doom? doom?
+                                                                    #:doom-ui? doom-ui?
+                                                                    #:inputs sessions-inputs
+                                                                    #:outputs sessions-outputs
+                                                                    #:portal-services portal-services
+                                                                    #:colors colors
+                                                                    #:font-variable-pitch font-variable-pitch
+                                                                    #:base-font-size base-font-size
+                                                                    #:emacs-interface emacs-interface
+                                                                    #:swaylock-effects? sessions-swaylock-effects?
+                                                                    #:swaylock sessions-swaylock
+                                                                    #:swaylock-effects sessions-swaylock-effects
+                                                                    #:swayidle sessions-swayidle)
+                               #:virtualization? virtualization?)
               (shells #:stateless? stateless?
                       #:doom? doom?
                       #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
@@ -8537,14 +8510,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (he-programs)
        (if desktop?
            (he-apps) '())))))
-
-(define (sway-no-logind sway)
-  (let ((base sway))
-    (package
-      (inherit base)
-      (inputs
-       (modify-inputs (package-inputs base)
-         (replace "wlroots" wlroots-no-logind))))))
 #+end_src
 ** Common
 *** Stateless
@@ -9971,7 +9936,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
-     #:sessions-swayidle ,(@ (gnu packages wm) swayidle-no-logind)
+     #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
      #:apps-make-google-chrome ,(@ (nongnu packages chrome) make-google-chrome-stable))))
 
 
@@ -9983,7 +9948,6 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     #:desktop? #t
     #:media #:media/pipewire
     #:connection-manager #:cm/network-manager
-    #:seat-manager #:seats/seatd
     ;; #:login-manager #:lm/gdm
 
     ;; NEW package parameterization
