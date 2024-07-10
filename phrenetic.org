@@ -5909,7 +5909,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
        ("XF86MonBrightnessDown" . ,(assoc-ref backlights #:backlight/down))))))
 
 (define (sway-volume)
-  (let ((volume (pulseaudio-volume)))
+  (let ((volume (pipewire-volume))) ; TODO This should be dependent on whether media is pulseaudio or pipewire.
     (bindsym-controls
      `(("XF86AudioRaiseVolume" . ,(cmd-chain (assoc-ref volume #:volume/up)))
        ("XF86AudioLowerVolume" . ,(cmd-chain (assoc-ref volume #:volume/down)))
@@ -6686,6 +6686,20 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
                               (list pactl "set-sink-volume" sink (step-pct step #:down #:prefix))))
       (#:volume/mute-unmute . ,(list pactl "set-sink-mute" sink "toggle"))
       (#:volume/mic-mute-unmute . ,(list pactl "set-source-mute" source "toggle")))))
+#+end_src
+********** Pipewire
+#+begin_src scheme
+(define* (pipewire-volume #:key (step 5))
+  (let* ((wpctl (file-append wireplumber "/bin/wpctl"))
+         (sink "@DEFAULT_AUDIO_SINK@")
+         (source "@DEFAULT_AUDIO_SOURCE@")
+         (unmute (list wpctl "set-mute" sink "0")))
+    `((#:volume/up . ,(list unmute
+                            (list wpctl "set-volume" sink (step-pct step #:up #:suffix))))
+      (#:volume/down . ,(list unmute
+                              (list wpctl "set-volume" sink (step-pct step #:down #:suffix))))
+      (#:volume/mute-unmute . ,(list wpctl "set-mute" sink "toggle"))
+      (#:volume/mic-mute-unmute . ,(list wpctl "set-mute" source "toggle")))))
 #+end_src
 ********* Player
 ********** Playerctl
