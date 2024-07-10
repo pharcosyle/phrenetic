@@ -1788,7 +1788,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages node) #:select (node-lts))
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
   #:use-module ((gnu packages pulseaudio) #:select (pulseaudio pavucontrol))
-  #:use-module ((gnu packages python-web) #:select (awscli-2))
+  #:use-module ((gnu packages python-web) #:select (awscli))
   #:use-module ((gnu packages qt) #:select (qtwayland qtwayland-5))
   #:use-module ((gnu packages shells) #:select (zsh))
   #:use-module ((gnu packages shellutils) #:select (direnv))
@@ -6951,7 +6951,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (simple-service
     'aws-add-packages
     home-profile-service-type
-    (list awscli-2))))
+    (list awscli))))
 #+end_src
 ****** Clojure
 #+begin_src scheme
