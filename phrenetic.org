@@ -4250,7 +4250,8 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
          (ibuffer ,@(if icons? '(+icons) '())))
 
         (#:checkers
-         (syntax ,@(if childframe? '(+childframe) '())))
+         (syntax ,@(if icons? '(+icons) '())
+                 ,@(if childframe? '(+childframe) '())))
 
         (#:tools
          editorconfig
