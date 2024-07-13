@@ -5695,7 +5695,10 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
           (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
                 DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
           (set $mod ,sway-mod)
-          (gaps left 78)) ; To accommodate the crack in my screen.
+
+          ;; To accommodate my broken screen.
+          (gaps left 92)
+          (gaps top 12))
 
         (sway-general)
         (apply sway-input (alist->list input))
