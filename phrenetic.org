@@ -6074,7 +6074,6 @@ Ideally the inclusions here would be gated but that would require a flag for eve
          (if effects?
              `((indicator)
 
-               (grace . "15")
                (effect-blur . 7x5)
                (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
 
@@ -6093,12 +6092,12 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                                  #:swaylock swaylock
                                                  #:swaylock-effects swaylock-effects)
                                    "/bin/swaylock")))
-    `((#:screen-locker/lock . ,(list swaylock-bin))
-      (#:screen-locker/lock-immediately . ,(append
-                                            (list swaylock-bin)
-                                            (if effects?
-                                                (list "--grace=0")
-                                                '()))))))
+    `((#:screen-locker/lock . ,(append
+                                (list swaylock-bin)
+                                (if effects?
+                                    (list "--grace=15")
+                                    '())))
+      (#:screen-locker/lock-immediately . ,(list swaylock-bin)))))
 
 (define* (get-swaylock #:key
                        effects?
