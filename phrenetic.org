@@ -693,16 +693,11 @@ Run with ~sudo~.
 #+end_src
 ***** Bluetooth
 #+begin_src scheme
-(define-system-comp (bluetooth #:key
-                               users
-                               stateless?)
+(define-system-comp (bluetooth #:key stateless?)
   (services
    (append
     (operating-system-user-services os)
     (list
-     (simple-service 'bluetooth-users-add-groups
-                     accounts-service-type
-                     (cons users '("lp")))
      (service bluetooth-service-type
               (bluetooth-configuration
                (auto-enable? #t))))
@@ -1669,7 +1664,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   connection-manager
                   wireless-users
                   bluetooth?
-                  bluetooth-users
                   login-manager
                   auto-login?
                   auto-login-user
@@ -1714,8 +1708,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                                                          #:stateless? stateless?)))
               $)
           (if bluetooth?
-              (bluetooth $ #:users bluetooth-users
-                         #:stateless? stateless?)
+              (bluetooth $ #:stateless? stateless?)
               $)
           (if seat-manager
               (case seat-manager
@@ -9780,9 +9773,6 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                       aux-name
                                       guest-name)
                #:bluetooth? bluetooth?
-               #:bluetooth-users (list primary-name
-                                       aux-name
-                                       guest-name)
                #:seat-users (list primary-name
                                   aux-name
                                   guest-name)
