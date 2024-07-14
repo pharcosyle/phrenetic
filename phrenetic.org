@@ -6075,7 +6075,6 @@ Ideally the inclusions here would be gated but that would require a flag for eve
              `((indicator)
 
                (effect-blur . 7x5)
-               (fade-in . "2") ; This is "pretty much broken", see https://github.com/jirutka/swaylock-effects/commit/89daa147638605b2026a401088bd316abdf61f75.
 
                (clock)
                (timestr . ,time-format)
@@ -6095,7 +6094,9 @@ Ideally the inclusions here would be gated but that would require a flag for eve
     `((#:screen-locker/lock . ,(append
                                 (list swaylock-bin)
                                 (if effects?
-                                    (list "--grace=15")
+                                    (let ((grace-period "5"))
+                                      (list (string-append "--grace=" grace-period)
+                                            (string-append "--fade-in=" grace-period))) ; This is "pretty much broken" (I think just in terms of not being very pretty), see https://github.com/jirutka/swaylock-effects/commit/89daa14763.
                                     '())))
       (#:screen-locker/lock-immediately . ,(list swaylock-bin)))))
 
