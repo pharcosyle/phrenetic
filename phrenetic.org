@@ -6094,9 +6094,11 @@ Ideally the inclusions here would be gated but that would require a flag for eve
                                                  #:swaylock-effects swaylock-effects)
                                    "/bin/swaylock")))
     `((#:screen-locker/lock . ,(list swaylock-bin))
-      (#:screen-locker/lock-immediately . ,(list
-                                            swaylock-bin
-                                            "--grace=0")))))
+      (#:screen-locker/lock-immediately . ,(append
+                                            (list swaylock-bin)
+                                            (if effects?
+                                                (list "--grace=0")
+                                                '()))))))
 
 (define* (get-swaylock #:key
                        effects?
