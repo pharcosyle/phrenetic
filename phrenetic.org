@@ -6855,23 +6855,32 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # ...
 #+end_src
 ***** Portals
+- TODO This isn't very good: wlr != wayland, GTK shouldn't be default (like if you're a QT person), in profile packages and "preferred" config
 #+begin_src scheme
-(define* (portal-services #:key wayland?)
+(define* (portal-services #:key
+                          (xdg-current-desktop "sway") ; TODO TEMPORARILY hardcoding this, fix me!
+                          wayland?)
   (list
    (simple-service
     'portals-add-packages
     home-profile-service-type
-    ;; TODO This isn't very good: wlr != wayland, GTK shouldn't be the default fallback (like if you're a QT person).
     (list xdg-desktop-portal
+          xdg-desktop-portal-gtk
           (if wayland?
-              xdg-desktop-portal-wlr
-              xdg-desktop-portal-gtk)))
+              xdg-desktop-portal-wlr)))
 
    (when wayland?
      (simple-service
-      'portals-wlr-config
+      'portals-config
       home-multi-xdg-configuration-files-service-type
-      `(("xdg-desktop-portal-wlr/config"
+      `((,(string-append "xdg-desktop-portal/" xdg-current-desktop "-portals.conf")
+         ,(ini-file
+           (string-append "xdg-desktop-portal-" xdg-current-desktop "-portals")
+           `((preferred ((default . ,(string->symbol "wlr;gtk")))))
+           #:ini-serialize
+           (lambda (config)
+             (ini-serialize config #:equal-string "=")))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
+        ("xdg-desktop-portal-wlr/config"
          ,(ini-file
            "xdg-desktop-portal-wlr-config"
            `((screencast ((chooser_cmd . ,#~(string-append #$(file-append slurp "/bin/slurp")
