@@ -762,6 +762,11 @@ Run with ~sudo~.
         '()))))
 #+end_src
 ****** Desktop TTY
+- TODO only run switch-to-tty-service on startup
+  Currently it's running on reconfigure too so if I'm logged in a different tty it switches away on reconfigure. Options:
+  - IIRC there are greetd/mingetty-specific ways of setting the intiial tty
+    I like the login-manager-independence of this method but consider those.
+  - possibly theshepherd service `transient?` field
 #+begin_src scheme
 (define-system-comp (desktop-tty #:key
                                  login
@@ -1304,6 +1309,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
    (stop #~(make-kill-destructor))))
 
 ;; HACK Clear the home directories because the `user-homes' shepherd service puts skeleton files in them. Only do this when a new user is added and on startup activation, not reconfigure activation: determine which it is by checking for the presence of ".guix-home".
+;; Update: possibly the shepherd servie `transient?` field could be of help here.
 (define (user-homes-shepherd-service users)
   (shepherd-service
    (provision '(stateless-user-homes))
