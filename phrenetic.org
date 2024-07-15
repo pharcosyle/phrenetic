@@ -531,7 +531,8 @@ Run with ~sudo~.
                        (cons users groups))
        (udev-rules-service 'kmonad-add-udev-rules
                            kmonad
-                           #:groups groups))))))
+                           ;; The input group is already part of %base-groups so we don't have to add it here. More importantly, if we do Guix issues a warning on build "guix system: warning: the following groups appear more than once: input" and I don't think it's dangerous but let's just be safe.
+                           #:groups (delete "input" groups)))))))
 #+end_src
 **** Desktop
 ***** Base services
