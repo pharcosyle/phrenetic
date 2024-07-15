@@ -1208,6 +1208,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
            (dir
             (mkdir-p dir)))
          ;; Taken from `populate-root-file-system'. Some of these might not be necessary (for example, "/tmp" and "/var/run" are deleted and recreated in `cleanup-service-type') but it's safest to do them here anyway just in case some early-running code assumes their presence.
+         ;; TODO Update: /run and /var/run are probably no longer necessary but I remember some stateless population/activation ordering stuff being subtle so I'm not removing them just yet. Relevant commits:
+         ;; - https://git.savannah.gnu.org/cgit/guix.git/commit/?id=e73db355b127b9ca2b5339f645f2d3eb6929531f
+         ;; - https://git.savannah.gnu.org/cgit/guix.git/commit/?id=27ee6f06d0ecab58ca3b739c911bacefda440177
          '("/bin"
            "/etc"
            ("/gnu/store" . #o1775)
