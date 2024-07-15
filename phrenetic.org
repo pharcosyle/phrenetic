@@ -1305,7 +1305,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
              #:group (group:name (getgrgid (passwd:gid (getpw #$user))))
              #:log-file (string-append "/var/log/stateless-home-" #$user ".log")
              #:environment-variables
-             (list (string-append "HOME=" (passwd:dir (getpw #$user))))))
+             (list (string-append "HOME=" (passwd:dir (getpw #$user)))
+                   "GUIX_SYSTEM_IS_RUNNING_HOME_ACTIVATE=t")))
    (stop #~(make-kill-destructor))))
 
 ;; HACK Clear the home directories because the `user-homes' shepherd service puts skeleton files in them. Only do this when a new user is added and on startup activation, not reconfigure activation: determine which it is by checking for the presence of ".guix-home".
