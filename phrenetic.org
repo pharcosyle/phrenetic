@@ -6816,7 +6816,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
      ("QT_QPA_PLATFORM" . "wayland-egl") ; Might not be necessary since I set `XDG_SESSION_TYPE=wayland', see https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#qt5
      ("_JAVA_AWT_WM_NONREPARENTING" . "1"))
    (if pipewire?
-       '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag).
+       '(("RTC_USE_PIPEWIRE" . "true")) '()))) ; No idea what this is for. I thought it was equivalent to toggling on chrome://flags/#enable-webrtc-pipewire-capturer but it's not. The `rtc_use_pipewire=true' in the ungoogled-chromium configure flags is a separate issue too (it only builds Chromium with support for pipewire, it still has to be turned on in the settings or with a flag). [2024-07-14 Sun] update: possibly relevant?: https://github.com/emersion/xdg-desktop-portal-wlr/wiki/Screencast-Compatibility#webrtc-aka-firefoxchromium
 #+end_src
 ***** Flatpak
 I might need to run apps specially in Wayland, with =--socket=wayland= and =--enable-features=UseOzonePlatform --ozone-platform=wayland= (if the app is based on Electron). See [[https://github.com/swaywm/sway/wiki/Running-programs-natively-under-Wayland#flatpak][Running programs natively under Wayland · swaywm/sway Wiki · GitHub (Flatpak)]]
@@ -6861,6 +6861,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
    (simple-service
     'portals-add-packages
     home-profile-service-type
+    ;; TODO This isn't very good: wlr != wayland, GTK shouldn't be the default fallback (like if you're a QT person).
     (list xdg-desktop-portal
           (if wayland?
               xdg-desktop-portal-wlr
