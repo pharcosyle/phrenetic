@@ -205,6 +205,7 @@ Run with ~sudo~.
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
+  #:use-module ((gnu packages freedesktop) #:select (libinput-minimal))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
@@ -543,7 +544,8 @@ Run with ~sudo~.
   (services
    (append
     (operating-system-user-services os)
-    (list (simple-service 'mtp udev-service-type (list libmtp))
+    (list (simple-service 'libinput udev-service-type (list libinput-minimal))
+          (simple-service 'mtp udev-service-type (list libmtp))
           (service sane-service-type)
           polkit-wheel-service
           (simple-service 'nfs-mount-setuid setuid-program-service-type
