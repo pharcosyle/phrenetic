@@ -5989,7 +5989,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
               #$(file-append swappy "/bin/swappy")))))
 #+end_src
 ******** App windows
-Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
+- TODO Ideally the inclusions here would be gated but that would require a flag for every application so just add them all.
 #+begin_src scheme
 (define* (sway-app-windows #:key (props (list emacs-modal-window-props
                                               ;; ...
@@ -6118,6 +6118,10 @@ Ideally the inclusions here would be gated but that would require a flag for eve
 #+end_src
 ******** Idle managers
 - TODO Figure out what the macOS defaults are and use those. Does it turn off the display (not dim it) /before/ locking the screen? I don't think so, but if I went with this approach (if it's even possible) would that obviate the need for a swaylock grace period?
+- TODO [2024-07-21 Sun](from seatd switch notes, might not be relevant now that I'm back on elogind)
+  Commented the "lock" and "before-sleep" parts, they wont work with seatd (or rather, without elogind). Come to think of it, why should those commented things be swayidle's responsibilities? Can I do the same thing in an init-system agnostic way?
+  - "I'm putting the `before-sleep`..."
+    [[https://forum.artixlinux.org/index.php/topic,3599.0.html][Broken suspend with `loginctl suspend` only when Sway is used.]]
 ********* Swayidle
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
@@ -6136,7 +6140,6 @@ Ideally the inclusions here would be gated but that would require a flag for eve
       (append
        (if screen-locker
            (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
-             ;; TODO These two won't work with seatd (or rather, without elogind), see notes.
              `(;(lock ,lock-cmd-quoted)
                ;(before-sleep ,lock-cmd-quoted)
                (timeout ,lock-timeout ,lock-cmd-quoted)))
@@ -6631,7 +6634,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
    #:placement 'modules-left))
 #+end_src
 ******** Power monitors
-- TODO this requires ~upower~ (so ~upower-service-type~), make that dependency explicit? Meh.
+- TODO this requires ~upower~ (so ~upower-service-type~) and a notification daemon (such as mako), make those dependencies explicit? At least the upower one? Meh.
 ********* Poweralertd
 #+begin_src scheme
 (define* (poweralertd-wm-piece)
@@ -7175,7 +7178,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             (org-mode . org-modern-mode)
                             (org-agenda-finalize . org-modern-agenda)
                             :config
-                            (setq org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
+                            (setq org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained (otherwise there's some extra and the amount grows each level down).
                                   org-modern-todo-faces
                                   (-map (-lambda ((kw . face))
                                                  `(,kw :inverse-video t :inherit ,face))
@@ -7340,9 +7343,11 @@ use_guixs() {
 #+end_src
 ******** TOML serialization
 #+begin_src scheme
+;; TOML is pretty close to (RDE's idea of) INI so just piggyback off of that until I have more sophisticated needs.
 (define (toml-file name config)
   (ini-file name config))
 
+;; TODO This should be part of `toml-file' eventually.
 (define (serialize-toml-array elements)
   (as-> elements $
         (map quoted $)
