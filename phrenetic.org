@@ -7175,9 +7175,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             (org-mode . org-modern-mode)
                             (org-agenda-finalize . org-modern-agenda)
                             :config
-                            (setq org-modern-star 'replace
-                                  org-modern-replace-stars '("◉" "▶" "✸" "○" "▷" "✲" "♠" "♣" "♦" "◉")
-                                  org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
+                            (setq org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained.
                                   org-modern-todo-faces
                                   (-map (-lambda ((kw . face))
                                                  `(,kw :inverse-video t :inherit ,face))
