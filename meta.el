@@ -20,4 +20,9 @@
       (mapcar #'car (org-babel-tangle-collect-blocks)))))
 
 (defun meta-tangled-files->gitignore ()
-  (string-join (meta--get-tangled-files) "\n"))
+  (string-join
+   ;; HACK
+   (mapcar (lambda (f)
+             (string-remove-prefix "/.persist/home/pharcosyle/work_for_now/phrenetic" f))
+           (meta--get-tangled-files))
+   "\n"))
