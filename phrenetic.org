@@ -480,11 +480,7 @@ Run with ~sudo~.
    (append
     (operating-system-user-services os)
     (list
-     (service (let ((nix-service-type* (without-profile-extension nix-service-type)))
-                (if stateless?
-                    ;; Don't remount read-only for stateless setups. This is a sensible precaution but messes with (re)creating dirs/symlinks during stateless activation ("guix system: error: chown: Read-only file system"). Another option might be to modify stateless activation to not mkdir/chown existing directories that already have the correct ownership.
-                    (without-extensions nix-service-type* file-system-service-type)
-                    nix-service-type*))
+     (service (without-profile-extension nix-service-type)
               (nix-configuration
                (extra-config (if stateless?
                                  (list
