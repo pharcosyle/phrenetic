@@ -6905,10 +6905,6 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 #+end_src
 ***** Shared
 #+begin_src scheme
-(define* (ini-file name config
-                   #:key (ini-serialize ini-serialize))
-  (apply mixed-text-file name (ini-serialize config)))
-
 (define* (pango-font-description font #:optional size)
   (string-join
    (append
@@ -7342,20 +7338,6 @@ use_guixs() {
              whitelist-entries))
    (default-value #f)
    (description "Whitelist for Direnv.")))
-#+end_src
-******** TOML serialization
-#+begin_src scheme
-;; TOML is pretty close to (RDE's idea of) INI so just piggyback off of that until I have more sophisticated needs.
-(define (toml-file name config)
-  (ini-file name config))
-
-;; TODO This should be part of `toml-file' eventually.
-(define (serialize-toml-array elements)
-  (as-> elements $
-        (map quoted $)
-        (string-join $ ", ")
-        (string-append "[ " $ " ]")
-        (string->symbol $)))
 #+end_src
 ***** SSH
 #+begin_src scheme
@@ -8121,6 +8103,24 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      #$file))
 
 (define very-big-history 1000000)
+#+end_src
+***** Serialization
+#+begin_src scheme
+(define* (ini-file name config
+                   #:key (ini-serialize ini-serialize))
+  (apply mixed-text-file name (ini-serialize config)))
+
+;; TOML is pretty close to (RDE's idea of) INI so just piggyback off of that until I have more sophisticated needs.
+(define (toml-file name config)
+  (ini-file name config))
+
+;; TODO This should be part of `toml-file' eventually.
+(define (serialize-toml-array elements)
+  (as-> elements $
+        (map quoted $)
+        (string-join $ ", ")
+        (string-append "[ " $ " ]")
+        (string->symbol $)))
 #+end_src
 *** Composite components
 **** System features
