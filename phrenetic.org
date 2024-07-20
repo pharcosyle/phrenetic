@@ -1814,7 +1814,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (phrenetic modules)
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
-  #:use-module ((sxml simple) #:select (sxml->xml))
+  ;; #:use-module ((sxml simple) #:select (sxml->xml))
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
   #:use-module ((ice-9 string-fun) #:select (string-replace-substring))
   #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
@@ -5433,15 +5433,16 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                        font-mono
                        extra-fonts)
   (list
-   (service (as-> home-fontconfig-service-type $
-              (without-extensions $ home-xdg-configuration-files-service-type)
-              (service-type
-               (inherit $)
-               (extensions
-                (cons* (service-extension
-                        home-xdg-configuration-files-service-type
-                        (partial add-fontconfig-config font-sans font-serif font-mono))
-                       (service-type-extensions $))))))
+   (service home-fontconfig-service-type)
+   ;; (service (as-> home-fontconfig-service-type $
+   ;;            (without-extensions $ home-xdg-configuration-files-service-type)
+   ;;            (service-type
+   ;;             (inherit $)
+   ;;             (extensions
+   ;;              (cons* (service-extension
+   ;;                      home-xdg-configuration-files-service-type
+   ;;                      (partial add-fontconfig-config font-sans font-serif font-mono))
+   ;;                     (service-type-extensions $))))))
 
    (simple-service
     'fonts-add-packages
@@ -5464,31 +5465,32 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 ;; TODO Probably give up on fonts stuff and get rid of all of this code? If not there's some useful fonts conf examples at https://gitlab.archlinux.org/archlinux/packaging/packages/noto-fonts and less useful, more complex, ones in the google noto fedora package
 ;; TODO do I not have a font for chinese/japanese/korean installed? I don't remember if Apple fonts cover it and I don't see a file with CJK in the name in the google-noto fonts package. Installing noto-cjk is an option.
 ;; TODO [2024-05-26 Sun] There's presets in the fontconfig package, share/fontconfig/conf.avail and etc/fonts/conf.d. Consider them?
-(define (add-fontconfig-config font-sans font-serif font-mono dirs)
-  `(("fontconfig/fonts.conf"
-     ,(apply mixed-text-file
-             "fonts.conf"
-             (list "<?xml version='1.0'?>" "\n"
-                   "<!DOCTYPE fontconfig SYSTEM 'fonts.dtd'>" "\n"
-                   (sxml-serialize
-                    `(fontconfig
-                      ,@(map (lambda (dir)
-                               `(dir ,dir))
-                             dirs)
-                      ,@(map (match-lambda
-                               ((family . name)
-                                `(alias
-                                  (family ,family)
-                                  (prefer
-                                   (family ,name)))))
-                             `(("sans-serif" . ,(assoc-ref font-sans #:font/name))
-                               ("serif" . ,(assoc-ref font-serif #:font/name))
-                               ("monospace" . ,(assoc-ref font-mono #:font/name)))))))))))
+;; TODO [2024-07-19 Fri] disabling this for now for no particular reason until I get back to fonts stuff
+;; (define (add-fontconfig-config font-sans font-serif font-mono dirs)
+;;   `(("fontconfig/fonts.conf"
+;;      ,(apply mixed-text-file
+;;              "fonts.conf"
+;;              (list "<?xml version='1.0'?>" "\n"
+;;                    "<!DOCTYPE fontconfig SYSTEM 'fonts.dtd'>" "\n"
+;;                    (sxml-serialize
+;;                     `(fontconfig
+;;                       ,@(map (lambda (dir)
+;;                                `(dir ,dir))
+;;                              dirs)
+;;                       ,@(map (match-lambda
+;;                                ((family . name)
+;;                                 `(alias
+;;                                   (family ,family)
+;;                                   (prefer
+;;                                    (family ,name)))))
+;;                              `(("sans-serif" . ,(assoc-ref font-sans #:font/name))
+;;                                ("serif" . ,(assoc-ref font-serif #:font/name))
+;;                                ("monospace" . ,(assoc-ref font-mono #:font/name)))))))))))
 
-(define (sxml-serialize tree)
-  (call-with-output-string
-    (lambda (port)
-      (sxml->xml tree port)))) ; It'd be nice if this pretty-printed or if I added some code that did.
+;; (define (sxml-serialize tree)
+;;   (call-with-output-string
+;;     (lambda (port)
+;;       (sxml->xml tree port)))) ; It'd be nice if this pretty-printed or if I added some code that did.
 
 ;; TODO These should really each be a function to parameterize the packages.
 (define %fonts
