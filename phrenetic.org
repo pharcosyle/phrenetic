@@ -1911,8 +1911,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             programs
             applications
             he-entire))
-
-(define serialize-alacritty-config (@@ (gnu home-services terminals) serialize-alacritty-config))
 #+end_src
 *** Create
 #+begin_src scheme
@@ -7671,33 +7669,32 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
    (simple-service
     'alacritty-config
     home-xdg-configuration-files-service-type
-    `(("alacritty/alacritty.yml"
-       ,(mixed-text-file
-         "alacritty.yml"
-         (serialize-alacritty-config
-          (append
-           `((window . ((padding . ((x . 5)
-                                    (y . 5)))
-                        (opacity . 0.75))))
-           (if font
-               `((font . ((normal . ,(append
-                                      `((family . ,(assoc-ref font #:font/name)))
-                                      (if-let ((weight (assoc-ref font #:font/weight)))
-                                              `((style . ,(font-weight->alacritty-style weight))) '())))
-                          (size . ,(- font-size 1)))))
-               '())
-           (let ((clr (lambda (color)
-                        (assoc-ref colors color))))
-             `((colors . ((primary . ((background . ,(clr #:color/bg))
-                                      (foreground . ,(clr #:color/fg))))
-                          (normal . ((black . ,(clr #:color/base0))
-                                     (white . ,(clr #:color/base8))
-                                     (red . ,(clr #:color/red))
-                                     (green . ,(clr #:color/green))
-                                     (yellow . ,(clr #:color/yellow))
-                                     (blue . ,(clr #:color/blue))
-                                     (magenta . ,(clr #:color/magenta))
-                                     (cyan . ,(clr #:color/cyan))))))))))))))))
+    `(("alacritty/alacritty.toml"
+       ,(toml-file
+         "alacritty-config.toml"
+         (append
+          `((window ((opacity . 0.75)))
+            (window.padding ((x . 5)
+                             (y . 5))))
+          (if font
+              `((font ((size . ,(- font-size 1))))
+                (font.normal ,(append
+                               `((family . ,(assoc-ref font #:font/name)))
+                               (if-let ((weight (assoc-ref font #:font/weight)))
+                                       `((style . ,(font-weight->alacritty-style weight))) '()))))
+              '())
+          (let ((clr (lambda (color)
+                       (assoc-ref colors color))))
+            `((colors.primary ((background . ,(clr #:color/bg))
+                               (foreground . ,(clr #:color/fg))))
+              (colors.normal ((black . ,(clr #:color/base0))
+                              (white . ,(clr #:color/base8))
+                              (red . ,(clr #:color/red))
+                              (green . ,(clr #:color/green))
+                              (yellow . ,(clr #:color/yellow))
+                              (blue . ,(clr #:color/blue))
+                              (magenta . ,(clr #:color/magenta))
+                              (cyan . ,(clr #:color/cyan)))))))))))))
 
 (define (font-weight->alacritty-style weight)
   (->> weight
