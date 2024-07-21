@@ -594,13 +594,20 @@ Run with ~sudo~.
 #+end_src
 ***** Power
 ****** Upower
+Ideally Upower would allow providing a program/script to run as the ~critical-power-action~ but it's hardcoded to talk to logind (over dbus).
 #+begin_src scheme
 (define-system-comp (upower-power #:key stateless?)
   (services
    (append
     (operating-system-user-services os)
     (list
-     (service upower-service-type))
+     (service upower-service-type
+              (upower-configuration
+               ;; The defaults are quite low, set them higher. In particular `percentage-action' is 2 which isn't a lot of battery to have in reserve.
+               (percentage-low 30)
+               (percentage-critical 15)
+               (percentage-action 10)
+               (critical-power-action 'hybrid-sleep)))) ; This is the default but let's be explicit.
     (if stateless?
         (list
          (stateless-service
