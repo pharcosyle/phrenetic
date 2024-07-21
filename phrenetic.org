@@ -736,11 +736,27 @@ Ideally Upower would allow providing a program/script to run as the ~critical-po
 #+end_src
 ***** Seat management
 ****** Elogind
+Configure elogind to do as little as possible:
+- seat manger flexbility
+  Make it easier to switch between seat managers.
+- enable using dedicated tools
+  "Do one thing well". Supplant elogind functionality with other programs that can be customized or swapped out.
+- systemd is too opinionated
+  And elogind inherits this characteristic. There's some consensus about this in the Linux community. Even the default settings can err on the side of too aggressive so don't feel bad ignoring them.
+There are considerably more options that to pare down / disable (see documentation for =loginctl.conf= and =sleep.conf=) not done yet. It's a headache and Guix doesn't even have fields for all of them in elogind-configuration at the moment (in particular options added in newer versions of elogind seem like they were neglected).
 #+begin_src scheme
 (define-system-comp (elogind-seats)
   (services
    (cons* (service elogind-service-type
                    (elogind-configuration
+                    (kill-user-processes? #f) ; Guix default but state explicitly.
+                    ;; (inhibit-delay-max-seconds 0) ; Find/implement an inhibitor lock system / PrepareForSleep + PrepareForShutdown DBus API before disabling this functionality in elogind.
+                    (holdoff-timeout-seconds 0)
+                    (idle-action 'ignore) ; Guix default but state explicitly.
+                    (runtime-directory-size-percent 100) ; "Clearing" this field might be better but elogind-configuration validates that it's a number.
+                    (remove-ipc? #f)
+
+                    ;; Still handle ACPI though.
                     (handle-power-key 'suspend))) ; A better default I think than `poweroff'.
           (operating-system-user-services os))))
 #+end_src
