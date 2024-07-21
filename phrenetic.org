@@ -205,7 +205,7 @@ Run with ~sudo~.
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
-  #:use-module ((gnu packages freedesktop) #:select (libinput-minimal))
+  #:use-module ((gnu packages freedesktop) #:select (elogind libinput-minimal switchd))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages libusb) #:select (libmtp))
@@ -239,6 +239,7 @@ Run with ~sudo~.
   #:use-module ((phrenetic stateless) #:prefix stateless:)
   #:use-module (phrenetic utils)
   #:use-module ((ice-9 match) #:select (match match-lambda))
+  #:use-module ((ice-9 string-fun) #:select (string-replace-substring))
   #:use-module ((srfi srfi-1) #:select (append-map delete-duplicates first remove iota))
   #:export (blank-os
             system-comp
@@ -734,6 +735,52 @@ Ideally Upower would allow providing a program/script to run as the ~critical-po
                      (#:mode . #o700)))))
         '()))))
 #+end_src
+***** ACPI
+****** Switchd
+#+begin_src scheme
+(define-system-comp (switchd-acpi)
+  (services
+   (cons* (simple-service
+           'switchd
+           shepherd-root-service-type
+           (list (switchd-shepherd-service)))
+          (operating-system-user-services os))))
+
+(define (switchd-shepherd-service)
+  (let ((events->commands
+         `((power-button . ,suspend-program)
+           ;; (restart-button . ...)
+           ;; (sleep-button . ...)
+           ;; (suspend-button . ...)
+           (lid-closed . ,suspend-program)
+           ;; (lid-opened . ...)
+           ;; (dock-attached . ...)
+           ;; (dock-detached . ...)
+           )))
+    (shepherd-service
+     (provision '(switchd))
+     (requirement '(udev)) ; Requires '/dev/input' be populated.
+     (respawn? #t) ; switchd exits when devices disappear and expects to be restarted when this happens, thus explicitly set respawning to true (even though that's already the default value).
+     (start #~(make-forkexec-constructor
+               (cons #$(file-append switchd "/bin/switchd")
+                     '#$(alist->list
+                         (update-keys events->commands
+                                      (lambda (event)
+                                        (-> event
+                                            symbol->string
+                                            (string-replace-substring  "-" "_"))))))
+               #:log-file "/var/log/switchd.log"))
+     (stop #~(make-kill-destructor)))))
+
+(define suspend-program
+  (program-file
+   "suspend"
+   (with-imported-modules '((guix build utils))
+     #~(begin
+         (use-modules ((guix build utils) #:select (invoke)))
+         ;; TODO For now I'm using the loginctl (elogind) command to implement suspending which presumably will break if I switch seat managers. Figure out a generic alternative (pm-utils...).
+         (invoke #$(file-append elogind "/bin/loginctl") "suspend")))))
+#+end_src
 ***** Seat management
 ****** Elogind
 Configure elogind to do as little as possible:
@@ -756,8 +803,13 @@ There are considerably more options that to pare down / disable (see documentati
                     (runtime-directory-size-percent 100) ; "Clearing" this field might be better but elogind-configuration validates that it's a number.
                     (remove-ipc? #f)
 
-                    ;; Still handle ACPI though.
-                    (handle-power-key 'suspend))) ; A better default I think than `poweroff'.
+                    ;; Ignore all ACPI.
+                    (handle-power-key                 'ignore)
+                    (handle-suspend-key               'ignore)
+                    (handle-hibernate-key             'ignore)
+                    (handle-lid-switch                'ignore)
+                    (handle-lid-switch-docked         'ignore)
+                    (handle-lid-switch-external-power 'ignore)))
           (operating-system-user-services os))))
 #+end_src
 ****** Seatd
@@ -1757,6 +1809,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
           (if bluetooth?
               (bluetooth $ #:stateless? stateless?)
               $)
+          (switchd-acpi $)
           (if seat-manager
               (case seat-manager
                 ((#:seats/elogind) (elogind-seats $))
