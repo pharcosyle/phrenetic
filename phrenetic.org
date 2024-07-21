@@ -847,9 +847,10 @@ Run with ~sudo~.
                              swaylock-effects)
   (services
    (append (operating-system-user-services os)
-           (list (swaylock-service #:effects? swaylock-effects?
-                                   #:swaylock swaylock
-                                   #:swaylock-effects swaylock-effects))
+           (list
+            (swaylock-service #:effects? swaylock-effects?
+                              #:swaylock swaylock
+                              #:swaylock-effects swaylock-effects))
            (brightnessctl-services #:users users))))
 #+end_src
 ******* Pieces
@@ -1771,7 +1772,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
-  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
   #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme))
@@ -6862,7 +6863,7 @@ use_guixs() {
 #+end_src
 ***** Text editors
 ****** Nano
-The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp.
+- TODO The Guix skeleton =nanorc= points to the system installed nano, it should be changed to =~/.guix-home= or the used Nano package directly with a gexp. Update: I think I had this commented just because it was a WIP.
 #+begin_src scheme
 ;; (define (nano-prog)
 ;;   (list
@@ -7000,8 +7001,9 @@ The Guix skeleton =nanorc= points to the system installed nano, it should be cha
     'misc-progs-add-packages
     home-profile-service-type
     (list curl
-          zip
-          unzip))))
+          ;; lm-sensors
+          unzip
+          zip))))
 #+end_src
 **** Apps
 ***** Audio
