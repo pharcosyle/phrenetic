@@ -1669,7 +1669,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   avahi-users
                   media
                   media-pipewire
-                  connection-manager
+                  (connection-manager #:cm/network-manager)
                   wireless-users
                   bluetooth?
                   login-manager
@@ -1771,10 +1771,10 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
-  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd udiskie xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
+  #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils elogind poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme (network-manager-applet . gnome:network-manager-applet)))
+  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
@@ -1799,7 +1799,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
   #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects))
-  #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
+  #:use-module ((gnu packages xdisorg) #:select (rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
@@ -1859,12 +1859,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             poweralertd-wm-piece
             poweralertd-monitor
             kanshi-wm-piece
-            network-manager-wm-applet
-            network-manager-applet
-            gammastep-wm-applet
-            gammastep-applet
-            udiskie-wm-applet
-            udiskie-applet
             portal-services
             flatpak-apps
             aws-prog
@@ -5859,7 +5853,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                                  screen-locker
                                  notifier
                                  power-monitor
-                                 applets
                                  app-launcher
                                  terminal
                                  backup-terminal
@@ -5867,11 +5860,9 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
   (let ((executions
          (map (lambda (cmd)
                 (cons "exec" cmd))
-              (append
-               (list idle-manager
-                     (assoc-ref notifier #:notifier/daemon)
-                     power-monitor)
-               applets)))
+              (list idle-manager
+                    (assoc-ref notifier #:notifier/daemon)
+                    power-monitor)))
 
         (bindings
          (append
@@ -6301,51 +6292,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
     (case fix
       ((#:prefix) (string-append sign percent))
       ((#:suffix) (string-append percent sign)))))
-#+end_src
-******** Applets
-********* Network
-********** Network manager
-#+begin_src scheme
-(define (network-manager-wm-applet)
-  (list
-   (simple-service
-    'applet-network-manager-add-packages
-    home-profile-service-type
-    (list gnome:network-manager-applet))))
-
-(define (network-manager-applet)
-  (list
-   (file-append gnome:network-manager-applet "/bin/nm-applet")
-   "--indicator"))
-#+end_src
-********* Gammastep
-#+begin_src scheme
-(define (gammastep-wm-applet)
-  (list
-   ;; The applet can't find its icon unless the package is installed.
-   (simple-service
-    'applet-gammastep-add-packages
-    home-profile-service-type
-    (list gammastep))))
-
-(define (gammastep-applet)
-  (list
-   (file-append gammastep "/bin/gammastep-indicator")
-   "-l" "44:-123")) ; TODO Don't hardcode lat/long (use geoclue?) or make it a parameter.
-#+end_src
-********* Udiskie
-#+begin_src scheme
-(define (udiskie-wm-applet)
-  (list
-   (simple-service
-    'applet-udiskie-add-packages
-    home-profile-service-type
-    (list udiskie))))
-
-(define (udiskie-applet)
-  (list
-   (file-append udiskie "/bin/udiskie")
-   "--tray"))
 #+end_src
 ****** Shared
 #+begin_src scheme
@@ -7533,7 +7479,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     home-profile-service-type
     (list ;; arc-theme ; TODO Remove temporarily, it requires frequent rebuilds and I'm probably going to be changing it anyway. Also commented "gtk-theme" setting below.
           ;; I copied the following from Andrew Tropin's config. I'm not sure why I'd need or want all of them (perhaps as fallbacks and in the case of `gnome-themes-extra' as a fallback GTK 2 theme?). I might get rid of some of them later but for now I'll try having more than less.
-          hicolor-icon-theme ; Andrew Tropin indicates (in abcdw/rde@3a8ea85f) that this is needed for network manager applet icons.
+          hicolor-icon-theme ; Andrew Tropin indicates (in abcdw/rde@3a8ea85f) that this is needed for network manager applet icons. [2024-07-20 Sat] update: deleted applets, do I still want this?
           adwaita-icon-theme
           ;; papirus-icon-theme ; TODO Remove for now, it massively increases guix build time. Why? Update: the situation may be better now: https://github.com/guix-mirror/guix/commit/aed385e18ec7b68a0bc1bb4b173aeadc9cd97245
           ;; gnome-themes-extra ; TODO Remove for now so I can avoid building its GTK 2 dependency.
@@ -7766,7 +7712,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
 (define* (sway-environment #:key
                            sway
                            pipewire?
-                           connection-manager
                            doom?
                            doom-ui?
                            inputs
@@ -7788,11 +7733,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                                   #:swaylock-effects swaylock-effects))
                            (menu (if doom-ui?
                                      (doom-menu (assoc-ref emacs-interface #:emacs/handler))
-                                     (rofi-menu #:wayland? #t)))
-                           (applets '(;; #:applet/connection-manager
-                                      ;; #:applet/color-temperature
-                                      ;; #:applet/auto-mounter
-                                      )))
+                                     (rofi-menu #:wayland? #t))))
   (let ((session #:session/sway))
     (append
      (sway-wm #:sway sway
@@ -7811,17 +7752,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
                 (#:power-monitor . ,(poweralertd-monitor))
-                (#:applets . ,(append
-                               (if (and (member #:applet/connection-manager (or applets '()))
-                                        connection-manager)
-                                   (list
-                                    (case connection-manager
-                                      ((#:cm/network-manager) (network-manager-applet))))
-                                   '())
-                               (if (member #:applet/color-temperature (or applets '()))
-                                   (list (gammastep-applet)) '())
-                               (if (member #:applet/auto-mounter (or applets '()))
-                                   (list (udiskie-applet)) '())))
                 (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
                 (#:terminal . ,(if doom-ui?
                                    (doom-vterm-terminal (assoc-ref emacs-interface #:emacs/handler))
@@ -7847,15 +7777,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     #:font-size base-font-size)
      (poweralertd-wm-piece)
      ;; (kanshi-wm-piece #:outputs outputs)
-     (if (and (member #:applet/connection-manager (or applets '()))
-              connection-manager)
-         (case connection-manager
-           ((#:cm/network-manager) (network-manager-wm-applet)))
-         '())
-     (if (member #:applet/color-temperature (or applets '()))
-         (gammastep-wm-applet) '())
-     (if (member #:applet/auto-mounter (or applets '()))
-         (udiskie-wm-applet) '()))))
+     )))
 #+end_src
 **** Programs
 #+begin_src scheme
@@ -7999,7 +7921,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (font-variable-pitch font-sans)
                     (base-font-size 10)
                     (portal-services (portal-services #:wayland? wayland?))
-                    connection-manager
                     login-manager
                     sessions
                     sessions-inputs
@@ -8036,7 +7957,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                #:sessions sessions
                                #:sway-environment (sway-environment #:sway sway
                                                                     #:pipewire? pipewire?
-                                                                    #:connection-manager connection-manager
                                                                     #:doom? doom?
                                                                     #:doom-ui? doom-ui?
                                                                     #:inputs sessions-inputs
@@ -9556,7 +9476,6 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     #:console? #t
     #:desktop? #t
     #:media #:media/pipewire
-    #:connection-manager #:cm/network-manager
     ;; #:login-manager #:lm/gdm
 
     ;; NEW package parameterization
