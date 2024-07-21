@@ -1781,7 +1781,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
-  #:use-module ((gnu packages linux) #:select (brightnessctl psmisc pipewire wireplumber wireplumber))
+  #:use-module ((gnu packages linux) #:select (brightnessctl pipewire wireplumber wireplumber))
   #:use-module ((gnu packages music) #:select (playerctl))
   #:use-module ((gnu packages node) #:select (node-lts))
   #:use-module ((gnu packages package-management) #:select (flatpak (guix . guix-package) nix))
@@ -1798,7 +1798,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages vpn) #:select (protonvpn-cli))
   #:use-module ((gnu packages web) #:select (jq))
   #:use-module ((gnu packages web-browsers) #:select (nyxt))
-  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects waybar waybar-cpu-histogram))
+  #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects))
   #:use-module ((gnu packages xdisorg) #:select (gammastep rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
   #:use-module ((gnu services configuration) #:select (interpose))
@@ -1856,9 +1856,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             swayidle-idle-manager
             mako-wm-piece
             mako-notifier
-            waybar-wm-piece
-            waybar-status-bar
-            waybar-modules
             poweralertd-wm-piece
             poweralertd-monitor
             kanshi-wm-piece
@@ -5861,7 +5858,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                                  idle-manager
                                  screen-locker
                                  notifier
-                                 status-bar
                                  power-monitor
                                  applets
                                  app-launcher
@@ -5874,7 +5870,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
               (append
                (list idle-manager
                      (assoc-ref notifier #:notifier/daemon)
-                     ;; (assoc-ref status-bar #:status-bar/command)
                      power-monitor)
                applets)))
 
@@ -5890,7 +5885,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
             (bindsym $mod+y exec ,@(assoc-ref emacs-interface #:emacs/new-frame)))
 
           (sway-notifications notifier)
-          ;; (sway-status-bar status-bar)
           (sway-screenshot #:sway sway)
           (sway-backlights)
           (sway-volume)
@@ -5902,9 +5896,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
   `((bindsym $mod+m exec ,@(assoc-ref notifier #:notifier/dismiss))
     (bindsym $mod+Shift+m exec ,@(assoc-ref notifier #:notifier/restore))
     (bindsym $mod+Control+m exec ,@(assoc-ref notifier #:notifier/menu))))
-
-(define (sway-status-bar status-bar)
-  `((bindsym $mod+backslash exec ,@(assoc-ref status-bar #:status-bar/toggle))))
 
 (define (sway-backlights)
   (let ((backlights (brightnessctl-backlights)))
@@ -6210,428 +6201,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                            (list makoctl "menu")
                            menu
                            (list (quoted "Notification action")))))))
-#+end_src
-******** Status bars
-********* Waybar
-- TODO [2023-12-16 Sat] waybar updated
-  I was using 0.9.17, blind-updated to the newest in Guix at this time (0.9.20), and now it's at 0.9.24. So update to 0.9.24 and probably review all the changes since 0.9.17.
-  - there's also ~waybar-experimental~ now
-    I think I looked at it and decided I didn't want it. Though there might be new experimental features now.
-  - maybe check out the Nix package
-#+begin_src scheme
-(define* (waybar-wm-piece #:key
-                          bars
-                          colors
-                          font
-                          transitions?
-                          extra-style
-                          modules)
-  (append
-   (list
-    (service
-     home-waybar-service-type
-     (home-waybar-configuration
-      (waybar waybar)
-      (config (->> bars
-                   (map (lambda (bar)
-                          (apply waybar-bar (alist->list bar))))
-                   (apply vector)))
-      (style-css
-       (waybar-style #:colors colors
-                     #:font font
-                     #:transitions? transitions?
-                     #:extra-style extra-style)))))
-
-   modules
-
-   (list
-    (simple-service
-     'waybar-reload-config-on-change
-     home-run-on-change-service-type
-     (let ((waybar-file (lambda (name)
-                          (string-append home-files-directory "/" xdg-configuration-files-directory "/waybar/" name)))
-           (reload-cmd #~(system* #$(file-append psmisc "/bin/killall") "-SIGUSR2" "waybar")))
-       (map (lambda (f)
-              (list (waybar-file f) reload-cmd))
-            '("config" "style.css")))))))
-
-(define* (waybar-bar #:key
-                     bar-id
-                     (position 'top)
-                     height
-                     outputs
-                     not-outputs
-                     extra-config)
-  (append
-   `((name . ,bar-id)
-     (position . ,position))
-   (if height
-         `((height . ,height)) '())
-   (let ((output (append
-                  (or outputs '())
-                  (map (lambda (o)
-                         (string-append "!" o))
-                       (or not-outputs '())))))
-     (if (null? output)
-         '()
-         `((output . ,output))))
-   (or extra-config '())))
-
-(define* (waybar-style #:key
-                       colors
-                       font
-                       transitions?
-                       extra-style)
-  (append
-   `(,#~#$(->> `(("fg" . #:color/fg)
-                 ("bg" . #:color/bg)
-                 ("bg-alt" . #:color/base0) ; TODO change this (previously I had it as lighter than bg, not darker)
-                 ("accent" . #:color/accent)
-                 ("green" . #:color/green)
-                 ("orange" . #:color/orange)
-                 ("red" . #:color/red))
-               (map (match-lambda
-                      ((name . color)
-                       (string-append (string-join
-                                       (list "@define-color" name (assoc-ref colors color)))
-                                      ";" "\n"))))
-               (apply string-append))
-     (*
-      ((font-family . #(FontAwesome
-                        ,@(if font
-                              (list
-                               (-> font
-                                   (assoc-ref #:font/name)
-                                   quoted
-                                   string->symbol))
-                              '())))
-       ,@(if transitions? '() '((transition . none)))
-       (box-shadow . none)
-       (text-shadow . none)
-       (min-height . 0)))
-
-     (tooltip
-      ((border . (solid @bg-alt))
-       (background . @bg)
-       (opacity . 0.9)))
-
-     ((tooltip label)
-      ((color . @fg)
-       (padding . 0)))
-
-     (#{#waybar}#
-      ((color . @fg)
-       (background . @bg)))
-
-     (#((.modules-right label)
-        (.modules-right image))
-      ((margin . (0.4em 0.2em))
-       (padding . (0 0.4em))
-       (background . @bg-alt)
-       (border-radius . 0.2em)))
-
-     ;; To accommodate the crack in my screen.
-     (.modules-left
-      ((margin-left . 82px)))
-     ;; (.modules-left
-     ;;  ((margin-left . 0.2em)))
-
-     (.modules-right
-      ((margin-right . 0.2em))))
-
-   (or extra-style '())))
-
-(define (waybar-status-bar)
-  `((#:status-bar/command . ,(list
-                              (file-append waybar "/bin/waybar")))
-    (#:status-bar/toggle . ,(list
-                             (file-append psmisc "/bin/killall")
-                             "-SIGUSR1" "waybar"))))
-
-(define* (waybar-modules #:key
-                         bar-id
-                         session
-                         date-format
-                         time-format)
-  (append
-   (list
-    (waybar-clock bar-id
-                  #:date-format date-format
-                  #:time-format time-format))
-   (if session
-       (case session
-         ((#:session/sway)
-          (list
-           (waybar-sway-workspaces bar-id)
-           (waybar-sway-window bar-id))))
-       '())
-   (let ((default-show-percentage? #f))
-     (list
-      (waybar-tray bar-id)
-      (waybar-idle-inhibitor bar-id)
-      (waybar-volume bar-id #:show-percentage? default-show-percentage?)
-      (waybar-microphone bar-id #:show-percentage? default-show-percentage?)
-      (waybar-backlight bar-id #:show-percentage? default-show-percentage?)
-      (waybar-cpu bar-id)
-      (waybar-memory bar-id)
-      (waybar-battery bar-id #:show-percentage? #t)))))
-#+end_src
-********** Modules
-#+begin_src scheme
-(define* (waybar-module name
-                        bar-id
-                        #:key
-                        config
-                        style
-                        (placement 'modules-right))
-  (simple-service
-   (symbol-append 'waybar-module- name)
-   home-waybar-service-type
-   (home-waybar-extension
-    (config `#(((name . ,bar-id)
-                (,placement . #(,name))
-                (,name . ,(or config '())))))
-    (style-css (or style '())))))
-#+end_src
-*********** Backlight
-#+begin_src scheme
-(define* (waybar-backlight bar-id #:key show-percentage?)
-  (waybar-module
-   'backlight
-   bar-id
-   #:config
-   `((format . ,(string-append
-                 "{icon}"
-                 (if show-percentage? " {percent}" "")))
-     (fomat-icons . #(🌕 🌔 🌗 🌒 🌑))))) ; TODO These aren't displaying for some reason.
-#+end_src
-*********** Battery
-#+begin_src scheme
-(define* (waybar-battery bar-id #:key show-percentage?)
-  (waybar-module
-   'battery
-   bar-id
-   #:config
-   (let ((base-format (string-append
-                       "{icon}"
-                       (if show-percentage? " {capacity}%" ""))))
-     `((format . ,base-format)
-       (format-charging . ,(string-append "⚡ " base-format))
-       (states . ((empty . 10)
-                  (low . 20)
-                  (half-low . 40)
-                  (half . 60)
-                  (high . 90)
-                  (full . 100)))
-       (format-icons . ((empty . )
-                        (low . )
-                        (half-low . )
-                        (half . )
-                        (high . )
-                        (full . )))
-       (tooltip-format . "Current capacity: {capacity}%\n\n{timeTo}")))
-   #:style
-   `((#{#battery.discharging.empty}#
-      ((color . @red)))
-     (#{#battery.discharging.low}#
-      ((color . @orange)))
-     (#{#battery.full}#
-      ((color . @green))))))
-#+end_src
-************ WAIT [#D] Fix battery capacity output
-It's frequently incorrect for me but I'm not sure if that's because my computer is old or there's a bug.
-- [2023-02-18 Sat] I've upgraded to a new Waybar version (0.9.17) with some battery improvements that may fix this, wait and watch.
-- [2023-03-02 Thu] It doesn't seem to be helping, full battery reports as ~50%.
-- [2024-05-17 Fri] Maybe it's fixed in 0.9.18?: [[https://github.com/Alexays/Waybar/pull/1937/commits/120cba0f5e897d85cf634400442db5e083408fd2][Alexays/Waybar#1937 fix: battery time remaining by cyrinux]]
-*********** Clock
-#+begin_src scheme
-(define* (waybar-clock bar-id
-                       #:key
-                       date-format
-                       time-format)
-  (waybar-module
-   'clock
-   bar-id
-   #:config
-   `((tooltip-format . "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>")
-     ;; Workarounds for https://github.com/Alexays/Waybar/issues/1452.
-     (format . ,(string-append "{:"
-                               ((@ (ice-9 string-fun) string-replace-substring) date-format "%-d" "%d")
-                               "  "
-                               ((@ (ice-9 string-fun) string-replace-substring) time-format "%-I" "%I")
-                               "}")))
-   #:placement 'modules-left))
-#+end_src
-*********** CPU
-- TODO histogram
-  - I don't understand the histogram output.
-  - The histogram is "jumpy", it changes width.
-    Possibly helpful: [[https://github.com/Alexays/Waybar/wiki/FAQ#how-can-i-prevent-modules-from-changing-size-aka-fixed-width-modules-and-monospace-fonts][FAQ · Alexays/Waybar Wiki · GitHub (prevent modules from changing size)]]
-#+begin_src scheme
-(define* (waybar-cpu bar-id
-                     #:key (histogram? #t))
-  (if histogram?
-      (waybar-module
-       'custom/cpu-hist
-       bar-id
-       #:config
-       `((format . {})
-         (return-type . "json")
-         (exec . ,#~(let ((cmd (list #$(file-append waybar-cpu-histogram "/bin/cpu-hist")
-                                     "2>" "/dev/null")))
-                      (string-append "\"" (string-join cmd) "\"")))
-         (interval . 10)))
-      (waybar-module
-       'cpu
-       bar-id
-       #:config
-       '((format . " {usage}%")))))
-#+end_src
-*********** Idle inhibitor
-#+begin_src scheme
-(define (waybar-idle-inhibitor bar-id)
-  (waybar-module
-   'idle_inhibitor
-   bar-id
-   #:config
-   (let ((tooltip-format "Idle inhibitor {status}."))
-     `((format . {icon})
-       (format-icons . ((activated . )
-                        (deactivated . )))
-       (tooltip-format-activated . ,tooltip-format)
-       (tooltip-format-deactivated . ,tooltip-format)))))
-#+end_src
-*********** Memory
-#+begin_src scheme
-(define (waybar-memory bar-id)
-  (waybar-module
-   'memory
-   bar-id
-   #:config
-   '((format . " {}%"))))
-#+end_src
-*********** Microphone
-#+begin_src scheme
-(define* (waybar-microphone bar-id #:key show-percentage?)
-  (waybar-module
-   'pulseaudio#source
-   bar-id
-   #:config
-   `((format . "{format_source}")
-     (format-source . ,(string-append
-                        (if show-percentage? "{volume}% " "")
-                        ""))
-     (format-source-muted . "")
-     (tooltip-format . "{source_desc} is on {source_volume}%")
-     (on-click . ,#~(let ((cmd (list
-                                #$(file-append pavucontrol "/bin/pavucontrol")
-                                "--tab=4")))
-                      (string-append "\"" (string-join cmd) "\""))))))
-#+end_src
-*********** Tray
-#+begin_src scheme
-(define (waybar-tray bar-id)
-  (waybar-module
-   'tray
-   bar-id
-   #:style
-   `(((#{#tray}# menu)
-      ((color . @fg)
-       (background . @bg)
-       (border . (solid 1px))
-       (border-color . @bg-alt)))
-
-     ((#{#tray}# menu menuitem)
-      ((padding-top . 0px)
-       (padding-bottom . 0px)
-       (margin-top . 0.1em)
-       (margin-bottom . 0em)))
-
-     ((#{#tray}# menu menuitem:hover)
-      ((background . none)))
-
-     ((#{#tray}# menu separator)
-      ((background . @bg-alt)
-       (padding-top . 1px)
-       (margin-top . 0.2em)
-       (margin-bottom . 0.2em))))))
-#+end_src
-*********** Volume
-#+begin_src scheme
-(define* (waybar-volume bar-id #:key show-percentage?)
-  (waybar-module
-   'pulseaudio#sink
-   bar-id
-   #:config
-   (let ((base-format (string-append
-                       (if show-percentage? "{volume}% " "")
-                       "{icon}")))
-     `((format . ,base-format)
-       (format-muted . "🔇")
-       (format-bluetooth . ,(string-append base-format ""))
-       (format-icons . ((default . #(🔈 🔉 🔊 📢))))
-       (tooltip-format . "{desc} is on {volume}%")
-       (on-click . ,(file-append pavucontrol "/bin/pavucontrol"))))))
-#+end_src
-*********** Sway
-************ Window
-#+begin_src scheme
-(define (waybar-sway-window bar-id)
-  (waybar-module
-   'sway/window
-   bar-id
-   #:style
-   `((#{#window}#
-      ((margin-left . 1em)
-       (margin-right . 1em))))
-   #:placement 'modules-center))
-#+end_src
-************ Workspaces
-#+begin_src scheme
-(define* (waybar-sway-workspaces
-          bar-id
-          #:key
-          persistent-workspaces
-          (format-icons '(("1" . )
-                          ("2" . )
-                          ("3" . )
-                          ("4" . )
-                          ("5" . )
-                          ("6" . ) ; 
-                          ("7" . )  ; 
-                          ("8" . )
-                          ("9" . )
-                          ("10" . )
-                          ("urgent" . )
-                          ("focused" . )
-                          ("default" . ))))
-  (waybar-module
-   'sway/workspaces
-   bar-id
-   #:config
-   `((disable-scroll . #t)
-     (format . {icon})
-     (format-icons . ,format-icons)
-     (persistent_workspaces . ,(or persistent-workspaces '())))
-   #:style
-   `(((#{#workspaces}# button)
-      ((background . none)
-       (border-radius . 0.2em)
-       (margin . (0.4em 0.2em))
-       (padding . (0.2em 0.2em))
-       (color . @fg)))
-
-     ((#{#workspaces}# button:hover)
-      ((background . none)
-       (border-color . @accent)))
-
-     ((#{#workspaces}# button.focused)
-      ((background . @bg-alt)
-       (color . @accent)))
-
-     ((#{#workspaces}# button.urgent)
-      ((color . @red))))
-   #:placement 'modules-left))
 #+end_src
 ******** Power monitors
 - TODO this requires ~upower~ (so ~upower-service-type~) and a notification daemon (such as mako), make those dependencies explicit? At least the upower one? Meh.
@@ -8241,7 +7810,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                 (#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
                 (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
-                ;; (#:status-bar . ,(waybar-status-bar))
                 (#:power-monitor . ,(poweralertd-monitor))
                 (#:applets . ,(append
                                (if (and (member #:applet/connection-manager (or applets '()))
@@ -8277,19 +7845,6 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
      (mako-wm-piece #:colors colors
                     #:font font-variable-pitch
                     #:font-size base-font-size)
-     ;; (let ((bar-id 'main))
-     ;;   (waybar-wm-piece #:bars `(((#:bar-id . ,bar-id)
-     ;;                              (#:not-outputs . ,(->> outputs
-     ;;                                                     (filter (lambda (o)
-     ;;                                                               (assoc-ref outputs #:display/no-status-bar?)))
-     ;;                                                     (map (lambda (o)
-     ;;                                                            (assoc-ref outputs #:display/ephemeral-name)))))))
-     ;;                    #:colors colors
-     ;;                    #:font font-variable-pitch
-     ;;                    #:modules (waybar-modules #:bar-id bar-id
-     ;;                                              #:session session
-     ;;                                              #:date-format date-format
-     ;;                                              #:time-format time-format)))
      (poweralertd-wm-piece)
      ;; (kanshi-wm-piece #:outputs outputs)
      (if (and (member #:applet/connection-manager (or applets '()))
@@ -9986,8 +9541,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
      #:doom-flags ,(acons #:doom/icons? #t doom-flags)
      #:doom-ui? #t
      #:sessions-inputs ,(list %macbook-keyboard)
-     #:sessions-outputs ,(list (acons #:display/ephemeral-name "eDP-1"
-                                      %macbook-display))
+     #:sessions-outputs ,(list %macbook-display)
 
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
