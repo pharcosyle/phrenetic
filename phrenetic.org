@@ -553,7 +553,6 @@ Run with ~sudo~.
                                  (program (file-append nfs-utils "/sbin/mount.nfs")))))
           fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
           (service udisks-service-type)
-          (service upower-service-type)
           ;; (service accountsservice-service-type)
           (service cups-pk-helper-service-type)
           (service colord-service-type)
@@ -568,8 +567,6 @@ Run with ~sudo~.
          (stateless-service
           'desktop-base-services
           #:state '(((#:path . "/etc/machine-id")
-                     (#:storage . #:storage/machine))
-                    ((#:path . "/var/lib/upower/")
                      (#:storage . #:storage/machine))
                     ;; ((#:path . "/var/lib/AccountsService/")
                     ;;  (#:storage . #:storage/machine))
@@ -594,6 +591,23 @@ Run with ~sudo~.
      (simple-service 'avahi-users-add-groups
                      accounts-service-type
                      (cons users (list group))))))
+#+end_src
+***** Power
+****** Upower
+#+begin_src scheme
+(define-system-comp (upower-power #:key stateless?)
+  (services
+   (append
+    (operating-system-user-services os)
+    (list
+     (service upower-service-type))
+    (if stateless?
+        (list
+         (stateless-service
+          'upower
+          #:state '(((#:path . "/var/lib/upower/")
+                     (#:storage . #:storage/machine)))))
+        '()))))
 #+end_src
 ***** Media
 ****** Classic
@@ -1706,6 +1720,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
         (as-> $ $
           (desktop-base-services $ #:avahi-users avahi-users
                                  #:stateless? stateless?)
+          (upower-power $ #:stateless? stateless?)
           (if media
               (case media
                 ((#:media/classic) (classic-media $))
