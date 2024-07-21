@@ -6676,6 +6676,7 @@ It's frequently incorrect for me but I'm not sure if that's because my computer 
 (define* (brightnessctl-backlights #:key (step 10))
   (let ((cmd (lambda (op)
                (list (file-append brightnessctl "/bin/brightnessctl")
+                     "--quiet" ; There's a big status report after every invocation that pollutes the logs.
                      "set"
                      (step-pct step op #:suffix)))))
     `((#:backlight/up . ,(cmd #:up))
