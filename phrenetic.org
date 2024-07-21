@@ -7174,7 +7174,8 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             (org-mode . org-modern-mode)
                             (org-agenda-finalize . org-modern-agenda)
                             :config
-                            (setq org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained (otherwise there's some extra and the amount grows each level down).
+                            (setq org-modern-fold-stars '(("▶" . "▼") ("▷" . "▽") ("▹" . "▿") ("▸" . "▾")) ; HACK: remove a symbol pair that doesn't render in Source Code Pro, instead using a Google Noto whih has a different line height.
+                                  org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained (otherwise there's some extra and the amount grows each level down).
                                   org-modern-todo-faces
                                   (-map (-lambda ((kw . face))
                                                  `(,kw :inverse-video t :inherit ,face))
