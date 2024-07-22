@@ -5532,6 +5532,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 ;; TODO do I not have a font for chinese/japanese/korean installed? I don't remember if Apple fonts cover it and I don't see a file with CJK in the name in the google-noto fonts package. Installing noto-cjk is an option.
 ;; TODO [2024-05-26 Sun] There's presets in the fontconfig package, share/fontconfig/conf.avail and etc/fonts/conf.d. Consider them?
 ;; TODO [2024-07-19 Fri] disabling this for now for no particular reason until I get back to fonts stuff
+;; TODO [2024-07-22 Mon] using liberation fonts instead of ms-core now. Consider aliasing them to the equivalent microsoft fonts. See the fedora package for liberation fonts.
 ;; (define (add-fontconfig-config font-sans font-serif font-mono dirs)
 ;;   `(("fontconfig/fonts.conf"
 ;;      ,(apply mixed-text-file
@@ -8098,11 +8099,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                  #:font-serif font-serif
                                  #:font-mono font-mono
                                  #:extra-fonts (list (assoc-ref %fonts #:fonts/google-noto)
+                                                     (assoc-ref %fonts #:fonts/liberation)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-color-emoji)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-compact)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-arabic)
-                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-symbols)
-                                                     (assoc-ref nonphrenetic:%fonts #:fonts/microsoft-web-core)))
+                                                     (assoc-ref nonphrenetic:%fonts #:fonts/apple-symbols)))
                    (xdg-user-directories #:stateless? stateless?)
                    (mesa #:stateless? stateless?)
                    (flatpak-apps #:stateless? stateless?
@@ -9094,7 +9095,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module (gnu services)
   #:use-module ((nongnu packages chrome) #:select ((make-google-chrome-unstable . make-google-chrome)))
   #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
-  #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols font-microsoft-web-core-fonts))
+  #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols))
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox))
   #:use-module ((chromium chromium) #:select (chromium chromium+drm))
@@ -9133,8 +9134,7 @@ delete it when leaving the dynamic extent of this call."
     (#:fonts/apple-color-emoji . ((#:font/name . "Apple Color Emoji")
                                   (#:font/package . ,font-apple-color-emoji)))
     (#:fonts/apple-symbols . ((#:font/name . "Apple Symbols")
-                              (#:font/package . ,font-apple-symbols)))
-    (#:fonts/microsoft-web-core . ((#:font/package . ,font-microsoft-web-core-fonts)))))
+                              (#:font/package . ,font-apple-symbols)))))
 #+end_src
 **** Programs
 ***** Development
