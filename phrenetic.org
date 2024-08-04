@@ -1764,10 +1764,10 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu home-services version-control)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module ((gnu packages chromium) #:select (ungoogled-chromium))
-  #:use-module ((gnu packages compression) #:select (zip unzip))
+  ;; #:use-module ((gnu packages compression) #:select (zip unzip))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages clojure) #:select (clojure-tools))
-  #:use-module ((gnu packages curl) #:select (curl))
+  ;; #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
   #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
@@ -1875,7 +1875,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             ;; nano-prog
             doom-trash-prog
             git-prog
-            misc-progs
+            ;; misc-progs
             pavucontrol-app
             font-manager-app
             doom-menu-app
@@ -6997,15 +6997,15 @@ use_guixs() {
 #+end_src
 ***** Miscellaneous programs
 #+begin_src scheme
-(define (misc-progs)
-  (list
-   (simple-service
-    'misc-progs-add-packages
-    home-profile-service-type
-    (list curl
-          ;; lm-sensors
-          unzip
-          zip))))
+;; (define (misc-progs)
+;;   (list
+;;    (simple-service
+;;     'misc-progs-add-packages
+;;     home-profile-service-type
+;;     (list curl
+;;           ;; lm-sensors
+;;           unzip
+;;           zip))))
 #+end_src
 **** Apps
 ***** Audio
@@ -7821,7 +7821,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
             (doom-trash-prog)
             '()))
        '()) ; Maybe have some alternatives for non-Doom here: Some file manager, trash-cli...
-   (misc-progs)))
+   ;; (misc-progs)
+   ))
 #+end_src
 **** Apps
 #+begin_src scheme
