@@ -5574,6 +5574,8 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
      (home-stateless-service
       'mesa
       #:state '(((#:path . ("mesa_shader_cache/" #:xdg-base "XDG_CACHE_HOME"))
+                 (#:storage . #:storage/machine))
+                ((#:path . ("mesa_shader_cache_db/" #:xdg-base "XDG_CACHE_HOME"))
                  (#:storage . #:storage/machine)))))))
 #+end_src
 ***** D-Bus
