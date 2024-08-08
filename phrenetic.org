@@ -2544,7 +2544,8 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
     `((#:init-file . ,(init-file (field #:modules)))
       (#:config-file . ,(config-file (field #:config)))
       (#:packages-file . ,(packages-file (field #:packages)))
-      (#:theme-files . ,(theme-files (field #:themes))))))
+      (#:theme-files . ,(theme-files (field #:themes)))
+      (#:snippets . ,(apply append (field #:snippets))))))
 
 (define (init-file exts)
   (as-> exts $
@@ -2642,7 +2643,15 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
             (let ((name (string-append (symbol->string theme-name) "-theme.el")))
               `(,(string-append "themes/" name)
                 ,(mixed-text-file name file)))))
-         (assoc-ref config #:theme-files)))))
+         (assoc-ref config #:theme-files))
+    (append-map (match-lambda
+                  ((mode snippets)
+                   (map (match-lambda
+                          ((name file)
+                           `(,(string-append "snippets/" mode "/" name)
+                             ,(mixed-text-file (string-append "emacs-snippet-" name) file))))
+                        snippets)))
+                (assoc-ref config #:snippets)))))
 #+end_src
 ****** Extension helpers
 #+begin_src scheme
@@ -2651,14 +2660,16 @@ A similar package and possibly useful reference: [[https://github.com/alphapapa/
                        modules
                        packages
                        config
-                       themes)
+                       themes
+                       snippets)
   (simple-service
    (symbol-append name '-doom)
    doom-service-type
    `((#:modules . ,modules)
      (#:packages . ,packages)
      (#:config . ,config)
-     (#:themes . ,themes))))
+     (#:themes . ,themes)
+     (#:snippets . ,snippets))))
 #+end_src
 ******* Stateless
 #+begin_src scheme
@@ -4405,7 +4416,10 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                      (setq evil-multiedit-follow-matches t)))
            '())
 
-       (wip-config)))
+       (wip-config))
+
+      #:snippets
+      `(("clojure-mode" (("bogus" "# -*- mode: snippet -*-\n# name: bogus\n# key: bogus\n# --\n(defn $1\n  \"$2\"$>\n  [$3]$>\n  $0)$>")))))
 
      (if stateless?
          (list
