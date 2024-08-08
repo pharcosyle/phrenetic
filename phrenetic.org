@@ -1775,7 +1775,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
   #:use-module ((gnu packages glib) #:select (dbus))
-  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome gnome-session gnome-themes-extra hicolor-icon-theme))
+  #:use-module ((gnu packages gnome) #:select (adwaita-icon-theme dconf gnome-essential-extras gnome-meta-core-services gnome-meta-core-shell gnome-meta-core-utilities gnome-session gnome-themes-extra hicolor-icon-theme))
   #:use-module ((gnu packages gnome-xyz) #:select (arc-theme papirus-icon-theme))
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
@@ -5631,7 +5631,11 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
     'gnome-add-packages
     home-profile-service-type
     (list (gnome-start-package)
-          gnome))
+          (append-map package-propagated-inputs
+                      (list gnome-meta-core-services
+                            gnome-meta-core-shell
+                            gnome-meta-core-utilities
+                            gnome-essential-extras))))
 
    ;; (when stateless?
    ;;   (home-stateless-service
