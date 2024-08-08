@@ -205,6 +205,7 @@ Run with ~sudo~.
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
+  #:use-module ((gnu packages firmware) #:select (ath9k-htc-ar7010-firmware ath9k-htc-ar9271-firmware openfwwf-firmware))
   #:use-module ((gnu packages freedesktop) #:select (elogind libinput-minimal switchd))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
@@ -287,6 +288,11 @@ Run with ~sudo~.
     (host-name #f)
     (bootloader (bootloader-configuration
                  (bootloader #f)))
+    (firmware (remove (lambda (p)
+                        (member p (list ath9k-htc-ar7010-firmware
+                                        ath9k-htc-ar9271-firmware
+                                        openfwwf-firmware)))
+                      %base-firmware))
     (services '())
     (file-systems %base-file-systems)))
 #+end_src
