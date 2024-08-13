@@ -6998,7 +6998,12 @@ use_guixs() {
     #:modules '((#:emacs
                  vc)
                 (#:ui
-                 (vc-gutter +pretty))))))
+                 (vc-gutter +pretty)))
+    #:config
+    '((use-package! diff-hl
+                    :defer t
+                    :init
+                    (remove-hook! 'diff-hl-mode-hook #'diff-hl-flydiff-mode))))))
 #+end_src
 ***** VPN
 ****** Proton VPN CLI
