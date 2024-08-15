@@ -4300,14 +4300,9 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                  (setq doom-modeline-major-mode-icon t)
                  (setq doom-modeline-persp-name t))
 
-         (use-package! highlight-indent-guides
-                       :defer t
-                       :init
-                       ;; I don't want indent guides on by default, remove all the Doom module's hooks.
-                       (remove-hook! '(prog-mode-hook
-                                       text-mode-hook
-                                       conf-mode-hook)
-                                     #'highlight-indent-guides-mode))
+         ;; I don't want indent guides enabled automatically.
+         (add-hook! '+indent-guides-inhibit-functions
+                    (lambda () t))
 
          (use-package! lispy
                        :defer t
