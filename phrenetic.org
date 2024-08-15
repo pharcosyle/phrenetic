@@ -4368,9 +4368,6 @@ Had =:tangle (meta-in-dir "parse-doom-packages.el")=
                  ;; Doom sets this to 4 for possible performance reasons. I like having more (and 9 is the rainbow-delimiters default). The Doom base theme defines 9 too so this should look okay on most themes (though if they define their own faces there might be some duplication/clash where their definitions stop and the base theme's start).
                  (setq rainbow-delimiters-max-face-count 9))
 
-         (after! recentf
-                 (setq recentf-max-saved-items 500))
-
          (after! smartparens
                  (map! :map smartparens-mode-map
                        "C-s-h" #'sp-backward-sexp
