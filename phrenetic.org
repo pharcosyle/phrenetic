@@ -7517,6 +7517,10 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        ,(ini-file
          "gtk-3.0-settings.ini"
          `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
+      ("gtk-4.0/settings.ini"
+       ,(ini-file
+         "gtk-4.0-settings.ini"
+         `((Settings ((gtk-application-prefer-dark-theme . ,(equal? theme #:theme/dark)))))))
       ("dconf/user"
        ,(dconf-db
          "dconf-user"
