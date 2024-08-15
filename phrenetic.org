@@ -5817,7 +5817,8 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                      default-kb-repeat-rate
                      default-tp-tap?)
   (append
-   `((input type:keyboard
+   `((focus_follows_mouse #f)
+     (input type:keyboard
       ,(append
         (if default-kb-repeat-delay
             `((repeat_delay ,default-kb-repeat-delay)) '())
