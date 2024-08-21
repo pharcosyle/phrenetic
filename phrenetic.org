@@ -209,6 +209,7 @@ Run with ~sudo~.
   #:use-module ((gnu packages freedesktop) #:select (elogind libinput-minimal switchd))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
+  #:use-module ((gnu packages hyprland) #:select (hyprlock))
   #:use-module ((gnu packages libusb) #:select (libmtp))
   #:use-module ((gnu packages linux) #:select (brightnessctl customize-linux e2fsprogs kbd linux-libre util-linux))
   #:use-module ((gnu packages nfs) #:select (nfs-utils))
@@ -965,6 +966,16 @@ There are considerably more options that to pare down / disable (see documentati
 #+end_src
 ******* Pieces
 ******** Screen lockers
+********* Hyprlock
+#+begin_src scheme
+(define* (hyprlock-service)
+  (service screen-locker-service-type
+           (screen-locker-configuration
+            (name "hyprlock")
+            (program (file-append hyprlock "/bin/hyprlock"))
+            (allow-empty-password? #t)
+            (using-setuid? #f))))
+#+end_src
 ********* Swaylock
 #+begin_src scheme
 (define* (swaylock-service #:key
@@ -1894,6 +1905,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
+  #:use-module ((gnu packages hyprland) #:select (hyprlock))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire wireplumber wireplumber))
@@ -6192,6 +6204,71 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 #+end_src
 ******* Pieces
 ******** Screen lockers
+********* Hyprlock
+#+begin_src scheme
+(define* (hyprlock-wm-piece #:key
+                            colors
+                            font
+                            font-size
+                            time-format
+                            date-format
+                            image
+                            extra-config)
+  (list
+   (simple-service
+    'hyprlock-add-packages
+    home-profile-service-type
+    (list hyprlock))
+
+   (simple-service
+    'hyprlock-conf
+    home-xdg-configuration-files-service-type
+    `(("hypr/hyprlock.conf"
+       ,(hyprlang-file
+         "hyprlock-conf"
+         (let ((font (assoc-ref font #:font/name)))
+           (append
+            `((#:grace 5)
+              (#:background ,(append
+                              ;; TODO blur is enabled by default, yes?
+                              ;; Any additional blur settings
+                              (if image
+                                  `((#:path ,image))
+                                  '())))
+              ;; Widgets
+              (#:label ((#:font_family ,font)
+                        (#:font_size ,(* font-size 3))
+                        ;; TODO remove halign/valign everywhere if they're the default / unnecessary
+                        (#:halign "center")
+                        (#:valign "center")
+                        (#:position 0 300)
+                        ;; (#:color ,(hex->rgb (assoc-ref colors #:color/violet)))
+                        (#:text ,(string-append "cmd[update:1000] echo \"$(date +\"" time-format "\")\""))))
+              (#:label ((#:font_family ,font)
+                        (#:font_size ,(* font-size 2))
+                        (#:halign "center")
+                        (#:valign "center")
+                        (#:position 0 100)
+                        ;; (#:color ,(hex->rgb (assoc-ref colors #:color/violet)))
+                        (#:text ,(string-append "cmd[update:1000] echo \"$(date +\"" date-format "\")\""))))
+              (#:input-field ((#:font_family ,font)
+                              (#:font_size ,font-size)
+                              (#:halign "center")
+                              (#:valign "center")
+                              (#:position 0 -100)
+                              ;; (#:text_color ,(hex->rgb (assoc-ref colors #:color/fg)))
+                              ;; (#:inner_color ,(string-append (hex->rgb (assoc-ref colors #:color/bg)) ", 0.5"))
+                              ;; (#:check_color ,(hex->rgb (assoc-ref colors #:color/blue)))
+                              ;; (#:fail_color ,(hex->rgb (assoc-ref colors #:color/red)))
+                              )))
+            (or extra-config '())))))))))
+
+(define* (hyprlock-screen-locker)
+  (let ((hyprlock-bin (file-append hyprlock "/bin/hyprlock")))
+    `((#:screen-locker/lock . ,(list hyprlock-bin))
+      (#:screen-locker/lock-immediately . ,(list hyprlock-bin
+                                                 "--immediate")))))
+#+end_src
 ********* Swaylock
 #+begin_src scheme
 (define* (swaylock-wm-piece #:key
