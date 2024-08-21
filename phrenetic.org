@@ -1813,6 +1813,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   sessions-swaylock-effects?
                   sessions-swaylock
                   sessions-swaylock-effects
+                  hyprland-users
                   sway-users
                   stateless?)
   (as-> os $
@@ -1868,6 +1869,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                            #:auto-login-user auto-login-user))
           (if (member #:session/gnome (or sessions '()))
               (gnome-desktop $) $)
+          (if (member #:session/hyprland (or sessions '()))
+              (hyprland-wm $ #:users hyprland-users) $)
           (if (member #:session/sway (or sessions '()))
               (sway-wm $ #:users sway-users
                        #:swaylock-effects? sessions-swaylock-effects?
@@ -8378,6 +8381,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                           login-manager
                           desktop-tty-start-cmds
                           sessions
+                          hyprland-environment
                           sway-environment
                           virtualization?)
   (append
@@ -8414,6 +8418,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                          #:start-cmds desktop-tty-start-cmds))
         (if (member #:session/gnome (or sessions '()))
             (gnome-desktop #:stateless? stateless?) '())
+        (if (member #:session/hyprland (or sessions '()))
+            hyprland-environment '())
         (if (member #:session/sway (or sessions '()))
             sway-environment '()))
        '())
@@ -8715,9 +8721,26 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                  #:pipewire media-pipewire
                                  #:login-manager login-manager
                                  #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                            (#:session/hyprland . ,(hyprland-start #:pipewire? pipewire?))
                                                             (#:session/sway . ,(sway-start #:sway sway
                                                                                            #:pipewire? pipewire?)))
                                  #:sessions sessions
+                                 #:hyprland-environment (hyprland-environment #:pipewire? pipewire?
+                                                                              #:doom? doom?
+                                                                              #:input input
+                                                                              #:output output
+                                                                              #:portal-services (append
+                                                                                                 (portal-config-services #:xdg-current-desktop "hyprland"
+                                                                                                                         #:preferred '("hyprland" "gtk"))
+                                                                                                 (portal-services/hyprland)
+                                                                                                 (portal-services/gtk))
+                                                                              #:colors colors
+                                                                              #:wallpaper wallpaper
+                                                                              #:font-variable-pitch font-variable-pitch
+                                                                              #:base-font-size base-font-size
+                                                                              #:date-format date-format
+                                                                              #:time-format time-format
+                                                                              #:external-programs external-programs)
                                  #:sway-environment (sway-environment #:sway sway
                                                                       #:pipewire? pipewire?
                                                                       #:doom? doom?
@@ -10111,6 +10134,10 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                                      guest-he-sessions)
                                (apply append)
                                delete-duplicates)
+               #:hyprland-users (session-users #:session/hyprland
+                                               `((,primary-name . ,primary-he-sessions)
+                                                 (,aux-name . ,aux-he-sessions)
+                                                 (,guest-name . ,guest-he-sessions)))
                #:sway-users (session-users #:session/sway
                                            `((,primary-name . ,primary-he-sessions)
                                              (,aux-name . ,aux-he-sessions)
