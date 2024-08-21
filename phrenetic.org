@@ -10247,7 +10247,8 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 
 (define primary-he-shell default-shell)
 (define primary-he-kmonad? #t)
-(define primary-he-sessions '(#:session/sway))
+(define primary-he-sessions '(#:session/hyprland
+                              #:session/sway))
 (define primary-he-virtualization? #t)
 
 
@@ -10269,6 +10270,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 (define aux-he-kmonad? #f)
 (define aux-he-sessions primary-he-sessions)
 (define aux-he-sessions '(;; #:session/gnome
+                          #:session/hyprland
                           #:session/sway))
 (define aux-he-virtualization? primary-he-virtualization?)
 
@@ -10289,6 +10291,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 (define guest-he-shell default-shell)
 (define guest-he-kmonad? #f)
 (define guest-he-sessions '(;; #:session/gnome
+                            #:session/hyprland
                             #:session/sway))
 (define guest-he-virtualization? #f)
 
