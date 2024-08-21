@@ -8421,6 +8421,46 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
        (virtualization) '())))
 #+end_src
 ***** Sessions
+****** Hyprland environment
+#+begin_src scheme
+(define* (hyprland-environment #:key
+                               pipewire?
+                               doom?
+                               input
+                               output
+                               portal-services
+                               colors
+                               wallpaper
+                               font-variable-pitch
+                               base-font-size
+                               date-format
+                               time-format
+                               external-programs
+                               (screen-locker (hyprlock-screen-locker)))
+  (let ((session #:session/hyprland))
+    (append
+     (hyprland-wm #:pipewire? pipewire?
+                  #:portal-services portal-services
+                  #:input input
+                  #:output output
+                  #:external-programs
+                  (append
+                   `((#:idle-manager . ,(hypridle-idle-manager))
+                     (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately)))
+                   external-programs))
+     (hyprlock-wm-piece #:colors colors
+                        #:image wallpaper
+                        #:font font-variable-pitch
+                        #:font-size base-font-size
+                        #:date-format date-format
+                        #:time-format time-format)
+     (hypridle-wm-piece #:session session
+                        #:screen-locker (assoc-ref screen-locker #:screen-locker/lock))
+     (mako-wm-piece #:colors colors
+                    #:font font-variable-pitch
+                    #:font-size base-font-size)
+     (poweralertd-wm-piece))))
+#+end_src
 ****** Sway environment
 #+begin_src scheme
 (define* (sway-environment #:key
