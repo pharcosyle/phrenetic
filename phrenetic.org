@@ -949,6 +949,15 @@ There are considerably more options that to pare down / disable (see documentati
           (operating-system-user-services os))))
 #+end_src
 ****** Window managers
+******* Hyprland
+#+begin_src scheme
+(define-system-comp (hyprland-wm #:key users)
+  (services
+   (append (operating-system-user-services os)
+           (list
+            (hyprlock-service))
+           (brightnessctl-services #:users users))))
+#+end_src
 ******* Sway
 #+begin_src scheme
 (define-system-comp (sway-wm #:key
@@ -1905,7 +1914,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
-  #:use-module ((gnu packages hyprland) #:select (hypridle hyprlock xdg-desktop-portal-hyprland/simple))
+  #:use-module ((gnu packages hyprland) #:select (hypridle hyprland hyprlock xdg-desktop-portal-hyprland/simple))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire wireplumber wireplumber))
@@ -5852,6 +5861,290 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                 (list xdg-session-type-wayland-env-var))))
 #+end_src
 ****** Window managers
+******* Hyprland
+#+begin_src scheme
+(define* (hyprland-wm #:key
+                      pipewire?
+                      portal-services
+                      (main-mod #:ALT)
+                      input
+                      output
+                      external-programs
+                      extra-config)
+  (append
+   (list
+    (simple-service
+     'hyprland-add-packages
+     home-profile-service-type
+     (list (hyprland-start-package #:pipewire? pipewire?)
+           hyprland))
+
+    (simple-service
+     'hyprland-conf
+     home-xdg-configuration-files-service-type
+     `(("hypr/hyprland.conf"
+        ,(hyprlang-file
+          "hyprland-conf"
+          (append
+           `((#:$mod ,main-mod)
+
+             (#:bind #:$mod #:H #:workspace "-1")
+             (#:bind #:$mod #:L #:workspace "+1")
+             (#:bind #:$mod+Shift #:H #:movetoworkspace "-1")
+             (#:bind #:$mod+Shift #:L #:movetoworkspace "+1")
+
+             (#:bindm #:$mod #:mouse:272 #:movewindow)
+             (#:bindm #:$mod+Shift #:mouse:272 #:resizewindow)
+
+             (#:general ((#:gaps_out 55 5 5 320)))
+             (#:animations ((#:enabled #f)))
+             (#:xwayland ((#:force_zero_scaling #t)))
+             (#:misc ((#:force_default_wallpaper 2)))
+
+             (#:debug:disable_logs #f))
+
+           (hyprland-general)
+           (apply hyprland-input (alist->list input))
+           ;; (apply hyprland-output (alist->list output))
+           (apply hyprland-external-programs (alist->list external-programs))
+           ;; (hyprland-app-windows)
+
+           (or extra-config '())))))))
+
+   (or portal-services '())))
+
+(define* (hyprland-start #:key pipewire?)
+  (file-append (hyprland-start-package #:pipewire? pipewire?)
+               "/bin/" hyprland-start-exe))
+
+(define hyprland-start-exe "hyprland-start")
+
+(define* (hyprland-start-package #:key pipewire?)
+  (session-start
+   hyprland-start-exe
+   (file-append hyprland "/bin/Hyprland")
+   #:log-file "hyprland.log"
+   ;; #:pre-start (environment-variable-shell-definitions
+   ;;              (cons* (xdg-current-desktop-env-var "Hyprland")
+   ;;                     xdg-session-type-wayland-env-var
+   ;;                     (wayland-env-vars pipewire?)))
+   ;; TODO there's some issue in session-start, work around it
+   #:pre-start (environment-variable-shell-definitions
+                '(("ASDFASDFASDFFF" . "bob")))))
+
+(define (hyprland-general)
+  (append
+   `(;; Windows
+     (#:bind #:$mod+Shift #:C #:killactive)
+     ;; (bindsym $mod+Shift+f fullscreen)
+     (#:bind #:$mod+Shift #:Space #:togglefloating)
+     ;; (bindsym $mod+Control+space focus mode_toggle)
+     (#:bind #:$mod+Control #:H #:movefocus #:l)
+     (#:bind #:$mod+Control #:J #:movefocus #:d)
+     (#:bind #:$mod+Control #:K #:movefocus #:u)
+     (#:bind #:$mod+Control #:L #:movefocus #:r)
+     ;; (bindsym $mod+Shift+h move left)
+     ;; (bindsym $mod+Shift+j move down)
+     ;; (bindsym $mod+Shift+k move up)
+     ;; (bindsym $mod+Shift+l move right)
+     )
+
+   ;; Workspaces
+   (append
+    (append-map (lambda (x)
+                  (let ((n (number->string (modulo x 10))))
+                    `((#:bind #:$mod ,n #:workspace ,x)
+                      (#:bind #:$mod+Shift ,n #:movetoworkspace ,x))))
+                (iota 10 1))
+    ;; `((bindsym $mod+tab workspace back_and_forth))
+    )
+
+   `(;; Scratchpad
+     ;; (bindsym $mod+Shift+minus move scratchpad)
+     ;; (bindsym $mod+minus scratchpad show)
+
+     ;; Layout
+     ;; (bindsym $mod+Shift+b splith)
+     ;; (bindsym $mod+Shift+v splitv)
+     ;; (bindsym $mod+Shift+s layout stacking)
+     ;; (bindsym $mod+Shift+w layout tabbed)
+     ;; (bindsym $mod+Shift+e layout toggle split)
+
+     ;; (bindsym $mod+Shift+a focus parent)
+
+     ;; (bindsym $mod+Shift+r reload)
+     (#:bind #:$mod+Control+Shift #:Q #:exit)
+
+
+     ;; (default_border pixel)
+     ;; (default_floating_border pixel)
+     ;; (gaps inner 8)
+
+     ;; (floating_modifier $mod normal)
+     )))
+
+(define* (hyprland-input #:key
+                         inputs
+                         default-kb-repeat-delay
+                         default-kb-repeat-rate
+                         default-tp-tap?)
+
+  `((#:input ((#:follow_mouse 0)
+              (#:float_switch_override_focus 0)
+              (#:repeat_delay ,default-kb-repeat-delay)
+              (#:repeat_rate ,default-kb-repeat-rate)
+              (#:kb_layout "us")
+              (#:kb_model "macbook78")
+              (#:touchpad ((#:natural_scroll #t)
+                           (#:tap-to-click ,default-tp-tap?))))))
+
+  ;; (append
+  ;;  `((focus_follows_mouse #f)
+  ;;    (input type:keyboard
+  ;;           ,(append
+  ;;             (if default-kb-repeat-delay
+  ;;                 `((repeat_delay ,default-kb-repeat-delay)) '())
+  ;;             (if default-kb-repeat-rate
+  ;;                 `((repeat_rate ,default-kb-repeat-rate)) '())))
+  ;;    (input type:touchpad
+  ;;           ((tap ,(if default-tp-tap?
+  ;;                      'enabled 'disabled)))))
+
+  ;;  (->> (or inputs '())
+  ;;       (filter (lambda (input)
+  ;;                 (assoc-ref input #:keyboard/layout)))
+  ;;       (map (lambda (input)
+  ;;              `(input ,(string-join (list (number->string
+  ;;                                           (assoc-ref input #:keyboard/vendor-id))
+  ;;                                          (number->string
+  ;;                                           (assoc-ref input #:keyboard/product-id))
+  ;;                                          (string-replace-substring
+  ;;                                           (assoc-ref input #:keyboard/name) " " "_"))
+  ;;                                    ":")
+  ;;                ,(let ((kb-layout (assoc-ref input #:keyboard/layout)))
+  ;;                   (append
+  ;;                    `((xkb_layout ,(keyboard-layout-name kb-layout)))
+  ;;                    (if-let ((variant (keyboard-layout-variant kb-layout)))
+  ;;                            `((xkb_variant ,variant)) '())
+  ;;                    (if-let ((model (keyboard-layout-model kb-layout)))
+  ;;                            `((xkb_model ,model)) '())
+  ;;                    (let ((options (keyboard-layout-options kb-layout)))
+  ;;                      (if (null? options)
+  ;;                          '()
+  ;;                          `((xkb_options ,(string-join
+  ;;                                           (keyboard-layout-options kb-layout) ","))))))))))))
+  )
+
+(define* (hyprland-output #:key
+                          outputs
+                          default-bg-image)
+  (append
+   `((output *
+      ,(if default-bg-image
+           `((bg ,default-bg-image fill)) '())))
+   ;; (map (lambda (output)
+   ;;        `((output ,(as-> (list (assoc-ref output #:display/make)
+   ;;                               (assoc-ref output #:display/model)) $
+   ;;                         (string-join $)
+   ;;                         (quoted $)))
+   ;;          ;; ...
+   ;;          ))
+   ;;      (or outputs '()))
+   ))
+
+;; TODO Temporary
+(define (gexp-cmd cmd)
+  #~(string-join '#$cmd))
+
+(define* (hyprland-external-programs #:key
+                                     idle-manager
+                                     screen-locker
+                                     notifier
+                                     power-monitor
+                                     app-launcher
+                                     terminal
+                                     backup-terminal
+                                     emacs-interface)
+  (let ((executions
+         (map (lambda (cmd)
+                (list #:exec-once (gexp-cmd cmd)))
+              (list idle-manager
+                    (assoc-ref notifier #:notifier/daemon)
+                    power-monitor)))
+
+        (bindings
+         (append
+          `((#:bind #:$mod #:Return #:exec ,(gexp-cmd terminal))
+            ,@(if backup-terminal
+                  `((#:bind #:$mod+Control+Shift #:Return #:exec ,(gexp-cmd backup-terminal)))
+                  '())
+            (#:bind #:$mod+Shift #:D #:exec ,(gexp-cmd app-launcher))
+            (#:bind #:$mod+Control+Shift #:L #:exec ,(gexp-cmd screen-locker))
+            (#:bind #:$mod+Shift #:Y #:exec ,(gexp-cmd (assoc-ref emacs-interface #:emacs/program)))
+            (#:bind #:$mod #:Y #:exec ,(gexp-cmd (assoc-ref emacs-interface #:emacs/new-frame))))
+
+          (hyprland-notifications notifier)
+          (hyprland-backlights)
+          (hyprland-volume)
+          (hyprland-player))))
+
+    (append executions bindings)))
+
+(define (hyprland-notifications notifier)
+  `((#:bind #:$mod #:M #:exec ,(gexp-cmd (assoc-ref notifier #:notifier/dismiss)))
+    (#:bind #:$mod+Shift #:M #:exec ,(gexp-cmd (assoc-ref notifier #:notifier/restore)))
+    (#:bind #:$mod+Control #:M #:exec ,(gexp-cmd (assoc-ref notifier #:notifier/menu)))))
+
+(define (hyprland-backlights)
+  (let ((backlights (brightnessctl-backlights)))
+    `((#:bindl "" #:XF86MonBrightnessUp #:exec ,(gexp-cmd (assoc-ref backlights #:backlight/up)))
+      (#:bindl "" #:XF86MonBrightnessDown #:exec ,(gexp-cmd (assoc-ref backlights #:backlight/down))))))
+
+(define (hyprland-volume)
+  (let ((volume (pipewire-volume))) ; TODO This should be dependent on whether media is pulseaudio or pipewire.
+    `((#:bindl "" #:XF86AudioRaiseVolume #:exec ,(gexp-cmd (cmd-chain (assoc-ref volume #:volume/up))))
+      (#:bindl "" #:XF86AudioLowerVolume #:exec ,(gexp-cmd (cmd-chain (assoc-ref volume #:volume/down))))
+      (#:bindl "" #:XF86AudioMute #:exec ,(gexp-cmd (assoc-ref volume #:volume/mute-unmute)))
+      (#:bindl "" #:XF86AudioMicMute #:exec ,(gexp-cmd (assoc-ref volume #:volume/mic-mute-unmute))))))
+
+;; TODO I don't know how I want to handle "multi-commands" yet, just do this for the ones I know that are for now. However at least in this case I do like the idea of doing "&&" between them rather than, say, comma-separating them like Sway allows because in the general case if one of the commands fails it's probably best not to run any that would come after.
+(define (cmd-chain cs)
+  (->> cs
+       (interpose (list "&&"))
+       (apply append)))
+
+(define (hyprland-player)
+  (let ((player (playerctl-player)))
+    `((#:bindl "" #:XF86AudioPlay #:exec ,(gexp-cmd (assoc-ref player #:player/play-pause)))
+      (#:bindl "" #:XF86AudioPrev #:exec ,(gexp-cmd (assoc-ref player #:player/previous)))
+      (#:bindl "" #:XF86AudioNext #:exec ,(gexp-cmd (assoc-ref player #:player/next))))))
+
+(define* (hyprland-app-windows #:key (props (list emacs-modal-window-props
+                                                  ;; ...
+                                                  )))
+  (map (lambda (p)
+         (let ((commands (append (list (if (assoc-ref p #:window-prop/floating?)
+                                           '((floating enable)) '())
+                                       ;; ...
+                                       ))))
+           (if (not (null? commands))
+               (append
+                ;; Andrew Tropin says there's a bug in Sway that could affect this (https://github.com/swaywm/sway/issues/6950). I haven't experienced it but it's something to consider if I have issues.
+                `(for_window ,(as-> (append
+                                     (if-let ((title (assoc-ref p #:window-prop.criteria/title)))
+                                             `(("title" . ,title)) '())
+                                     ;; ...
+                                     ) $
+                                (map (match-lambda
+                                       ((k . v)
+                                        (string-append k "=" (quoted v))))
+                                     $)
+                                (string-join $)
+                                (string-append "[" $ "]")))
+                commands)
+               '())))
+       props))
+#+end_src
 ******* Sway
 #+begin_src scheme
 (define* (sway-wm #:key
