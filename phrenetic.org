@@ -7951,53 +7951,37 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                            sway
                            pipewire?
                            doom?
-                           doom-ui?
-                           inputs
-                           outputs
+                           input
+                           output
                            portal-services
                            colors
-                           (wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
+                           wallpaper
                            font-variable-pitch
                            base-font-size
-                           (date-format (assoc-ref %date-formats #:date-format/simple))
-                           (time-format (assoc-ref %time-formats #:time-format/simple))
-                           emacs-interface
+                           date-format
+                           time-format
+                           external-programs
                            swaylock-effects?
                            swaylock
                            swaylock-effects
                            swayidle
                            (screen-locker (swaylock-screen-locker #:effects? swaylock-effects?
                                                                   #:swaylock swaylock
-                                                                  #:swaylock-effects swaylock-effects))
-                           (menu (if doom-ui?
-                                     (doom-menu (assoc-ref emacs-interface #:emacs/handler))
-                                     (rofi-menu #:wayland? #t))))
+                                                                  #:swaylock-effects swaylock-effects)))
   (let ((session #:session/sway))
     (append
      (sway-wm #:sway sway
               #:pipewire? pipewire?
               #:doom? doom?
               #:portal-services portal-services
-              #:input `((#:inputs . ,inputs)
-                        (#:default-kb-repeat-delay . 200)
-                        (#:default-kb-repeat-rate . 40)
-                        (#:default-tp-tap? . #t))
-              #:output `((#:outputs . ,outputs)
-                         (#:default-bg-image . ,wallpaper))
+              #:input input
+              #:output output
               #:external-programs
-              `((#:sway . ,sway)
-                (#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
-                (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately))
-                (#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
-                (#:power-monitor . ,(poweralertd-monitor))
-                (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
-                (#:terminal . ,(if doom-ui?
-                                   (doom-vterm-terminal (assoc-ref emacs-interface #:emacs/handler))
-                                   (alacritty-terminal)))
-                (#:backup-terminal . ,(if doom-ui?
-                                          (alacritty-terminal)
-                                          #f))
-                (#:emacs-interface . ,emacs-interface)))
+              (append
+               `((#:sway . ,sway)
+                 (#:idle-manager . ,(swayidle-idle-manager #:swayidle swayidle))
+                 (#:screen-locker . ,(assoc-ref screen-locker #:screen-locker/lock-immediately)))
+               external-programs))
      (swaylock-wm-piece #:colors colors
                         #:image wallpaper
                         #:font font-variable-pitch
@@ -8177,44 +8161,69 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
     (let ((he-base
            (lambda ()
              (append
-              (system-features #:stateless? stateless?
-                               #:stateless-storage-paths stateless-storage-paths
-                               #:login-shell login-shell
-                               #:doom? doom?
-                               #:doom-flags doom-flags
-                               #:package-managers package-managers
-                               #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
-                               #:console? console?
-                               #:kmonad? kmonad?
-                               #:kmonad kmonad
-                               #:desktop? desktop?
-                               #:pipewire? pipewire?
-                               #:pipewire media-pipewire
-                               #:login-manager login-manager
-                               #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
-                                                          (#:session/sway . ,(sway-start #:sway sway
-                                                                                         #:pipewire? pipewire?)))
-                               #:sessions sessions
-                               #:sway-environment (sway-environment #:sway sway
-                                                                    #:pipewire? pipewire?
-                                                                    #:doom? doom?
-                                                                    #:doom-ui? doom-ui?
-                                                                    #:inputs sessions-inputs
-                                                                    #:outputs sessions-outputs
-                                                                    #:portal-services (append
-                                                                                       (portal-config-services #:xdg-current-desktop "sway"
-                                                                                                               #:preferred '("wlr" "gtk"))
-                                                                                       (portal-services/wlr)
-                                                                                       (portal-services/gtk))
-                                                                    #:colors colors
-                                                                    #:font-variable-pitch font-variable-pitch
-                                                                    #:base-font-size base-font-size
-                                                                    #:emacs-interface emacs-interface
-                                                                    #:swaylock-effects? sessions-swaylock-effects?
-                                                                    #:swaylock sessions-swaylock
-                                                                    #:swaylock-effects sessions-swaylock-effects
-                                                                    #:swayidle sessions-swayidle)
-                               #:virtualization? virtualization?)
+              (let* ((wallpaper (assoc-ref %wallpapers #:wallpaper/alucard))
+                     (input `((#:inputs . ,sessions-inputs)
+                              (#:default-kb-repeat-delay . 200)
+                              (#:default-kb-repeat-rate . 40)
+                              (#:default-tp-tap? . #t)))
+                     (output `((#:outputs . ,sessions-outputs)
+                               (#:default-bg-image . ,wallpaper)))
+                     (date-format (assoc-ref %date-formats #:date-format/simple))
+                     (time-format (assoc-ref %time-formats #:time-format/simple))
+                     (external-programs
+                      (let ((menu (if doom-ui?
+                                      (doom-menu (assoc-ref emacs-interface #:emacs/handler))
+                                      (rofi-menu #:wayland? #t))))
+                        `((#:notifier . ,(mako-notifier (assoc-ref menu #:menu/menu)))
+                          (#:power-monitor . ,(poweralertd-monitor))
+                          (#:app-launcher . ,(assoc-ref menu #:menu/app-launcher))
+                          (#:terminal . ,(if doom-ui?
+                                             (doom-vterm-terminal (assoc-ref emacs-interface #:emacs/handler))
+                                             (alacritty-terminal)))
+                          (#:backup-terminal . ,(if doom-ui?
+                                                    (alacritty-terminal)
+                                                    #f))
+                          (#:emacs-interface . ,emacs-interface)))))
+                (system-features #:stateless? stateless?
+                                 #:stateless-storage-paths stateless-storage-paths
+                                 #:login-shell login-shell
+                                 #:doom? doom?
+                                 #:doom-flags doom-flags
+                                 #:package-managers package-managers
+                                 #:nix-nixpkgs-config-settings nix-nixpkgs-config-settings
+                                 #:console? console?
+                                 #:kmonad? kmonad?
+                                 #:kmonad kmonad
+                                 #:desktop? desktop?
+                                 #:pipewire? pipewire?
+                                 #:pipewire media-pipewire
+                                 #:login-manager login-manager
+                                 #:desktop-tty-start-cmds `((#:session/gnome . ,(gnome-start))
+                                                            (#:session/sway . ,(sway-start #:sway sway
+                                                                                           #:pipewire? pipewire?)))
+                                 #:sessions sessions
+                                 #:sway-environment (sway-environment #:sway sway
+                                                                      #:pipewire? pipewire?
+                                                                      #:doom? doom?
+                                                                      #:input input
+                                                                      #:output output
+                                                                      #:portal-services (append
+                                                                                         (portal-config-services #:xdg-current-desktop "sway"
+                                                                                                                 #:preferred '("wlr" "gtk"))
+                                                                                         (portal-services/wlr)
+                                                                                         (portal-services/gtk))
+                                                                      #:colors colors
+                                                                      #:wallpaper wallpaper
+                                                                      #:font-variable-pitch font-variable-pitch
+                                                                      #:base-font-size base-font-size
+                                                                      #:date-format date-format
+                                                                      #:time-format time-format
+                                                                      #:external-programs external-programs
+                                                                      #:swaylock-effects? sessions-swaylock-effects?
+                                                                      #:swaylock sessions-swaylock
+                                                                      #:swaylock-effects sessions-swaylock-effects
+                                                                      #:swayidle sessions-swayidle)
+                                 #:virtualization? virtualization?))
               (shells #:stateless? stateless?
                       #:doom? doom?
                       #:doom-tree-sitter? (assoc-ref doom-flags #:doom/tree-sitter?)
