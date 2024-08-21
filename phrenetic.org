@@ -1927,7 +1927,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   ;; #:use-module ((sxml simple) #:select (sxml->xml))
   #:use-module ((ice-9 match) #:select (match match-lambda match-let))
   #:use-module ((ice-9 string-fun) #:select (string-replace-substring))
-  #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates list-index remove))
+  #:use-module ((srfi srfi-1) #:select (append-map concatenate delete-duplicates every list-index remove))
   #:export (create-he
             stateless
             home-stateless-service
@@ -7881,6 +7881,65 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
         (string-join $ ", ")
         (string-append "[ " $ " ]")
         (string->symbol $)))
+
+(define (serialize-hyprlang form)
+
+  (define* (serialize-tree tree)
+    (->> tree
+         (map serialize-expr)
+         (apply append)))
+
+  (define* (serialize-expr expr
+                           #:optional
+                           (nesting-level 0))
+    (append (list (aligner nesting-level))
+            (let ((head (car expr))
+                  (tail (cdr expr)))
+              (append (list (serialize-term head))
+                      (if (and (= (length tail) 1)
+                               (tree? (car tail)))
+                          (serialize-subtree (car tail) nesting-level)
+                          (serialize-arguments tail))))
+            (list "\n")))
+
+  (define (serialize-subtree subtree nesting-level)
+    (append (list " {" "\n")
+            (->> subtree
+                 (map (lambda (expr)
+                        (serialize-expr expr (1+ nesting-level))))
+                 (apply append))
+            (list (aligner nesting-level)
+                  "}")))
+
+  (define (serialize-arguments arguments)
+    (cons " = "
+          (->> arguments
+               (map serialize-term)
+               (interpose ", "))))
+
+  (define (serialize-term term)
+    (match term
+      (#t "true")
+      (#f "false")
+      ((? keyword? e) (-> e keyword->symbol symbol->string))
+      ((? number? e) (number->string e))
+      ((? string? e) e)
+      (e e)))
+
+  (define (aligner nesting-level)
+    (apply string-append
+           (map (const "    ") (iota nesting-level))))
+
+  (define (expr? x)
+    (list? x))
+
+  (define (tree? x)
+    (and (list? x) (every expr? x)))
+
+  (serialize-tree form))
+
+(define* (hyprlang-file name body)
+  (apply mixed-text-file name (serialize-hyprlang body)))
 #+end_src
 *** Composite components
 **** System features
