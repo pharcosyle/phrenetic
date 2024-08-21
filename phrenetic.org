@@ -1905,7 +1905,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
-  #:use-module ((gnu packages hyprland) #:select (hyprlock))
+  #:use-module ((gnu packages hyprland) #:select (hypridle hyprlock))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire wireplumber wireplumber))
@@ -6381,6 +6381,35 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
   Commented the "lock" and "before-sleep" parts, they wont work with seatd (or rather, without elogind). Come to think of it, why should those commented things be swayidle's responsibilities? Can I do the same thing in an init-system agnostic way?
   - "I'm putting the `before-sleep`..."
     [[https://forum.artixlinux.org/index.php/topic,3599.0.html][Broken suspend with `loginctl suspend` only when Sway is used.]]
+********* Hypridle
+#+begin_src scheme
+(define* (hypridle-wm-piece #:key
+                            session
+                            screen-locker
+                            (lock-timeout 600)
+                            extra-config)
+  (list
+   (simple-service
+    'hypridle-add-packages
+    home-profile-service-type
+    (list hypridle))
+
+   (simple-service
+    'hypridle-conf
+    home-xdg-configuration-files-service-type
+    `(("hypr/hypridle.conf"
+       ,(hyprlang-file
+         "hypridle-conf"
+         (append
+          `((#:listener ((#:timeout ,lock-timeout)
+                         (#:on-timeout "echo 'Timed out'")
+                         (#:on-resume "echo 'Welcome back'"))))
+          (or extra-config '()))))))))
+
+(define (hypridle-idle-manager)
+  (list
+   (file-append hypridle "/bin/hypridle")))
+#+end_src
 ********* Swayidle
 #+begin_src scheme
 (define* (swayidle-wm-piece #:key
