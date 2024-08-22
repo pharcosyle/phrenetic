@@ -1899,7 +1899,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (%default-dotguile %default-gdbinit %default-nanorc))
-  #:use-module (rde home services wm)
   #:use-module (rde home services xdisorg)
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
@@ -1994,6 +1993,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             programs
             applications
             he-entire))
+
+(define serialize-sway-config (@@ (rde home services wm) serialize-sway-config))
+(define serialize-swaylock-config (@@ (rde home services wm) serialize-swaylock-config))
 #+end_src
 *** Create
 #+begin_src scheme
@@ -5849,29 +5851,33 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
      ;; - does it belong here or in gtk-services?
      ;;   Possibly Andrew Tropin would have put it in his home-gtk3-service-type or feature-gtk3 if it weren't sway or wayland-specific
      (list (sway-start-package #:sway sway
-                               #:pipewire? pipewire?)))
+                               #:pipewire? pipewire?)
+           sway))
 
-    (service
-     home-sway-service-type
-     (home-sway-configuration
-      (package sway)
-      (config
-       (append
-        `((xwayland ,(if xwayland? 'enable 'disable))
-          ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
-          ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
-          ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
-          ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
-          (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
-                DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
-          (set $mod ,sway-mod))
+    (simple-service
+     'sway-config
+     home-xdg-configuration-files-service-type
+     `(("sway/config"
+        ,(apply
+          mixed-text-file
+          "sway-config"
+          (serialize-sway-config
+           (append
+            `((xwayland ,(if xwayland? 'enable 'disable))
+              ;; Some of these might not be necessary. To be safe I'm using a combination of those in RDE and suggested here:
+              ;; - https://github.com/swaywm/sway/wiki#gtk-applications-take-20-seconds-to-start
+              ;; - https://lists.sr.ht/~abcdw/rde-discuss/%3C87bku5ozzn.fsf%40bruun.xyz%3E
+              ;; - https://github.com/emersion/xdg-desktop-portal-wlr#running
+              (exec ,(file-append dbus "/bin/dbus-update-activation-environment")
+                    DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP SWAYSOCK)
+              (set $mod ,sway-mod))
 
-        (sway-general)
-        (apply sway-input (alist->list input))
-        (apply sway-output (alist->list output))
-        (apply sway-external-programs (alist->list external-programs))
-        (sway-app-windows)
-        (or extra-config '())))))
+            (sway-general)
+            (apply sway-input (alist->list input))
+            (apply sway-output (alist->list output))
+            (apply sway-external-programs (alist->list external-programs))
+            (sway-app-windows)
+            (or extra-config '())))))))
 
     (simple-service
      'sway-reload-config-on-change
@@ -6187,65 +6193,74 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                             extra-config
                             swaylock
                             swaylock-effects)
+
   (list
-   (service
-    home-swaylock-service-type
-    (home-swaylock-configuration
-     (swaylock (get-swaylock #:effects? effects?
-                             #:swaylock swaylock
-                             #:swaylock-effects swaylock-effects))
-     (config
-      (let ((clr (lambda* (color #:optional alpha)
-                   (as-> color $
-                         (assoc-ref colors $)
-                         (string-drop $ 1)
-                         (string-append $ (or alpha "")))))
-            (alpha "7f")) ; 50%
-        (append
-         `((daemonize)
+   (simple-service
+    'swaylock-add-packages
+    home-profile-service-type
+    (list (get-swaylock #:effects? effects?
+                        #:swaylock swaylock
+                        #:swaylock-effects swaylock-effects)))
 
-           (font . ,(assoc-ref font #:font/name))
+   (simple-service
+    'swaylock-config
+    home-xdg-configuration-files-service-type
+    `(("swaylock/config"
+       ,(apply
+         mixed-text-file
+         "swaylock-config"
+         (serialize-swaylock-config
+          (let ((clr (lambda* (color #:optional alpha)
+                       (as-> color $
+                             (assoc-ref colors $)
+                             (string-drop $ 1)
+                             (string-append $ (or alpha "")))))
+                (alpha "7f")) ; 50%
+            (append
+             `((daemonize)
 
-           (indicator-idle-visible)
-           (indicator-caps-lock)
-           (indicator-radius . "150")
-           (indicator-thickness . "10")
+               (font . ,(assoc-ref font #:font/name))
 
-           (key-hl-color . ,(clr #:color/green))
-           (bs-hl-color . ,(clr #:color/yellow))
-           (inside-color . ,(clr #:color/bg alpha))
+               (indicator-idle-visible)
+               (indicator-caps-lock)
+               (indicator-radius . "150")
+               (indicator-thickness . "10")
 
-           (ring-color . ,(clr #:color/bg))
-           (ring-clear-color . ,(clr #:color/bg alpha))
-           (ring-ver-color . ,(clr #:color/bg alpha))
-           (ring-wrong-color . ,(clr #:color/bg alpha))
+               (key-hl-color . ,(clr #:color/green))
+               (bs-hl-color . ,(clr #:color/yellow))
+               (inside-color . ,(clr #:color/bg alpha))
 
-           (text-clear-color . ,(clr #:color/orange))
-           (text-ver-color . ,(clr #:color/blue))
-           (text-wrong-color . ,(clr #:color/red))
-           (inside-clear-color . ,(clr #:color/orange))
-           (inside-ver-color . ,(clr #:color/blue))
-           (inside-wrong-color . ,(clr #:color/red))
+               (ring-color . ,(clr #:color/bg))
+               (ring-clear-color . ,(clr #:color/bg alpha))
+               (ring-ver-color . ,(clr #:color/bg alpha))
+               (ring-wrong-color . ,(clr #:color/bg alpha))
 
-           (text-color . ,(clr #:color/violet))
-           (separator-color . "00000000")
-           (line-uses-ring))
+               (text-clear-color . ,(clr #:color/orange))
+               (text-ver-color . ,(clr #:color/blue))
+               (text-wrong-color . ,(clr #:color/red))
+               (inside-clear-color . ,(clr #:color/orange))
+               (inside-ver-color . ,(clr #:color/blue))
+               (inside-wrong-color . ,(clr #:color/red))
 
-         (if image
-             (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'. Maybe upstream a patch.
-             '())
+               (text-color . ,(clr #:color/violet))
+               (separator-color . "00000000")
+               (line-uses-ring))
 
-         (if effects?
-             `((indicator)
+             (if image
+                 (list #~(string-append "image=" #$image)) ; HACK `serialize-swaylock-config' doesn't allow gexp terms (it probably should). Ideally this line would be `(image . ,image)'. Maybe upstream a patch.
+                 '())
 
-               (effect-blur . 7x5)
+             (if effects?
+                 `((indicator)
 
-               (clock)
-               (timestr . ,time-format)
-               (datestr . ,date-format))
-             '())
+                   (effect-blur . 7x5)
 
-         (or extra-config '()))))))))
+                   (clock)
+                   (timestr . ,time-format)
+                   (datestr . ,date-format))
+                 '())
+
+             (or extra-config '()))))))))))
 
 (define* (swaylock-screen-locker #:key
                                  effects?
@@ -6288,19 +6303,27 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                             extra-config
                             swayidle)
   (list
-   (service
-    home-swayidle-service-type
-    (home-swayidle-configuration
-     (swayidle swayidle)
-     (config
-      (append
-       (if screen-locker
-           (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
-             `(;(lock ,lock-cmd-quoted)
-               ;(before-sleep ,lock-cmd-quoted)
-               (timeout ,lock-timeout ,lock-cmd-quoted)))
-           '())
-       (or extra-config '())))))
+   (simple-service
+    'swayidle-add-packages
+    home-profile-service-type
+    (list swayidle))
+
+   (simple-service
+    'swayidle-config
+    home-xdg-configuration-files-service-type
+    `(("swayidle/config"
+       ,(apply
+         mixed-text-file
+         "swayidle-config"
+         (serialize-sway-config
+          (append
+           (if screen-locker
+               (let ((lock-cmd-quoted #~(format #f "'~a'" (string-join '#$screen-locker))))
+                 `(;(lock ,lock-cmd-quoted)
+                                        ;(before-sleep ,lock-cmd-quoted)
+                   (timeout ,lock-timeout ,lock-cmd-quoted)))
+               '())
+           (or extra-config '())))))))
 
    ;; (case session
    ;;   ((#:session/sway)
