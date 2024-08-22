@@ -1905,7 +1905,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages gnuzilla) #:select (icecat))
   #:use-module ((gnu packages gstreamer) #:select (gst-libav gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly))
   #:use-module ((gnu packages haskell-apps) #:select (kmonad))
-  #:use-module ((gnu packages hyprland) #:select (hypridle hyprlock))
+  #:use-module ((gnu packages hyprland) #:select (hypridle hyprlock xdg-desktop-portal-hyprland/simple))
   #:use-module ((gnu packages image) #:select (grim slurp swappy))
   #:use-module ((gnu packages java) #:select (openjdk-lts))
   #:use-module ((gnu packages linux) #:select (brightnessctl pipewire wireplumber wireplumber))
@@ -6726,6 +6726,24 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
          #:ini-serialize
          (lambda (config)
            (ini-serialize config #:equal-string "=")))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
+
+(define (portal-services/hyprland)
+  (list
+   (simple-service
+    'hyprland-portal-add-packages
+    home-profile-service-type
+    (list xdg-desktop-portal
+          xdg-desktop-portal-hyprland/simple))
+
+   ;; Example. We're not configuring anthing at the moment (also there's not really anthing to configure, 'max_fps' is the only option at time of writing).
+   ;; (simple-service
+   ;;  'hyprland-portal-config
+   ;;  home-multi-xdg-configuration-files-service-type
+   ;;  `(("xdg-desktop-portal-hyprland/config"
+   ;;     ,(hyprlang-file
+   ;;       "xdg-desktop-portal-hyprland-config"
+   ;;       `((#:screencopy ((#:max_fps 120))))))))
+   ))
 
 (define* (portal-config-services #:key
                                  xdg-current-desktop
