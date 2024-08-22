@@ -1971,7 +1971,9 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             poweralertd-wm-piece
             poweralertd-monitor
             ;; kanshi-wm-piece
-            portal-services
+            portal-services/gtk
+            portal-services/wlr
+            portal-config-services
             flatpak-apps
             aws-prog
             clojure-prog
@@ -6589,40 +6591,51 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
 # ...
 #+end_src
 ***** Portals
-- TODO This isn't very good: wlr != wayland, GTK shouldn't be default (like if you're a QT person), in profile packages and "preferred" config
 #+begin_src scheme
-(define* (portal-services #:key
-                          (xdg-current-desktop "sway") ; TODO TEMPORARILY hardcoding this, fix me!
-                          wayland?)
+(define (portal-services/gtk)
   (list
    (simple-service
-    'portals-add-packages
+    'gtk-portal-add-packages
     home-profile-service-type
     (list xdg-desktop-portal
-          xdg-desktop-portal-gtk
-          (if wayland?
-              xdg-desktop-portal-wlr)))
+          xdg-desktop-portal-gtk))))
 
-   (when wayland?
-     (simple-service
-      'portals-config
-      home-multi-xdg-configuration-files-service-type
-      `((,(string-append "xdg-desktop-portal/" xdg-current-desktop "-portals.conf")
-         ,(ini-file
-           (string-append "xdg-desktop-portal-" xdg-current-desktop "-portals")
-           `((preferred ((default . ,(string->symbol "wlr;gtk")))))
-           #:ini-serialize
-           (lambda (config)
-             (ini-serialize config #:equal-string "=")))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
-        ("xdg-desktop-portal-wlr/config"
-         ,(ini-file
-           "xdg-desktop-portal-wlr-config"
-           `((screencast ((chooser_cmd . ,#~(string-append #$(file-append slurp "/bin/slurp")
-                                                           " -f %o -or -c ff0000"))
-                          (chooser_type . simple))))
-           #:ini-serialize
-           (lambda (config)
-             (ini-serialize config #:equal-string "="))))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
+(define (portal-services/wlr)
+  (list
+   (simple-service
+    'wlr-portal-add-packages
+    home-profile-service-type
+    (list xdg-desktop-portal
+          xdg-desktop-portal-wlr))
+
+   (simple-service
+    'wlr-portal-config
+    home-multi-xdg-configuration-files-service-type
+    `(("xdg-desktop-portal-wlr/config"
+       ,(ini-file
+         "xdg-desktop-portal-wlr-config"
+         `((screencast ((chooser_cmd . ,#~(string-append #$(file-append slurp "/bin/slurp")
+                                                         " -f %o -or -c ff0000"))
+                        (chooser_type . simple))))
+         #:ini-serialize
+         (lambda (config)
+           (ini-serialize config #:equal-string "=")))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
+
+(define* (portal-config-services #:key
+                                 xdg-current-desktop
+                                 preferred)
+  (list
+   (simple-service
+    (symbol-append (string->symbol xdg-current-desktop)
+                   '-portals-config)
+    home-multi-xdg-configuration-files-service-type
+    `((,(string-append "xdg-desktop-portal/" xdg-current-desktop "-portals.conf")
+       ,(ini-file
+         (string-append "xdg-desktop-portal-" xdg-current-desktop "-portals")
+         `((preferred ((default . ,(string-join preferred ";")))))
+         #:ini-serialize
+         (lambda (config)
+           (ini-serialize config #:equal-string "=")))))))) ; Donno if this is necessary (the examples don't have spaces around the equals), let's be safe.
 #+end_src
 ***** Shared
 #+begin_src scheme
@@ -8146,7 +8159,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (font-mono (assoc-ref %fonts #:fonts/adobe-source-code-pro))
                     (font-variable-pitch font-sans)
                     (base-font-size 10)
-                    (portal-services (portal-services #:wayland? wayland?))
+                    ;; TODO Temporarily remove until I figure out conflicting portal setups with multiple desktops.
+                    ;; (portal-services ...)
                     login-manager
                     sessions
                     sessions-inputs
@@ -8187,7 +8201,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                                     #:doom-ui? doom-ui?
                                                                     #:inputs sessions-inputs
                                                                     #:outputs sessions-outputs
-                                                                    #:portal-services portal-services
+                                                                    #:portal-services (append
+                                                                                       (portal-config-services #:xdg-current-desktop "sway"
+                                                                                                               #:preferred '("wlr" "gtk"))
+                                                                                       (portal-services/wlr)
+                                                                                       (portal-services/gtk))
                                                                     #:colors colors
                                                                     #:font-variable-pitch font-variable-pitch
                                                                     #:base-font-size base-font-size
@@ -8239,7 +8257,9 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                    (xdg-user-directories #:stateless? stateless?)
                    (mesa #:stateless? stateless?)
                    (flatpak-apps #:stateless? stateless?
-                                 #:portal-services portal-services))
+                                 ;; TODO Temporarily remove until I figure out conflicting portal setups with multiple desktops.
+                                 ;; #:portal-services portal-services
+                                 ))
                   '())
               (work #:stateless? stateless?
                     #:projects projects))))
