@@ -971,7 +971,9 @@ There are considerably more options that to pare down / disable (see documentati
             (swaylock-service #:effects? swaylock-effects?
                               #:swaylock swaylock
                               #:swaylock-effects swaylock-effects))
-           (brightnessctl-services #:users users))))
+           ;; TODO Omit dup with hyprland
+           ;; (brightnessctl-services #:users users)
+           )))
 #+end_src
 ******* Pieces
 ******** Screen lockers
@@ -8516,10 +8518,11 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                         #:sway sway
                         #:screen-locker (assoc-ref screen-locker #:screen-locker/lock)
                         #:swayidle swayidle)
-     (mako-wm-piece #:colors colors
-                    #:font font-variable-pitch
-                    #:font-size base-font-size)
-     (poweralertd-wm-piece)
+     ;; TODO Omit dup with hyprland
+     ;; (mako-wm-piece #:colors colors
+     ;;                #:font font-variable-pitch
+     ;;                #:font-size base-font-size)
+     ;; (poweralertd-wm-piece)
      ;; (kanshi-wm-piece #:outputs outputs)
      )))
 #+end_src
