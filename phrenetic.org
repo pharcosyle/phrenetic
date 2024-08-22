@@ -1899,7 +1899,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (%default-dotguile %default-gdbinit %default-nanorc))
-  #:use-module (rde home services xdisorg)
   #:use-module ((rde serializers elisp) #:select (elisp-serialize))
   #:use-module ((rde serializers ini) #:select (ini-serialize))
   #:use-module (phrenetic modules)
@@ -1994,6 +1993,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             applications
             he-entire))
 
+(define serialize-rasi-config (@@ (rde home services xdisorg) serialize-rasi-config))
 (define serialize-sway-config (@@ (rde home services wm) serialize-sway-config))
 (define serialize-swaylock-config (@@ (rde home services wm) serialize-swaylock-config))
 #+end_src
@@ -7295,44 +7295,52 @@ use_guixs() {
                    font
                    font-size)
   (list
-   (service
-    home-rofi-service-type
-    (home-rofi-configuration
-     (rofi (get-rofi #:wayland? wayland?))
-     (config-rasi
-      (append
-       ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
-       `((configuration
-          ((modi . "run,ssh,drun")
-           (drun-show-actions . #t)
-           (show-icons . #t)
-           (font . ,(pango-font-description font font-size))
+   (simple-service
+    'rofi-add-packages
+    home-profile-service-type
+    (list (get-rofi #:wayland? wayland?)))
 
-           (kb-element-next . "")
-           (kb-row-select . "Tab,Control+i")
-           (kb-secondary-paste . "Control+y")
-           (kb-remove-word-forward . "Alt+d")
-           (kb-remove-word-back . "Control+w,Control+BackSpace")
-           (kb-clear-line . "Control+slash")
-           (kb-page-next . "Control+v")
-           (kb-page-prev . "Alt+v"))))
+   (simple-service
+    'rofi-config
+    home-xdg-configuration-files-service-type
+    `(("rofi/config.rasi"
+       ,(apply
+         mixed-text-file
+         "rofi-config.rasi"
+         (serialize-rasi-config
+          (append
+           ;; Using Andrew Tropin's / RDE's confguration for now, revisit later.
+           `((configuration
+              ((modi . "run,ssh,drun")
+               (drun-show-actions . #t)
+               (show-icons . #t)
+               (font . ,(pango-font-description font font-size))
+
+               (kb-element-next . "")
+               (kb-row-select . "Tab,Control+i")
+               (kb-secondary-paste . "Control+y")
+               (kb-remove-word-forward . "Alt+d")
+               (kb-remove-word-back . "Control+w,Control+BackSpace")
+               (kb-clear-line . "Control+slash")
+               (kb-page-next . "Control+v")
+               (kb-page-prev . "Alt+v"))))
 
 
-       ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
-       ;; (list #~#$(string-append "@theme" " " (quoted "paper-float")))
-       ;; (let ((clr (lambda* (color #:optional alpha)
-       ;;              (as-> color $
-       ;;                    (assoc-ref colors $)
-       ;;                    (string-append $ (or alpha ""))))))
-       ;;   `((*
-       ;;      (;; (white . ,(clr #:color/fg))
-       ;;       ;; (black . ,(clr #:color/bg))
-       ;;       ;; (grey . ,(clr #:color/...))
-       ;;       ;; (blue . ,(clr #:color/blue))
-       ;;       (background . "#000000BF")))))
-       ;; `((window
-       ;;    ((transparency . "real"))))
-       ))))
+           ;; Not done yet: configure Rofi to look pretty and use `colors' argument.
+           ;; (list #~#$(string-append "@theme" " " (quoted "paper-float")))
+           ;; (let ((clr (lambda* (color #:optional alpha)
+           ;;              (as-> color $
+           ;;                    (assoc-ref colors $)
+           ;;                    (string-append $ (or alpha ""))))))
+           ;;   `((*
+           ;;      (;; (white . ,(clr #:color/fg))
+           ;;       ;; (black . ,(clr #:color/bg))
+           ;;       ;; (grey . ,(clr #:color/...))
+           ;;       ;; (blue . ,(clr #:color/blue))
+           ;;       (background . "#000000BF")))))
+           ;; `((window
+           ;;    ((transparency . "real"))))
+           ))))))
 
    (when stateless?
      (home-stateless-service
