@@ -9219,14 +9219,14 @@ delete it when leaving the dynamic extent of this call."
   #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols))
   #:use-module ((nongnu packages messaging) #:select (zoom))
   #:use-module ((nongnu packages mozilla) #:select (firefox))
-  #:use-module ((chromium chromium) #:select (chromium chromium+drm))
+  ;; #:use-module ((chromium chromium) #:select (chromium chromium+drm))
   #:use-module (phrenetic home)
   #:use-module (phrenetic utils)
   #:export (%nixpkgs-allow-unfree
             %fonts
             datomic-prog
             zoom-app
-            chromium-app
+            ;; chromium-app
             google-chrome-app
             firefox-app))
 #+end_src
@@ -9298,45 +9298,45 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 ****** Chromium
 ******* Chromium
 #+begin_src scheme
-(define* (chromium-app #:key
-                       stateless?
-                       toolkits
-                       wayland?
-                       pipewire?
-                       theme
-                       gtk-services
-                       qt-services
-                       drm?
-                       (chromium chromium)
-                       (chromium+drm chromium+drm))
-  (append
-   (list
-    (simple-service
-     'chromium-add-packages
-     home-profile-service-type
-     ;; Chromium inherits from ungoogled-chromium and at the time of writing, ungoogled-chromium doesn't offer GTK 4 or QT 6 so just ignore the toolkits option.
-     (list (chromium-wrapper (if drm?
-                                 chromium+drm
-                                 chromium)
-                             wayland? pipewire? theme)
-           ublock-origin/chromium))
+;; (define* (chromium-app #:key
+;;                        stateless?
+;;                        toolkits
+;;                        wayland?
+;;                        pipewire?
+;;                        theme
+;;                        gtk-services
+;;                        qt-services
+;;                        drm?
+;;                        (chromium chromium)
+;;                        (chromium+drm chromium+drm))
+;;   (append
+;;    (list
+;;     (simple-service
+;;      'chromium-add-packages
+;;      home-profile-service-type
+;;      ;; Chromium inherits from ungoogled-chromium and at the time of writing, ungoogled-chromium doesn't offer GTK 4 or QT 6 so just ignore the toolkits option.
+;;      (list (chromium-wrapper (if drm?
+;;                                  chromium+drm
+;;                                  chromium)
+;;                              wayland? pipewire? theme)
+;;            ublock-origin/chromium))
 
-    (when stateless?
-      (home-stateless-service
-       'chromium
-       #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700))
-                 ((#:path . ".pki/nssdb/")
-                  (#:storage . #:storage/machine)
-                  (#:mode . #o700)
-                  (#:parent-dir-perms . ((#:mode . #o700))))))))
+;;     (when stateless?
+;;       (home-stateless-service
+;;        'chromium
+;;        #:state '(((#:path . ("chromium/" #:xdg-base "XDG_CACHE_HOME"))
+;;                   (#:storage . #:storage/machine)
+;;                   (#:mode . #o700))
+;;                  ((#:path . ("chromium/" #:xdg-base "XDG_CONFIG_HOME"))
+;;                   (#:storage . #:storage/machine)
+;;                   (#:mode . #o700))
+;;                  ((#:path . ".pki/nssdb/")
+;;                   (#:storage . #:storage/machine)
+;;                   (#:mode . #o700)
+;;                   (#:parent-dir-perms . ((#:mode . #o700))))))))
 
-   (or gtk-services '())
-   (or qt-services '())))
+;;    (or gtk-services '())
+;;    (or qt-services '())))
 #+end_src
 ******* Google Chrome
 #+begin_src scheme
@@ -9802,9 +9802,6 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
           "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
           (openpgp-fingerprint
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
-       (channel
-        (name 'guix-chromium)
-        (url "https://gitlab.com/mbakke/guix-chromium"))
 
        ;; %default-channels
        (list
@@ -9867,13 +9864,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
         (make-channel-introduction
          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
          (openpgp-fingerprint
-          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
-      (channel
-       (name 'guix-chromium)
-       (url "https://gitlab.com/mbakke/guix-chromium")
-       (branch "master")
-       (commit
-        "3bc21255be98efb7a0e4b8de060c27bf60ae44f7")))
+          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
 #+end_src
 * Guix channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
@@ -9895,10 +9886,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     (make-channel-introduction
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
-      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
-  (channel
-   (name 'guix-chromium)
-   (url "https://gitlab.com/mbakke/guix-chromium"))))
+      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
 #+end_src
 * Github
 ** Readme
