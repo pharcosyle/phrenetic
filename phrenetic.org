@@ -1896,7 +1896,6 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   #:use-module ((gnu packages wm) #:select (mako sway swayidle swaylock swaylock-effects))
   #:use-module ((gnu packages xdisorg) #:select (rofi rofi-wayland wl-clipboard))
   #:use-module (gnu services)
-  #:use-module ((gnu services configuration) #:select (interpose))
   #:use-module (gnu services shepherd)
   #:use-module (gnu system keyboard)
   #:use-module ((gnu system shadow) #:select (%default-dotguile %default-gdbinit %default-nanorc))
@@ -6085,9 +6084,9 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 
 ;; TODO I don't know how I want to handle "multi-commands" yet, just do this for the ones I know that are for now. However at least in this case I do like the idea of doing "&&" between them rather than, say, comma-separating them like Sway allows because in the general case if one of the commands fails it's probably best not to run any that would come after.
 (define (cmd-chain cs)
-  (as-> cs $
-        (interpose $ (list "&&"))
-        (apply append $)))
+  (->> cs
+       (interpose (list "&&"))
+       (apply append)))
 
 (define (sway-player)
   (let ((player (playerctl-player)))
@@ -8880,7 +8879,7 @@ delete it when leaving the dynamic extent of this call."
 #+begin_src scheme
 (define-module (phrenetic common utils)
   #:use-module ((ice-9 match) #:select (match-lambda))
-  #:use-module ((srfi srfi-1) #:select (append-map fold take drop))
+  #:use-module ((srfi srfi-1) #:select (append-map fold fold-right take drop))
   #:export (re-export-public-interface
             when-let
             if-let
@@ -8898,6 +8897,7 @@ delete it when leaving the dynamic extent of this call."
             select-keys
             update-keys
             update-vals
+            interpose
             around
             quoted
             single-quoted
@@ -9039,6 +9039,16 @@ delete it when leaving the dynamic extent of this call."
          ((k . v)
           (cons k (f v))))
        alist))
+#+end_src
+**** Lists
+#+begin_src scheme
+(define (interpose sep lst)
+  (fold-right (lambda (e acc)
+                (cons e
+                      (if (null? acc)
+                          acc
+                          (cons sep acc))))
+              '() lst))
 #+end_src
 **** Misc
 #+begin_src scheme
