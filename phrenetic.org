@@ -131,8 +131,8 @@ Run with ~sudo~.
            (read-user-input (string-append "Mount directory")
                             #:default "/mnt"))
 
-         (define mount-bin "/run/setuid-programs/mount")
-         (define umount-bin "/run/setuid-programs/umount")
+         (define mount-bin "/run/privileged/bin/mount")
+         (define umount-bin "/run/privileged/bin/umount")
 
          (when (equal? #$filesystem #:filesystem/btrfs)
            (let ((btrfs-bin #$(file-append btrfs-progs "/bin/btrfs")))
@@ -231,7 +231,7 @@ Run with ~sudo~.
   #:use-module (gnu system)
   #:use-module (gnu system accounts)
   #:use-module (gnu system file-systems)
-  #:use-module ((gnu system setuid) #:select (setuid-program))
+  #:use-module ((gnu system privilege) #:select (privileged-program))
   #:use-module ((gnu system shadow) #:select (account-service-type))
   #:use-module (gnu system mapped-devices)
   #:use-module ((rde gexp) #:select (slurp-file-like))
@@ -555,9 +555,10 @@ Run with ~sudo~.
           (simple-service 'mtp udev-service-type (list libmtp))
           (service sane-service-type)
           polkit-wheel-service
-          (simple-service 'nfs-mount-setuid setuid-program-service-type
-                          (list (setuid-program
-                                 (program (file-append nfs-utils "/sbin/mount.nfs")))))
+          (simple-service 'nfs-mount-privileged privileged-program-service-type
+                          (list (privileged-program
+                                 (program (file-append nfs-utils "/sbin/mount.nfs"))
+                                 (setuid? #t))))
           fontconfig-file-system-service ; TODO Make a dedicated component for this so the Home fonts component has an analogue in System?
           (service udisks-service-type)
           ;; (service accountsservice-service-type)
@@ -1522,7 +1523,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 
 ;; (let ((pass (enter-pass)))
 ;;   (when pass
-;;     ;; (invoke "/run/setuid-programs/passwd")
+;;     ;; (invoke "/run/privileged/bin/passwd")
 
 ;;     (crypt pass (string-append "$" "6" "$" "sosalty"))
 
