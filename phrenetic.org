@@ -1950,7 +1950,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
             mako-notifier
             poweralertd-wm-piece
             poweralertd-monitor
-            kanshi-wm-piece
+            ;; kanshi-wm-piece
             portal-services
             flatpak-apps
             aws-prog
@@ -6416,16 +6416,16 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 ********* Kanshi
 - TODO this is the only wm-peice daemon with a shepherd service. Just run it in the Sway config with ~exec~ like everything else for consistency?
 #+begin_src scheme
-(define* (kanshi-wm-piece #:key
-                          outputs
-                          extra-config)
-  (list
-   (service
-    home-kanshi-service-type
-    (home-kanshi-configuration
-     (config
-      ;; Not done yet.
-      (or extra-config '()))))))
+;; (define* (kanshi-wm-piece #:key
+;;                           outputs
+;;                           extra-config)
+;;   (list
+;;    (service
+;;     home-kanshi-service-type
+;;     (home-kanshi-configuration
+;;      (config
+;;       ;; Not done yet.
+;;       (or extra-config '()))))))
 #+end_src
 ******** Controls
 ********* Backlights
