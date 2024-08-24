@@ -1864,7 +1864,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   ;; #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
-  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-google-noto-sans-cjk font-google-noto-serif-cjk font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -5624,7 +5624,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                  (#:storage . #:storage/machine)))))))
 
 ;; TODO Probably give up on fonts stuff and get rid of all of this code? If not there's some useful fonts conf examples at https://gitlab.archlinux.org/archlinux/packaging/packages/noto-fonts and less useful, more complex, ones in the google noto fedora package
-;; TODO do I not have a font for chinese/japanese/korean installed? I don't remember if Apple fonts cover it and I don't see a file with CJK in the name in the google-noto fonts package. Installing noto-cjk is an option.
 ;; TODO [2024-05-26 Sun] There's presets in the fontconfig package, share/fontconfig/conf.avail and etc/fonts/conf.d. Consider them?
 ;; TODO [2024-07-19 Fri] disabling this for now for no particular reason until I get back to fonts stuff
 ;; TODO [2024-07-22 Mon] using liberation fonts instead of ms-core now. Consider aliasing them to the equivalent microsoft fonts. See the fedora package for liberation fonts.
@@ -5667,7 +5666,9 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
                             (#:font/package . ,font-gnu-unifont)))
     (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
     (#:fonts/google-noto-emoji . ((#:font/name . "Noto Emoji")
-                                  (#:font/package . ,font-google-noto-emoji)))))
+                                  (#:font/package . ,font-google-noto-emoji)))
+    (#:fonts/google-noto-sans-cjk . ((#:font/package . ,font-google-noto-sans-cjk)))
+    (#:fonts/google-noto-serif-cjk . ((#:font/package . ,font-google-noto-serif-cjk)))))
 #+end_src
 ***** Date/time formats
 #+begin_src scheme
@@ -8224,6 +8225,8 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-color-emoji)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-compact)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-arabic)
+                                                     (assoc-ref %fonts #:fonts/google-noto-sans-cjk)
+                                                     (assoc-ref %fonts #:fonts/google-noto-serif-cjk)
                                                      (assoc-ref nonphrenetic:%fonts #:fonts/apple-symbols)))
                    (xdg-user-directories #:stateless? stateless?)
                    (mesa #:stateless? stateless?)
