@@ -9097,7 +9097,7 @@ delete it when leaving the dynamic extent of this call."
   #:use-module (gnu services)
   #:use-module ((gnu services linux) #:select (kernel-module-loader-service-type))
   #:use-module (gnu system)
-  #:use-module ((nongnu packages firmware) #:select (facetimehd-calibration facetimehd-firmware))
+  #:use-module ((nongnu packages firmware) #:select (facetimehd-calibration facetimehd-firmware nouveau-firmware))
   #:use-module ((nongnu packages linux) #:select (linux linux-firmware broadcom-bt-firmware broadcom-sta facetimehd))
   #:use-module ((nongnu system linux-initrd) #:select (microcode-initrd))
   #:use-module (phrenetic system)
@@ -9208,6 +9208,15 @@ delete it when leaving the dynamic extent of this call."
         (cons (string-append param-name "=" vs*)
               kargs))))
 #+end_src
+****** Nvidia
+******* Graphics cards
+Only for Tesla-Kepler chipsets, see [[https://nouveau.freedesktop.org/FeatureMatrix.html][FeatureMatrix · freedesktop.org]].
+#+begin_src scheme
+(define-system-comp (nvidia-graphics)
+  (firmware (cons* nouveau-firmware
+                   (operating-system-firmware os))))
+#+end_src
+
 *** Composite components
 **** Macbook hardware
 #+begin_src scheme
@@ -9232,7 +9241,8 @@ delete it when leaving the dynamic extent of this call."
     (console-keyboard-layouts $ #:kb-layout (assoc-ref console-input #:keyboard/layout))
     (console-fonts $ #:number-of-ttys number-of-ttys
                    #:hidpi? (assoc-ref console-output #:display/hidpi?))
-    (apple-macbook $ #:bluetooth? bluetooth?)))
+    (apple-macbook $ #:bluetooth? bluetooth?)
+    (nvidia-graphics $)))
 #+end_src
 ** Home
 :PROPERTIES:
