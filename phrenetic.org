@@ -220,6 +220,7 @@ Run with ~sudo~.
   #:use-module (gnu services base)
   #:use-module (gnu services dbus)
   #:use-module (gnu services desktop)
+  #:use-module (gnu services games)
   #:use-module ((gnu services linux) #:select (zram-device-service-type zram-device-configuration))
   #:use-module (gnu services networking)
   #:use-module (gnu services nix)
@@ -569,7 +570,10 @@ Run with ~sudo~.
           (service rtkit-service-type)
           (service dbus-root-service-type)
           (service ntp-service-type)
-          (service x11-socket-directory-service-type)) ; TODO Gate this, only necessary for wayland with xwayland. In fact, determine if it's necessary at all or, ideally, if something equivalent can be done at the user level.
+          (service x11-socket-directory-service-type) ; TODO Gate this, only necessary for wayland with xwayland. In fact, determine if it's necessary at all or, ideally, if something equivalent can be done at the user level.
+          ;; TODO Probably doesn't belong in desktop-base-services, sticking it here for the moment.
+          ;; TODO Could this be home service instead (except for the udev rules part of course)? Does the daemon need to udev/system-y stuff?
+          (service joycond-service-type))
     (avahi-services #:users avahi-users)
     (if stateless?
         (list
