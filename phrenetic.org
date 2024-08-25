@@ -224,7 +224,7 @@ Run with ~sudo~.
   #:use-module (gnu services networking)
   #:use-module (gnu services nix)
   #:use-module (gnu services shepherd)
-  #:use-module ((gnu services sound) #:select (alsa-service-type pulseaudio-service-type))
+  #:use-module ((gnu services sound) #:select (alsa-service-type pipewire-service-type pipewire-configuration pulseaudio-service-type))
   #:use-module (gnu services sysctl)
   #:use-module ((gnu services xorg) #:select (gdm-service-type gdm-configuration screen-locker-service-type screen-locker-configuration))
   #:use-module (gnu services virtualization)
@@ -636,11 +636,19 @@ Ideally Upower would allow providing a program/script to run as the ~critical-po
 #+end_src
 ****** Pipewire
 #+begin_src scheme
-(define-system-comp (pipewire-media #:key pipewire)
+(define-system-comp (pipewire-media #:key
+                                    pipewire
+                                    users)
   (services
-   (cons* (udev-rules-service 'pipewire-add-udev-rules
-                              pipewire)
-          (operating-system-user-services os))))
+   (append
+    (operating-system-user-services os)
+    (list
+     (service pipewire-service-type
+              (pipewire-configuration
+               (pipewire pipewire)))
+     (simple-service 'pipewire-users-add-groups
+                     accounts-service-type
+                     (cons users (list "pipewire")))))))
 #+end_src
 ***** Network
 ****** Network manager
@@ -1762,6 +1770,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
                   avahi-users
                   media
                   media-pipewire
+                  pipewire-users
                   (connection-manager #:cm/network-manager)
                   wireless-users
                   bluetooth?
@@ -1802,7 +1811,8 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
           (if media
               (case media
                 ((#:media/classic) (classic-media $))
-                ((#:media/pipewire) (pipewire-media $ #:pipewire media-pipewire)))
+                ((#:media/pipewire) (pipewire-media $ #:pipewire media-pipewire
+                                                      #:users pipewire-users)))
               $)
           (if connection-manager
               (case connection-manager
@@ -9511,6 +9521,9 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                #:avahi-users (list primary-name
                                    aux-name
                                    guest-name)
+               #:pipewire-users (list primary-name
+                                      aux-name
+                                      guest-name)
                #:wireless-users (list primary-name
                                       aux-name
                                       guest-name)
