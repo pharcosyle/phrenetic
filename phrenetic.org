@@ -434,6 +434,7 @@ Run with ~sudo~.
 (define-system-comp (guix-pm #:key
                              authorized-keys
                              substitute-urls
+                             (dev? #t)
                              stateless?)
   (services
    (append
@@ -446,7 +447,11 @@ Run with ~sudo~.
                                  (or authorized-keys '())))
                (substitute-urls (append
                                  %default-substitute-urls
-                                 (or substitute-urls '())))))
+                                 (or substitute-urls '())))
+               (extra-options (if dev?
+                                   (list "--gc-keep-derivations=yes"
+                                         "--gc-keep-outputs=yes")
+                                   '()))))
      (service log-cleanup-service-type
               (log-cleanup-configuration
                (directory "/var/log/guix/drvs"))))
