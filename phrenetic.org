@@ -205,6 +205,7 @@ Run with ~sudo~.
   #:use-module ((gnu build accounts) #:select (%password-lock-file))
   #:use-module ((gnu packages bash) #:select (bash))
   #:use-module ((gnu packages base) #:select (coreutils))
+  #:use-module ((gnu packages bootloaders) #:select (grub-efi))
   #:use-module ((gnu packages firmware) #:select (ath9k-htc-ar7010-firmware ath9k-htc-ar9271-firmware openfwwf-firmware))
   #:use-module ((gnu packages freedesktop) #:select (elogind libinput-minimal switchd))
   #:use-module ((gnu packages fonts) #:select (font-terminus))
@@ -1624,10 +1625,13 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 (define-system-comp (grub-efi-boot #:key
                                    label
                                    (target "/boot/efi")
+                                   (grub-efi grub-efi)
                                    stateless?)
   (bootloader (bootloader-configuration
                (inherit (operating-system-bootloader os))
-               (bootloader grub-efi-bootloader)
+               (bootloader (bootloader
+                            (inherit grub-efi-bootloader)
+                            (package grub-efi)))
                (targets (list target))))
   (file-systems
    (cons* (file-system
