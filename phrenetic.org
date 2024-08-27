@@ -274,7 +274,7 @@ Run with ~sudo~.
             stateless
             linux-libre-kernel
             linux-with-customizations
-            grub-efi
+            grub-efi-boot
             virtualization
             console-keyboard-layouts
             console-fonts
@@ -1621,10 +1621,10 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
 #+end_src
 ****** Grub EFI
 #+begin_src scheme
-(define-system-comp (grub-efi #:key
-                              label
-                              (target "/boot/efi")
-                              stateless?)
+(define-system-comp (grub-efi-boot #:key
+                                   label
+                                   (target "/boot/efi")
+                                   stateless?)
   (bootloader (bootloader-configuration
                (inherit (operating-system-bootloader os))
                (bootloader grub-efi-bootloader)
@@ -9254,8 +9254,8 @@ Only for Tesla-Kepler chipsets, see [[https://nouveau.freedesktop.org/FeatureMat
                                 bluetooth?
                                 stateless?)
   (as-> os $
-    (grub-efi $ #:label efi-label
-              #:stateless? stateless?)
+    (grub-efi-boot $ #:label efi-label
+                   #:stateless? stateless?)
     (linux-kernel $ #:system "x86_64-linux"
                     #:xanmod? xanmod?
                     #:xanmod-config-version xanmod-config-version)
