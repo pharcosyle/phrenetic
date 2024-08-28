@@ -9278,7 +9278,7 @@ Only for Tesla-Kepler chipsets, see [[https://nouveau.freedesktop.org/FeatureMat
   #:use-module (gnu home services)
   #:use-module ((gnu packages browser-extensions) #:select (ublock-origin/chromium))
   #:use-module (gnu services)
-  #:use-module ((nongnu packages chrome) #:select ((make-google-chrome-unstable . make-google-chrome)))
+  #:use-module ((nongnu packages chrome) #:select ((make-google-chrome-stable . make-google-chrome)))
   #:use-module ((nongnu packages databases) #:select (datomic-cli-tools))
   #:use-module ((nongnu packages fonts) #:select (font-apple-sf-pro font-apple-sf-compact font-apple-sf-mono font-apple-sf-arabic font-apple-new-york font-apple-color-emoji font-apple-symbols))
   #:use-module ((nongnu packages messaging) #:select (zoom))
@@ -9413,7 +9413,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
                             gtk-services
                             qt-services
                             (make-google-chrome make-google-chrome)
-                            (release-channel #:chrome.channel/unstable))
+                            (release-channel #:chrome.channel/stable))
   (append
    (list
     (simple-service
@@ -9755,7 +9755,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
      ;; NEW package parameterization
      #:emacs-pgtk ,(@ (gnu packages emacs) emacs-pgtk)
      #:sessions-swayidle ,(@ (gnu packages wm) swayidle)
-     #:apps-make-google-chrome ,(@ (nongnu packages chrome) make-google-chrome-unstable))))
+     #:apps-make-google-chrome ,(@ (nongnu packages chrome) make-google-chrome-stable))))
 
 
 
