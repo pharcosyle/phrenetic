@@ -5096,13 +5096,6 @@ Some colors from the original Atom theme on which I based mine that might be use
   (-> weight
       string-downcase
       string->symbol))
-
-(define* (adobe-source-code-pro #:key (font-adobe-source-code-pro font-adobe-source-code-pro))
-  `((#:font/name . "Source Code Pro")
-    (#:font/weight . "Medium")
-    (#:font/package . ,font-adobe-source-code-pro)))
-
-(define %adobe-source-code-pro (adobe-source-code-pro))
 #+end_src
 **** Package management
 ***** Guix
@@ -5675,7 +5668,10 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 
 ;; TODO These should really each be a function to parameterize the packages.
 (define %fonts
-  `((#:fonts/gnu-unifont . ((#:font/name . "Unifont")
+  `((#:fonts/adobe-source-code-pro . ((#:font/name . "Source Code Pro")
+                                      (#:font/weight . "Medium")
+                                      (#:font/package . ,font-adobe-source-code-pro)))
+    (#:fonts/gnu-unifont . ((#:font/name . "Unifont")
                             (#:font/package . ,font-gnu-unifont)))
     (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
     (#:fonts/google-noto-emoji . ((#:font/name . "Noto Emoji")
@@ -8229,7 +8225,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                        (doom-desktop #:theme theme
                                      #:light-colors light-colors
                                      #:dark-colors dark-colors
-                                     #:font %adobe-source-code-pro
+                                     #:font (assoc-ref %fonts #:fonts/adobe-source-code-pro)
                                      #:font-variable-pitch font-variable-pitch
                                      #:font-size base-font-size)
                        '()))
