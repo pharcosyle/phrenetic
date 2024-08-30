@@ -5080,15 +5080,7 @@ Some colors from the original Atom theme on which I based mine that might be use
                                      'normal)))
        (biome--set-font-safe
         'doom-variable-pitch-font
-        (font-spec :family ,(assoc-ref font-variable-pitch #:font/name)))))
-
-    (simple-service
-     'doom-fonts-add-font-packages
-     home-profile-service-type
-     (map (lambda (font)
-            (assoc-ref font #:font/package))
-          (list font
-                font-variable-pitch))))
+        (font-spec :family ,(assoc-ref font-variable-pitch #:font/name))))))
 
    (doom-dash)))
 
