@@ -5675,20 +5675,20 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 
 ;; TODO These should really each be a function to parameterize the packages.
 (define %fonts
-  `((#:fonts/iosevka-aile . ((#:font/name . "Iosevka Aile")
-                             (#:font/package . ,font-iosevka-aile)))
-    (#:fonts/iosevka-etoile . ((#:font/name . "Iosevka Etoile")
-                               (#:font/package . ,font-iosevka-etoile)))
-    (#:fonts/iosevka . ((#:font/name . "Iosevka")
-                        (#:font/package . ,font-iosevka)))
-    (#:fonts/liberation . ((#:font/package . ,font-liberation)))
-    (#:fonts/gnu-unifont . ((#:font/name . "Unifont")
+  `((#:fonts/gnu-unifont . ((#:font/name . "Unifont")
                             (#:font/package . ,font-gnu-unifont)))
     (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
     (#:fonts/google-noto-emoji . ((#:font/name . "Noto Emoji")
                                   (#:font/package . ,font-google-noto-emoji)))
     (#:fonts/google-noto-sans-cjk . ((#:font/package . ,font-google-noto-sans-cjk)))
-    (#:fonts/google-noto-serif-cjk . ((#:font/package . ,font-google-noto-serif-cjk)))))
+    (#:fonts/google-noto-serif-cjk . ((#:font/package . ,font-google-noto-serif-cjk)))
+    (#:fonts/iosevka-aile . ((#:font/name . "Iosevka Aile")
+                             (#:font/package . ,font-iosevka-aile)))
+    (#:fonts/iosevka-etoile . ((#:font/name . "Iosevka Etoile")
+                               (#:font/package . ,font-iosevka-etoile)))
+    (#:fonts/iosevka . ((#:font/name . "Iosevka")
+                        (#:font/package . ,font-iosevka)))
+    (#:fonts/liberation . ((#:font/package . ,font-liberation)))))
 #+end_src
 ***** Date/time formats
 #+begin_src scheme
