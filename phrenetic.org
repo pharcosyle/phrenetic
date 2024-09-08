@@ -6472,7 +6472,7 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
          (source "@DEFAULT_AUDIO_SOURCE@")
          (unmute (list wpctl "set-mute" sink "0")))
     `((#:volume/up . ,(list unmute
-                            (list wpctl "set-volume" sink (step-pct step #:up #:suffix))))
+                            (list wpctl "set-volume" "--limit" "1" sink (step-pct step #:up #:suffix))))
       (#:volume/down . ,(list unmute
                               (list wpctl "set-volume" sink (step-pct step #:down #:suffix))))
       (#:volume/mute-unmute . ,(list wpctl "set-mute" sink "toggle"))
