@@ -5888,11 +5888,11 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
             (sway-app-windows)
             (or extra-config '())))))))
 
-    (simple-service
-     'sway-reload-config-on-change
-     home-run-on-change-service-type
-     `((,(string-append home-files-directory "/" xdg-configuration-files-directory "/sway/config")
-        ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
+    ;; (simple-service
+    ;;  'sway-reload-config-on-change
+    ;;  home-run-on-change-service-type
+    ;;  `((,(string-append home-files-directory "/" xdg-configuration-files-directory "/sway/config")
+    ;;     ,#~(system* #$(file-append sway "/bin/swaymsg") "reload"))))
 
     (when doom?
       (doom-service
