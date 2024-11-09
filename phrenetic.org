@@ -10217,7 +10217,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 (define physical-memory (* 16 GiB))
 ;; TODO trying without at the moment
 ;; (define swap-size (* 32 GiB))
-(define swap-size (* 8 GiB))
+(define swap-size (* 16 GiB)) ; Made this large to accommodate big Guix builds in /tmp, namely the linux kernel.
 
 (define (feature-users flags)
   (->> flags
