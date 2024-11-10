@@ -1,0 +1,9 @@
+use_guixs() {
+	LOCK_FILE=channels-lock
+
+	if [ -f $LOCK_FILE ]; then
+		eval "$(guix time-machine --channels=$LOCK_FILE -- shell --search-paths "$@")"
+	else
+		eval "$(guix shell --search-paths "$@")"
+	fi
+}

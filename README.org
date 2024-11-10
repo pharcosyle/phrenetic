@@ -1,0 +1,25 @@
+* Phrenetic
+Configuration components and useful packages/services for [[https://guix.gnu.org/][GNU Guix]].
+
+It's decent.
+* [[file:phrenetic.org][Browse the full source]]
+* Usage
+Install as a [[https://guix.gnu.org/manual/devel/en/guix.html#Channels][Guix channel]] with the following declaration:
+#+begin_src scheme
+(channel
+ (name 'phrenetic)
+ (url "https://github.com/pharcosyle/phrenetic")
+ (branch "tangled"))
+#+end_src
+* Noteworthy features
+Some stuff I haven't seen elsewhere folks might be interested in:
+- Stateless service :: Configure your Guix to run with an ephemeral, in-memory root directory. Kind of like [[https://grahamc.com/blog/erase-your-darlings][Erase your darlings: immutable infrastructure for mutable systems]] but using Guix/Btrfs instead of NixOS/ZFS.
+- Doom package and module :: [[https://github.com/doomemacs/doomemacs][Doom Emacs]] packaged for Guix and with patches to better organize Emacs state, a service to set up symlinks, etc.
+- Guix integration for [[https://github.com/radian-software/straight.el][Straight.el]] :: Your Straight or Doom-based Emacs configuration can use Guix Emacs packages under hood (but with the revisions you, or Doom, specify). Get the best of both worlds! Still WIP.
+- Miscellaneous packages :: Guix packages for stuff not upstream yet: Datomic CLI tools, the AWS CLI v2, etc.
+* A word about literate programming
+I use Emacs' =org-mode= to structure my code as a single file that I can export ("tangle") into numerous source files. This allows me to annotate and organize related code in potentially different languages with different output paths together in a way that easy for humans to read and reason about. This does necessitate maintaining a separate =tangled= branch (set as the Github default) so others can use it easily, though.
+* Contributing
+Pull requests welcome! Targeting =master= is ideal but if you aren't familiar with literate programming / Emacs / =org=mode= then making your changes on the =tangled= branch is also fine (I'll reverse-tangle it for you).
+* Acknowledgements
+This project incorporates code from Andrew Tropin's excellent [[https://github.com/abcdw/rde][RDE]], many thanks to him.
