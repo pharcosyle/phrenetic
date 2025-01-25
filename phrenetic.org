@@ -5454,7 +5454,7 @@ nix-channel --update
 #+begin_src scheme
 (define* (kmonad-tool #:key
                       doom?
-                      (device "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
+                      (device "/dev/input/by-path/platform-39b10c000.spi-cs-0-event-kbd")
                       (kbd (local-file "keyboard-config.kbd"))
                       kmonad)
   (list
@@ -5491,7 +5491,7 @@ nix-channel --update
 ****** Keyboard config
 #+begin_src kbd :tangle (meta-in-dir "keyboard-config.kbd")
 (defcfg
-  input (device-file "/dev/input/by-id/usb-Apple_Inc._Apple_Internal_Keyboard___Trackpad-event-kbd")
+  input (device-file "/dev/input/by-path/platform-39b10c000.spi-cs-0-event-kbd")
   output (uinput-sink "My KMonad output")
   fallthrough true
   allow-cmd false)
@@ -5913,7 +5913,6 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
              (#:bindm #:$mod #:mouse:272 #:movewindow)
              (#:bindm #:$mod+Shift #:mouse:272 #:resizewindow)
 
-             (#:general ((#:gaps_out 55 5 5 320)))
              (#:animations ((#:enabled #f)))
              (#:xwayland ((#:force_zero_scaling #t)))
              (#:misc ((#:force_default_wallpaper 2)))
@@ -10439,7 +10438,7 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
 (cons* (channel
         (name 'rde)
         ;; (url "https://git.sr.ht/~abcdw/rde")
-        (url "file:///.persist/home/pharcosyle/work_for_now/channels/rde")
+        (url "file:///home/pharcosyle/keep/channels/rde")
         (introduction
          (make-channel-introduction
           "257cebd587b66e4d865b3537a9a88cccd7107c95"
@@ -10448,18 +10447,28 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
        (channel
         (name 'nonguix)
         ;; (url "https://gitlab.com/nonguix/nonguix")
-        (url "file:///.persist/home/pharcosyle/work_for_now/channels/nonguix")
+        (url "file:///home/pharcosyle/keep/channels/nonguix")
         (introduction
          (make-channel-introduction
           "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
           (openpgp-fingerprint
            "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+       (channel
+        (name 'asahi)
+        ;; (url "https://github.com/asahi-guix/channel")
+        (url "file:///home/pharcosyle/keep/channels/asahi")
+        (branch "main")
+        (introduction
+         (make-channel-introduction
+          "3eeb493b037bea44f225c4314c5556aa25aff36c"
+          (openpgp-fingerprint
+           "D226 A339 D8DF 4481 5DDE  0CA0 3DDA 5252 7D2A C199"))))
 
        ;; %default-channels
        (list
         (channel
          (name 'guix)
-         (url "file:///.persist/home/pharcosyle/work_for_now/channels/guix")
+         (url "file:///home/pharcosyle/keep/channels/guix")
          (introduction
           (make-channel-introduction
            "9edb3f66fd807b096b48283debdcddccfea34bad"
@@ -10516,7 +10525,18 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
         (make-channel-introduction
          "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
          (openpgp-fingerprint
-          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5")))))
+          "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+      (channel
+       (name 'asahi)
+       (url "https://github.com/asahi-guix/channel")
+       (branch "main")
+       (commit
+        "bf806d95047351805db7ddc816c8737470e09a10")
+       (introduction
+        (make-channel-introduction
+         "3eeb493b037bea44f225c4314c5556aa25aff36c"
+         (openpgp-fingerprint
+          "D226 A339 D8DF 4481 5DDE  0CA0 3DDA 5252 7D2A C199")))))
 #+end_src
 * Guix channel
 #+begin_src scheme :tangle (meta-in-dir ".guix-channel")
@@ -10538,7 +10558,16 @@ Doesn't work for me at the moment. As of this writing the package is brand new s
     (make-channel-introduction
      "897c1a470da759236cc11798f4e0a5f7d4d59fbc"
      (openpgp-fingerprint
-      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))))
+      "2A39 3FFF 68F4 EF7A 3D29  12AF 6F51 20A0 22FB B2D5"))))
+  (channel
+   (name asahi)
+   (url "https://github.com/asahi-guix/channel")
+   (branch "main")
+   (introduction
+    (make-channel-introduction
+     "3eeb493b037bea44f225c4314c5556aa25aff36c"
+     (openpgp-fingerprint
+      "D226 A339 D8DF 4481 5DDE  0CA0 3DDA 5252 7D2A C199"))))))
 #+end_src
 * Github
 ** Readme

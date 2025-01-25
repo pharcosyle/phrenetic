@@ -23,6 +23,6 @@
   (string-join
    ;; HACK
    (mapcar (lambda (f)
-             (string-remove-prefix "/.persist/home/pharcosyle/work_for_now/phrenetic" f))
+             (string-remove-prefix "/home/pharcosyle/keep/phrenetic" f))
            (meta--get-tangled-files))
    "\n"))
