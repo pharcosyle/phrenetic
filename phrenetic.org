@@ -1909,7 +1909,7 @@ Must succeed [[*File systems][File systems]] component. To be useful, the statel
   ;; #:use-module ((gnu packages curl) #:select (curl))
   #:use-module ((gnu packages emacs) #:select (emacs emacs-pgtk))
   #:use-module ((gnu packages emacs-xyz) #:select (doom-emacs))
-  #:use-module ((gnu packages fonts) #:select (font-fira-code font-google-noto font-google-noto-emoji font-google-noto-sans-cjk font-google-noto-serif-cjk font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
+  #:use-module ((gnu packages fonts) #:select (font-adobe-source-code-pro font-google-noto font-google-noto-emoji font-google-noto-sans-cjk font-google-noto-serif-cjk font-iosevka font-iosevka-aile font-iosevka-etoile font-liberation font-gnu-unifont))
   #:use-module ((gnu packages fontutils) #:select (fontmanager-no-googlefonts))
   #:use-module ((gnu packages freedesktop) #:select (desktop-file-utils poweralertd xdg-utils xdg-user-dirs xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr))
   #:use-module ((gnu packages gimp) #:select (gimp))
@@ -5700,8 +5700,9 @@ Wireplumber does not (yet?) support seatd. At the time of this writing this only
 
 ;; TODO These should really each be a function to parameterize the packages.
 (define %fonts
-  `((#:fonts/fira-code . ((#:font/name . "Fira Code")
-                          (#:font/package . ,font-fira-code)))
+  `((#:fonts/adobe-source-code-pro . ((#:font/name . "Source Code Pro")
+                                      (#:font/weight . "Medium")
+                                      (#:font/package . ,font-adobe-source-code-pro)))
     (#:fonts/gnu-unifont . ((#:font/name . "Unifont")
                             (#:font/package . ,font-gnu-unifont)))
     (#:fonts/google-noto . ((#:font/package . ,font-google-noto)))
@@ -7343,7 +7344,7 @@ flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flath
                             (org-mode . org-modern-mode)
                             (org-agenda-finalize . org-modern-agenda)
                             :config
-                            (setq org-modern-fold-stars '(("▶" . "▼") ("▷" . "▽") ("▹" . "▿") ("▸" . "▾")) ; HACK: remove a symbol pair that renders with a different line hight (at least in Fira Code).
+                            (setq org-modern-fold-stars '(("▶" . "▼") ("▷" . "▽") ("▹" . "▿") ("▸" . "▾")) ; HACK: remove a symbol pair that doesn't render in Source Code Pro, instead using a Google Noto whih has a different line height.
                                   org-modern-hide-stars nil ; You still can't see them because `org-hide-leading-stars' is true but this way the indentation is retained (otherwise there's some extra and the amount grows each level down).
                                   org-modern-todo-faces
                                   (-map (-lambda ((kw . face))
@@ -8680,7 +8681,7 @@ It's not totally clear what parts of this are Wayland-specific or if it's necess
                     (colors dark-colors)
                     (font-sans (assoc-ref nonphrenetic:%fonts #:fonts/apple-sf-pro))
                     (font-serif (assoc-ref nonphrenetic:%fonts #:fonts/apple-new-york))
-                    (font-mono (assoc-ref %fonts #:fonts/fira-code))
+                    (font-mono (assoc-ref %fonts #:fonts/adobe-source-code-pro))
                     (font-variable-pitch font-sans)
                     (base-font-size 10)
                     ;; TODO Temporarily remove until I figure out conflicting portal setups with multiple desktops.
